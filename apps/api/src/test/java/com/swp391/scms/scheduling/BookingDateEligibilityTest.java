@@ -58,7 +58,7 @@ class BookingDateEligibilityTest {
         offer.setMember(member);
         offer.setStatus("notified");
         offer.setReservationExpiresAt(LocalDateTime.now(clock).plusHours(24));
-        when(members.findById(actor.id())).thenReturn(Optional.of(member));
+        when(members.findByUserIdForUpdate(actor.id())).thenReturn(Optional.of(member));
         when(sessions.findById(9L)).thenReturn(Optional.of(session));
         when(classes.findByIdForUpdate(5L)).thenReturn(Optional.of(gymClass));
         when(enrollments.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));

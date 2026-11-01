@@ -56,6 +56,41 @@ describe('MemberClassesPage', () => {
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
   async function render() { await act(async () => root.render(<MemoryRouter><MemberClassesPage /></MemoryRouter>)); }
 
+  it('claims a notified offer by ID without duplicate submit and keeps errors as errors', async () => {
+    mocks.sessions.mockResolvedValue([session]);
+    mocks.waitlists.mockResolvedValue([{ id: 31, classId: 3, className: 'Yoga Flow', memberId: 9,
+      status: 'notified', requestedAt: '2099-10-01T08:00:00' }]);
+    let reject!: (reason: unknown) => void;
+    mocks.enroll.mockReturnValue(new Promise((_, fail) => { reject = fail; }));
+    await render();
+    const claim = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Xác nhận chỗ')!;
+    expect(claim).toBeDefined();
+    await act(async () => { claim.click(); claim.click(); });
+    expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(8, 31);
+    expect(claim.disabled).toBe(true);
+    await act(async () => reject(new ApiError('Suất giữ chỗ đã hết hạn', 409)));
+    expect(host.textContent).toContain('Suất giữ chỗ đã hết hạn');
+    expect(host.textContent).not.toContain('thành công!');
+    expect(mocks.enroll).toHaveBeenCalledTimes(1);
+    expect(mocks.waitlists).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirms a notified offer and reloads enrollment and waitlist state', async () => {
+    const booking = { id: 41, classId: 3, className: 'Yoga Flow', memberId: 9, sessionId: 8,
+      sessionDate: '2099-10-19', startTime: '08:00:00', endTime: '09:00:00', status: 'booked',
+      enrolledAt: '2099-10-01T08:00:00', cancelledAt: null, cancelReason: null };
+    mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 11 }]);
+    mocks.waitlists.mockResolvedValueOnce([{ id: 31, classId: 3, className: 'Yoga Flow', memberId: 9,
+      status: 'notified', requestedAt: '2099-10-01T08:00:00' }]).mockResolvedValueOnce([]);
+    mocks.enrollments.mockResolvedValueOnce([]).mockResolvedValueOnce([booking]);
+    mocks.enroll.mockResolvedValue(booking);
+    await render();
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Xác nhận chỗ')!.click());
+    expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(8, 31);
+    expect(host.textContent).toContain('Đã đặt chỗ');
+    expect(host.textContent).not.toContain('Đang giữ chỗ');
+  });
+
   it('shows loading, then real sessions and waitlist action when class is full', async () => {
     let resolve!: (value: typeof session[]) => void;
     mocks.sessions.mockReturnValue(new Promise((done) => { resolve = done; }));

@@ -116,7 +116,7 @@ export function MemberClassesPage() {
     return () => { active = false; };
   }, [waitlistsRetry]);
 
-  async function handleEnroll(session: ClassSessionDto) {
+  async function handleEnroll(session: ClassSessionDto, waitlistId?: number) {
     const key = `session-${session.id}`;
     if (busyRef.current) return;
     busyRef.current = key;
@@ -125,7 +125,8 @@ export function MemberClassesPage() {
     setNotice('');
     setActionError('');
     try {
-      await enroll(session.id);
+      if (waitlistId === undefined) await enroll(session.id);
+      else await enroll(session.id, waitlistId);
       if (actionGenRef.current === gen) {
         setNotice(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`);
       }
@@ -420,7 +421,7 @@ export function MemberClassesPage() {
                           <span className="badge badge-success">Đã đặt chỗ</span>
                         )}
                         {!myEnrollment && myWaitlist && (
-                          <span className="badge badge-warning">Đang chờ chỗ</span>
+                          <span className="badge badge-warning">{myWaitlist.status === 'notified' ? 'Đang giữ chỗ' : 'Đang chờ chỗ'}</span>
                         )}
                       </div>
                       <h3 className="row-card__title">{item.className}</h3>
@@ -436,7 +437,7 @@ export function MemberClassesPage() {
                     <div style={{ textAlign: 'right' }}>
                       <div className="meta-label">SĨ SỐ HIỆN TẠI</div>
                       <strong>{item.bookedCount} / {item.capacity} học viên</strong>
-                      <div style={{ marginTop: 10 }}>
+                      <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         {myEnrollment ? (
                           <button
                             type="button"
@@ -447,14 +448,26 @@ export function MemberClassesPage() {
                             {isBusy ? 'Đang xử lý...' : 'Hủy đặt chỗ'}
                           </button>
                         ) : myWaitlist ? (
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            disabled={isBusy}
-                            onClick={() => void handleLeaveWaitlist(myWaitlist.id, item.className)}
-                          >
-                            {isBusy ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
-                          </button>
+                          <>
+                            {myWaitlist.status === 'notified' && (
+                              <button
+                                type="button"
+                                className="btn-primary btn-sm"
+                                disabled={isBusy || unavailable}
+                                onClick={() => void handleEnroll(item, myWaitlist.id)}
+                              >
+                                {isBusy ? 'Đang xác nhận...' : 'Xác nhận chỗ'}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              disabled={isBusy}
+                              onClick={() => void handleLeaveWaitlist(myWaitlist.id, item.className)}
+                            >
+                              {isBusy ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
+                            </button>
+                          </>
                         ) : unavailable ? (
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             Không thể đặt

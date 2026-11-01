@@ -107,6 +107,7 @@ class SchedulingServiceTest {
         session.setStartTime(LocalTime.of(13, 0));
         session.setEndTime(LocalTime.of(14, 0));
         lenient().when(members.findById(MEMBER.id())).thenReturn(Optional.of(member));
+        lenient().when(members.findByUserIdForUpdate(MEMBER.id())).thenReturn(Optional.of(member));
         lenient().when(sessions.findById(9L)).thenReturn(Optional.of(session));
         lenient().when(gymClasses.findById(5L)).thenReturn(Optional.of(gymClass));
         lenient().when(gymClasses.findByIdForUpdate(5L)).thenReturn(Optional.of(gymClass));
@@ -272,7 +273,7 @@ class SchedulingServiceTest {
     }
 
     @Test
-    void cancellationGrants15MinReservationWindowToNextWaitlistMember() {
+    void cancellationGrants24HourReservationWindowToNextWaitlistMember() {
         ClassEnrollment enrollment = new ClassEnrollment();
         ReflectionTestUtils.setField(enrollment, "id", 101L);
         enrollment.setGymClass(gymClass);
@@ -286,9 +287,10 @@ class SchedulingServiceTest {
         waitlistMember.setUserId(99L);
         waiting.setMember(waitlistMember);
 
-        when(enrollments.findById(101L)).thenReturn(Optional.of(enrollment));
-        when(waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(5L, "waiting"))
-                .thenReturn(List.of(waiting));
+        when(enrollments.findClassIdById(101L)).thenReturn(Optional.of(5L));
+        when(enrollments.findByIdForUpdate(101L)).thenReturn(Optional.of(enrollment));
+        when(waitlists.findFirstByGymClassIdAndStatusOrderByRequestedAtAscIdAsc(5L, "waiting"))
+                .thenReturn(Optional.of(waiting));
 
         enrollmentService.cancel(MEMBER, 101L);
 
@@ -297,7 +299,7 @@ class SchedulingServiceTest {
         assertNotNull(waiting.getNotifiedAt());
         assertNotNull(waiting.getReservationExpiresAt());
         assertEquals(waiting.getNotifiedAt().plusHours(24), waiting.getReservationExpiresAt());
-        verify(waitlists).save(waiting);
+        verify(waitlists).saveAndFlush(waiting);
     }
 
     @Test
@@ -311,8 +313,9 @@ class SchedulingServiceTest {
         Member nextMember = new Member();
         nextMember.setUserId(99L);
         next.setMember(nextMember);
-        when(waitlists.findById(30L)).thenReturn(Optional.of(reserved));
-        when(waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(5L, "waiting")).thenReturn(List.of(next));
+        when(waitlists.findClassIdById(30L)).thenReturn(Optional.of(5L));
+        when(waitlists.findByIdForUpdate(30L)).thenReturn(Optional.of(reserved));
+        when(waitlists.findFirstByGymClassIdAndStatusOrderByRequestedAtAscIdAsc(5L, "waiting")).thenReturn(Optional.of(next));
 
         waitlistService.withdraw(MEMBER, 30L);
 
@@ -324,7 +327,7 @@ class SchedulingServiceTest {
     void outsiderBlockedFromBookingWhenActiveWaitlistReservationHoldsVirtualSeat() {
         // Lớp capacity = 1, booked = 0 nhưng có 1 slot ảo đang giữ (active reservation = 1)
         when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(0L);
-        when(waitlists.countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(eq(5L), eq("notified"), any()))
+        when(waitlists.countLiveOffers(eq(5L), any(), any()))
                 .thenReturn(1L);
         when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "notified"))
                 .thenReturn(Optional.empty());
@@ -339,7 +342,7 @@ class SchedulingServiceTest {
         holdingReservation.setReservationExpiresAt(LocalDateTime.of(2026, 10, 17, 12, 15));
 
         when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(0L);
-        when(waitlists.countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(eq(5L), eq("notified"), any()))
+        when(waitlists.countLiveOffers(eq(5L), any(), any()))
                 .thenReturn(1L);
         when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "notified"))
                 .thenReturn(Optional.of(holdingReservation));

@@ -44,9 +44,11 @@ public class EnrollmentController {
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<EnrollmentDto>> enroll(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @RequestParam(required = false) Long waitlistId) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(msg("scheduling.enrollment.created"), service.enroll(principal, id)));
+                .body(ApiResponse.created(msg("scheduling.enrollment.created"), waitlistId == null
+                        ? service.enroll(principal, id) : service.enroll(principal, id, waitlistId)));
     }
 
     @Operation(summary = "Cancel a class enrollment (owner or staff)")
