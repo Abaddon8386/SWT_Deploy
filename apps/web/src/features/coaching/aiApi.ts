@@ -113,18 +113,20 @@ export const aiApi = {
         return SAMPLE_MEMBERS;
       }
       const byMemberId = new Map<number, MemberOption>();
-      for (const cls of classes) {
+      const rosters = await Promise.allSettled(classes.map(async cls => apiFetch<
+        Array<{
+          memberId: number;
+          membershipCode?: string;
+          fullName?: string;
+          fitnessGoal?: string;
+          healthNotes?: string;
+          fitnessLevel?: string;
+        }>
+      >(`/classes/${cls.id}/students`)));
+      for (const roster of rosters) {
+        if (roster.status === 'rejected') continue;
         try {
-          const students = await apiFetch<
-            Array<{
-              memberId: number;
-              membershipCode?: string;
-              fullName?: string;
-              fitnessGoal?: string;
-              healthNotes?: string;
-              fitnessLevel?: string;
-            }>
-          >(`/classes/${cls.id}/students`);
+          const students = roster.value;
           if (Array.isArray(students)) {
             for (const s of students) {
               if (s.memberId && !byMemberId.has(s.memberId)) {

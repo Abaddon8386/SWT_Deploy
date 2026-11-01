@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigation } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser } from '../../shared/api/client';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from './PortalIcon';
 import { MOBILE_PRIMARY_NAV, PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
@@ -17,6 +18,8 @@ export function PortalShell() {
   const user = getCurrentUser();
   const location = useLocation();
   const navigate = useNavigate();
+  const navigation = useNavigation();
+  const navigating = navigation.state !== 'idle';
   const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | null>(null);
   const [query, setQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState<number | null>(null);
@@ -122,8 +125,9 @@ export function PortalShell() {
           </div>
         </header>
         <PwaStatus mode="status" />
-        <main ref={mainRef} id="portal-main" tabIndex={-1}>
-          <div key={location.pathname} className="route-fade"><Outlet /></div>
+        <main ref={mainRef} id="portal-main" tabIndex={-1} aria-busy={navigating || undefined}>
+          {navigating && <LoadingSkeleton label="Đang tải trang…" variant="cards" count={3} className="portal-route-loading" />}
+          <div key={location.pathname} className="route-fade" hidden={navigating}><Outlet /></div>
         </main>
         <footer className="portal-workspace-footer"><span>SÖL · Không gian của bạn</span><span>Chuyển động mỗi ngày. Cân bằng mỗi khoảnh khắc.</span></footer>
       </div>

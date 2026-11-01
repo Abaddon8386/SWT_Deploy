@@ -24,6 +24,7 @@ export function usePublicCatalog() {
     let sequence = 0;
     const load = async () => {
       const request = ++sequence;
+      setError(false);
       try {
         const data = await apiFetch<PublicCatalog>('/public/catalog', {
           cache: 'no-store', signal: controller.signal, headers: { Authorization: '' },

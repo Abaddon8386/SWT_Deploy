@@ -1672,25 +1672,16 @@ textarea.portal-textarea:focus-visible,
 /* ==========================================================================
    UNIFIED SKELETON LOADING & PACKAGE BENEFIT LISTS
    ========================================================================== */
-@keyframes portal-skeleton-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
 .member-skeleton,
 .portal-skeleton {
   border-radius: 8px;
-  background: linear-gradient(90deg, #EAE3DA 25%, #F5F0E9 50%, #EAE3DA 75%);
-  background-size: 200% 100%;
-  animation: portal-skeleton-shimmer 1.5s ease-in-out infinite;
+  background: var(--portal-raised, #eeefec);
 }
 
 .portal-skeleton-line {
   height: 14px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #EAE3DA 25%, #F5F0E9 50%, #EAE3DA 75%);
-  background-size: 200% 100%;
-  animation: portal-skeleton-shimmer 1.5s ease-in-out infinite;
+  background: var(--portal-raised, #eeefec);
 }
 
 .package-benefit-list {

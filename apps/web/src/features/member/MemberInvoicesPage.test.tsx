@@ -29,10 +29,24 @@ describe('MemberInvoicesPage', () => {
     mocks.payments.mockReturnValue(new Promise((done) => { resolve = done; }));
     await render();
     expect(host.textContent).toContain('Đang tải giao dịch');
+    expect(host.querySelector('[role="status"] [aria-hidden="true"]')).not.toBeNull();
     expect(host.querySelector('.portal-container.member-invoices')).not.toBeNull();
     await act(async () => resolve([paid, { ...paid, id: 13, status: 'pending' }]));
     expect(host.textContent).toContain('#12');
     expect(host.textContent).not.toContain('#13');
+  });
+
+  it('shows an invoice skeleton until the detail request settles without a display delay', async () => {
+    mocks.payments.mockResolvedValue([paid]);
+    let finish!: (value: unknown) => void;
+    mocks.invoice.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    await render();
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Xem hóa đơn giao dịch #12"]')?.click());
+    expect(host.querySelector('.member-invoices__invoice [role="status"] [aria-hidden="true"]')).not.toBeNull();
+    expect(host.querySelector('.member-invoices__download')).toBeNull();
+    await act(async () => finish({ paymentId: 12, invoiceNumber: 'INV-12', issuedAt: '2026-10-25T10:00:00', subtotalAmount: 200000, taxAmount: 20000, totalAmount: 220000 }));
+    expect(host.querySelector('.member-invoices__invoice [role="status"]')).toBeNull();
+    expect(host.textContent).toContain('INV-12');
   });
 
   it('opens owned invoice, shows persisted total and downloads its PDF', async () => {

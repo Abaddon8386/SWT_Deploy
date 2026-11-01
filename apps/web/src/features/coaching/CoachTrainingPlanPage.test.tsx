@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoachTrainingPlanPage } from './CoachTrainingPlanPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
-import { aiApi } from './aiApi';
+import { aiApi, SAMPLE_MEMBERS, type MemberOption } from './aiApi';
 
 describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập Tích hợp AI Gợi ý)', () => {
   let host: HTMLDivElement;
@@ -85,6 +85,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     vi.spyOn(aiApi, 'generateWorkoutPlan').mockResolvedValue(mockAiResponse);
     vi.spyOn(aiApi, 'saveTrainingPlan').mockResolvedValue({ id: 101, status: 'active' });
+    vi.spyOn(aiApi, 'getCoachMembers').mockResolvedValue(SAMPLE_MEMBERS);
   });
 
   afterEach(async () => {
@@ -118,6 +119,21 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     await renderComponent();
     expect(host.textContent).toContain('Truy cập bị từ chối (403 Forbidden)');
+  });
+
+  it('waits for member data before showing the editor and renders immediately when it arrives', async () => {
+    let finishMembers!: (members: MemberOption[]) => void;
+    vi.mocked(aiApi.getCoachMembers).mockReturnValue(new Promise(resolve => { finishMembers = resolve; }));
+
+    await renderComponent();
+    expect(host.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(host.textContent).not.toContain(SAMPLE_MEMBERS[0].fullName);
+    expect(host.querySelector('#plan-member')).toBeNull();
+
+    await act(async () => finishMembers([{ ...SAMPLE_MEMBERS[0], id: 42, fullName: 'Học viên đã tải' }]));
+    expect(host.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(host.textContent).toContain('Học viên đã tải');
+    expect(host.textContent).toContain('Lưu & Kích hoạt giáo án');
   });
 
   it('renders plan editor workspace with day tabs (Thứ 2 -> Chủ Nhật)', async () => {

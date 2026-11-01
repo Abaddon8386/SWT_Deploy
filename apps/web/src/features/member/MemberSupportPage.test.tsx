@@ -46,6 +46,26 @@ function deferred<T>() {
 const otherTicket = { ...ticket, id: 8, subject: '[Khác] Phiếu B' };
 const message = (id: number, text: string): supportApi.SupportMessage => ({ id, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: text, createdAt: ticket.createdAt });
 
+it('keeps support ticket and message skeletons until their requests settle', async () => {
+  const tickets = deferred<{ content: supportApi.SupportTicket[]; totalPages: number }>();
+  const history = deferred<supportApi.SupportMessage[]>();
+  vi.mocked(supportApi.getMySupportTickets).mockReturnValueOnce(tickets.promise);
+  vi.mocked(supportApi.getSupportMessages).mockReturnValueOnce(history.promise);
+  await render();
+  expect(host.querySelector('[aria-labelledby="support-list-title"] [role="status"] [aria-hidden="true"]')).not.toBeNull();
+  expect(host.textContent).not.toContain('Bạn chưa có phiếu');
+  await act(async () => tickets.resolve({ content: [ticket], totalPages: 1 }));
+  await chooseTicket(7);
+  expect(host.querySelector('.member-support-conversation [role="status"] [aria-hidden="true"]')).not.toBeNull();
+  expect(host.textContent).not.toContain('Chưa có tin nhắn');
+  await type('#support-message', 'Xin chào');
+  expect(host.querySelector<HTMLButtonElement>('.member-support-compose button')?.disabled).toBe(true);
+  await act(async () => history.resolve([]));
+  expect(host.querySelector('.member-support-conversation [aria-busy="true"]')).toBeNull();
+  expect(host.textContent).toContain('Chưa có tin nhắn');
+  expect(host.querySelector<HTMLButtonElement>('.member-support-compose button')?.disabled).toBe(false);
+});
+
 it('refetches authoritative messages and closed status on realtime invalidation without duplicates', async () => {
   await render(); await chooseTicket(7);
   const changed = vi.mocked(subscribeSupport).mock.calls.at(-1)![0];

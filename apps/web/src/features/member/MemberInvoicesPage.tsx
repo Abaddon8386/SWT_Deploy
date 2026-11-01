@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { ApiError } from '../../shared/api/client';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
@@ -76,7 +77,7 @@ export function MemberInvoicesPage() {
     <div className="portal-container member-invoices">
       <PageHeader eyebrow="Hội viên" title="Giao dịch & hóa đơn" subtitle="Các khoản thanh toán đã hoàn tất của bạn." />
       <section className="portal-card member-invoices__card" aria-label="Lịch sử giao dịch">
-        {loading ? <p role="status">Đang tải giao dịch…</p> : error ? (
+        {loading ? <LoadingSkeleton label="Đang tải giao dịch…" variant="table" count={4} /> : error ? (
           <div role="alert"><p>Không tải được giao dịch. Vui lòng thử lại.</p><button type="button" className="btn-secondary btn-sm" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>Thử lại</button></div>
         ) : payments.length === 0 ? <p>Chưa có giao dịch thanh toán thành công.</p> : (
           <div className="member-invoices__scroll">
@@ -92,7 +93,7 @@ export function MemberInvoicesPage() {
       </section>
       {selected && <Modal title="Hóa đơn điện tử" onClose={() => setSelected(null)}>
         <div className="member-invoices__invoice">
-          {invoiceLoading ? <p role="status">Đang tải hóa đơn…</p> : invoiceError ? <p role="alert">{invoiceError}</p> : invoice && <>
+          {invoiceLoading ? <LoadingSkeleton label="Đang tải hóa đơn…" variant="profile" /> : invoiceError ? <p role="alert">{invoiceError}</p> : invoice && <>
             <p className="member-invoices__number">{invoice.invoiceNumber}</p>
             <p className="member-invoices__issued">Ngày phát hành {dateLabel(invoice.issuedAt)}</p>
             <dl>

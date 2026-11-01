@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { chatRoleLabel, type ChatConversation } from './chatApi';
 import type { useChatConversation } from './useChatConversation';
 
@@ -33,10 +34,11 @@ export function ChatThread({ conversation, chat, onBack }: { conversation: ChatC
       <button type="button" className="direct-chat__link" onClick={() => void chat.refresh()} disabled={chat.loading}>Làm mới hội thoại</button>
     </header>
     {chat.error && <div role="alert" className="direct-chat__error"><p>{chat.error}</p><button type="button" className="direct-chat__link" onClick={() => void chat.refresh()}>Thử lại tải tin nhắn</button></div>}
-    <div className="direct-chat__transcript" ref={scroll} role="region" aria-label="Lịch sử tin nhắn" tabIndex={0} aria-busy={chat.loading}
+    <div className="direct-chat__transcript" ref={scroll} role="region" aria-label="Lịch sử tin nhắn" tabIndex={0} aria-busy={chat.loading || chat.olderLoading}
       onScroll={() => { const node = scroll.current; if (node) { atBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 64; if (atBottom.current) setNewBelow(false); } }}>
       {chat.hasOlder && <button type="button" className="direct-chat__older direct-chat__link" disabled={chat.olderLoading} onClick={() => void chat.loadOlder()}>{chat.olderLoading ? 'Đang tải…' : 'Tải tin nhắn cũ hơn'}</button>}
-      {chat.loading ? <p role="status" className="direct-chat__empty">Đang tải tin nhắn…</p>
+      {chat.olderLoading && <LoadingSkeleton label="Đang tải tin nhắn cũ hơn…" count={2} />}
+      {chat.loading ? <LoadingSkeleton label="Đang tải tin nhắn…" count={4} />
         : chat.messages.length === 0 && !chat.error ? <p className="direct-chat__empty">Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.</p> : null}
       <ol className="direct-chat__messages">{chat.messages.map(message => <li key={message.id} className={message.mine ? 'is-mine' : undefined}>
         <div className="direct-chat__bubble"><span className="direct-chat__sender">{message.mine ? 'Bạn' : conversation.peer.name}</span><p>{message.message}</p>

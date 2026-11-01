@@ -1,3 +1,4 @@
+import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { checkinApi } from './checkinApi';
@@ -48,8 +49,8 @@ export function GateQrPanel({ gateId }: { gateId: string }) {
   return <section className="gate-qr-panel" aria-label="Mã QR cổng cho hội viên">
     <h2 className="portal-card-title">Hội viên quét QR cổng</h2>
     <p className="qr-checkin-hint">Mở mục Quét QR trên điện thoại và hướng camera vào mã bên dưới.</p>
-    {qr && remaining > 0 ? <><img className="gate-qr-panel__image" src={qr.image} alt="Mã QR cổng check-in" onError={() => { setQr(null); setError('Không thể hiển thị mã QR. Vui lòng thử lại.'); }} /><p className="gate-qr-panel__status">Mã còn hiệu lực {remaining}s · Tự làm mới</p></>
-      : loading ? <p role="status">Đang tạo mã QR cổng…</p> : !error && <p role="status">Mã đã hết hạn. Vui lòng tạo mã mới.</p>}
+    {qr && remaining > 0 ? <><LoadingImage className="gate-qr-panel__image" src={qr.image} alt="Mã QR cổng check-in" onError={() => { setQr(null); setError('Không thể hiển thị mã QR. Vui lòng thử lại.'); }} /><p className="gate-qr-panel__status">Mã còn hiệu lực {remaining}s · Tự làm mới</p></>
+      : loading ? <div role="status" aria-busy="true" style={{ display: 'grid' }}><span className="sr-only">Đang tạo mã QR cổng…</span><div className="gate-qr-panel__image portal-skeleton" aria-hidden="true" style={{ background: 'var(--portal-raised, #eeefec)' }} /></div> : !error && <p role="status">Mã đã hết hạn. Vui lòng tạo mã mới.</p>}
     {error && <p className="qr-checkin-error" role="alert">{error}</p>}
     {(!qr || remaining === 0) && <button type="button" className="btn-secondary" disabled={loading} onClick={() => setRetry((value) => value + 1)}>Tạo lại mã QR cổng</button>}
   </section>;

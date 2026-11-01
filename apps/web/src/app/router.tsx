@@ -16,6 +16,7 @@ export const router = createBrowserRouter([
 
   // Protected Portal App Shell
   {
+    id: 'portal',
     lazy: async () => ({ Component: (await import('../shared/ui/AppLayout')).AppLayout }),
     children: [
       { path: '/portal', element: <PortalHome /> },

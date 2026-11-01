@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import {
@@ -386,10 +387,7 @@ export function CoachClassesPage() {
           </div>
 
           {loading && (
-            <div className="coach-loading-box">
-              <div className="portal-spinner" />
-              <p>Đang tải lịch dạy của huấn luyện viên...</p>
-            </div>
+            <LoadingSkeleton label="Đang tải lịch dạy của huấn luyện viên…" variant="cards" count={3} />
           )}
 
           {error && !loading && (
@@ -515,10 +513,7 @@ export function CoachClassesPage() {
           </div>
 
           {allStudentsLoading ? (
-            <div className="coach-loading-box">
-              <div className="portal-spinner" />
-              <p>Đang tải danh sách học viên phụ trách...</p>
-            </div>
+            <LoadingSkeleton label="Đang tải danh sách học viên phụ trách…" variant="cards" count={4} />
           ) : allStudentsError ? (
             <div className="coach-error-box" role="alert"><p>{allStudentsError}</p></div>
           ) : filteredAllStudents.length === 0 ? (
@@ -624,10 +619,7 @@ export function CoachClassesPage() {
             </div>
 
             {studentsLoading ? (
-              <div className="students-loading-state">
-                <div className="portal-spinner" />
-                <p>Đang tải dữ liệu của buổi học...</p>
-              </div>
+              <LoadingSkeleton label="Đang tải dữ liệu của buổi học…" count={4} />
             ) : modalViewMode === 'attendance' ? (
               /* CHẾ ĐỘ 2: LỊCH SỬ ĐIỂM DANH */
               <div className="students-list-wrap">

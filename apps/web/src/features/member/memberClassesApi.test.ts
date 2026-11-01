@@ -48,6 +48,12 @@ describe('memberClassesApi', () => {
     expect(filterSessions([session, boxing], 'ALL', 'ALL')).toHaveLength(2);
   });
 
+  it('includes the portal strength disciplines when selecting the main Gym group', () => {
+    const strength = { ...session, disciplineName: 'Olympic Strength' };
+    expect(filterSessions([session, strength], 'Gym', 'ALL')).toEqual([strength]);
+    expect(filterSessions([session, strength], 'Yoga', 'ALL')).toEqual([session]);
+  });
+
   it('requests only the current Monday–Sunday week', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [] }) });
     vi.stubGlobal('fetch', fetchMock);

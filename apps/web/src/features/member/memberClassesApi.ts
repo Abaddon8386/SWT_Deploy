@@ -1,4 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
+import { matchesDiscipline } from '../../shared/lib/disciplines';
 
 export interface GymClassDto {
   id: number; name: string; disciplineId: number; disciplineName: string;
@@ -58,10 +59,8 @@ export function weekday(date: string): number {
 }
 
 export function filterSessions(sessions: ClassSessionDto[], discipline: string, day: string): ClassSessionDto[] {
-  const needle = discipline.toLocaleLowerCase();
   return sessions.filter((session) => {
-    const disc = session.disciplineName.toLocaleLowerCase();
-    const matchDisc = discipline === 'ALL' || disc === needle || disc.includes(needle);
+    const matchDisc = discipline === 'ALL' || matchesDiscipline(session.disciplineName, discipline);
     return matchDisc && (day === 'ALL' || weekday(session.sessionDate) === Number(day));
   });
 }

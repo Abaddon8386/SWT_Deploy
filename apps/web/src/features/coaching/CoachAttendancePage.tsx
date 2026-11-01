@@ -1,6 +1,7 @@
 import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { toast } from '../../shared/ui/toast';
@@ -729,10 +730,7 @@ export function CoachAttendancePage() {
 
           {/* Danh sách học viên ĐIỂM DANH */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
-              <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
-              <p>Đang tải danh sách học viên buổi học...</p>
-            </div>
+            <LoadingSkeleton label="Đang tải danh sách học viên buổi học…" count={5} />
           ) : students.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
               <p>Chưa có học viên nào book buổi học này.</p>
@@ -834,10 +832,7 @@ export function CoachAttendancePage() {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
-              <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
-              <p>Đang tải danh sách học viên...</p>
-            </div>
+            <LoadingSkeleton label="Đang tải danh sách học viên…" variant="cards" count={3} />
           ) : students.length === 0 ? (
             <div className="attendance-empty-state">
               <p>Chưa có học viên nào trong buổi học này để đánh giá.</p>

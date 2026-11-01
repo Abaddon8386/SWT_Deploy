@@ -5,6 +5,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { PortalIcon } from '../portal/PortalIcon';
 import { ApiError } from '../../shared/api/client';
+import { PRIMARY_DISCIPLINES } from '../../shared/lib/disciplines';
 import {
   cancelEnrollment,
   currentWeek,
@@ -227,7 +228,7 @@ export function MemberClassesPage() {
   }
 
   const weekRange = currentWeek(weekOffset);
-  const disciplines = [...new Set(['Gym', 'Yoga', 'Pilates', 'Boxing', ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
+  const disciplines = [...new Set([...PRIMARY_DISCIPLINES.map(item => item.name), ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
   const visible = filterSessions(sessions, discipline, day);
   const myScheduleReady = !myScheduleLoading && !myScheduleError;
   const activeEnrollments = myScheduleReady ? enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled') : [];
