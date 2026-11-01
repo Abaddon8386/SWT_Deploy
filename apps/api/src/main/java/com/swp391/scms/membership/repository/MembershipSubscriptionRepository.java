@@ -72,6 +72,16 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
     boolean hasActiveMembership(@Param("memberId") Long memberId, @Param("date") LocalDate date);
 
     @Query("""
+            select (count(s) > 0) from MembershipSubscription s
+            where s.member.userId = :memberId and s.status = 'active'
+              and s.startDate <= :today and s.endDate >= :today
+              and s.startDate <= :sessionDate and s.endDate >= :sessionDate
+            """)
+    boolean hasActiveMembershipCoveringSession(@Param("memberId") Long memberId,
+                                               @Param("today") LocalDate today,
+                                               @Param("sessionDate") LocalDate sessionDate);
+
+    @Query("""
             select s from MembershipSubscription s
             join fetch s.member m
             join fetch m.user u

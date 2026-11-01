@@ -54,7 +54,8 @@ class ClassServiceTest {
 
     private final SchedulingMapper mapper = new SchedulingMapper();
     // Fixed clock: 2026-10-16 10:00:00 UTC
-    private final Clock clock = Clock.fixed(Instant.parse("2026-10-16T10:00:00Z"), ZoneId.of("UTC"));
+    // 10:00 Vietnam time; session dates/times represent the center's wall time.
+    private final Clock clock = Clock.fixed(Instant.parse("2026-10-16T03:00:00Z"), ZoneId.of("UTC"));
 
     private ClassService service;
     private GymClass gymClass;

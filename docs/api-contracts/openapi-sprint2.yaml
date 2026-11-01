@@ -1412,6 +1412,15 @@ paths:
   /classes/sessions/{id}/enroll:
     post:
       summary: Đăng ký tham gia buổi học (MEMBER)
+      description: |
+        Chỉ nhận buổi scheduled có thời điểm bắt đầu trong tương lai, theo Asia/Ho_Chi_Minh.
+        Một subscription active phải bao phủ cả ngày đặt hiện tại và ngày diễn ra buổi học;
+        startDate/endDate được tính inclusive. Không ghép quyền với kỳ gia hạn tương lai.
+        Claim chỗ notified dùng cùng endpoint và được kiểm tra lại các điều kiện này;
+        thời hạn giữ chỗ 24 giờ không thay đổi.
+        Legacy persistence vẫn gắn enrollment với classId, không phải sessionId;
+        kiểm tra ngày chỉ áp dụng cho session được yêu cầu, không cam kết mọi session của lớp.
+        Trigger kiểm tra membership theo ngày Việt Nam hiện tại; ngày session do service kiểm tra.
       tags: [Enrollments]
       parameters:
         - name: id
@@ -1434,7 +1443,7 @@ paths:
         '400':
           description: Buổi học không hợp lệ hoặc đã qua
         '403':
-          description: Gói tập chưa kích hoạt hoặc đã hết hạn (Trigger P4)
+          description: Gói không active/không có hiệu lực hiện tại (SCHEDULING_MEMBERSHIP_INVALID), hoặc gói active hiện tại không bao phủ ngày học (SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION).
         '409':
           description: Lớp đã đầy chỗ (Trigger P2) hoặc đã đăng ký trước đó
 
@@ -1487,7 +1496,7 @@ paths:
   /classes/sessions/{id}/waitlist:
     post:
       summary: Tham gia danh sách chờ khi lớp đã đầy chỗ (MEMBER)
-      description: Chỉ nhận buổi scheduled chưa bắt đầu và hội viên có gói active đang trong thời hạn. Đăng ký thành công sẽ đóng mục waiting của hội viên trong cùng lớp.
+      description: Chỉ nhận buổi scheduled chưa bắt đầu theo Asia/Ho_Chi_Minh. Một subscription active phải bao phủ cả ngày hiện tại và ngày session (startDate/endDate inclusive), không ghép kỳ gia hạn tương lai. Enrollment thành công sẽ đóng mục waiting của hội viên trong cùng lớp; danh sách chờ legacy vẫn gắn classId.
       tags: [Waitlist]
       parameters:
         - name: id
@@ -1510,7 +1519,7 @@ paths:
         '400':
           description: Lớp còn chỗ hoặc đã đăng ký/chờ trước đó
         '403':
-          description: Gói tập không hợp lệ (Trigger P4)
+          description: Gói không active/không có hiệu lực hiện tại (SCHEDULING_MEMBERSHIP_INVALID), hoặc không bao phủ ngày học (SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION).
 
   /classes/waitlists/{id}:
     delete:
