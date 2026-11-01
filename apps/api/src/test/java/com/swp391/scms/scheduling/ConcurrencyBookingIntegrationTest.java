@@ -121,10 +121,10 @@ class ConcurrencyBookingIntegrationTest {
         when(enrollments.countByGymClassIdAndStatus(eq(10L), eq("booked")))
                 .thenAnswer(invocation -> (long) currentBookedCount.get());
 
-        when(waitlists.countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(eq(10L), eq("notified"), any()))
+        when(waitlists.countLiveOffers(eq(10L), any(), any()))
                 .thenReturn(0L);
 
-        when(members.findById(any(Long.class))).thenAnswer(invocation -> {
+        when(members.findByUserIdForUpdate(any(Long.class))).thenAnswer(invocation -> {
             Long uid = invocation.getArgument(0);
             User u = new User();
             ReflectionTestUtils.setField(u, "id", uid);

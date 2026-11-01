@@ -29,6 +29,8 @@ import java.util.Locale;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -94,6 +96,27 @@ class EnrollmentControllerTest {
         mockMvc.perform(post("/api/v1/classes/sessions/9/enroll"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void claimForwardsOptionalWaitlistId() throws Exception {
+        when(enrollmentService.enroll(any(), eq(9L), eq(31L))).thenReturn(sampleDto());
+        mockMvc.perform(post("/api/v1/classes/sessions/9/enroll").param("waitlistId", "31"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true));
+        verify(enrollmentService).enroll(any(), eq(9L), eq(31L));
+    }
+
+    @Test
+    void inactiveClaimReturnsLocalizedConflictWithoutFalseSuccess() throws Exception {
+        when(enrollmentService.enroll(any(), eq(9L), eq(31L))).thenThrow(
+                new com.swp391.scms.common.exception.ConflictException("SCHEDULING_WAITLIST_OFFER_NOT_ACTIVE",
+                        "error.scheduling.waitlist_offer_not_active", null, null));
+        mockMvc.perform(post("/api/v1/classes/sessions/9/enroll").param("waitlistId", "31")
+                        .header("Accept-Language", "en"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("This reserved seat is no longer available to confirm. Reload the class list."));
     }
 
     @Test

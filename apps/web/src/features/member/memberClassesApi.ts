@@ -43,7 +43,10 @@ export const getSessions = (weekOffset = 0) => {
 };
 export const getMyEnrollments = () => apiFetch<EnrollmentDto[]>('/classes/enrollments/my');
 export const getMyWaitlists = () => apiFetch<WaitlistDto[]>('/classes/waitlists/my');
-export const enroll = (sessionId: number) => apiFetch<EnrollmentDto>(`/classes/sessions/${sessionId}/enroll`, { method: 'POST' });
+export const enroll = (sessionId: number, waitlistId?: number) => apiFetch<EnrollmentDto>(
+  `/classes/sessions/${sessionId}/enroll${waitlistId === undefined ? '' : `?waitlistId=${waitlistId}`}`,
+  { method: 'POST' },
+);
 export const cancelEnrollment = (enrollmentId: number) => apiFetch<EnrollmentDto>(`/classes/enrollments/${enrollmentId}`, { method: 'DELETE' });
 export const joinWaitlist = (sessionId: number) => apiFetch<WaitlistDto>(`/classes/sessions/${sessionId}/waitlist`, { method: 'POST' });
 export const leaveWaitlist = (waitlistId: number) => apiFetch<WaitlistDto>(`/classes/waitlists/${waitlistId}`, { method: 'DELETE' });

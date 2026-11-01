@@ -5,6 +5,9 @@ import com.swp391.scms.attendance.dto.CheckinResponses.CheckinDto;
 import com.swp391.scms.attendance.service.CenterCheckinService;
 import com.swp391.scms.attendance.repository.CenterCheckinRepository;
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.AppException;
+import com.swp391.scms.scheduling.service.EnrollmentService;
+import com.swp391.scms.scheduling.service.WaitlistService;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import org.junit.jupiter.api.AfterAll;
@@ -60,6 +63,10 @@ class OperationsConcurrencyPostgreSqlTest {
     @Autowired MembershipSubscriptionRepository subscriptions;
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired Clock clock;
+    @Autowired EnrollmentService bookingService;
+    @Autowired WaitlistService waitlistService;
+    @Autowired com.swp391.scms.membership.service.MembershipSubscriptionService membershipService;
+    private static final AtomicInteger BOOKING_DAY = new AtomicInteger(60);
 
     private ExecutorService workers;
     private AuthenticatedPrincipal staff;
@@ -207,7 +214,306 @@ class OperationsConcurrencyPostgreSqlTest {
         }
     }
 
-    private Future<CheckinDto> submit(CountDownLatch ready, AtomicInteger backendPid, Supplier<CheckinDto> action) {
+    // SCRUM-74: real PostgreSQL locks, independent connections, bounded blocking barriers.
+    // These tests require the explicitly configured isolated Supabase test project/schema.
+    @Test
+    void duplicateCancellationReleasesAndPromotesExactlyOnce() throws Exception {
+        long owner = bookingMember();
+        long queued = bookingMember();
+        long gymClass = bookingClass(1);
+        long booking = booked(gymClass, owner);
+        long offer = waiting(gymClass, queued, 2);
+        var results = raceOnClass(gymClass,
+                () -> bookingService.cancel(memberPrincipal(owner), booking),
+                () -> bookingService.cancel(memberPrincipal(owner), booking));
+        assertEquals(1, results.stream().filter(this::succeeded).count());
+        assertEquals(1, rowCount("class_enrollments", gymClass, "cancelled"));
+        assertEquals(1, rowCount("class_waitlists", gymClass, "notified"));
+        assertEquals(1, notificationCount("class_enrollment", booking));
+        assertEquals(1, notificationCount("class_session", offer));
+    }
+
+    @Test
+    void cancellationAndManualPromotionCannotOverHold() throws Exception {
+        long owner = bookingMember();
+        long gymClass = bookingClass(1);
+        long booking = booked(gymClass, owner);
+        long first = waiting(gymClass, bookingMember(), 2);
+        waiting(gymClass, bookingMember(), 1);
+        var results = raceOnClass(gymClass,
+                () -> bookingService.cancel(memberPrincipal(owner), booking),
+                () -> bookingService.promoteNextWaitlistEntry(gymClass, LocalDateTime.now(clock)));
+        for (var result : results) result.get(20, TimeUnit.SECONDS);
+        assertEquals(1, rowCount("class_waitlists", gymClass, "notified"));
+        assertEquals(1, notificationCount("class_session", first));
+        assertEquals(0, rowCount("class_enrollments", gymClass, "booked"));
+    }
+
+    @Test
+    void withdrawalAndPromotionCannotCreateTwoOffers() throws Exception {
+        long owner = bookingMember();
+        long gymClass = bookingClass(1);
+        long existing = offered(gymClass, owner, false);
+        long next = waiting(gymClass, bookingMember(), 1);
+        var results = raceOnClass(gymClass,
+                () -> waitlistService.withdraw(memberPrincipal(owner), existing),
+                () -> bookingService.promoteNextWaitlistEntry(gymClass, LocalDateTime.now(clock)));
+        for (var result : results) result.get(20, TimeUnit.SECONDS);
+        assertEquals("expired", jdbc.queryForObject("select status from class_waitlists where id = ?", String.class, existing));
+        assertEquals(1, rowCount("class_waitlists", gymClass, "notified"));
+        assertEquals(1, notificationCount("class_session", next));
+    }
+
+    @Test
+    void duplicateExpiryWorkersExpireAndPromoteOnce() throws Exception {
+        long gymClass = bookingClass(1);
+        long old = offered(gymClass, bookingMember(), true);
+        long next = waiting(gymClass, bookingMember(), 2);
+        waiting(gymClass, bookingMember(), 1);
+        var results = raceOnClass(gymClass,
+                () -> bookingService.processExpiredWaitlistReservations(gymClass, LocalDateTime.now(clock)),
+                () -> bookingService.processExpiredWaitlistReservations(gymClass, LocalDateTime.now(clock)));
+        int expired = 0;
+        for (var result : results) expired += (Integer) result.get(20, TimeUnit.SECONDS);
+        assertEquals(1, expired);
+        assertEquals(1, rowCount("class_waitlists", gymClass, "notified"));
+        assertEquals(1, notificationCount("class_session", old));
+        assertEquals(1, notificationCount("class_session", next));
+    }
+
+    @Test
+    void expiredClaimAndExpiryWorkerHaveOneValidFinalState() throws Exception {
+        long owner = bookingMember();
+        long gymClass = bookingClass(1);
+        long old = offered(gymClass, owner, true);
+        long next = waiting(gymClass, bookingMember(), 1);
+        long session = bookingSession(gymClass);
+        var results = raceOnClass(gymClass,
+                () -> bookingService.enroll(memberPrincipal(owner), session, old),
+                () -> bookingService.processExpiredWaitlistReservations(gymClass, LocalDateTime.now(clock)));
+        assertFalse(succeeded(results.get(0)));
+        results.get(1).get(20, TimeUnit.SECONDS);
+        assertEquals(0, rowCount("class_enrollments", gymClass, "booked"));
+        assertEquals(1, rowCount("class_waitlists", gymClass, "notified"));
+        assertEquals(1, notificationCount("class_session", next));
+    }
+
+    @Test
+    void liveClaimCannotBeExpiredOrTriggerAnotherPromotion() throws Exception {
+        long owner = bookingMember();
+        long gymClass = bookingClass(1);
+        long old = offered(gymClass, owner, false);
+        waiting(gymClass, bookingMember(), 1);
+        long session = bookingSession(gymClass);
+        var results = raceOnClass(gymClass,
+                () -> bookingService.enroll(memberPrincipal(owner), session, old),
+                () -> bookingService.processExpiredWaitlistReservations(gymClass, LocalDateTime.now(clock)));
+        results.get(0).get(20, TimeUnit.SECONDS);
+        assertEquals(0, results.get(1).get(20, TimeUnit.SECONDS));
+        assertEquals(1, rowCount("class_enrollments", gymClass, "booked"));
+        assertEquals(0, rowCount("class_waitlists", gymClass, "notified"));
+        assertEquals(0, notificationCount("class_session", old));
+    }
+
+    @Test
+    void twoMembersCompeteForLastSeatThroughRealClassLock() throws Exception {
+        long first = bookingMember();
+        long second = bookingMember();
+        long gymClass = bookingClass(1);
+        long session = bookingSession(gymClass);
+        var results = raceOnClass(gymClass,
+                () -> bookingService.enroll(memberPrincipal(first), session),
+                () -> bookingService.enroll(memberPrincipal(second), session));
+        assertEquals(1, results.stream().filter(this::succeeded).count());
+        assertEquals(1, rowCount("class_enrollments", gymClass, "booked"));
+    }
+
+    @Test
+    void notifiedRejoinIsRejectedAndExpiredMemberCannotClaim() {
+        long owner = bookingMember();
+        long gymClass = bookingClass(1);
+        long offer = offered(gymClass, owner, false);
+        long session = bookingSession(gymClass);
+        assertEquals("SCHEDULING_WAITLIST_DUPLICATE", assertThrows(AppException.class,
+                () -> waitlistService.join(memberPrincipal(owner), session)).getErrorCode());
+        jdbc.update("update membership_subscriptions set status = 'expired' where member_id = ?", owner);
+        assertEquals("SCHEDULING_MEMBERSHIP_INVALID", assertThrows(AppException.class,
+                () -> bookingService.enroll(memberPrincipal(owner), session, offer)).getErrorCode());
+        assertEquals(1, rowCount("class_waitlists", gymClass, "notified"));
+        assertEquals(0, rowCount("class_enrollments", gymClass, "booked"));
+    }
+
+    @Test
+    void explicitExpiredClaimCannotFallBackToFreshBookingEvenWithEmptyClass() {
+        long owner = bookingMember();
+        long gymClass = bookingClass(1);
+        long offer = offered(gymClass, owner, true);
+        long session = bookingSession(gymClass);
+        assertEquals(1, bookingService.processExpiredWaitlistReservations(gymClass, LocalDateTime.now(clock)));
+        assertEquals("SCHEDULING_WAITLIST_OFFER_NOT_ACTIVE", assertThrows(AppException.class,
+                () -> bookingService.enroll(memberPrincipal(owner), session, offer)).getErrorCode());
+        assertEquals(0, rowCount("class_enrollments", gymClass, "booked"));
+        // A new, intentional ordinary enrollment remains backward compatible.
+        assertEquals("booked", bookingService.enroll(memberPrincipal(owner), session).status());
+    }
+
+    @Test
+    void claimCannotUseAnotherMembersOrAnotherClassOffer() {
+        long owner = bookingMember();
+        long outsider = bookingMember();
+        long gymClass = bookingClass(1);
+        long otherClass = bookingClass(1);
+        long offer = offered(gymClass, owner, false);
+        long session = bookingSession(gymClass);
+        long otherSession = bookingSession(otherClass);
+        assertEquals(404, assertThrows(AppException.class,
+                () -> bookingService.enroll(memberPrincipal(outsider), session, offer)).getStatus().value());
+        assertEquals(404, assertThrows(AppException.class,
+                () -> bookingService.enroll(memberPrincipal(owner), otherSession, offer)).getStatus().value());
+        assertEquals(0, rowCount("class_enrollments", gymClass, "booked"));
+        assertEquals(0, rowCount("class_enrollments", otherClass, "booked"));
+        assertEquals(1, rowCount("class_waitlists", gymClass, "notified"));
+    }
+
+    @Test
+    void membershipHoldAndEnrollmentSerializeOnMemberBeforeClass() throws Exception {
+        long owner = bookingMember();
+        long gymClass = bookingClass(1);
+        long session = bookingSession(gymClass);
+        long subscriptionId = jdbc.queryForObject("select id from membership_subscriptions where member_id = ?", Long.class, owner);
+        jdbc.update("update membership_subscriptions set hold_status = 'PENDING', hold_reason = 'Fixture', hold_requested_at = ? where id = ?",
+                LocalDateTime.now(clock), subscriptionId);
+        var ready = new CountDownLatch(2);
+        var holdPid = new AtomicInteger();
+        var enrollPid = new AtomicInteger();
+        Future<Object> hold;
+        Future<Object> enrollment;
+        try (var blocker = dataSource.getConnection()) {
+            blocker.setAutoCommit(false);
+            try {
+                lockRow(blocker, "select user_id from members where user_id = ? for update", owner);
+                hold = submit(ready, holdPid, () -> membershipService.approveHold(staff, subscriptionId));
+                enrollment = submit(ready, enrollPid, () -> bookingService.enroll(memberPrincipal(owner), session));
+                awaitBlocked(ready, holdPid, enrollPid);
+                blocker.commit();
+            } finally {
+                blocker.rollback();
+            }
+        }
+        hold.get(20, TimeUnit.SECONDS);
+        succeeded(enrollment); // Allowed to book before hold, or to be rejected after it; no deadlock is allowed.
+        assertEquals("frozen", jdbc.queryForObject("select status from membership_subscriptions where id = ?", String.class, subscriptionId));
+        assertEquals(0, rowCount("class_enrollments", gymClass, "booked"));
+    }
+
+    @Test
+    void rollbackDoesNotPersistCancellationPromotionOrNotifications() {
+        long owner = bookingMember();
+        long gymClass = bookingClass(1);
+        long booking = booked(gymClass, owner);
+        long queue = waiting(gymClass, bookingMember(), 1);
+        new TransactionTemplate(transactionManager).execute(status -> {
+            bookingService.cancel(memberPrincipal(owner), booking);
+            status.setRollbackOnly();
+            return null;
+        });
+        assertEquals(1, rowCount("class_enrollments", gymClass, "booked"));
+        assertEquals(1, rowCount("class_waitlists", gymClass, "waiting"));
+        assertEquals(0, notificationCount("class_enrollment", booking));
+        assertEquals(0, notificationCount("class_session", queue));
+    }
+
+    private List<Future<Object>> raceOnClass(long gymClass, Supplier<?> first, Supplier<?> second) throws Exception {
+        var ready = new CountDownLatch(2);
+        var firstPid = new AtomicInteger();
+        var secondPid = new AtomicInteger();
+        Future<Object> a;
+        Future<Object> b;
+        try (var blocker = dataSource.getConnection()) {
+            blocker.setAutoCommit(false);
+            try {
+                lockRow(blocker, "select id from classes where id = ? for update", gymClass);
+                a = submit(ready, firstPid, () -> (Object) first.get());
+                b = submit(ready, secondPid, () -> (Object) second.get());
+                awaitBlocked(ready, firstPid, secondPid);
+                blocker.commit();
+            } finally {
+                blocker.rollback();
+            }
+        }
+        return List.of(a, b);
+    }
+
+    private boolean succeeded(Future<?> result) {
+        try {
+            result.get(20, TimeUnit.SECONDS);
+            return true;
+        } catch (ExecutionException error) {
+            assertInstanceOf(AppException.class, error.getCause(), "A database failure/deadlock is not a valid business rejection");
+            return false;
+        } catch (Exception error) {
+            throw new AssertionError(error);
+        }
+    }
+
+    private AuthenticatedPrincipal memberPrincipal(long member) {
+        return new AuthenticatedPrincipal(member, "booking-fixture", "MEMBER");
+    }
+
+    private long bookingMember() {
+        long member = member();
+        subscription(member, "active", -1, 365);
+        return member;
+    }
+
+    private long bookingClass(int capacity) {
+        long coach = user("COACH");
+        jdbc.update("insert into coaches (user_id, employment_status) values (?, 'active')", coach);
+        return jdbc.queryForObject("""
+                insert into classes (name, discipline_id, coach_id, room_id, capacity, level, status, created_at, updated_at)
+                values (?, (select min(id) from disciplines), ?, (select min(id) from rooms),
+                        ?, 'all', 'active', now(), now()) returning id
+                """, Long.class, "Concurrency-" + UUID.randomUUID(), coach, capacity);
+    }
+
+    private long bookingSession(long gymClass) {
+        return jdbc.queryForObject("""
+                insert into class_sessions (class_id, session_date, start_time, end_time, status, created_at, updated_at)
+                values (?, ?, '10:00', '11:00', 'scheduled', now(), now()) returning id
+                """, Long.class, gymClass, LocalDate.now(clock).plusDays(BOOKING_DAY.getAndIncrement()));
+    }
+
+    private long booked(long gymClass, long member) {
+        return jdbc.queryForObject("insert into class_enrollments (class_id, member_id, status, enrolled_at) values (?, ?, 'booked', now()) returning id",
+                Long.class, gymClass, member);
+    }
+
+    private long waiting(long gymClass, long member, int hoursAgo) {
+        return jdbc.queryForObject("insert into class_waitlists (class_id, member_id, status, requested_at) values (?, ?, 'waiting', ?) returning id",
+                Long.class, gymClass, member, LocalDateTime.now(clock).minusHours(hoursAgo));
+    }
+
+    private long offered(long gymClass, long member, boolean expired) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        return jdbc.queryForObject("""
+                insert into class_waitlists (class_id, member_id, status, requested_at, notified_at, reservation_expires_at)
+                values (?, ?, 'notified', ?, ?, ?) returning id
+                """, Long.class, gymClass, member, now.minusDays(2), now.minusHours(expired ? 25 : 1),
+                expired ? now.minusSeconds(1) : now.plusHours(23));
+    }
+
+    private int rowCount(String table, long gymClass, String status) {
+        assertTrue(Set.of("class_enrollments", "class_waitlists").contains(table));
+        return jdbc.queryForObject("select count(*) from " + table + " where class_id = ? and status = ?",
+                Integer.class, gymClass, status);
+    }
+
+    private int notificationCount(String type, long id) {
+        return jdbc.queryForObject("select count(*) from notifications where related_entity_type = ? and related_entity_id = ?",
+                Integer.class, type, id);
+    }
+
+    private <T> Future<T> submit(CountDownLatch ready, AtomicInteger backendPid, Supplier<T> action) {
         return workers.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
             jdbc.execute("set local statement_timeout = '15s'");
             backendPid.set(jdbc.queryForObject("select pg_backend_pid()", Integer.class));
