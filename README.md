@@ -144,7 +144,7 @@ SWP391/
 │   └── web/        React + Vite + TypeScript Web Portal (Feature-sliced UI)
 ├── db/             Tài liệu cấu trúc & lịch sử dữ liệu (chỉ tham chiếu, không dùng bootstrap DB)
 ├── docs/           Tài liệu dự án (Master Guide, Plans, Diagrams, Rules, API Contracts, QA)
-├── scripts/        Script tự động hóa khởi chạy local & CD (run-local, stop-local, deploy-render)
+├── scripts/        Script tự động hóa khởi chạy local (run-local, stop-local, init-db)
 └── .github/        GitHub Actions workflows cho CI (ci.yml) và CD (cd.yml)
 ```
 

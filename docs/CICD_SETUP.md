@@ -37,9 +37,9 @@ Trong tab **Variables**, thêm `VERCEL_CLI_VERSION`: phiên bản CLI chính xá
 lưu số phiên bản đó; không dùng `latest` hoặc range để tránh CLI tự đổi giữa các lần chạy.
 
 Variable `FRONTEND_URL` là tùy chọn: đặt URL HTTPS của tên miền production công khai
-nếu muốn kiểm tra tên miền đó. Nếu không đặt, CD kiểm tra URL deployment Vercel vừa
-tạo. Nếu URL này bật Deployment Protection, check sẽ thất bại; có thể dùng
-`FRONTEND_URL` trỏ tới tên miền production công khai. Không đưa token vào URL.
+nếu muốn chỉ định rõ tên miền cần kiểm tra. Nếu không đặt, CD tự tra cứu public
+production alias của project từ Vercel API để tránh kiểm tra URL hash riêng lẻ bị bật
+Deployment Protection. Không đưa token vào URL.
 
 ## 2. Vercel
 
@@ -75,20 +75,13 @@ tạo. Nếu URL này bật Deployment Protection, check sẽ thất bại; có 
 
 ## 4. Đưa workflow lên GitHub
 
-Push/merge `.github/workflows/ci.yml`, `.github/workflows/cd.yml`, các script triển khai
-và kiểm tra trong `scripts/`, cùng tài liệu này
+Push/merge `.github/workflows/ci.yml`, `.github/workflows/cd.yml` cùng tài liệu này
 lên nhánh mặc định `main`. `workflow_run` yêu cầu file CD nằm trên nhánh mặc định.
 Sau đó push/merge thay đổi vào `main`, hoặc mở **Actions → CI → Run workflow → main**.
 CI thành công sẽ kích hoạt CD; bên trái Actions sẽ có **CI** và **CD**.
 
 Chỉ chạy CI trên `main` sau khi đã thêm Secrets/Variable và kiểm tra đúng project/service.
 Workflow thiếu cấu hình sẽ báo lỗi rõ ràng, không tạo project/service mới.
-
-Kiểm tra các script triển khai, điều kiện CI và HTTP health check offline:
-
-```sh
-python -B -m unittest discover -s scripts -p 'test_*.py'
-```
 
 Tài liệu chính thức: [Vercel + GitHub Actions](https://vercel.com/kb/guide/how-can-i-use-github-actions-with-vercel),
 [Render trigger deploy](https://api-docs.render.com/reference/create-deploy),
