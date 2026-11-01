@@ -128,7 +128,7 @@ const routes = [
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
     for (const [path, button] of [['/manager/catalogs', /Thêm mới/], ['/manager/users', /Thêm tài khoản/], ['/staff/classes', /Tạo lớp học/]]) {
-      role = path.startsWith('/manager') ? 'MANAGER' : 'STAFF'; await visit(path);
+      role = 'MANAGER'; await visit(path);
       await check(`${path} create dialog`, async () => {
         await page.getByRole('button', { name: button }).first().click(); await page.locator('dialog[open]').waitFor();
         await audit(`${path} dialog controls`);
