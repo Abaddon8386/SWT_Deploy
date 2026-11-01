@@ -1,0 +1,22 @@
+.member-classes .btn-primary.member-class-enroll {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--portal-salmon);
+  border-radius: 50%;
+  font: inherit;
+  cursor: pointer;
+}
+.member-class-enroll > [aria-hidden] { font-size: 36px; line-height: 1; font-weight: 400; }
+.member-class-enroll:focus-visible { outline: 2px solid var(--portal-paper); outline-offset: 3px; }
+.member-class-enroll:disabled { opacity: .65; cursor: wait; }
+.member-classes-more { display: grid; justify-items: center; gap: 8px; padding: 12px 0; }
+.member-classes-more p { margin: 0; font-size: 13px; color: var(--portal-muted); }
+.member-classes-more button { min-height: 44px; }
+.member-class-session { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .member-classes .portal-card--list { flex-wrap: wrap; }
+  .member-class-session > div { min-width: 0; max-width: 100%; }
+}
