@@ -91,7 +91,8 @@ class SchedulingServiceTest {
     void setUp() {
         waitlistService = new WaitlistService(waitlists, enrollments, sessions, subscriptions, members, gymClasses,
                 clock, enrollmentService);
-        lenient().when(clock.instant()).thenReturn(Instant.parse("2026-10-17T12:00:00Z"));
+        // Noon at the center, independently of the UTC Clock zone.
+        lenient().when(clock.instant()).thenReturn(Instant.parse("2026-10-17T05:00:00Z"));
         lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         Member member = new Member();
         member.setUserId(MEMBER.id());
@@ -110,6 +111,8 @@ class SchedulingServiceTest {
         lenient().when(gymClasses.findById(5L)).thenReturn(Optional.of(gymClass));
         lenient().when(gymClasses.findByIdForUpdate(5L)).thenReturn(Optional.of(gymClass));
         lenient().when(subscriptions.hasActiveMembership(MEMBER.id(), TODAY)).thenReturn(true);
+        lenient().when(subscriptions.hasActiveMembershipCoveringSession(eq(MEMBER.id()), eq(TODAY), any()))
+                .thenReturn(true);
         lenient().when(enrollments.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
         lenient().when(waitlists.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
         lenient().when(sessions.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));

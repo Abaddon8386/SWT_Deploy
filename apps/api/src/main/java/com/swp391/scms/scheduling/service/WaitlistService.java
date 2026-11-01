@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -83,7 +82,7 @@ public class WaitlistService {
         SessionEligibility.ensureBookable(session, clock);
 
         // BR-03: same membership requirement as booking (Trigger P4).
-        ensureActiveMembership(member.getUserId());
+        SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), session.getSessionDate(), clock);
 
         // BR-02: a member already holding a booking may not also wait.
         if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED)
@@ -174,17 +173,6 @@ public class WaitlistService {
         return waitlists.findByMemberUserIdOrderByRequestedAtAsc(principal.id()).stream()
                 .map(this::toDto)
                 .toList();
-    }
-
-    private void ensureActiveMembership(Long memberId) {
-        boolean hasActive = subscriptions.hasActiveMembership(memberId, LocalDate.now(clock));
-        if (!hasActive) {
-            throw new ForbiddenException(
-                    "SCHEDULING_MEMBERSHIP_INVALID",
-                    "error.scheduling.membership_expired_or_inactive",
-                    null,
-                    "Member has no active or unexpired subscription");
-        }
     }
 
     private ClassSession findSession(Long sessionId) {

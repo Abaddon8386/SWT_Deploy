@@ -107,14 +107,16 @@ CREATE OR REPLACE FUNCTION scms_require_active_membership_for_enrollment()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
 BEGIN
     IF NEW.status = 'booked' AND NOT EXISTS (
         SELECT 1
         FROM membership_subscriptions subscription
         WHERE subscription.member_id = NEW.member_id
           AND subscription.status = 'active'
-          AND subscription.start_date <= CURRENT_DATE
-          AND subscription.end_date >= CURRENT_DATE
+          AND subscription.start_date <= business_date
+          AND subscription.end_date >= business_date
         FOR SHARE
     ) THEN
         RAISE EXCEPTION 'Học viên không có gói thành viên còn hiệu lực để đăng ký lớp.'

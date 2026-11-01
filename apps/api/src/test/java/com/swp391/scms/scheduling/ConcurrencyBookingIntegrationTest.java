@@ -113,6 +113,7 @@ class ConcurrencyBookingIntegrationTest {
 
         when(sessions.findById(100L)).thenReturn(Optional.of(session));
         when(subscriptions.hasActiveMembership(any(), any())).thenReturn(true);
+        when(subscriptions.hasActiveMembershipCoveringSession(any(), any(), any())).thenReturn(true);
         when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(any(), any(), eq("booked")))
                 .thenReturn(Optional.empty());
 

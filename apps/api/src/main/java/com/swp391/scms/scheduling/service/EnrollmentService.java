@@ -104,7 +104,7 @@ public class EnrollmentService {
                     "Class is currently inactive");
         }
         SessionEligibility.ensureBookable(session, clock);
-        ensureActiveMembership(member.getUserId());
+        SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), session.getSessionDate(), clock);
 
         if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED)
                 .isPresent()) {
@@ -381,20 +381,6 @@ public class EnrollmentService {
                         && !"cancelled".equalsIgnoreCase(s.getStatus()))
                 .findFirst()
                 .orElse(classSessions.get(0));
-    }
-
-    /**
-     * SCRUM-73 BR-01: Trigger P4 pre-check, the database trigger remains the source of truth.
-     */
-    private void ensureActiveMembership(Long memberId) {
-        boolean hasActive = subscriptions.hasActiveMembership(memberId, LocalDate.now(clock));
-        if (!hasActive) {
-            throw new ForbiddenException(
-                    "SCHEDULING_MEMBERSHIP_INVALID",
-                    "error.scheduling.membership_expired_or_inactive",
-                    null,
-                    "Member has no active or unexpired subscription");
-        }
     }
 
     private boolean isStaffRole(String role) {
