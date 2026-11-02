@@ -764,7 +764,7 @@ paths:
           description: Quyền truy cập bị từ chối (FORBIDDEN)
 
     get:
-      summary: Xem toàn bộ danh sách phiếu yêu cầu hỗ trợ (CENTER_MANAGER, RECEPTIONIST)
+      summary: Xem toàn bộ danh sách phiếu yêu cầu hỗ trợ (CENTER_MANAGER, RECEPTIONIST, COACH)
       tags: [Support]
       parameters:
         - name: status
@@ -838,7 +838,7 @@ paths:
 
   /support/requests/{id}/status:
     patch:
-      summary: Cập nhật trạng thái phiếu hỗ trợ và người phụ trách (CENTER_MANAGER, RECEPTIONIST)
+      summary: Cập nhật trạng thái phiếu hỗ trợ và người phụ trách (CENTER_MANAGER, RECEPTIONIST, COACH)
       tags: [Support]
       parameters:
         - name: id
@@ -874,6 +874,7 @@ paths:
   /support/requests/{id}/messages:
     post:
       summary: Gui tin nhan phan hoi vao phieu ho tro (SCRUM-106)
+      description: MEMBER chỉ gửi trong ticket của mình; CENTER_MANAGER, RECEPTIONIST và COACH được phản hồi ticket.
       tags: [Support]
       parameters:
         - name: id
@@ -907,6 +908,7 @@ paths:
           description: Phieu ho tro khong ton tai
     get:
       summary: Lay toan bo lich su trao doi trong phieu ho tro theo thu tu thoi gian (SCRUM-106)
+      description: MEMBER chỉ xem ticket của mình; CENTER_MANAGER, RECEPTIONIST và COACH được xem lịch sử.
       tags: [Support]
       parameters:
         - name: id

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import {
@@ -29,7 +29,9 @@ export function CoachSupportPage() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  const [{ status: selectedStatus, page }, setQuery] = useState({ status: 'ALL', page: 0 });
+  const [totalPages, setTotalPages] = useState(0);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) ?? null;
@@ -38,87 +40,127 @@ export function CoachSupportPage() {
   const [messagesLoading, setMessagesLoading] = useState<boolean>(false);
   const [messagesError, setMessagesError] = useState<string | null>(null);
 
-  const [replyText, setReplyText] = useState<string>('');
-  const [sending, setSending] = useState<boolean>(false);
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const replyText = selectedTicketId === null ? '' : drafts[selectedTicketId] ?? '';
+  const [sendingTicketId, setSendingTicketId] = useState<number | null>(null);
+  const sending = sendingTicketId === selectedTicketId && selectedTicketId !== null;
+  const sendingRef = useRef(false);
+  const selectedTicketRef = useRef<number | null>(null);
+  const listRequest = useRef(0);
+  const messageRequest = useRef(0);
+  const mounted = useRef(false);
   const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
 
-  // Load ticket list
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      listRequest.current += 1;
+      messageRequest.current += 1;
+    };
+  }, []);
+
   const loadTickets = useCallback(async () => {
+    const request = ++listRequest.current;
     setLoading(true);
     setError(null);
     try {
-      const res = await getCoachSupportTickets(selectedStatus);
+      const res = await getCoachSupportTickets(selectedStatus, page);
+      if (!mounted.current || request !== listRequest.current) return;
       setTickets(res.content);
-      if (res.content.length > 0 && !selectedTicketId) {
-        setSelectedTicketId(res.content[0].id);
-      }
+      setTotalPages(res.totalPages);
+      setSelectedTicketId((current) => res.content.some((ticket) => ticket.id === current)
+        ? current : res.content[0]?.id ?? null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể tải danh sách khiếu nại.';
-      setError(msg);
+      if (mounted.current && request === listRequest.current) {
+        setError(err instanceof Error ? err.message : 'Không thể tải danh sách khiếu nại.');
+      }
     } finally {
-      setLoading(false);
+      if (mounted.current && request === listRequest.current) setLoading(false);
     }
-  }, [selectedStatus, selectedTicketId]);
+  }, [selectedStatus, page]);
 
   useEffect(() => {
     void loadTickets();
-  }, [loadTickets]);
+    return () => { listRequest.current += 1; };
+  }, [loadTickets, refreshVersion]);
 
-  // Load messages when selected ticket changes
   const loadMessages = useCallback(async (ticketId: number) => {
+    const request = ++messageRequest.current;
+    setMessages([]);
     setMessagesLoading(true);
     setMessagesError(null);
     try {
       const msgs = await getSupportMessages(ticketId);
-      setMessages(msgs);
+      if (mounted.current && request === messageRequest.current && selectedTicketRef.current === ticketId) {
+        setMessages((current) => [...msgs, ...current.filter((message) => !msgs.some((item) => item.id === message.id))]);
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể tải cuộc hội thoại.';
-      setMessagesError(msg);
+      if (mounted.current && request === messageRequest.current && selectedTicketRef.current === ticketId) {
+        setMessagesError(err instanceof Error ? err.message : 'Không thể tải cuộc hội thoại.');
+      }
     } finally {
-      setMessagesLoading(false);
+      if (mounted.current && request === messageRequest.current && selectedTicketRef.current === ticketId) {
+        setMessagesLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (selectedTicketId) {
+    selectedTicketRef.current = selectedTicketId;
+    if (selectedTicketId !== null) {
       void loadMessages(selectedTicketId);
     } else {
       setMessages([]);
+      setMessagesError(null);
+      setMessagesLoading(false);
     }
+    return () => { messageRequest.current += 1; };
   }, [selectedTicketId, loadMessages]);
 
-  // Handle Send Reply
   const handleSendReply = async (e: FormEvent) => {
     e.preventDefault();
     const text = replyText.trim();
-    if (!text || !selectedTicketId || sending) return;
-
-    setSending(true);
+    if (!text || selectedTicketId === null || sendingRef.current) return;
+    const ticketId = selectedTicketId;
+    const draft = replyText;
+    sendingRef.current = true;
+    setSendingTicketId(ticketId);
     try {
-      const sent = await sendSupportMessage(selectedTicketId, text);
-      setMessages((prev) => [...prev, sent]);
-      setReplyText('');
+      const sent = await sendSupportMessage(ticketId, text);
+      if (!mounted.current) return;
+      setDrafts((current) => current[ticketId] === draft ? { ...current, [ticketId]: '' } : current);
+      if (selectedTicketRef.current === ticketId) {
+        setMessagesLoading(false);
+        setMessages((prev) => prev.some((message) => message.id === sent.id) ? prev : [...prev, sent]);
+      }
+      // The backend may also assign the ticket and move open -> in_progress.
+      setRefreshVersion((current) => current + 1);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Gửi phản hồi thất bại.';
-      alert(msg);
+      if (mounted.current && selectedTicketRef.current === ticketId) {
+        setMessagesError(err instanceof Error ? err.message : 'Gửi phản hồi thất bại.');
+      }
     } finally {
-      setSending(false);
+      sendingRef.current = false;
+      if (mounted.current) setSendingTicketId(null);
     }
   };
 
-  // Handle Update Status
   const handleStatusChange = async (newStatus: SupportTicket['status']) => {
-    if (!selectedTicketId || updatingStatus) return;
-
+    if (selectedTicketId === null || updatingStatus) return;
+    const ticketId = selectedTicketId;
     setUpdatingStatus(true);
     try {
-      const updated = await updateSupportTicketStatus(selectedTicketId, newStatus);
-      setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      const updated = await updateSupportTicketStatus(ticketId, newStatus);
+      if (!mounted.current) return;
+      setTickets((prev) => prev.map((ticket) => ticket.id === updated.id ? updated : ticket));
+      setRefreshVersion((current) => current + 1);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Cập nhật trạng thái thất bại.';
-      alert(msg);
+      if (mounted.current && selectedTicketRef.current === ticketId) {
+        setMessagesError(err instanceof Error ? err.message : 'Cập nhật trạng thái thất bại.');
+      }
     } finally {
-      setUpdatingStatus(false);
+      if (mounted.current) setUpdatingStatus(false);
     }
   };
 
@@ -158,7 +200,7 @@ export function CoachSupportPage() {
                 key={f.id}
                 type="button"
                 className={`filter-chip ${selectedStatus === f.id ? 'is-active' : ''}`}
-                onClick={() => setSelectedStatus(f.id)}
+                onClick={() => setQuery({ status: f.id, page: 0 })}
               >
                 {f.label}
               </button>
@@ -194,6 +236,15 @@ export function CoachSupportPage() {
                 </button>
               ))}
             </div>
+          )}
+          {totalPages > 1 && (
+            <nav className="coach-support-pagination" aria-label="Phân trang yêu cầu hỗ trợ">
+              <button type="button" className="btn-secondary btn-sm" disabled={loading || page === 0}
+                onClick={() => setQuery({ status: selectedStatus, page: page - 1 })}>Trang trước</button>
+              <span>Trang {page + 1}/{totalPages}</span>
+              <button type="button" className="btn-secondary btn-sm" disabled={loading || page + 1 >= totalPages}
+                onClick={() => setQuery({ status: selectedStatus, page: page + 1 })}>Trang sau</button>
+            </nav>
           )}
         </div>
 
@@ -235,10 +286,10 @@ export function CoachSupportPage() {
                     disabled={updatingStatus || selectedTicket.status === 'closed'}
                     onChange={(e) => void handleStatusChange(e.target.value as SupportTicket['status'])}
                   >
-                    <option value="open">Đang chờ</option>
+                    <option value="open" disabled={selectedTicket.status === 'resolved'}>Đang chờ</option>
                     <option value="in_progress">Đang xử lý</option>
                     <option value="resolved">Đã giải quyết</option>
-                    <option value="closed" disabled>Đã đóng</option>
+                    <option value="closed" disabled={selectedTicket.status === 'open'}>Đã đóng</option>
                   </Select>
                 </div>
               </div>
@@ -248,7 +299,9 @@ export function CoachSupportPage() {
                 {messagesLoading ? (
                   <div className="portal-state">Đang tải nội dung trao đổi…</div>
                 ) : messagesError ? (
-                  <div className="portal-alert portal-alert--error">{messagesError}</div>
+                  <div className="portal-alert portal-alert--error" role="alert">{messagesError}
+                    <button type="button" className="btn-secondary btn-sm" onClick={() => void loadMessages(selectedTicket.id)}>Thử lại</button>
+                  </div>
                 ) : messages.length === 0 ? (
                   <div className="coach-support-empty-state">
                     <p>Chưa có tin nhắn phản hồi nào cho yêu cầu này.</p>
@@ -266,7 +319,7 @@ export function CoachSupportPage() {
                       >
                         <div className="coach-support-bubble">{m.message}</div>
                         <span className="coach-support-meta-line">
-                          {isFromCoach ? 'Bạn (HLV)' : m.senderName || 'Học viên'} ·{' '}
+                          {m.senderName || (isFromCoach ? 'Nhân viên hỗ trợ' : 'Học viên')} ·{' '}
                           {new Date(m.createdAt).toLocaleTimeString('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -286,13 +339,13 @@ export function CoachSupportPage() {
                     rows={2}
                     placeholder="Nhập nội dung phản hồi học viên..."
                     value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
+                    onChange={(e) => setDrafts((current) => ({ ...current, [selectedTicket.id]: e.target.value }))}
                     disabled={sending}
                   />
                   <button
                     type="submit"
                     className="btn-primary"
-                    disabled={sending || !replyText.trim()}
+                    disabled={sendingTicketId !== null || !replyText.trim()}
                     style={{ minHeight: 44 }}
                   >
                     {sending ? 'Đang gửi…' : 'Gửi phản hồi'}

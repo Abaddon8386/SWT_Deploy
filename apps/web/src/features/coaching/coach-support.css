@@ -215,3 +215,12 @@
     grid-template-columns: 1fr;
   }
 }
+
+.coach-support-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--portal-muted);
+  font-size: 12px;
+}
