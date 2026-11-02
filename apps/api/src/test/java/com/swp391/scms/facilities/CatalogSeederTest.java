@@ -42,7 +42,7 @@ class CatalogSeederTest {
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
         verify(packages, times(6)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(199000, 299000, 599000, 1799000, 2699000, 5399000);
+                .containsExactly(199000, 299000, 599000, 549000, 799000, 1599000);
     }
 
     @Test
@@ -87,19 +87,21 @@ class CatalogSeederTest {
     }
 
     @Test
-    void retiresSixMonthPackagesWithoutDeletingThem() {
+    void retiresSixAndTwelveMonthPackagesWithoutDeletingThem() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
         when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
         when(packages.list()).thenReturn(List.of(
                 new PackageDto(7L, CatalogSeeder.SILVER_6M_NAME, null, new BigDecimal("999000"), 180, 2, "active"),
                 new PackageDto(8L, CatalogSeeder.GOLD_6M_NAME, null, new BigDecimal("1499000"), 180, 5, "inactive"),
-                new PackageDto(9L, CatalogSeeder.SILVER_12M_NAME, null, new BigDecimal("1799000"), 365, 2, "active")));
+                new PackageDto(9L, CatalogSeeder.SILVER_12M_NAME, null, new BigDecimal("1799000"), 365, 2, "active"),
+                new PackageDto(10L, CatalogSeeder.SILVER_3M_NAME, null, new BigDecimal("549000"), 90, 6, "active")));
 
         seeder.run(null);
 
         verify(packages).updateStatus(7L, "inactive");
         verify(packages, never()).updateStatus(8L, "inactive");
-        verify(packages, never()).updateStatus(9L, "inactive");
+        verify(packages).updateStatus(9L, "inactive");
+        verify(packages, never()).updateStatus(10L, "inactive");
         verify(packages, never()).update(any(), any());
     }
 }

@@ -64,64 +64,52 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final int PLATINUM_DURATION = 30;
     public static final Integer PLATINUM_CREDIT_LIMIT = null;
 
-    // --- 6 THÁNG: đã ngừng bán (giữ 3 gói 1 tháng + 3 gói đồng hành 12 tháng) ---
+    // --- 3 THÁNG (90 NGÀY) - ĐỒNG HÀNH DÀI HẠN (giá thấp hơn mua 3 lần gói 1 tháng) ---
+    public static final String SILVER_3M_NAME = "SILVER 3 THÁNG";
+    public static final String SILVER_3M_DESC = "BASIC – Đồng hành 3 tháng (Tiết kiệm 8%)\n"
+            + "Quyền lợi:\n"
+            + "- Tập luyện không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
+            + "- Sử dụng khu vực tập luyện tiêu chuẩn, phòng thay đồ và tủ khóa chung.\n"
+            + "- Miễn phí nước uống.\n"
+            + "- 6 lượt đăng ký lớp Group Fitness cơ bản theo lịch.\n"
+            + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
+    public static final BigDecimal SILVER_3M_PRICE = new BigDecimal("549000");
+    public static final int SILVER_3M_DURATION = 90;
+    public static final Integer SILVER_3M_CREDIT_LIMIT = 6;
+
+    public static final String GOLD_3M_NAME = "GOLD 3 THÁNG";
+    public static final String GOLD_3M_DESC = "STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
+            + "Toàn bộ quyền lợi Silver, cộng thêm:\n"
+            + "- 09 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
+            + "- Sử dụng khu vực máy tập nâng cao và khăn tập riêng mỗi buổi.\n"
+            + "- Tủ khóa cá nhân cố định.\n"
+            + "- 15 lượt đặt chỗ trong các lớp Group Fitness.\n"
+            + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
+    public static final BigDecimal GOLD_3M_PRICE = new BigDecimal("799000");
+    public static final int GOLD_3M_DURATION = 90;
+    public static final Integer GOLD_3M_CREDIT_LIMIT = 15;
+
+    public static final String PLATINUM_3M_NAME = "PLATINUM 3 THÁNG";
+    public static final String PLATINUM_3M_DESC = "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
+            + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
+            + "- 18 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
+            + "- Đặc quyền sử dụng phòng tập VIP riêng biệt và phòng xông hơi.\n"
+            + "- Khăn tập, khăn tắm và tủ đồ cá nhân cao cấp.\n"
+            + "- Giáo án tập luyện riêng và tư vấn dinh dưỡng cơ bản.\n"
+            + "- Ưu tiên đặt lịch PT và lớp học.\n"
+            + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
+    public static final BigDecimal PLATINUM_3M_PRICE = new BigDecimal("1599000");
+    public static final int PLATINUM_3M_DURATION = 90;
+    public static final Integer PLATINUM_3M_CREDIT_LIMIT = null;
+
+    // --- 6 và 12 THÁNG: đã ngừng bán ---
     // Chỉ giữ tên để chuyển gói đã có trong CSDL về inactive; không xóa vì hội viên có thể đang dùng.
     public static final String SILVER_6M_NAME = "SILVER 6 THÁNG";
     public static final String GOLD_6M_NAME = "GOLD 6 THÁNG";
     public static final String PLATINUM_6M_NAME = "PLATINUM 6 THÁNG";
-
-    // --- 12 THÁNG (365 NGÀY) - ĐỒNG HÀNH TRỌN NĂM (TIẾT KIỆM 25% - TẶNG 3 THÁNG) ---
     public static final String SILVER_12M_NAME = "SILVER 12 THÁNG";
-    public static final String SILVER_12M_DESC = "BASIC – Đồng hành 12 tháng (Tiết kiệm 25% - Tặng 3 tháng tập)\n"
-            + "Quyền lợi:\n"
-            + "- Tập luyện không giới hạn trong giờ hoạt động suốt 365 ngày.\n"
-            + "- Tiết kiệm 25% chi phí (tương đương tặng 3 tháng tập miễn phí, chỉ ~149.000đ/tháng).\n"
-            + "- Sử dụng khu vực tập luyện tiêu chuẩn.\n"
-            + "- Sử dụng phòng thay đồ và tủ khóa chung.\n"
-            + "- Miễn phí nước uống.\n"
-            + "- 24 lượt đăng ký lớp Group Fitness cơ bản theo lịch.\n"
-            + "- Đánh giá thể trạng và chỉ số BMI định kỳ hàng quý.\n"
-            + "- Tặng 02 lần bảo lưu thẻ với tổng thời gian lên tới 60 ngày.";
-    public static final BigDecimal SILVER_12M_PRICE = new BigDecimal("1799000");
-    public static final int SILVER_12M_DURATION = 365;
-    public static final Integer SILVER_12M_CREDIT_LIMIT = 24;
-
     public static final String GOLD_12M_NAME = "GOLD 12 THÁNG";
-    public static final String GOLD_12M_DESC = "STANDARD – Đồng hành 12 tháng (Tiết kiệm 25% - Tặng 3 tháng tập)\n"
-            + "Toàn bộ quyền lợi Silver, cộng thêm:\n"
-            + "- 36 buổi tập Personal Trainer 1:1 suốt năm.\n"
-            + "- Sử dụng khu vực máy tập nâng cao.\n"
-            + "- Cung cấp khăn tập riêng trong mỗi buổi tập.\n"
-            + "- Tủ khóa cá nhân cố định suốt cả năm.\n"
-            + "- Đánh giá thể trạng chuyên sâu định kỳ mỗi tháng.\n"
-            + "- Xây dựng kế hoạch tập luyện cá nhân toàn diện theo năm.\n"
-            + "- 60 lượt đặt chỗ trong các lớp Group Fitness.\n"
-            + "- Giảm 15% dịch vụ PT bổ sung và sản phẩm tại trung tâm.\n"
-            + "- Hỗ trợ bảo lưu linh hoạt tới 90 ngày.\n"
-            + "- Tặng trọn bộ quà tặng SÖL Premium (bình giữ nhiệt + khăn + túi thể thao).";
-    public static final BigDecimal GOLD_12M_PRICE = new BigDecimal("2699000");
-    public static final int GOLD_12M_DURATION = 365;
-    public static final Integer GOLD_12M_CREDIT_LIMIT = 60;
-
     public static final String PLATINUM_12M_NAME = "PLATINUM 12 THÁNG";
-    public static final String PLATINUM_12M_DESC = "VIP – Đồng hành 12 tháng (Đặc quyền VIP trọn năm - Tiết kiệm 25%)\n"
-            + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
-            + "- 72 buổi tập Personal Trainer 1:1 cao cấp.\n"
-            + "- Đặc quyền sử dụng phòng tập VIP riêng biệt 365 ngày.\n"
-            + "- Sử dụng hệ thống máy tập cao cấp và thiết bị chuyên biệt.\n"
-            + "- Khăn tập và khăn tắm cá nhân theo tiêu chuẩn VIP 5 sao.\n"
-            + "- Tủ đồ cá nhân cao cấp, có chìa khóa riêng biệt cả năm.\n"
-            + "- Sử dụng phòng xông hơi sauna/jacuzzi không giới hạn.\n"
-            + "- Miễn phí nước khoáng và đồ uống thể thao mỗi buổi tập.\n"
-            + "- Đánh giá chỉ số cơ thể chuyên sâu: BMI, Body Fat, Muscle Mass.\n"
-            + "- Giáo án tập luyện cá nhân hóa và chế độ dinh dưỡng chuyên sâu cùng Master Coach.\n"
-            + "- Ưu tiên cao nhất mọi lịch hẹn PT, lớp học và khu vực VIP.\n"
-            + "- Giảm 25% dịch vụ PT bổ sung và sản phẩm tại trung tâm.\n"
-            + "- Tặng bảo lưu linh hoạt 120 ngày và 04 vé mời trải nghiệm VIP cho người thân.\n"
-            + "- Khách mời danh dự tham gia tất cả sự kiện, workshop và gala của trung tâm.";
-    public static final BigDecimal PLATINUM_12M_PRICE = new BigDecimal("5399000");
-    public static final int PLATINUM_12M_DURATION = 365;
-    public static final Integer PLATINUM_12M_CREDIT_LIMIT = null;
 
     private final DisciplineService disciplines;
     private final RoomService rooms;
@@ -156,15 +144,16 @@ public class CatalogSeeder implements ApplicationRunner {
         upsertPackage(GOLD_NAME, GOLD_DESC, GOLD_PRICE, GOLD_DURATION, GOLD_CREDIT_LIMIT, "The Sanctuary VIP");
         upsertPackage(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_PRICE, PLATINUM_DURATION, PLATINUM_CREDIT_LIMIT, "The Sovereign Annual");
 
-        // Ngừng bán các gói 6 tháng đã seed trước đây
-        retirePackage(SILVER_6M_NAME);
-        retirePackage(GOLD_6M_NAME);
-        retirePackage(PLATINUM_6M_NAME);
+        // Upsert 3-month long-term packages
+        upsertPackage(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT);
+        upsertPackage(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_DURATION, GOLD_3M_CREDIT_LIMIT);
+        upsertPackage(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_DURATION, PLATINUM_3M_CREDIT_LIMIT);
 
-        // Upsert 12-month long-term packages
-        upsertPackage(SILVER_12M_NAME, SILVER_12M_DESC, SILVER_12M_PRICE, SILVER_12M_DURATION, SILVER_12M_CREDIT_LIMIT);
-        upsertPackage(GOLD_12M_NAME, GOLD_12M_DESC, GOLD_12M_PRICE, GOLD_12M_DURATION, GOLD_12M_CREDIT_LIMIT);
-        upsertPackage(PLATINUM_12M_NAME, PLATINUM_12M_DESC, PLATINUM_12M_PRICE, PLATINUM_12M_DURATION, PLATINUM_12M_CREDIT_LIMIT);
+        // Ngừng bán các gói 6 và 12 tháng đã seed trước đây
+        for (String retired : new String[] {SILVER_6M_NAME, GOLD_6M_NAME, PLATINUM_6M_NAME,
+                SILVER_12M_NAME, GOLD_12M_NAME, PLATINUM_12M_NAME}) {
+            retirePackage(retired);
+        }
     }
 
     /** Đặt gói đang active về inactive (idempotent); không tạo mới, không xóa. */
