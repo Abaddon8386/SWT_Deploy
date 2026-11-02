@@ -796,13 +796,6 @@ export function CoachAttendancePage() {
           <div className="attendance-bottom-actions">
             <button
               type="button"
-              className="btn-switch-tab-link"
-              onClick={() => setActiveTab('evaluation')}
-            >
-              Chuyển sang Đánh giá học viên →
-            </button>
-            <button
-              type="button"
               className="btn-batch-save"
               onClick={handleSaveAttendance}
               disabled={saving || savingEvaluation || !rosterReady || students.length === 0}

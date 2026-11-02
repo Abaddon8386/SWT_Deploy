@@ -335,7 +335,7 @@
 /* Bottom Action */
 .attendance-bottom-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 14px;
   margin-top: 24px;
