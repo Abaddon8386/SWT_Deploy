@@ -145,8 +145,21 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-logo i { display: none; }
 .portal-logo > span { color: var(--portal-ink); display: inline-flex; align-items: center; justify-content: center; line-height: 1; transform: translateY(-0.5px); }
 .portal-rail-nav, .portal-rail-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.portal-rail-nav { flex: 1 1 auto; min-height: 0; width: 100%; padding-block: 2px; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
-.portal-rail-nav::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.portal-rail-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  padding-block: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.portal-rail-nav::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
 .portal-rail-footer { flex-shrink: 0; margin-top: auto; gap: 8px; }
 .portal-v2 .portal-rail-link {
   position: relative;

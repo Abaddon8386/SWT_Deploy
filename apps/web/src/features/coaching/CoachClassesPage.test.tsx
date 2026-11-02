@@ -6,6 +6,24 @@ import { CoachClassesPage } from './CoachClassesPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { coachingApi } from './coachingApi';
 
+function getWeekMonday(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function formatYmd(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const currentMondayStr = formatYmd(getWeekMonday(new Date()));
+
 describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên Phụ trách)', () => {
   let host: HTMLDivElement;
   let root: Root;
@@ -21,7 +39,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       coachName: 'Coach Marcus Vance',
       roomId: 101,
       roomName: 'Studio 01 (Tầng 2)',
-      sessionDate: '2026-10-19',
+      sessionDate: currentMondayStr,
       startTime: '07:00',
       endTime: '08:15',
       status: 'scheduled',
@@ -39,7 +57,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       coachName: 'Coach Marcus Vance',
       roomId: 102,
       roomName: 'Phòng Cử Tạ (Tầng 1)',
-      sessionDate: '2026-10-19',
+      sessionDate: currentMondayStr,
       startTime: '10:00',
       endTime: '11:30',
       status: 'scheduled',
