@@ -5,6 +5,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { QrCameraScanner } from '../checkin/QrCameraScanner';
 import { memberCheckinApi } from './memberCheckinApi';
 import type { CheckinDto } from '../reception/checkinApi';
+import { formatCenterDateTime, formatCenterTime } from '../../shared/lib/centerTime';
 
 export function MemberCheckInPage() {
   const [result, setResult] = useState<CheckinDto | null>(null);
@@ -57,7 +58,7 @@ export function MemberCheckInPage() {
         {result && <div role="status" aria-live="polite" className="qr-checkin-result" data-granted={granted}>
           <h2>{granted ? 'Check-in thành công' : 'Chưa thể check-in'}</h2>
           <p>{granted ? `${result.memberName || 'Hội viên'} · ${result.gate || 'Cổng trung tâm'}` : result.denialReason || 'Vui lòng kiểm tra gói tập hoặc liên hệ lễ tân.'}</p>
-          {granted && <p>Giờ vào: {new Date(result.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>}
+          {granted && <p>Giờ vào: {formatCenterDateTime(result.checkInTime)}</p>}
         </div>}
         <QrCameraScanner onScan={(code) => void scan(code)} disabled={pending || !online} />
       </div>
@@ -72,7 +73,7 @@ export function MemberCheckInPage() {
           <h2 className="portal-card-title">Ra vào hôm nay</h2>
           {loading ? <LoadingSkeleton label="Đang tải lịch sử…" count={3} /> : historyError ? <><p role="alert">{historyError}</p><button className="btn-secondary" onClick={() => void loadHistory()}>Thử lại</button></> : history.length === 0 ? <p className="qr-checkin-hint">Chưa có lượt ra vào hôm nay.</p> : <div className="stack">{history.slice(0, 5).map((visit) => <div key={visit.id} className="qr-checkin-result">
             <strong>{visit.status.toUpperCase() === 'GRANTED' ? visit.checkOutTime ? 'Đã ra về' : 'Đã vào trung tâm' : 'Check-in bị từ chối'}</strong>
-            <p>{visit.gate} · {new Date(visit.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
+            <p>{visit.gate} · Vào {formatCenterTime(visit.checkInTime)}{visit.checkOutTime ? ` · Ra ${formatCenterTime(visit.checkOutTime)}` : ''}</p>
             {visit.denialReason && <p>{visit.denialReason}</p>}
           </div>)}</div>}
         </section>

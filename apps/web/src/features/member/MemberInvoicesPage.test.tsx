@@ -57,6 +57,10 @@ describe('MemberInvoicesPage', () => {
     expect(mocks.invoice).toHaveBeenCalledWith(12);
     expect(host.textContent).toContain('INV-12');
     expect(host.textContent).toContain('219.000');
+    // Both the list and the invoice show the time of day, not only the date.
+    expect(host.textContent).toContain('10:00 25/10/2026');
+    expect(host.textContent).toContain('Phát hành lúc 10:00 25/10/2026');
+    expect(host.textContent).toContain('Thanh toán lúc10:00 25/10/2026');
     expect(host.querySelector('.member-invoices__download')?.classList.contains('btn-primary')).toBe(true);
     const blob = new Blob(['%PDF'], { type: 'application/pdf' });
     mocks.pdf.mockResolvedValue(blob);

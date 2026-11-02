@@ -3,7 +3,9 @@ import type QrScanner from 'qr-scanner';
 import { PortalIcon } from '../portal/PortalIcon';
 import './qr-checkin.css';
 
-export function QrCameraScanner({ onScan, disabled = false }: { onScan: (code: string) => void; disabled?: boolean }) {
+const DEFAULT_HINT = 'Quét mã QR cổng trên màn hình lễ tân. Camera chỉ dùng để đọc mã và không lưu hình ảnh.';
+
+export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT }: { onScan: (code: string) => void; disabled?: boolean; hint?: string }) {
   const video = useRef<HTMLVideoElement>(null);
   const videoHost = useRef<HTMLDivElement>(null);
   const scanner = useRef<QrScanner | null>(null);
@@ -76,7 +78,7 @@ export function QrCameraScanner({ onScan, disabled = false }: { onScan: (code: s
       <div className="qr-camera__frame" aria-hidden="true" />
       {phase !== 'scanning' && <div className="qr-camera__placeholder"><PortalIcon name="scan" size={48} /><span>{phase === 'starting' ? 'Đang mở camera…' : phase === 'done' ? 'Đã đọc mã QR' : 'Đưa mã QR vào khung'}</span></div>}
     </div>
-    <p className="qr-checkin-hint">Quét mã QR cổng trên màn hình lễ tân. Camera chỉ dùng để đọc mã và không lưu hình ảnh.</p>
+    <p className="qr-checkin-hint">{hint}</p>
     {error && <p role="alert" className="qr-checkin-error">{error}</p>}
     <button type="button" className="btn-primary qr-camera__button" disabled={disabled || phase === 'starting'}
       onClick={() => { if (phase === 'scanning') { release(); setPhase('ready'); } else void start(); }}>
