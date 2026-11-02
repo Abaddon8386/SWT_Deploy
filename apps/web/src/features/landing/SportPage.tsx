@@ -4,6 +4,7 @@ import { CatalogSchedule, CatalogStatus } from './components/CatalogSections';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../shared/api/client';
 import { PublicLayout, RoundArrow } from './components/PublicLayout';
+import { DISCIPLINES } from '../../shared/lib/disciplines';
 import { SPORT_PAGES, SPORT_PAGE_LIST, sportIdFromPath, type SportPageId } from './sportPages';
 
 export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
@@ -14,6 +15,9 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
   const { catalog, error, retry } = usePublicCatalog();
   const user = getCurrentUser();
   const joinPath = user ? (user.role === 'MEMBER' ? '/member/packages' : homePath(user.role)) : '/register';
+  const sportName = DISCIPLINES.find((item) => item.id === sport.id)!.name;
+  // Hội viên vào thẳng lịch lớp của đúng bộ môn; người khác đăng nhập trước khi đặt lịch
+  const bookPath = user?.role === 'MEMBER' ? `/member/classes?discipline=${encodeURIComponent(sportName)}` : '/login';
 
   return (
     <PublicLayout>
@@ -56,15 +60,6 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
                 <small>{sport.subtitle}</small>
               </h1>
 
-              <div className="fit-trainer-stats-row">
-                {sport.stats.map((st) => (
-                  <div key={st.label} className="fit-trainer-stat-box">
-                    <strong>{st.value}</strong>
-                    <span>{st.label}</span>
-                  </div>
-                ))}
-              </div>
-
               <div className="fit-sport-page-programs">
                 <span className="fit-kicker">CHƯƠNG TRÌNH TẬP LUYỆN</span>
                 <div className="fit-sport-page-program-grid">
@@ -78,15 +73,15 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
                 </div>
               </div>
 
-              {catalog ? <CatalogSchedule catalog={catalog} sport={sport.id} joinPath={user?.role === 'MEMBER' ? '/member/classes' : '/login'} /> : <CatalogStatus loading={!error} retry={retry} />}
+              {catalog ? <CatalogSchedule catalog={catalog} sport={sport.id} joinPath={bookPath} /> : <CatalogStatus loading={!error} retry={retry} />}
 
               <div className="fit-trainer-hero-actions">
-                <Link to={joinPath} className="fit-pill">
-                  Xem gói tập
+                <Link to={bookPath} className="fit-pill">
+                  Đặt lịch {sportName}
                   <RoundArrow diagonal />
                 </Link>
-                <Link to="/#trainers" className="fit-text-link">
-                  Đội ngũ huấn luyện viên <RoundArrow diagonal />
+                <Link to={joinPath} className="fit-text-link">
+                  Xem gói tập <RoundArrow diagonal />
                 </Link>
               </div>
             </div>

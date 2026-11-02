@@ -94,12 +94,27 @@ describe('MemberClassesPage', () => {
     mocks.myCoachBookings.mockResolvedValue([]);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
-  async function render() { await act(async () => root.render(<MemoryRouter><MemberClassesPage /></MemoryRouter>)); }
+  async function render(path = '/') { await act(async () => root.render(<MemoryRouter initialEntries={[path]}><MemberClassesPage /></MemoryRouter>)); }
   const manySessions = () => Array.from({ length: 14 }, (_, index) => ({ ...session, id: 100 + index, classId: 100 + index,
     className: `Buổi ${index + 1}`, disciplineName: index < 7 ? 'Yoga' : 'Boxing', bookedCount: 1 }));
   async function clickText(text: string) {
     await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.includes(text))!.click());
   }
+
+  it('opens on the discipline from the sport page link and ignores unknown values', async () => {
+    mocks.sessions.mockResolvedValue([
+      { ...session, id: 1, className: 'Gym sáng', disciplineName: 'Gym' },
+      { ...session, id: 2, className: 'Boxing tối', disciplineName: 'Boxing & Kickfit' },
+    ]);
+    await render('/member/classes?discipline=Boxing');
+    expect(host.textContent).toContain('Boxing tối');
+    expect(host.textContent).not.toContain('Gym sáng');
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await render('/member/classes?discipline=Yoga');
+    expect(host.textContent).toContain('Gym sáng');
+    expect(host.textContent).toContain('Boxing tối');
+  });
 
   it('offers an accessible circular plus that books the actual session', async () => {
     mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 1 }]);

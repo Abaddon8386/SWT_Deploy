@@ -34,15 +34,19 @@ const render = (path: string) => act(async () => root.render(
   </Routes></MemoryRouter>));
 
 it.each([
-  ['/boxing', 'Phòng Tập Boxing', 'Boxing căn bản'],
-  ['/badminton', 'Sân Cầu Lông', 'Cầu lông đôi'],
-])('renders the %s page with its own programs and only its own classes', async (path, title, className) => {
+  ['/boxing', 'Phòng Tập Boxing', 'Boxing căn bản', 'Boxing'],
+  ['/badminton', 'Sân Cầu Lông', 'Cầu lông đôi', 'Cầu lông'],
+])('renders the %s page with its own programs and only its own classes', async (path, title, className, name) => {
   await render(path);
   expect(host.querySelector('h1')?.textContent).toContain(title);
   expect(host.textContent).toContain(className);
   const other = className === 'Boxing căn bản' ? 'Cầu lông đôi' : 'Boxing căn bản';
   expect(host.textContent).not.toContain(other);
   expect(host.querySelectorAll('.fit-sport-page-program-card')).toHaveLength(3);
+  expect(host.querySelector('.fit-trainer-stats-row')).toBeNull();
+  // Chưa đăng nhập: nút đặt lịch dẫn tới đăng nhập
+  expect([...host.querySelectorAll('a.fit-pill')].map((link) => link.textContent)).toContain(`Đặt lịch ${name}`);
+  expect([...host.querySelectorAll('a.fit-pill')].find((link) => link.textContent?.startsWith('Đặt lịch'))?.getAttribute('href')).toBe('/login');
   expect([...host.querySelectorAll('.fit-trainer-switch-pill')].map((link) => link.getAttribute('href')))
     .toEqual(['/swimming', '/boxing', '/tennis', '/badminton']);
   expect(host.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe(path);

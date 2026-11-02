@@ -110,6 +110,12 @@ function findOverlappingEnrollment(
   return null;
 }
 
+/** Liên kết từ trang bộ môn (`?discipline=Boxing`); giá trị lạ quay về tất cả bộ môn. */
+function disciplineFromQuery(value: string | null): string {
+  const found = DISCIPLINES.find((item) => item.name.toLocaleLowerCase('vi') === value?.toLocaleLowerCase('vi'));
+  return found?.name ?? 'ALL';
+}
+
 export function MemberClassesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
@@ -124,7 +130,7 @@ export function MemberClassesPage() {
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
   const [waitlists, setWaitlists] = useState<WaitlistDto[]>([]);
-  const [discipline, setDiscipline] = useState('ALL');
+  const [discipline, setDiscipline] = useState(() => disciplineFromQuery(searchParams.get('discipline')));
   const [day, setDay] = useState('ALL');
   const [favoriteDisciplineIds, setFavoriteDisciplineIds] = useState<number[]>([]);
   // null: chưa biết (đang tải hoặc lỗi) — khi đó không hiện lời nhắc mua gói
