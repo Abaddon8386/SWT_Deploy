@@ -134,7 +134,7 @@
   border-radius: 6px;
   color: #6E5F52;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
 }
 
 .ldp-nav-btn:hover:not(:disabled) {
@@ -187,7 +187,7 @@
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease, opacity 0.12s ease;
   user-select: none;
 }
 
@@ -242,7 +242,7 @@
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
 }
 
 .ldp-action-btn:hover {

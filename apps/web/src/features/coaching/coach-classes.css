@@ -46,7 +46,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -87,7 +87,7 @@
   padding: 10px 8px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   color: var(--portal-muted);
   display: flex;
   flex-direction: column;
@@ -394,7 +394,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   text-decoration: none;
 }
 
@@ -499,7 +499,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 }
 
 .student-card-item:hover {
@@ -816,7 +816,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 }
 
 .history-record-card:hover {
@@ -988,7 +988,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   font-weight: 600;
   color: var(--portal-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   white-space: nowrap;
 }
 
@@ -1079,7 +1079,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   border-radius: 6px;
   text-decoration: none;
   font-size: 0.84rem;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;

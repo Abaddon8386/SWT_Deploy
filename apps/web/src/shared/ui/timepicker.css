@@ -189,7 +189,7 @@
   font-weight: 500;
   color: #332B25;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease, opacity 0.12s ease;
   margin-bottom: 2px;
 }
 

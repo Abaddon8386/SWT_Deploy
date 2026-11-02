@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigation } from 'react-router-dom';
 import { clearAuthSession, syncSessionWithServer, type UserSession } from '../../shared/api/client';
 import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
@@ -10,9 +10,11 @@ import { MOBILE_PRIMARY_NAV, PORTAL_NAV, ROLE_LABELS } from './portalNavigation'
 import { getUnreadCount } from '../member/notificationsApi';
 import { usePortalNotices } from '../../shared/lib/portalNotices';
 import { ChatWidget } from '../chat/ChatWidget';
-import { LiquidGlassChatbot } from '../../shared/liquid-glass/LiquidGlassChatbot';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { NotificationsPopover } from '../member/NotificationsPopover';
+
+// Only members see the AI assistant; its WebGL shaders stay out of every other role's first load.
+const LiquidGlassChatbot = lazy(() => import('../../shared/liquid-glass/LiquidGlassChatbot').then(module => ({ default: module.LiquidGlassChatbot })));
 
 function searchable(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -201,7 +203,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         </button>
       </nav>
 
-      {isMember && location.pathname !== '/member/check-in' && <LiquidGlassChatbot />}
+      {isMember && location.pathname !== '/member/check-in' && <Suspense fallback={null}><LiquidGlassChatbot /></Suspense>}
       {location.pathname !== '/member/check-in' && location.pathname !== '/messages' && <ChatWidget />}
       {canReceiveNotifications && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
       {dialog === 'logout' && <Modal title="Đăng xuất khỏi SÖL?" onClose={() => setDialog(null)}>

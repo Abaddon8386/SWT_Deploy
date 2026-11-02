@@ -299,7 +299,7 @@
   cursor: pointer;
   padding: 0;
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
   line-height: 1;
 }
 
@@ -411,7 +411,7 @@
   font-size: 0.88rem !important;
   cursor: pointer !important;
   padding: 0 2px !important;
-  transition: all 0.2s ease !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease !important;
   line-height: 1 !important;
 }
 
@@ -478,7 +478,7 @@
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  transition: all 0.2s ease !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease !important;
   flex-shrink: 0 !important;
 }
 
@@ -517,7 +517,7 @@
   font-size: 0.84rem !important;
   color: #FFFFFF !important;
   outline: none !important;
-  transition: all 0.2s ease !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease !important;
   box-sizing: border-box !important;
 }
 
@@ -544,7 +544,7 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: all 0.2s ease !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease !important;
   flex-shrink: 0 !important;
 }
 

@@ -34,7 +34,7 @@
   border: 1px solid var(--portal-border);
   cursor: pointer;
   text-align: left;
-  transition: all 160ms ease;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease, opacity 160ms ease;
   display: flex;
   flex-direction: column;
   gap: 6px;

@@ -215,7 +215,7 @@
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: all 0.3s var(--ease-luxury);
+  transition: background-color 0.3s var(--ease-luxury), border-color 0.3s var(--ease-luxury), color 0.3s var(--ease-luxury), box-shadow 0.3s var(--ease-luxury), transform 0.3s var(--ease-luxury), opacity 0.3s var(--ease-luxury);
 }
 
 .portal-tab.active {
@@ -437,7 +437,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   font-weight: 600;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.35s var(--ease-luxury);
+  transition: background-color 0.35s var(--ease-luxury), border-color 0.35s var(--ease-luxury), color 0.35s var(--ease-luxury), box-shadow 0.35s var(--ease-luxury), transform 0.35s var(--ease-luxury), opacity 0.35s var(--ease-luxury);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -477,7 +477,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   text-transform: uppercase;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.35s var(--ease-luxury);
+  transition: background-color 0.35s var(--ease-luxury), border-color 0.35s var(--ease-luxury), color 0.35s var(--ease-luxury), box-shadow 0.35s var(--ease-luxury), transform 0.35s var(--ease-luxury), opacity 0.35s var(--ease-luxury);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   text-decoration: none;
   display: inline-flex;
@@ -517,7 +517,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   justify-content: center;
   gap: 12px;
   overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1), color 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 4px 18px rgba(26, 22, 20, 0.16);
 }
 
@@ -580,7 +580,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 6px;
   padding: 10px 12px;
   cursor: pointer;
-  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1), color 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -866,7 +866,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.35s var(--ease-luxury);
+  transition: background-color 0.35s var(--ease-luxury), border-color 0.35s var(--ease-luxury), color 0.35s var(--ease-luxury), box-shadow 0.35s var(--ease-luxury), transform 0.35s var(--ease-luxury), opacity 0.35s var(--ease-luxury);
 }
 
 .app-logout:hover {
@@ -1169,7 +1169,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.35s var(--ease-luxury);
+  transition: background-color 0.35s var(--ease-luxury), border-color 0.35s var(--ease-luxury), color 0.35s var(--ease-luxury), box-shadow 0.35s var(--ease-luxury), transform 0.35s var(--ease-luxury), opacity 0.35s var(--ease-luxury);
 }
 
 .btn-danger:hover {
@@ -1237,7 +1237,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.35s var(--ease-luxury);
+  transition: background-color 0.35s var(--ease-luxury), border-color 0.35s var(--ease-luxury), color 0.35s var(--ease-luxury), box-shadow 0.35s var(--ease-luxury), transform 0.35s var(--ease-luxury), opacity 0.35s var(--ease-luxury);
 }
 
 .filter-chip:hover {
@@ -1261,7 +1261,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   border: 1px solid var(--color-border-subtle);
   border-radius: 3px;
   background: var(--color-bg-base);
-  transition: all 0.4s var(--ease-luxury);
+  transition: background-color 0.4s var(--ease-luxury), border-color 0.4s var(--ease-luxury), color 0.4s var(--ease-luxury), box-shadow 0.4s var(--ease-luxury), transform 0.4s var(--ease-luxury), opacity 0.4s var(--ease-luxury);
 }
 
 .row-card:hover {
@@ -1406,7 +1406,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.3s var(--ease-luxury);
+  transition: background-color 0.3s var(--ease-luxury), border-color 0.3s var(--ease-luxury), color 0.3s var(--ease-luxury), box-shadow 0.3s var(--ease-luxury), transform 0.3s var(--ease-luxury), opacity 0.3s var(--ease-luxury);
 }
 
 .seg-btn:hover {
@@ -1797,7 +1797,7 @@ textarea.portal-textarea:focus-visible,
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
   min-height: 28px;
   min-width: 44px;
   line-height: 1.2;
