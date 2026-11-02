@@ -4,8 +4,6 @@
   background: var(--portal-raised);
 }
 .member-packages .grid-3 > article { min-width: 0; }
-.member-packages .grid-3 .portal-card-title { min-height: 2.6em; }
-.member-packages .grid-3 article > div:first-child > p { min-height: 3.2em; }
 .member-packages .package-benefit-list { min-height: 0; }
 .member-packages .grid-3 .btn-primary:disabled {
   opacity: 1;
@@ -56,3 +54,15 @@
     position: absolute; right: 0; z-index: 5; padding: 10px; border: 1px solid var(--portal-border-strong); border-radius: 12px; background: var(--portal-surface); box-shadow: 0 12px 30px #0003;
   }
 }
+
+.member-packages .package-term-tabs { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 18px; border: 1px solid var(--portal-border); border-radius: 999px; background: var(--portal-surface); }
+.member-packages .package-term-tabs button { min-height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: 600 13px/1 var(--font-sans); cursor: pointer; }
+.member-packages .package-term-tabs button.is-active { background: var(--portal-salmon); color: var(--portal-ink); }
+.member-packages .package-term-tabs button:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+
+/* Khối trạng thái phía trên danh mục: gọn để danh mục gói không bị đẩy xuống */
+.member-packages .package-current { padding: 16px 20px; }
+.member-packages .package-current .meta-label { margin-bottom: 0; }
+.member-packages .package-pending { padding: 16px 20px; }
+.member-packages .package-pending__head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
+.member-packages .package-pending .row-card__meta { margin: 0 0 4px; }

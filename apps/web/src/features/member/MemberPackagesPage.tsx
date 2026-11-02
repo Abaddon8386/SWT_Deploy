@@ -7,6 +7,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { PortalIcon } from '../portal/PortalIcon';
 import './member-packages.css';
 import { notify, resolveNotice } from '../../shared/lib/portalNotices';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { subscribeMembershipChanges } from './membershipRealtime';
 import {
   cancelPendingMembershipSubscription,
@@ -38,6 +39,8 @@ interface RequestResult {
   action: 'register' | 'renew' | 'upgrade';
 }
 
+// Gói "đồng hành" dài hạn (6/12 tháng) tách khỏi gói 1 tháng bằng tab
+const LONG_TERM_DAYS = 180;
 const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại quầy lễ tân để nhân viên xác nhận và kích hoạt gói tập.';
 
 function formatDate(value: string): string {
@@ -82,7 +85,7 @@ export function MemberPackagesPage() {
   const watchedPending = useRef(new Set<number>());
   const announcedPayments = useRef(new Set<number>());
   const [syncError, setSyncError] = useState(false);
-  const [durationTab, setDurationTab] = useState<'all' | '1m' | '6m' | '12m'>('all');
+  const [durationTab, setDurationTab] = useState<'short' | 'long'>('short');
   const [paymentResult, setPaymentResult] = useState<MemberSubscription | null>(null);
 
   const [actionError, setActionError] = useState<string | null>(null);
@@ -611,8 +614,8 @@ export function MemberPackagesPage() {
 
       {current && (
         <section
-          className="portal-card portal-card--feature"
-          style={{ marginBottom: 24 }}
+          className="portal-card portal-card--feature package-current"
+          style={{ marginBottom: 16 }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
             <div>
@@ -768,28 +771,18 @@ export function MemberPackagesPage() {
         <section
           ref={membershipFocus}
           tabIndex={-1}
-          className="portal-card"
-          style={{ marginBottom: 24, border: '1px solid var(--color-border-medium)', background: 'var(--color-bg-warm)' }}
+          className="portal-card package-pending"
+          style={{ marginBottom: 16, border: '1px solid var(--color-border-medium)', background: 'var(--color-bg-warm)' }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            <div className="meta-label">
-              Thanh toán gói tập • Yêu cầu #{pending.id}
+          <div className="package-pending__head">
+            <div>
+              <h2 className="portal-card-title">{pending.packageName}</h2>
+              <p className="row-card__meta" style={{ margin: '4px 0 0' }}>
+                Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
+              </p>
             </div>
             <span className="badge badge-warning">Đang chờ xác nhận tại quầy Lễ tân</span>
           </div>
-
-          <h2
-            className="portal-card-title"
-            style={{ marginTop: 10 }}
-          >
-            {pending.packageName}
-          </h2>
-
-          {pendingPackage && (
-            <p className="row-card__meta" style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>
-              {formatPrice(pendingPackage.price)} · {pendingPackage.durationDays} ngày
-            </p>
-          )}
           {paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage && (
             <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
           )}
@@ -808,17 +801,11 @@ export function MemberPackagesPage() {
           {paymentsState.status === 'success' && relatedPayments.length === 0 && !pendingPackage && (
             <p role="alert">Không tìm thấy giá gói để gửi yêu cầu. Vui lòng thử lại sau.</p>
           )}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+            <RefreshButton label="Tải lại trạng thái" onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }} />
             <button
               type="button"
-              className="btn-secondary"
-              onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }}
-            >
-              Tải lại trạng thái
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
+              className="btn-secondary btn-sm"
               style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
               disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
               onClick={() => { setActionError(null); setPendingToCancel(pending); }}
@@ -893,20 +880,16 @@ export function MemberPackagesPage() {
         </div>
       ) : (
         <>
-          {activePackages.some((p) => p.durationDays >= 90) && (
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }} role="tablist" aria-label="Bộ lọc thời hạn gói tập">
-              <button type="button" className={`btn-secondary ${durationTab === 'all' ? 'active' : ''}`} style={durationTab === 'all' ? { background: 'var(--color-text-main, #202020)', color: '#fff' } : undefined} onClick={() => setDurationTab('all')}>Tất cả ({activePackages.length})</button>
-              <button type="button" className={`btn-secondary ${durationTab === '1m' ? 'active' : ''}`} style={durationTab === '1m' ? { background: 'var(--color-text-main, #202020)', color: '#fff' } : undefined} onClick={() => setDurationTab('1m')}>Gói 1 tháng (30 ngày)</button>
-              <button type="button" className={`btn-secondary ${durationTab === '6m' ? 'active' : ''}`} style={durationTab === '6m' ? { background: 'var(--color-text-main, #202020)', color: '#fff' } : undefined} onClick={() => setDurationTab('6m')}>Đồng hành 6 tháng (-17%)</button>
-              <button type="button" className={`btn-secondary ${durationTab === '12m' ? 'active' : ''}`} style={durationTab === '12m' ? { background: 'var(--color-text-main, #202020)', color: '#fff' } : undefined} onClick={() => setDurationTab('12m')}>Đồng hành 12 tháng (Tặng 3 tháng)</button>
+          {activePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) && activePackages.some((p) => p.durationDays < LONG_TERM_DAYS) && (
+            <div className="package-term-tabs" role="group" aria-label="Thời hạn gói tập">
+              <button type="button" className={durationTab === 'short' ? 'is-active' : ''} aria-pressed={durationTab === 'short'} onClick={() => setDurationTab('short')}>Gói 1 tháng</button>
+              <button type="button" className={durationTab === 'long' ? 'is-active' : ''} aria-pressed={durationTab === 'long'} onClick={() => setDurationTab('long')}>Đồng hành dài hạn</button>
             </div>
           )}
           <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label="Danh mục gói tập">
             {activePackages.filter((pkg) => {
-              if (durationTab === '1m') return pkg.durationDays <= 35;
-              if (durationTab === '6m') return pkg.durationDays >= 90 && pkg.durationDays <= 200;
-              if (durationTab === '12m') return pkg.durationDays > 200;
-              return true;
+              if (!activePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) || !activePackages.some((p) => p.durationDays < LONG_TERM_DAYS)) return true;
+              return durationTab === 'long' ? pkg.durationDays >= LONG_TERM_DAYS : pkg.durationDays < LONG_TERM_DAYS;
             }).map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage);
             // Chỉ điều có giá trị so sánh: lượt đặt lớp + quyền lợi do catalog mô tả (thời hạn đã nằm cạnh giá)
@@ -916,6 +899,8 @@ export function MemberPackagesPage() {
                 : 'Không giới hạn lượt đặt lớp',
               ...details.perks,
             ];
+            // Chỉ gập khi còn từ 2 ý trở lên; thừa đúng 1 ý thì hiện luôn
+            const visibleCount = highlights.length <= 3 ? highlights.length : 2;
             const isCurrent =
               current?.packageId ===
               membershipPackage.id;
@@ -1038,18 +1023,18 @@ export function MemberPackagesPage() {
                   </p>
 
                   <ul className="package-benefit-list" aria-label={`Quyền lợi gói ${membershipPackage.name}`}>
-                    {highlights.slice(0, 3).map((benefit, index) => (
+                    {highlights.slice(0, visibleCount).map((benefit, index) => (
                       <li key={index} className="package-benefit-item">
                         <span className="package-benefit-check" aria-hidden="true">✓</span>
                         <span>{benefit}</span>
                       </li>
                     ))}
                   </ul>
-                  {highlights.length > 3 && (
+                  {highlights.length > visibleCount && (
                     <details className="package-benefit-more">
-                      <summary>Xem thêm {highlights.length - 3} quyền lợi</summary>
+                      <summary>Xem thêm {highlights.length - visibleCount} quyền lợi</summary>
                       <ul className="package-benefit-list">
-                        {highlights.slice(3).map((benefit, index) => (
+                        {highlights.slice(visibleCount).map((benefit, index) => (
                           <li key={index} className="package-benefit-item">
                             <span className="package-benefit-check" aria-hidden="true">✓</span>
                             <span>{benefit}</span>

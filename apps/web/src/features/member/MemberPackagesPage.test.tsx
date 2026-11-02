@@ -110,9 +110,15 @@ describe('SCRUM-86 packages', () => {
       { ...lowerPackage, price: 999000, durationDays: 180, classCreditLimit: 6 },
     ]);
     await render();
-    for (const value of ['299.000', '499.000', '999.000', '30 ngày', '90 ngày', '180 ngày']) {
+    for (const value of ['299.000', '499.000', '30 ngày', '90 ngày']) {
       expect(host.textContent).toContain(value);
     }
+    expect(host.textContent).not.toContain('999.000');
+    await act(async () => button('Đồng hành dài hạn')?.click());
+    for (const value of ['999.000', '180 ngày']) {
+      expect(host.textContent).toContain(value);
+    }
+    expect(host.textContent).not.toContain('299.000');
   });
 
   it('keeps payment confirmation separate from activation', async () => {
