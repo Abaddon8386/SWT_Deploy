@@ -3476,8 +3476,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/client/AiClientConfig.java": {
-    "mtime": 1791287068.5655196,
-    "ast_hash": "b2ec8c2a3fbf28caa8f9e7c4184dea38",
+    "mtime": 1793612807.5471413,
+    "ast_hash": "a8093b9030b15ddff054c81803fd8210",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/client/GeminiRestClient.java": {
@@ -3491,8 +3491,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/client/OpenAiRestClient.java": {
-    "mtime": 1793197910.2348204,
-    "ast_hash": "cf6e50b4904e9113d75c1b417941f405",
+    "mtime": 1793613283.824806,
+    "ast_hash": "c736fa933c2d94942a08d73f57edea68",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/repository/AiRecommendationLogRepository.java": {
@@ -4136,13 +4136,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/portal/PortalShell.tsx": {
-    "mtime": 1793608091.7910283,
-    "ast_hash": "4c4e0646fff5121e2926291870cd5472",
+    "mtime": 1793612981.3867166,
+    "ast_hash": "506599ad5a8774b5fef752180b9a1189",
     "semantic_hash": ""
   },
   "apps/web/src/features/portal/portalNavigation.ts": {
-    "mtime": 1793611345.5529182,
-    "ast_hash": "52084e7e355cfc7896b9892b6fa9edab",
+    "mtime": 1793612977.9660487,
+    "ast_hash": "9e0361ee75e7fa9fc56f6d17116f4178",
     "semantic_hash": ""
   },
   "apps/web/src/features/reception/checkinApi.test.ts": {
@@ -4562,8 +4562,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/service/AiChatService.java": {
-    "mtime": 1793197910.239846,
-    "ast_hash": "7e2b3e3899624596438a37e09030a506",
+    "mtime": 1793613284.1165664,
+    "ast_hash": "08c91d7a79243b1b6acec52e4952efc7",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/SessionEvaluationController.java": {
@@ -4652,8 +4652,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/ai/AiChatServiceTest.java": {
-    "mtime": 1792943980.380769,
-    "ast_hash": "e37ed166cd5e4579785b29bb615a8640",
+    "mtime": 1793613284.853872,
+    "ast_hash": "b304c315c3b3ff19a9920837ceeca90e",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/ai/AiRecommendationControllerTest.java": {
@@ -4707,8 +4707,8 @@
     "semantic_hash": ""
   },
   "DESIGN.md": {
-    "mtime": 1793611819.8071873,
-    "ast_hash": "a2869555253a4a5ec2da6b70b82cf7ab",
+    "mtime": 1793613283.6588762,
+    "ast_hash": "0e34fb5ef39d9809f1d65863e2daeb19",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/README.md": {
@@ -5147,8 +5147,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/client/AiChatProvider.java": {
-    "mtime": 1792943980.3662095,
-    "ast_hash": "b0345643b19f979c8ad1e5db0256d760",
+    "mtime": 1793613283.715407,
+    "ast_hash": "0c17ae21a8c1f4f25f0c3b8ece1712f8",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/attendance/SessionAttendanceController.java": {
@@ -5347,8 +5347,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/ai/AiChatProviderTest.java": {
-    "mtime": 1792943980.378768,
-    "ast_hash": "2ba225295d0c17916a323edbda58ade2",
+    "mtime": 1793612688.7678401,
+    "ast_hash": "44d01e323125227441b7e3017a6e046a",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/ai/AiChatSecurityTest.java": {
@@ -5452,13 +5452,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/coaching/CoachTrainingPlanPage.test.tsx": {
-    "mtime": 1793608091.7628715,
-    "ast_hash": "b6f39216cb41fb0f76f95c65778ff536",
+    "mtime": 1793612922.4096456,
+    "ast_hash": "33130bcfff15f9e5c5a9d3bffb41d990",
     "semantic_hash": ""
   },
   "apps/web/src/features/coaching/CoachTrainingPlanPage.tsx": {
-    "mtime": 1793608091.7638738,
-    "ast_hash": "7595d60200e591ede5e9357ae61667fa",
+    "mtime": 1793612976.5592983,
+    "ast_hash": "5cd74838108478aff559f6cedc73ac1d",
     "semantic_hash": ""
   },
   "apps/web/src/features/coaching/aiApi.ts": {
@@ -6272,8 +6272,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/portal/PortalShell.mobile.test.tsx": {
-    "mtime": 1793608091.7900014,
-    "ast_hash": "e3c3099c94da137358e9e5d83453aaa1",
+    "mtime": 1793612924.7417355,
+    "ast_hash": "49b61930ee0f90cbd08829578e00a279",
     "semantic_hash": ""
   },
   "apps/web/src/features/pwa/PwaStatus.test.tsx": {
@@ -7347,6 +7347,21 @@
   "docs/superpowers/specs/2026-11-02-five-role-access-design.md": {
     "mtime": 1793611820.7926488,
     "ast_hash": "cb73cc1e40c328bade5c58ac959c8367",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/ai/service/AiRagContextService.java": {
+    "mtime": 1793613284.485338,
+    "ast_hash": "75b4079d8841d68442168767f07af6e7",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/ai/AiRagContextServiceTest.java": {
+    "mtime": 1793613284.9881978,
+    "ast_hash": "c6b382647225163070522d64e2e861c4",
+    "semantic_hash": ""
+  },
+  "docs/qa/2026-11-02-staff-account-provisioning.md": {
+    "mtime": 1793612433.405881,
+    "ast_hash": "705b68cb2739bafe6b80e27b4a737ab6",
     "semantic_hash": ""
   }
 }
