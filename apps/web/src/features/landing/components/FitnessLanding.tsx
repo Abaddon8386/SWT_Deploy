@@ -157,7 +157,7 @@ const muscleGroups = [
 ] as const;
 
 const stories = [
-  { slug: 'strength-coach', name: 'Derek', image: 'coach-strength.png', quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.', focus: 'STRENGTH COACH', meta: '6 năm kinh nghiệm · Strength Floor' },
+  { slug: 'strength-coach', name: 'Derek', image: 'coach-strength.webp', quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.', focus: 'STRENGTH COACH', meta: '6 năm kinh nghiệm · Strength Floor' },
   { slug: 'aquatics-coach', name: 'Anthony', image: 'coach-aquatics.jpg', quote: 'Tôi tìm được nhịp tập phù hợp dưới nước và giúp học viên lướt nhẹ mà không tốn sức.', focus: 'AQUATICS COACH', meta: '8 năm kinh nghiệm · Hồ bơi 25m' },
   { slug: 'personal-coach', name: 'Jhon', image: 'coach-personal.jpg', quote: 'Không chỉ là thay đổi vóc dáng. Tôi muốn bạn thấy khỏe và tự tin hơn mỗi tuần.', focus: 'PERSONAL COACH', meta: '7 năm kinh nghiệm · Kèm 1:1 Đa môn' },
   { slug: 'tennis-coach', name: 'Ezekiel', image: 'coach-tennis.jpg', quote: 'Có người đồng hành chỉnh từng bước chân giúp bạn tự tin trong mọi đường bóng.', focus: 'TENNIS COACH', meta: '7 năm kinh nghiệm · Sân Tennis' },
@@ -424,7 +424,17 @@ export function FitnessLanding() {
       <div className="fit-hero-copy"><p>Mạnh mẽ từ thể chất.<br />Tự tin từ bên trong.</p>
         <a href="#stories" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{stories.slice(0, 3).map((story) => <LoadingImage key={story.name} src={`/images/fitness/${story.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span><span className="fit-review-label">Đội ngũ đồng hành</span></a>
       </div>
-      <LoadingImage className="fit-hero-athlete" src="/images/fitness/hero-athlete.png" alt="Vận động viên ngồi tập tạ đơn, hướng ánh nhìn xuống, trên nền tối" fetchPriority="high" />
+      <LoadingImage
+        className="fit-hero-athlete"
+        src="/images/fitness/hero-athlete.webp"
+        srcSet="/images/fitness/hero-athlete-800w.webp 800w, /images/fitness/hero-athlete.webp 1024w"
+        sizes="(max-width: 768px) 92vw, 42vw"
+        width={1024}
+        height={1536}
+        alt="Vận động viên ngồi tập tạ đơn, hướng ánh nhìn xuống, trên nền tối"
+        fetchPriority="high"
+        decoding="async"
+      />
       <div className="fit-hero-anatomy-stage" onPointerLeave={scheduleClearMuscle}>
         <svg
           className="fit-hero-anatomy"
@@ -445,7 +455,7 @@ export function FitnessLanding() {
             </mask>
           </defs>
           {activeMuscle && <image
-            href="/images/fitness/hero-athlete.png"
+            href="/images/fitness/hero-athlete.webp"
             width="1024"
             height="1536"
             mask="url(#fit-active-muscle-mask)"
