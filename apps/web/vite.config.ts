@@ -24,6 +24,25 @@ export default defineConfig({
       this.emitFile({ type: 'asset', fileName: 'sw.js', source: createWorkerSource(Date.now().toString(36), assets, [...precache]) });
     },
   }],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalized = id.replace(/\\/g, '/');
+          if (
+            normalized.includes('node_modules/react/') ||
+            normalized.includes('node_modules/react-dom/') ||
+            normalized.includes('node_modules/scheduler/')
+          ) {
+            return 'react-vendor';
+          }
+          if (normalized.includes('node_modules/react-router')) {
+            return 'router-vendor';
+          }
+        },
+      },
+    },
+  },
   test: {
     environment: 'happy-dom',
   },

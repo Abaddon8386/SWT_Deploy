@@ -5,6 +5,7 @@ import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
 import { authDestination, purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
 import { loginSchema } from './authValidation';
+import { loadGoogleIdentity } from './loadGoogleIdentity';
 import {
   getGoogleOAuthAuthorizeUrl,
   googleOAuthCallback,
@@ -57,6 +58,12 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
   // Google Client ID từ biến môi trường
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+  useEffect(() => {
+    if (googleClientId) {
+      void loadGoogleIdentity().catch(() => {});
+    }
+  }, [googleClientId]);
 
   const [isExpired, setIsExpired] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -220,6 +227,9 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   // One Google entry point: popup when ready, otherwise the state-protected backend redirect.
   const handleGoogleOAuthLogin = async () => {
     setFormError('');
+    if (googleClientId && !window.google?.accounts?.oauth2?.initTokenClient) {
+      await loadGoogleIdentity().catch(() => {});
+    }
     if (googleClientId && window.google?.accounts?.oauth2?.initTokenClient) {
       try {
         const tokenClient = window.google.accounts.oauth2.initTokenClient({

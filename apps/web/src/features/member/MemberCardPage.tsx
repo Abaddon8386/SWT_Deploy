@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import html2canvas from 'html2canvas';
+
 import { Link } from 'react-router-dom';
 import { getProfile, type Profile } from './profileApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -96,6 +96,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     if (!cardRef.current || !canShowQr || !qrImage || !qrLoaded || qrError || downloading) return;
     setDownloading(true);
     try {
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(cardRef.current, { backgroundColor: '#202020', scale: 2 });
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');

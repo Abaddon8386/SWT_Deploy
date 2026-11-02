@@ -1,11 +1,11 @@
-import { z } from 'zod';
 import { homePath, type UserSession } from '../api/client';
 
-const packageIdSchema = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const KEY = 'scms_purchase_return';
 export function selectedPackageId(search: string): number | null {
-  const result = packageIdSchema.safeParse(new URLSearchParams(search).get('packageId'));
-  return result.success ? result.data : null;
+  const raw = new URLSearchParams(search).get('packageId')?.trim();
+  if (!raw) return null;
+  const num = Number(raw);
+  return Number.isSafeInteger(num) && num > 0 ? num : null;
 }
 
 function purchaseReturnPath(search: string): string | null {
