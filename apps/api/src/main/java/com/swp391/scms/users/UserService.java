@@ -24,6 +24,31 @@ import java.util.Locale;
 
 @Service
 public class UserService {
+    @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CENTER_MANAGER', 'ADMIN')")
+    public List<UserDto> getStaffAccounts() {
+        return userRepository.findAllByDeletedAtIsNullAndRole_CodeInOrderByIdAsc(List.of("COACH", "RECEPTIONIST"))
+                .stream().map(userMapper::toDto).toList();
+    }
+
+    @Transactional
+    @Audited(action = "STAFF_ACCOUNT_CREATE", entity = "users")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CENTER_MANAGER', 'ADMIN')")
+    public UserDto createStaffAccount(com.swp391.scms.users.dto.StaffAccountCreateDto request) {
+        if (request.roleCode() == null || !List.of("COACH", "RECEPTIONIST").contains(request.roleCode())) {
+            throw new BadRequestException("INVALID_STAFF_ROLE", "validation.users.staff_role", null, null);
+        }
+        Role role = roleRepository.findByCode(request.roleCode())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.role", request.roleCode()));
+        UserCreateDto dto = new UserCreateDto();
+        dto.setFullName(request.fullName());
+        dto.setEmail(request.email());
+        dto.setPhone(request.phone());
+        dto.setPassword(request.password());
+        dto.setGender(request.gender());
+        dto.setRoleId(role.getId());
+        return createUser(dto);
+    }
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -92,7 +117,7 @@ public class UserService {
         if (userRepository.findByEmailIgnoreCase(dto.getEmail().trim()).isPresent()) {
             throw new ConflictException("EMAIL_EXISTS", "users.email_exists", null, null);
         }
-        if (dto.getPhone() != null && userRepository.findByPhone(dto.getPhone().trim()).isPresent()) {
+        if (dto.getPhone() != null && !dto.getPhone().isBlank() && userRepository.findByPhone(dto.getPhone().trim()).isPresent()) {
             throw new ConflictException("PHONE_EXISTS", "users.phone_exists", null, null);
         }
 
@@ -112,6 +137,7 @@ public class UserService {
         user.setUpdatedAt(LocalDateTime.now(clock));
 
         User saved = userRepository.saveAndFlush(user);
+        initializeStaffProfile(saved);
         if ("MEMBER".equalsIgnoreCase(role.getCode())) {
             Member member = new Member();
             member.setUser(saved);
@@ -121,7 +147,25 @@ public class UserService {
             saved.setMember(member);
             userRepository.save(saved);
         }
+        if (saved.getCoach() != null || saved.getReceptionist() != null) {
+            userRepository.save(saved);
+        }
         return userMapper.toDto(saved);
+    }
+
+    private void initializeStaffProfile(User user) {
+        if ("COACH".equalsIgnoreCase(user.getRole().getCode()) && user.getCoach() == null) {
+            var coach = new com.swp391.scms.users.entity.Coach();
+            coach.setUser(user);
+            coach.setHireDate(LocalDate.now(clock));
+            user.setCoach(coach);
+        }
+        if ("RECEPTIONIST".equalsIgnoreCase(user.getRole().getCode()) && user.getReceptionist() == null) {
+            var receptionist = new com.swp391.scms.users.entity.Receptionist();
+            receptionist.setUser(user);
+            receptionist.setHireDate(LocalDate.now(clock));
+            user.setReceptionist(receptionist);
+        }
     }
 
     @Transactional
@@ -146,7 +190,11 @@ public class UserService {
         }
         if (dto.getRoleId() != null) {
             Role newRole = findRole(dto.getRoleId());
+            if (!"ADMIN".equalsIgnoreCase(newRole.getCode())) {
+                protectLastActiveAdmin(user);
+            }
             user.setRole(newRole);
+            initializeStaffProfile(user);
             if ("MEMBER".equalsIgnoreCase(newRole.getCode()) && user.getMember() == null) {
                 Member member = new Member();
                 member.setUser(user);
@@ -164,6 +212,7 @@ public class UserService {
     @Audited(action = "USER_DELETE", entity = "users")
     public void deleteUser(Long id) {
         User user = findActiveUser(id);
+        protectLastActiveAdmin(user);
         LocalDateTime now = LocalDateTime.now(clock);
         user.setDeletedAt(now);
         user.setUpdatedAt(now);
@@ -177,6 +226,7 @@ public class UserService {
             throw new BadRequestException("INVALID_USER_STATUS", "users.invalid_status", null, null);
         }
         User user = findActiveUser(id);
+        if (!"active".equals(status)) protectLastActiveAdmin(user);
         user.setStatus(status);
         user.setUpdatedAt(LocalDateTime.now(clock));
         return userMapper.toDto(userRepository.save(user));
@@ -185,6 +235,17 @@ public class UserService {
     private Role findRole(Long roleId) {
         return roleRepository.findById(roleId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.role", roleId));
+    }
+
+    private void protectLastActiveAdmin(User user) {
+        if (user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().getCode())
+                && "active".equalsIgnoreCase(user.getStatus())) {
+            // Serialize removals against the shared role row so concurrent requests cannot remove both Admins.
+            roleRepository.lockByCode("ADMIN");
+            if (userRepository.countByRole_CodeAndDeletedAtIsNullAndStatus("ADMIN", "active") <= 1) {
+                throw new ConflictException("LAST_ACTIVE_ADMIN", "users.last_active_admin", null, null);
+            }
+        }
     }
 
     private User findActiveUser(Long id) {
@@ -220,7 +281,7 @@ public class UserService {
         int count = 0;
         for (User user : users) {
             // Không bao giờ tự động xóa Quản lý trung tâm
-            if (user.getRole() != null && "CENTER_MANAGER".equalsIgnoreCase(user.getRole().getCode())) {
+            if (user.getRole() != null && List.of("CENTER_MANAGER", "ADMIN").contains(user.getRole().getCode().toUpperCase(Locale.ROOT))) {
                 continue;
             }
 

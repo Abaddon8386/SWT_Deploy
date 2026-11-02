@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 
 @Tag(name = "Users & RBAC", description = "Quản trị người dùng, trạng thái khóa/mở khóa và phân quyền vai trò")
-@PreAuthorize("hasRole('CENTER_MANAGER')")
+@PreAuthorize("hasRole('ADMIN')")
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {

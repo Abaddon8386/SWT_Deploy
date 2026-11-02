@@ -36,6 +36,106 @@ class UserServiceTest {
     private Clock clock = Clock.systemUTC();
     private UserService service;
 
+    @Test
+    void lastActiveAdminCannotBeLockedDeletedOrDemoted() {
+        var role = new com.swp391.scms.users.entity.Role();
+        role.setCode("ADMIN");
+        var admin = new User();
+        admin.setId(1L);
+        admin.setRole(role);
+        admin.setStatus("active");
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(admin));
+        var otherRole = new com.swp391.scms.users.entity.Role();
+        otherRole.setCode("CENTER_MANAGER");
+        when(roleRepository.findById(2L)).thenReturn(Optional.of(otherRole));
+        var update = new com.swp391.scms.users.dto.UserUpdateDto();
+        update.setRoleId(2L);
+        assertThrows(ConflictException.class, () -> service.setStatus(1L, "locked"));
+        assertThrows(ConflictException.class, () -> service.deleteUser(1L));
+        assertThrows(ConflictException.class, () -> service.updateUser(1L, update));
+        assertEquals("active", admin.getStatus());
+        assertEquals("ADMIN", admin.getRole().getCode());
+        org.mockito.Mockito.verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void adminCanBeLockedWhenAnotherActiveAdminRemains() {
+        var role = new com.swp391.scms.users.entity.Role();
+        role.setCode("ADMIN");
+        var admin = new User();
+        admin.setRole(role);
+        admin.setStatus("active");
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.countByRole_CodeAndDeletedAtIsNullAndStatus("ADMIN", "active")).thenReturn(2L);
+        service.setStatus(1L, "locked");
+        verify(roleRepository).lockByCode("ADMIN");
+        assertEquals("locked", admin.getStatus());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"ADMIN", "CENTER_MANAGER", "MANAGER", "MEMBER"})
+    void staffProvisioningRejectsEveryOtherRole(String code) {
+        var request = new com.swp391.scms.users.dto.StaffAccountCreateDto("Staff", "staff@gmail.com", null, "Secret123", "other", code);
+        assertThrows(BadRequestException.class, () -> service.createStaffAccount(request));
+        org.mockito.Mockito.verifyNoInteractions(userRepository, roleRepository);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
+    void staffProvisioningResolvesOnlyAllowedRoleAndSavesItsProfile(String code) {
+        var role = new com.swp391.scms.users.entity.Role();
+        role.setId(3L);
+        role.setCode(code);
+        when(roleRepository.findByCode(code)).thenReturn(Optional.of(role));
+        when(roleRepository.findById(3L)).thenReturn(Optional.of(role));
+        when(userRepository.saveAndFlush(any())).thenAnswer(call -> {
+            User user = call.getArgument(0);
+            user.setId(31L);
+            return user;
+        });
+        service.createStaffAccount(new com.swp391.scms.users.dto.StaffAccountCreateDto("Staff", "staff@gmail.com", null, "Secret123", "other", code));
+        var saved = org.mockito.ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        assertEquals(code, saved.getValue().getRole().getCode());
+        assertEquals(null, saved.getValue().getMember());
+        assertNotNull("COACH".equals(code) ? saved.getValue().getCoach() : saved.getValue().getReceptionist());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
+    void provisioningCreatesStaffProfile(String code) {
+        var role = new com.swp391.scms.users.entity.Role();
+        role.setId(2L);
+        role.setCode(code);
+        var dto = new UserCreateDto();
+        dto.setEmail(" Staff@gmail.com ");
+        dto.setFullName(" Staff ");
+        dto.setPassword("secret123");
+        dto.setRoleId(2L);
+        when(roleRepository.findById(2L)).thenReturn(Optional.of(role));
+        when(userRepository.saveAndFlush(any())).thenAnswer(call -> {
+            User user = call.getArgument(0);
+            user.setId(12L);
+            return user;
+        });
+        var captured = org.mockito.ArgumentCaptor.forClass(User.class);
+
+        service.createUser(dto);
+
+        verify(userRepository).save(captured.capture());
+        User created = captured.getValue();
+        assertEquals("staff@gmail.com", created.getEmail());
+        assertEquals(code, created.getRole().getCode());
+        if ("COACH".equals(code)) {
+            assertNotNull(created.getCoach());
+            assertEquals(created, created.getCoach().getUser());
+        } else {
+            assertNotNull(created.getReceptionist());
+            assertEquals(created, created.getReceptionist().getUser());
+        }
+    }
+
     @BeforeEach
     void setUp() {
         service = new UserService(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, subscriptionRepository, clock);

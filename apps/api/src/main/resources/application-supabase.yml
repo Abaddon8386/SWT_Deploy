@@ -23,6 +23,6 @@ app:
   auth:
     debug-otp-enabled: false
   bootstrap:
-    manager:
-      email: ${APP_BOOTSTRAP_MANAGER_EMAIL:}
-      password: ${APP_BOOTSTRAP_MANAGER_PASSWORD:}
+    admin:
+      email: ${APP_BOOTSTRAP_ADMIN_EMAIL:}
+      password: ${APP_BOOTSTRAP_ADMIN_PASSWORD:}

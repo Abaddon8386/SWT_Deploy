@@ -54,7 +54,7 @@ public class SecurityConfig {
                     // Profile extensions (SCRUM-66)
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/coach").hasRole("COACH")
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/receptionist").hasRole("RECEPTIONIST")
-                    .requestMatchers(HttpMethod.PUT, "/api/v1/users/*/receptionist").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/users/*/receptionist").hasRole("ADMIN")
 
                     // Notifications & Support Requests (SCRUM-67, SCRUM-68)
                     .requestMatchers("/api/v1/notifications/**").authenticated()
@@ -150,7 +150,8 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/members/me/favorite-disciplines/**", "/api/v1/members/me/favorite-disciplines").hasRole("MEMBER")
 
                     // Users, Roles, Member Lookup & Facilities Catalog
-                    .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers("/api/v1/staff-accounts", "/api/v1/staff-accounts/**").hasAnyRole("CENTER_MANAGER", "ADMIN")
+                    .requestMatchers("/api/v1/users", "/api/v1/users/**", "/api/v1/roles", "/api/v1/roles/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/v1/members/lookup").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**").authenticated()
                     .requestMatchers("/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**").hasRole("CENTER_MANAGER")

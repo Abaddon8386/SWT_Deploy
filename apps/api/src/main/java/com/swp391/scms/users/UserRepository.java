@@ -12,6 +12,8 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    long countByRole_CodeAndDeletedAtIsNullAndStatus(String code, String status);
+    List<User> findAllByDeletedAtIsNullAndRole_CodeInOrderByIdAsc(List<String> roleCodes);
     List<User> findAllByDeletedAtIsNullOrderByIdAsc();
     Optional<User> findByIdAndDeletedAtIsNull(Long id);
     @Query("select new com.swp391.scms.users.dto.AuthenticationUser(u.id, u.username, u.status, r.code) "

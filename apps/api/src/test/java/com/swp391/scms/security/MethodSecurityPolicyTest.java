@@ -120,8 +120,14 @@ class MethodSecurityPolicyTest {
 
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
-    @DisplayName("AC SCRUM-69: Center Manager có quyền xóa người dùng -> Không bị chặn")
-    void centerManagerCanDeleteUser() {
+    @DisplayName("Manager chỉ tạo nhân sự, không xóa người dùng")
+    void centerManagerCannotDeleteUser() {
+        assertThrows(AccessDeniedException.class, () -> userController.deleteUser(4L));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanDeleteUser() {
         assertDoesNotThrow(() -> userController.deleteUser(4L));
     }
 

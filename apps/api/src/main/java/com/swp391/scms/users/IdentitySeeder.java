@@ -18,8 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Seeds the 4 core roles, the permission catalog, the default role grants and an optional bootstrap
- * Center Manager account (idempotent). Needed so a freshly code-first-generated database is usable.
+ * Seeds five core roles and an optional Admin. Managers are provisioned by an authenticated Admin.
  */
 @Component
 @Order(0)
@@ -34,12 +33,14 @@ public class IdentitySeeder implements ApplicationRunner {
             new String[]{"PAYMENT_MANAGE", "Ghi nhận thanh toán và hóa đơn", "finance"});
 
     private static final Map<String, List<String>> GRANTS = Map.of(
-            "CENTER_MANAGER", PERMISSIONS.stream().map(p -> p[0]).toList(),
+            "ADMIN", List.of("USER_MANAGE", "ROLE_MANAGE", "PROFILE_SELF"),
+            "CENTER_MANAGER", List.of("PROFILE_SELF", "CATALOG_MANAGE", "MEMBER_LOOKUP", "PAYMENT_MANAGE"),
             "RECEPTIONIST", List.of("PROFILE_SELF", "MEMBER_LOOKUP", "PAYMENT_MANAGE"),
             "COACH", List.of("PROFILE_SELF"),
             "MEMBER", List.of("PROFILE_SELF"));
 
     private static final Map<String, String> ROLE_NAMES = Map.of(
+            "ADMIN", "Quản trị hệ thống",
             "CENTER_MANAGER", "Quản lý trung tâm",
             "RECEPTIONIST", "Lễ tân / Thu ngân",
             "COACH", "Huấn luyện viên",
@@ -49,19 +50,19 @@ public class IdentitySeeder implements ApplicationRunner {
     private final PermissionRepository permissions;
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
-    private final String managerEmail;
-    private final String managerPassword;
+    private final String adminEmail;
+    private final String adminPassword;
 
     public IdentitySeeder(RoleRepository roles, PermissionRepository permissions, UserRepository users,
                           PasswordEncoder passwordEncoder,
-                          @Value("${app.bootstrap.manager.email:}") String managerEmail,
-                          @Value("${app.bootstrap.manager.password:}") String managerPassword) {
+                          @Value("${app.bootstrap.admin.email:}") String adminEmail,
+                          @Value("${app.bootstrap.admin.password:}") String adminPassword) {
         this.roles = roles;
         this.permissions = permissions;
         this.users = users;
         this.passwordEncoder = passwordEncoder;
-        this.managerEmail = managerEmail;
-        this.managerPassword = managerPassword;
+        this.adminEmail = adminEmail;
+        this.adminPassword = adminPassword;
     }
 
     @Override
@@ -89,22 +90,25 @@ public class IdentitySeeder implements ApplicationRunner {
                 role.setPermissions(granted);
                 roles.save(role);
             }
+            if ("CENTER_MANAGER".equals(code) && role.getPermissions().removeIf(
+                    permission -> Set.of("USER_MANAGE", "ROLE_MANAGE").contains(permission.getCode()))) {
+                roles.save(role);
+            }
         });
 
-        seedManager();
+        seedAdmin();
     }
 
-    private void seedManager() {
-        if (managerEmail.isBlank() || managerPassword.isBlank()
-                || users.findByEmailIgnoreCase(managerEmail.trim()).isPresent()) {
+    private void seedAdmin() {
+        if (adminEmail.isBlank() || adminPassword.isBlank()
+                || users.findByEmailIgnoreCase(adminEmail.trim()).isPresent()) {
             return;
         }
         User manager = new User();
-        manager.setRole(roles.findByCode("CENTER_MANAGER").orElseThrow());
-        manager.setUsername("admin");
-        manager.setFullName("Center Manager");
-        manager.setEmail(managerEmail.trim().toLowerCase(Locale.ROOT));
-        manager.setPasswordHash(passwordEncoder.encode(managerPassword));
+        manager.setRole(roles.findByCode("ADMIN").orElseThrow());
+        manager.setFullName("System Admin");
+        manager.setEmail(adminEmail.trim().toLowerCase(Locale.ROOT));
+        manager.setPasswordHash(passwordEncoder.encode(adminPassword));
         manager.setStatus("active");
         LocalDateTime now = LocalDateTime.now();
         manager.setCreatedAt(now);
