@@ -433,6 +433,9 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-plan-price > span { display: block; font-size: 9px; letter-spacing: .04em; margin-top: 5px; font-weight: 400; }
 .fit-plan ul { list-style: none; padding: 0; margin: 23px 0; display: grid; gap: 13px; }
 .fit-plan li { font-size: 9px; display: flex; align-items: flex-start; gap: 10px; line-height: 1.6; }
+.fit-plan-more { margin: -8px 0 16px; }
+.fit-plan-more summary { cursor: pointer; color: var(--fit-salmon); font-size: 12px; font-weight: 700; padding: 6px 0; }
+.fit-plan-more ul { margin: 10px 0 0; }
 .fit-plan li > span { color: var(--fit-salmon); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; margin-top: 2px; }
 .fit-plan .fit-pill { margin-top: auto; min-height: 36px; font-size: 9px; gap: 18px; padding-left: 18px; }
 .fit-plan .fit-round-arrow { width: 26px; height: 26px; }

@@ -41,8 +41,7 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
         const details = getPackageDetails(pkg);
         const isFeatured = index === 1;
         return <article key={pkg.id} className={`fit-plan ${isFeatured ? 'fit-plan-featured' : ''}`} data-reveal="lift">
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <span className="fit-plan-period">{pkg.durationDays} ngày</span>
+          {pkg.durationDays >= 170 && <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
             {pkg.durationDays >= 360 && (
               <span className="fit-plan-period fit-plan-period--highlight">
                 Tặng 3 tháng (Tiết kiệm 25%)
@@ -53,11 +52,15 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
                 Tiết kiệm ~17%
               </span>
             )}
-          </div>
+          </div>}
           <h3>{pkg.name}</h3>
           <div className="fit-plan-price">{formatPrice(pkg.price)}<span>/ {pkg.durationDays} ngày</span></div>
           <p className="fit-plan-summary">{details.summary}</p>
-          <ul>{details.benefits.map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
+          <ul>{details.benefits.slice(0, 3).map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
+          {details.benefits.length > 3 && <details className="fit-plan-more">
+            <summary>Xem thêm {details.benefits.length - 3} quyền lợi</summary>
+            <ul>{details.benefits.slice(3).map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
+          </details>}
           <Link
             className="fit-pill"
             to={joinPath === '/register' || joinPath === '/login' ? `${joinPath}?returnTo=${encodeURIComponent(`/member/packages?packageId=${pkg.id}`)}` : joinPath === '/member/packages' ? `${joinPath}?packageId=${pkg.id}` : joinPath}
