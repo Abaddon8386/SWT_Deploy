@@ -37,6 +37,9 @@ import java.util.List;
 public class CoachBookingService {
 
     private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 hours
+    private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
+            java.util.Set.of("package_quota", "cash", "bank_transfer", "online_wallet");
+    private static final int MAX_UNPAID_UPCOMING = 2;
     private static final BigDecimal DEFAULT_HOURLY_RATE = new BigDecimal("200000.00");
 
     private final CoachBookingRepository coachBookingRepository;
@@ -187,7 +190,8 @@ public class CoachBookingService {
 
     @Transactional
     public CoachBookingDto createBooking(AuthenticatedPrincipal principal, CoachBookingCreateDto request) {
-        Member member = memberRepository.findById(principal.id())
+        // Row lock serializes concurrent bookings of one member so the quota count below stays exact.
+        Member member = memberRepository.findByUserIdForUpdate(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Member", principal.id()));
 
         Coach coach = coachRepository.findById(request.coachId())
@@ -195,6 +199,13 @@ public class CoachBookingService {
 
         if (!"active".equalsIgnoreCase(coach.getEmploymentStatus())) {
             throw new BadRequestException("COACH_INACTIVE", "error.coach.inactive", "Huấn luyện viên hiện không nhận học viên.");
+        }
+
+        String paymentMethod = request.paymentMethod() != null
+                ? request.paymentMethod().trim().toLowerCase(java.util.Locale.ROOT) : "package_quota";
+        if (!ALLOWED_PAYMENT_METHODS.contains(paymentMethod)) {
+            throw new BadRequestException("INVALID_PAYMENT_METHOD", "error.coach_booking.invalid_payment_method",
+                    "Unsupported payment method.");
         }
 
         if (request.endTime().isBefore(request.startTime()) || request.endTime().equals(request.startTime())) {
@@ -279,7 +290,6 @@ public class CoachBookingService {
         }
 
         // Rule 4: Payment / PT Quota verification
-        String paymentMethod = request.paymentMethod() != null ? request.paymentMethod() : "package_quota";
         String paymentStatus = "used_quota";
 
         if ("package_quota".equalsIgnoreCase(paymentMethod)) {
@@ -320,6 +330,11 @@ public class CoachBookingService {
                 );
             }
         } else {
+            // Hourly sessions are settled at the desk; cap unpaid ones so they cannot become free, unlimited booking.
+            if (coachBookingRepository.countUnpaidUpcoming(member.getUserId(), LocalDate.now(clock)) >= MAX_UNPAID_UPCOMING) {
+                throw new ConflictException("COACH_BOOKING_UNPAID_LIMIT", "error.coach_booking.unpaid_limit",
+                        new Object[]{MAX_UNPAID_UPCOMING}, "Please settle your unpaid 1:1 sessions first.");
+            }
             paymentStatus = "pending";
         }
 

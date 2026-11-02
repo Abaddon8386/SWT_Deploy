@@ -186,19 +186,17 @@ class PaymentServiceTest {
     }
 
     @Test
-    @DisplayName("Should update payment status from success to refunded")
-    void shouldUpdatePaymentStatusFromSuccessToRefunded() {
+    @DisplayName("Should reject success to refunded on the status endpoint; refunds go through refundPayment")
+    void shouldRejectStatusUpdateFromSuccessToRefunded() {
         Payment payment = new Payment();
         payment.setId(1L);
         payment.setStatus("success");
         payment.setPaidAt(LocalDateTime.now(clock).minusHours(1));
 
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
-        when(paymentMapper.toDto(payment)).thenReturn(new PaymentDto());
 
-        paymentService.updatePaymentStatus(1L, "refunded");
-
-        assertEquals("refunded", payment.getStatus());
+        assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatus(1L, "refunded"));
+        assertEquals("success", payment.getStatus());
     }
 
     @Test

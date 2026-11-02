@@ -106,7 +106,7 @@ class CoachBookingServiceTest {
         active.setEndDate(LocalDate.of(2026, 11, 30));
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active));
 
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
         when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
@@ -141,7 +141,7 @@ class CoachBookingServiceTest {
     @Test
     @DisplayName("Chặn đặt lịch nếu thời gian bắt đầu cách dưới 2 tiếng")
     void createBooking_throws_whenTooSoon() {
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
 
         // Attempt booking at 09:00 (only 1 hour from 08:00, less than 2 hours!)
@@ -163,7 +163,7 @@ class CoachBookingServiceTest {
     @Test
     @DisplayName("Chặn đặt lịch nếu Huấn luyện viên đã có lịch dạy lớp trùng giờ")
     void createBooking_throws_whenCoachBusy() {
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
 
         GymClass gymClass = new GymClass();
@@ -194,7 +194,7 @@ class CoachBookingServiceTest {
     @Test
     @DisplayName("Thành công trừ lượt PT của gói GOLD khi còn hạn mức")
     void createBooking_success_withPackageQuota() {
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
         when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
@@ -237,7 +237,7 @@ class CoachBookingServiceTest {
     @Test
     @DisplayName("Báo lỗi khi gói tập không có quyền lợi PT (như SILVER) mà chọn trừ lượt gói")
     void createBooking_throws_whenSilverHasNoPtQuota() {
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
         when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
@@ -302,7 +302,7 @@ class CoachBookingServiceTest {
 
     @Test
     void paidBookingRequiresActiveMembership() {
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
                 LocalTime.of(14, 0), LocalTime.of(15, 0), "bank_transfer", null);
@@ -313,7 +313,7 @@ class CoachBookingServiceTest {
     }
     @Test
     void rejectsMultiHourBookingChargedAsOneSession() {
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
                 LocalTime.of(14, 0), LocalTime.of(18, 0), "package_quota", null);
@@ -333,5 +333,33 @@ class CoachBookingServiceTest {
                 .filter(item -> item.startTime().equals(LocalTime.of(11, 0))).findFirst().orElseThrow();
         assertThat(slot.available()).isFalse();
         assertThat(slot.reason()).isEqualTo("member_busy");
+    }
+    @Test
+    void rejectsUnknownPaymentMethod() {
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
+                LocalTime.of(14, 0), LocalTime.of(15, 0), "free_lunch", null);
+        assertThatThrownBy(() -> service.createBooking(principal, request))
+                .isInstanceOf(BadRequestException.class)
+                .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("INVALID_PAYMENT_METHOD"));
+        verify(coachBookingRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectsHourlyBookingWhenUnpaidLimitReached() {
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setStatus("active");
+        sub.setStartDate(LocalDate.of(2026, 10, 1));
+        sub.setEndDate(LocalDate.of(2026, 12, 31));
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
+        when(coachBookingRepository.countUnpaidUpcoming(10L, LocalDate.of(2026, 10, 31))).thenReturn(2L);
+        var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
+                LocalTime.of(14, 0), LocalTime.of(15, 0), "cash", null);
+        assertThatThrownBy(() -> service.createBooking(principal, request))
+                .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
+        verify(coachBookingRepository, never()).save(any());
     }
 }

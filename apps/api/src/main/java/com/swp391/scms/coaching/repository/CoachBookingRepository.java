@@ -62,4 +62,20 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             @Param("endDate") LocalDate endDate,
             @Param("paymentMethod") String paymentMethod
     );
+    @Query("""
+            select cb from CoachBooking cb
+            where cb.member.userId = :memberId
+              and cb.bookingDate >= :today
+              and cb.status = 'confirmed'
+            """)
+    List<CoachBooking> findFutureConfirmedByMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
+
+    @Query("""
+            select count(cb) from CoachBooking cb
+            where cb.member.userId = :memberId
+              and cb.bookingDate >= :today
+              and cb.paymentStatus = 'pending'
+              and cb.status = 'confirmed'
+            """)
+    long countUnpaidUpcoming(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 }

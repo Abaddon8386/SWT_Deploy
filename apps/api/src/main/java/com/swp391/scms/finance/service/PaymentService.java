@@ -66,6 +66,9 @@ public class PaymentService {
     @Autowired(required = false)
     private com.swp391.scms.scheduling.service.EnrollmentService enrollmentService;
 
+    @Autowired(required = false)
+    private com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
+
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
@@ -232,7 +235,7 @@ public class PaymentService {
             boolean allowed = switch (currentStatus) {
                 case "pending" -> "success".equals(normalizedStatus) || "failed".equals(normalizedStatus);
                 case "failed" -> "pending".equals(normalizedStatus);
-                case "success" -> "refunded".equals(normalizedStatus);
+                // Refunds go through refundPayment (manager-only, audited, with reason).
                 default -> false;
             };
             if (!allowed) {
@@ -255,9 +258,6 @@ public class PaymentService {
             }
             if ("pending".equals(currentStatus) && "success".equals(normalizedStatus)) {
                 activateLinkedTargetsOnSuccess(payment);
-            }
-            if ("success".equals(currentStatus) && "refunded".equals(normalizedStatus)) {
-                cancelLinkedTargetsOnRefund(payment, null);
             }
         }
 
@@ -400,6 +400,7 @@ public class PaymentService {
                         "Enrollment does not belong to member");
             }
 
+            requireBookable(enrollment);
             enrollment.setStatus("booked");
             classEnrollmentRepository.save(enrollment);
         }
@@ -462,7 +463,9 @@ public class PaymentService {
         }
         payment.setNote(combinedNote);
 
-        cancelLinkedTargetsOnRefund(payment, request.getReason());
+        if (refundAmount.compareTo(payment.getAmount()) == 0) {
+            cancelLinkedTargetsOnRefund(payment, request.getReason());
+        }
 
         Payment saved = paymentRepository.save(payment);
         return paymentMapper.toDto(saved);
@@ -475,6 +478,7 @@ public class PaymentService {
                 sub.setHoldStatus(null);
                 sub.setUpdatedAt(LocalDateTime.now(clock));
                 membershipSubscriptionRepository.save(sub);
+                cancelFutureBookingsWithoutEntitlement(sub, cancelReason);
             });
         }
 
@@ -490,6 +494,30 @@ public class PaymentService {
                     enrollmentService.promoteNextWaitlistEntry(enrollment.getGymClass().getId(), LocalDateTime.now(clock));
                 }
             });
+        }
+    }
+
+    /** A refunded membership grants no booking rights, unless another paid period still covers the member. */
+    private void cancelFutureBookingsWithoutEntitlement(MembershipSubscription refunded, String reason) {
+        if (refunded.getMember() == null) return;
+        Long memberId = refunded.getMember().getUserId();
+        java.time.LocalDate today = java.time.LocalDate.now(clock);
+        boolean stillCovered = membershipSubscriptionRepository.findByMemberUserId(memberId).stream()
+                .anyMatch(other -> !other.getId().equals(refunded.getId())
+                        && ("active".equalsIgnoreCase(other.getStatus()) || "frozen".equalsIgnoreCase(other.getStatus()))
+                        && other.getEndDate() != null && !other.getEndDate().isBefore(today));
+        if (stillCovered) return;
+        String cancelReason = reason != null && !reason.isBlank() ? reason : "Refunded membership";
+        if (cancelReason.length() > 255) cancelReason = cancelReason.substring(0, 255);
+        if (enrollmentService != null) {
+            enrollmentService.cancelFutureEnrollmentsForMember(memberId, cancelReason);
+        }
+        if (coachBookingRepository != null) {
+            for (var booking : coachBookingRepository.findFutureConfirmedByMember(memberId, today)) {
+                booking.setStatus("cancelled");
+                booking.setCancelledAt(LocalDateTime.now(clock));
+                booking.setCancelReason(cancelReason);
+            }
         }
     }
 
@@ -540,9 +568,17 @@ public class PaymentService {
         }
         if (payment.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
             classEnrollmentRepository.findById(payment.getClassEnrollmentId()).ifPresent(enrollment -> {
+                requireBookable(enrollment);
                 enrollment.setStatus("booked");
                 classEnrollmentRepository.save(enrollment);
             });
+        }
+    }
+
+    private void requireBookable(ClassEnrollment enrollment) {
+        if (!"booked".equalsIgnoreCase(enrollment.getStatus())) {
+            throw new ConflictException("PAYMENT_ENROLLMENT_NOT_PAYABLE", "finance.payment.enrollment_not_payable",
+                    new Object[]{enrollment.getStatus()}, null);
         }
     }
 
