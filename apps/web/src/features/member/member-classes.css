@@ -20,3 +20,7 @@
   .member-classes .portal-card--list { flex-wrap: wrap; }
   .member-class-session > div { min-width: 0; max-width: 100%; }
 }
+
+/* Link trong dòng nhắc đủ vùng chạm trên mobile */
+.member-classes-package-link { display: inline-flex; align-items: center; min-height: 32px; }
+@media (max-width: 767px) { .member-classes-package-link { min-height: 44px; } }

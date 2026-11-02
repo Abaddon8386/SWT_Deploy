@@ -7,6 +7,8 @@ import { PortalIcon } from '../portal/PortalIcon';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { getFavoriteDisciplines, toggleFavoriteDiscipline } from './favoriteDisciplinesApi';
+import { getMySubscription } from './memberCardApi';
+import { cardStatus } from './cardStatus';
 import { PRIMARY_DISCIPLINES } from '../../shared/lib/disciplines';
 import {
   cancelEnrollment,
@@ -124,6 +126,8 @@ export function MemberClassesPage() {
   const [discipline, setDiscipline] = useState('ALL');
   const [day, setDay] = useState('ALL');
   const [favoriteDisciplineIds, setFavoriteDisciplineIds] = useState<number[]>([]);
+  // null: chưa biết (đang tải hoặc lỗi) — khi đó không hiện lời nhắc mua gói
+  const [hasActivePackage, setHasActivePackage] = useState<boolean | null>(null);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [visibleCount, setVisibleCount] = useState(SESSION_BATCH_SIZE);
   const [loading, setLoading] = useState(true);
@@ -166,6 +170,16 @@ export function MemberClassesPage() {
     void getFavoriteDisciplines()
       .then((ids) => {
         if (active) setFavoriteDisciplineIds(ids);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void getMySubscription()
+      .then((subscription) => {
+        if (active) setHasActivePackage(!!subscription && ['active', 'warning'].includes(cardStatus(subscription.status, subscription.endDate)));
       })
       .catch(() => {});
     return () => { active = false; };
@@ -445,6 +459,8 @@ export function MemberClassesPage() {
                         border: 'none',
                         cursor: 'pointer',
                         fontSize: 15,
+                        minWidth: 32,
+                        minHeight: 32,
                         padding: '2px 4px',
                         marginLeft: -4,
                         color: isFav ? '#f59e0b' : 'var(--portal-muted, #9ca3af)',
@@ -474,9 +490,11 @@ export function MemberClassesPage() {
             {days.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </Select>
         </div>
-        <p className="row-card__meta" style={{ margin: 0 }}>
-          Cần gói tập đang hoạt động để đặt chỗ. <Link to="/member/packages">Xem gói tập</Link>
-        </p>
+        {hasActivePackage === false && (
+          <p className="row-card__meta" style={{ margin: 0 }}>
+            Cần gói tập đang hoạt động để đặt chỗ. <Link className="member-classes-package-link" to="/member/packages">Xem gói tập</Link>
+          </p>
+        )}
       </div>
 
       {notice && (

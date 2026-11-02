@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   joinWaitlist: vi.fn(),
   leaveWaitlist: vi.fn(),
   favoriteDisciplines: vi.fn(),
+  mySubscription: vi.fn(),
   toggleFavoriteDiscipline: vi.fn(),
   coaches: vi.fn(),
   coachSlots: vi.fn(),
@@ -37,6 +38,10 @@ vi.mock('./memberClassesApi', async (importOriginal) => {
 vi.mock('./favoriteDisciplinesApi', () => ({
   getFavoriteDisciplines: mocks.favoriteDisciplines,
   toggleFavoriteDiscipline: mocks.toggleFavoriteDiscipline,
+}));
+
+vi.mock('./memberCardApi', () => ({
+  getMySubscription: mocks.mySubscription,
 }));
 
 vi.mock('./coachBookingApi', () => ({
@@ -64,6 +69,7 @@ describe('MemberClassesPage', () => {
     host = document.createElement('div'); document.body.append(host);
     root = createRoot(host);
     mocks.sessions.mockReset();
+    mocks.mySubscription.mockReset().mockResolvedValue(null);
     mocks.waitlists.mockReset();
     mocks.enrollments.mockReset();
     mocks.enroll.mockReset();
@@ -212,6 +218,15 @@ describe('MemberClassesPage', () => {
     const button = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Tham gia hàng chờ'));
     expect(button?.disabled).toBe(false);
     expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
+  });
+
+  it('hides the buy-a-package reminder when the member already has an active package', async () => {
+    const end = new Date(Date.now() + 20 * 86400000).toLocaleDateString('en-CA');
+    mocks.mySubscription.mockResolvedValue({ id: 1, status: 'active', endDate: end });
+    mocks.sessions.mockResolvedValue([session]);
+    await render();
+    expect(host.textContent).toContain('Yoga Flow');
+    expect(host.textContent).not.toContain('Cần gói tập đang hoạt động để đặt chỗ');
   });
 
   it('shows empty schedule', async () => {
