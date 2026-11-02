@@ -24,6 +24,9 @@ async function fixtures(page) {
     if (endpoint === '/memberships/subscriptions/my') data = null;
     if (endpoint === '/notifications/unread-count') data = { count: 0 };
     if (endpoint === '/notifications') data = { content: [], number: 0, totalPages: 0 };
+    if (endpoint === '/chat/realtime-session') data = { enabled: false };
+    if (endpoint === '/chat/conversations') data = { content: [{ id: 7, peer: { id: 20, name: 'Coach Linh', role: 'COACH', available: true }, createdAt: new Date().toISOString(), lastActivityAt: new Date().toISOString() }], number: 0, totalPages: 1 };
+    if (endpoint === '/chat/conversations/7/messages') data = { items: [], hasMore: false };
     if (endpoint === '/check-in/gate-qr') data = {
       qrCode: qrPayload, gateId: url.searchParams.get('gate') || 'A1', gate: 'Turnstile A1 - Sảnh Chính',
       generatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), expiresInSeconds: 60,
@@ -105,11 +108,12 @@ async function layout(page, mobile) {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.screenshot({ path: path.join(output, `${role.toLowerCase()}-390.png`), fullPage: true });
       if (role === 'MEMBER') {
-        await page.getByTitle('Mở trợ lý AI', { exact: true }).click();
-        const chatInput = page.getByRole('textbox', { name: 'Câu hỏi cho AI' });
+        await page.getByRole('button', { name: 'Mở tin nhắn', exact: true }).click();
+        await page.getByRole('button', { name: /Coach Linh/ }).click();
+        const chatInput = page.getByRole('textbox', { name: 'Tin nhắn cho Coach Linh' });
         await chatInput.waitFor();
-        assert.ok(await chatInput.evaluate(el => parseFloat(getComputedStyle(el).fontSize)) >= 16, 'chatbot input uses 16px on mobile');
-        await page.getByRole('button', { name: 'Đóng cửa sổ chat' }).click();
+        assert.ok(await chatInput.evaluate(el => parseFloat(getComputedStyle(el).fontSize)) >= 16, 'chat input uses 16px on mobile');
+        await page.getByRole('button', { name: 'Đóng cửa sổ tin nhắn' }).click();
       }
       for (const width of [844, 1440, 1920, 2560]) {
         await page.setViewportSize({ width, height: 900 }); await layout(page, false);

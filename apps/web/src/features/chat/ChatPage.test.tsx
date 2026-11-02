@@ -105,4 +105,6 @@ it('toggles mobile thread state and restores focus to inbox heading on back', as
   });
   expect(host.querySelector('.direct-chat')?.classList.contains('direct-chat--thread-open')).toBe(false);
   expect(document.activeElement?.id).toBe('chat-inbox-title');
+  await act(async () => button('Coach Linh').click());
+  expect(document.activeElement?.id).toBe('chat-thread-title');
 });

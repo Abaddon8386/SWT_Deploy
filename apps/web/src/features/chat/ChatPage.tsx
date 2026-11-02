@@ -13,14 +13,14 @@ const connectionLabel: Record<ChatConnection, string> = {
   reconnecting: 'Mất kết nối trực tiếp · đang thử lại', disabled: 'Cập nhật trực tiếp chưa được cấu hình',
 };
 
-export function ChatPage() {
+export function ChatPage({ embedded = false }: { embedded?: boolean }) {
   const user = getCurrentUser();
   if (!user || !['MEMBER', 'STAFF', 'COACH'].includes(user.role))
     return <div className="portal-container"><h1 className="portal-title">Tin nhắn</h1><p role="alert">Bạn không có quyền truy cập chat riêng.</p></div>;
-  return <ChatWorkspace member={user.role === 'MEMBER'} />;
+  return <ChatWorkspace member={user.role === 'MEMBER'} embedded={embedded} />;
 }
 
-function ChatWorkspace({ member }: { member: boolean }) {
+function ChatWorkspace({ member, embedded }: { member: boolean; embedded: boolean }) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selected, setSelected] = useState<ChatConversation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,8 +71,8 @@ function ChatWorkspace({ member }: { member: boolean }) {
   }
 
   return <div className={`portal-container direct-chat${mobileThread ? ' direct-chat--thread-open' : ''}`}>
-    <header className="portal-header"><div><p className="portal-eyebrow">Kết nối tại SÖL</p><h1 className="portal-title">Tin nhắn</h1>
-      <p className="direct-chat__intro">{member ? 'Trao đổi riêng với lễ tân và huấn luyện viên.' : 'Trao đổi riêng với hội viên của bạn.'}</p></div>
+    <header className="portal-header">{!embedded && <div><p className="portal-eyebrow">Kết nối tại SÖL</p><h1 className="portal-title">Tin nhắn</h1>
+      <p className="direct-chat__intro">{member ? 'Trao đổi riêng với lễ tân và huấn luyện viên.' : 'Trao đổi riêng với hội viên của bạn.'}</p></div>}
       <div className="direct-chat__connection"><span role="status" className={`direct-chat__connection-label is-${connection}`}><i aria-hidden="true" />{connectionLabel[connection]}</span>
         {(connection === 'disabled' || connection === 'reconnecting') && <button type="button" className="direct-chat__link" onClick={() => setConnectionAttempt(n => n + 1)}>Thử kết nối lại</button>}
         <button type="button" className="btn-secondary" onClick={() => { void loadInbox(pageRef.current); void refresh(); }} disabled={loading}>Làm mới</button></div>
@@ -94,7 +94,7 @@ function ChatWorkspace({ member }: { member: boolean }) {
           <button type="button" className="direct-chat__link" disabled={page + 1 >= totalPages} onClick={() => void loadInbox(page + 1)}>Sau</button>
         </nav>}
       </aside>
-      {selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} onBack={() => { setMobileThread(false); requestAnimationFrame(() => listTitle.current?.focus({ preventScroll: true })); }} />
+      {selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} onBack={() => { setMobileThread(false); requestAnimationFrame(() => listTitle.current?.focus({ preventScroll: true })); }} />
         : <section className="direct-chat__placeholder"><span aria-hidden="true">↗</span><h2>Chọn một cuộc trò chuyện</h2><p>Tin nhắn riêng của bạn được lưu tại đây.</p></section>}
     </div>
   </div>;

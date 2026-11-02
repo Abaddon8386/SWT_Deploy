@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { useComponentReveal } from '../hooks/useComponentReveal';
 import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
+import { ChatWidget } from '../../chat/ChatWidget';
 import '../fitness-public.css';
 
 const links = [
@@ -137,6 +138,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         <div className="fit-footer-watermark" aria-hidden="true">SÖL FITNESS</div>
       </footer>
     </div>
+    <ChatWidget />
   </div>;
 }
 

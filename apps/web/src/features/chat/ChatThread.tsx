@@ -6,13 +6,13 @@ import type { useChatConversation } from './useChatConversation';
 const dateTime = (value: string) => new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 type ChatState = ReturnType<typeof useChatConversation>;
 
-export function ChatThread({ conversation, chat, onBack }: { conversation: ChatConversation; chat: ChatState; onBack: () => void }) {
+export function ChatThread({ conversation, chat, onBack, active = true }: { conversation: ChatConversation; chat: ChatState; onBack: () => void; active?: boolean }) {
   const scroll = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const atBottom = useRef(true);
   const previous = useRef<{ first?: number; last?: number; height: number }>({ height: 0 });
   const [newBelow, setNewBelow] = useState(false);
-  useEffect(() => { title.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => { if (active) title.current?.focus({ preventScroll: true }); }, [active]);
   useLayoutEffect(() => {
     const node = scroll.current;
     if (!node) return;

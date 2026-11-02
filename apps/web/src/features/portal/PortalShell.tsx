@@ -7,7 +7,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from './PortalIcon';
 import { MOBILE_PRIMARY_NAV, PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
-import { LiquidGlassChatbot } from '../../shared/liquid-glass/LiquidGlassChatbot';
+import { ChatWidget } from '../chat/ChatWidget';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { NotificationsPopover } from '../member/NotificationsPopover';
 
@@ -162,7 +162,7 @@ export function PortalShell() {
         </button>
       </nav>
 
-      {isMember && location.pathname !== '/member/check-in' && <LiquidGlassChatbot />}
+      {location.pathname !== '/member/check-in' && location.pathname !== '/messages' && <ChatWidget />}
       {isMember && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
       {dialog === 'logout' && <Modal title="Đăng xuất khỏi SÖL?" onClose={() => setDialog(null)}>
         <p className="portal-subtitle">Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.</p>
