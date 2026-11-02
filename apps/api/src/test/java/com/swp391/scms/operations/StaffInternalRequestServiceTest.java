@@ -46,7 +46,12 @@ class StaffInternalRequestServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new StaffInternalRequestService(requestRepository, userRepository, notificationService);
+        var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("i18n/messages");
+        messages.setDefaultEncoding("UTF-8");
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.forLanguageTag("vi"));
+        service = new StaffInternalRequestService(requestRepository, userRepository, notificationService,
+                new com.swp391.scms.common.i18n.MessageService(messages));
 
         Role staffRole = new Role();
         staffRole.setCode("STAFF");
@@ -69,11 +74,16 @@ class StaffInternalRequestServiceTest {
         managerUser.setRole(managerRole);
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void resetLocale() {
+        org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+    }
+
     @Test
     @DisplayName("Tạo đơn xin nghỉ phép thành công và gửi thông báo cho Manager")
     void createRequest_Success() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
-        when(userRepository.findAll()).thenReturn(List.of(staffUser, managerUser));
+        when(userRepository.findActiveManagers()).thenReturn(List.of(staffUser, managerUser));
 
         when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(invocation -> {
             StaffInternalRequest saved = invocation.getArgument(0);
@@ -134,7 +144,7 @@ class StaffInternalRequestServiceTest {
         req.setStatus("PENDING");
         req.setTitle("Đổi ca trực");
 
-        when(requestRepository.findById(50L)).thenReturn(Optional.of(req));
+        when(requestRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(req));
         when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(i -> i.getArgument(0));
 
         StaffInternalRequestDto cancelled = service.cancelRequest(10L, 50L);
@@ -151,7 +161,7 @@ class StaffInternalRequestServiceTest {
         req.setUser(staffUser);
         req.setStatus("PENDING");
 
-        when(requestRepository.findById(50L)).thenReturn(Optional.of(req));
+        when(requestRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(req));
 
         assertThrows(ForbiddenException.class, () -> service.cancelRequest(999L, 50L));
         verify(requestRepository, never()).save(any());
@@ -165,7 +175,7 @@ class StaffInternalRequestServiceTest {
         req.setUser(staffUser);
         req.setStatus("APPROVED");
 
-        when(requestRepository.findById(50L)).thenReturn(Optional.of(req));
+        when(requestRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(req));
 
         assertThrows(BadRequestException.class, () -> service.cancelRequest(10L, 50L));
     }
@@ -180,7 +190,7 @@ class StaffInternalRequestServiceTest {
         req.setRequestType("LEAVE");
         req.setTitle("Xin nghỉ phép");
 
-        when(requestRepository.findById(200L)).thenReturn(Optional.of(req));
+        when(requestRepository.findByIdForUpdate(200L)).thenReturn(Optional.of(req));
         when(userRepository.findById(1L)).thenReturn(Optional.of(managerUser));
         when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -210,7 +220,7 @@ class StaffInternalRequestServiceTest {
         req.setUser(staffUser);
         req.setStatus("PENDING");
 
-        when(requestRepository.findById(200L)).thenReturn(Optional.of(req));
+        when(requestRepository.findByIdForUpdate(200L)).thenReturn(Optional.of(req));
 
         StaffInternalRequestReviewDto dto = new StaffInternalRequestReviewDto("REJECTED", "   ");
 
@@ -226,10 +236,18 @@ class StaffInternalRequestServiceTest {
         req.setUser(staffUser);
         req.setStatus("REJECTED");
 
-        when(requestRepository.findById(200L)).thenReturn(Optional.of(req));
+        when(requestRepository.findByIdForUpdate(200L)).thenReturn(Optional.of(req));
 
         StaffInternalRequestReviewDto dto = new StaffInternalRequestReviewDto("APPROVED", "Duyệt lại");
 
         assertThrows(BadRequestException.class, () -> service.reviewRequest(1L, 200L, dto));
+    }
+    @Test
+    void createRequestRejectsReversedDateRange() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        var dto = new StaffInternalRequestCreateDto("LEAVE", "Leave", "Reason",
+                java.time.LocalDate.of(2026, 11, 3), java.time.LocalDate.of(2026, 11, 2), null, null);
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L, dto));
+        verify(requestRepository, never()).save(any());
     }
 }

@@ -12,6 +12,7 @@ import com.swp391.scms.operations.repository.StaffInternalRequestRepository;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.swp391.scms.common.i18n.MessageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,19 +30,27 @@ public class StaffInternalRequestService {
     private final StaffInternalRequestRepository requestRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final MessageService messageService;
 
     public StaffInternalRequestService(StaffInternalRequestRepository requestRepository,
                                        UserRepository userRepository) {
         this(requestRepository, userRepository, null);
     }
 
+    public StaffInternalRequestService(StaffInternalRequestRepository requestRepository,
+                                       UserRepository userRepository,
+                                       NotificationService notificationService) {
+        this(requestRepository, userRepository, notificationService, null);
+    }
+
     @Autowired
     public StaffInternalRequestService(StaffInternalRequestRepository requestRepository,
                                        UserRepository userRepository,
-                                       @Autowired(required = false) NotificationService notificationService) {
+                                       @Autowired(required = false) NotificationService notificationService, MessageService messageService) {
         this.requestRepository = requestRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.messageService = messageService;
     }
 
     @Transactional
@@ -52,6 +61,12 @@ public class StaffInternalRequestService {
         String type = requestDto.requestType().toUpperCase().trim();
         if (!VALID_TYPES.contains(type)) {
             throw new BadRequestException("INVALID_REQUEST_TYPE", "error.operations.request.invalid_type", "Loại đơn từ không hợp lệ.");
+        }
+
+        if (requestDto.startDate() != null && requestDto.endDate() != null
+                && requestDto.endDate().isBefore(requestDto.startDate())) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "error.operations.request.invalid_date_range",
+                    "End date must not precede start date.");
         }
 
         User replacement = null;
@@ -75,7 +90,7 @@ public class StaffInternalRequestService {
 
         // Notify managers about new request
         if (notificationService != null) {
-            List<User> managers = userRepository.findAll().stream()
+            List<User> managers = userRepository.findActiveManagers().stream()
                     .filter(u -> u.getRole() != null && 
                             ("MANAGER".equalsIgnoreCase(u.getRole().getCode()) || "CENTER_MANAGER".equalsIgnoreCase(u.getRole().getCode())))
                     .toList();
@@ -83,8 +98,8 @@ public class StaffInternalRequestService {
                 String roleCode = user.getRole() != null ? user.getRole().getCode() : "STAFF";
                 notificationService.send(
                         mgr.getId(),
-                        "Đơn từ nội bộ mới cần duyệt",
-                        String.format("%s (%s) đã gửi đơn %s: %s", user.getFullName(), roleCode, type, saved.getTitle()),
+                        msg("notifications.operations.created.title"),
+                        msg("notifications.operations.created.body", user.getFullName(), roleCode, type, saved.getTitle()),
                         "system",
                         null,
                         saved.getId()
@@ -108,7 +123,7 @@ public class StaffInternalRequestService {
 
     @Transactional
     public StaffInternalRequestDto cancelRequest(Long userId, Long requestId) {
-        StaffInternalRequest req = requestRepository.findById(requestId)
+        StaffInternalRequest req = requestRepository.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.staff_internal_request", requestId));
 
         if (!req.getUser().getId().equals(userId)) {
@@ -136,7 +151,7 @@ public class StaffInternalRequestService {
 
     @Transactional
     public StaffInternalRequestDto reviewRequest(Long managerUserId, Long requestId, StaffInternalRequestReviewDto reviewDto) {
-        StaffInternalRequest req = requestRepository.findById(requestId)
+        StaffInternalRequest req = requestRepository.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.staff_internal_request", requestId));
 
         if (!"PENDING".equalsIgnoreCase(req.getStatus())) {
@@ -165,11 +180,10 @@ public class StaffInternalRequestService {
 
         // Send in-app notification to the requester
         if (notificationService != null) {
-            String title = "APPROVED".equals(newStatus) ? "Đơn từ của bạn đã được duyệt" : "Đơn từ của bạn bị từ chối";
-            String notePart = saved.getManagerNotes() != null ? (" - Ghi chú: " + saved.getManagerNotes()) : "";
-            String message = String.format("Đơn '%s' (%s) đã được %s xử lý: %s%s",
-                    saved.getTitle(), saved.getRequestType(), manager.getFullName(),
-                    "APPROVED".equals(newStatus) ? "CHẤP THUẬN" : "TỪ CHỐI", notePart);
+            String title = msg("APPROVED".equals(newStatus) ? "notifications.operations.approved.title" : "notifications.operations.rejected.title");
+            String message = msg("notifications.operations.reviewed.body", saved.getTitle(),
+                    manager.getFullName(), msg("operations.status." + newStatus.toLowerCase(java.util.Locale.ROOT)),
+                    saved.getManagerNotes() != null ? saved.getManagerNotes() : "");
 
             notificationService.send(
                     saved.getUser().getId(),
@@ -207,5 +221,8 @@ public class StaffInternalRequestService {
                 r.getCreatedAt(),
                 r.getUpdatedAt()
         );
+    }
+    private String msg(String key, Object... args) {
+        return messageService != null ? messageService.getMessage(key, args) : key;
     }
 }

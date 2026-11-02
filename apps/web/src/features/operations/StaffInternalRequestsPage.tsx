@@ -53,8 +53,8 @@ export function StaffInternalRequestsPage() {
     try {
       const data = await getMyStaffRequests();
       setRequests(data);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách đơn từ của bạn.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể tải danh sách đơn từ của bạn.'));
     } finally {
       setLoading(false);
     }
@@ -96,8 +96,8 @@ export function StaffInternalRequestsPage() {
       setShowCreateModal(false);
       resetForm();
       await loadData();
-    } catch (err: any) {
-      setFormError(err.message || 'Không thể gửi đơn từ. Vui lòng kiểm tra lại.');
+    } catch (err: unknown) {
+      setFormError((err instanceof Error ? err.message : 'Không thể gửi đơn từ. Vui lòng kiểm tra lại.'));
     } finally {
       setSubmitting(false);
     }
@@ -120,8 +120,8 @@ export function StaffInternalRequestsPage() {
       await cancelStaffRequest(id);
       setNotice('Đã hủy đơn thành công.');
       await loadData();
-    } catch (err: any) {
-      setError(err.message || 'Không thể hủy đơn từ.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể hủy đơn từ.'));
     } finally {
       setCancellingId(null);
     }

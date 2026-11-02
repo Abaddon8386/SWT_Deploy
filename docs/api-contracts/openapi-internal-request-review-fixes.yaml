@@ -1,0 +1,34 @@
+openapi: 3.0.3
+info:
+  title: SCMS internal request corrections (SCRUM-135)
+  version: 1.0.0
+  description: Corrections from PR 78 review. Uses the existing ApiResponse envelope and Accept-Language localization.
+servers:
+  - url: /api/v1
+paths:
+  /operations/requests:
+    post:
+      summary: Submit an internal staff request
+      description: Staff/coach can submit a request. If both dates are supplied, endDate must be on or after startDate. Notifications target active, non-deleted managers only.
+      responses:
+        '201': {description: Request created}
+        '400': {description: Invalid request type or INVALID_DATE_RANGE}
+  /operations/requests/{id}/cancel:
+    put:
+      summary: Owner cancels a pending request
+      description: Review and cancellation acquire a database write lock on the same request. Only one transition from PENDING can succeed; the later operation receives the existing invalid-state error.
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: integer, format: int64}}
+      responses:
+        '200': {description: Cancelled request}
+        '400': {description: CANNOT_CANCEL after another transition}
+        '403': {description: Request belongs to another user}
+  /operations/requests/{id}/review:
+    put:
+      summary: Manager approves or rejects a pending request
+      description: Serialized with cancellation and other review attempts. Rejection requires managerNotes. Notifications use localized system messages.
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: integer, format: int64}}
+      responses:
+        '200': {description: Reviewed request}
+        '400': {description: ALREADY_REVIEWED, INVALID_STATUS or REJECTION_REASON_REQUIRED}

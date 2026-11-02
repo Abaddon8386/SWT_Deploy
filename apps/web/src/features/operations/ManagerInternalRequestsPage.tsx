@@ -52,8 +52,8 @@ export function ManagerInternalRequestsPage() {
     try {
       const data = await getAllStaffRequests();
       setRequests(data);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách đơn từ nhân sự.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể tải danh sách đơn từ nhân sự.'));
     } finally {
       setLoading(false);
     }
@@ -113,8 +113,8 @@ export function ManagerInternalRequestsPage() {
       );
       setReviewTarget(null);
       await loadData();
-    } catch (err: any) {
-      setModalError(err.message || 'Không thể xử lý đơn từ. Vui lòng thử lại.');
+    } catch (err: unknown) {
+      setModalError((err instanceof Error ? err.message : 'Không thể xử lý đơn từ. Vui lòng thử lại.'));
     } finally {
       setSubmitting(false);
     }
