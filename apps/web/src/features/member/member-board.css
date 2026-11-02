@@ -21,33 +21,33 @@
 .portal-v2 .member-board .member-membership-card { padding: 10px; }
 .member-card-cover { display: block; width: 100%; height: 120px; object-fit: cover; border-radius: 12px; background: var(--portal-raised); }
 .member-card-body { padding: 16px 7px 8px; }
-.member-card-body .badge { font-size: 9px; }
+.member-card-body .badge { font-size: 11px; }
 .member-card-body .row-card__meta { font-size: 11px; line-height: 1.8; }
 .member-text-link { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; margin-top: 12px; color: var(--portal-salmon); font-size: 11px; font-weight: 650; }
 .member-text-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .member-board-note { display: flex; align-items: center; gap: 10px; padding: 15px 12px; border: 1px dashed var(--portal-border-strong); border-radius: 16px; font-size: 11px; font-weight: 600; transition: background-color 160ms ease, border-color 160ms ease; }
 .member-board-note > svg { flex-shrink: 0; color: var(--portal-salmon); }
 .member-board-note > span { flex: 1; }
-.member-board-note small { display: block; margin-top: 4px; font-size: 10px; font-weight: 400; color: var(--portal-muted); }
+.member-board-note small { display: block; margin-top: 4px; font-size: 11px; font-weight: 400; color: var(--portal-muted); }
 .member-board-note:hover { background: var(--portal-raised); border-color: var(--portal-border-strong); }
 .member-board-empty { padding-top: 4px; }
 .member-board-empty-icon { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; line-height: 1; margin-bottom: 16px; border-radius: 14px; background: var(--portal-tint); color: var(--portal-salmon); }
 .portal-v2 .member-board .member-booking-row { justify-content: flex-start; padding: 12px; gap: 9px; flex-wrap: nowrap; align-items: flex-start; }
 .portal-v2 .member-booking-row .row-card__title { font-size: 12px; margin-bottom: 4px; }
-.portal-v2 .member-booking-row .row-card__meta { font-size: 10px; }
+.portal-v2 .member-booking-row .row-card__meta { font-size: 11px; }
 .member-booking-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 30px; width: 30px; height: 30px; line-height: 1; background: var(--portal-tint); color: var(--portal-salmon); border-radius: 9px; }
 .member-discover-card { display: grid; grid-template-columns: minmax(0, 1fr) 18px; gap: 12px 6px; padding: 10px 10px 16px; border-radius: 18px; background: var(--portal-surface); box-shadow: 0 6px 22px -16px #00000030; }
 .member-discover-card > img { grid-column: 1 / -1; width: 100%; height: 116px; border-radius: 12px; object-fit: cover; }
 .member-discover-card > span { padding-left: 7px; }
 .member-discover-card strong { display: block; font-size: 12px; font-weight: 650; }
-.member-discover-card small { display: block; margin-top: 5px; font-size: 10px; line-height: 1.7; color: var(--portal-muted); }
+.member-discover-card small { display: block; margin-top: 5px; font-size: 11px; line-height: 1.7; color: var(--portal-muted); }
 .member-discover-card > svg { align-self: center; color: var(--portal-salmon); }
 .member-digital-card { display: flex; flex-direction: column; min-height: 192px; padding: 22px 18px 16px; margin-bottom: 14px; border-radius: 18px; background: var(--portal-tint); border: 1px solid var(--portal-border); color: var(--portal-salmon); }
 .member-digital-card-top { display: flex; align-items: center; justify-content: space-between; }
 .member-digital-card-top > span { font-size: 26px; font-weight: 800; letter-spacing: -.07em; }
-.member-digital-card-label { margin-top: 23px; font-size: 8px; letter-spacing: .14em; }
+.member-digital-card-label { margin-top: 23px; font-size: 11px; letter-spacing: .14em; }
 .member-digital-card > strong { margin-top: 7px; font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
-.member-digital-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 20px; font-size: 9px; }
+.member-digital-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 20px; font-size: 11px; }
 .member-info-icon { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; line-height: 1; margin-bottom: 14px; border-radius: 12px; background: var(--portal-tint); color: var(--portal-salmon); }
 .member-board-info h3, .member-profile-card h3 { margin: 0 0 8px; font-size: 13px; font-weight: 650; }
 .member-board-info p, .member-profile-card p { margin: 0; color: var(--portal-muted); font-size: 11px; line-height: 1.9; }
@@ -56,9 +56,9 @@
 .member-sanctuary-card { display: block; padding: 10px; border-radius: 18px; background: var(--portal-surface); box-shadow: 0 6px 22px -16px #00000030; }
 .member-sanctuary-card > img { display: block; width: 100%; height: 130px; border-radius: 12px; object-fit: cover; }
 .member-sanctuary-card > span { display: block; padding: 16px 8px 10px; }
-.member-sanctuary-card small { color: var(--portal-muted); font-size: 8px; letter-spacing: .08em; }
+.member-sanctuary-card small { color: var(--portal-muted); font-size: 11px; letter-spacing: .08em; }
 .member-sanctuary-card strong { display: block; margin-top: 9px; font-size: 17px; line-height: 1.6; font-weight: 650; letter-spacing: -.04em; }
-.member-sanctuary-card > span > span { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 10px; color: var(--portal-salmon); font-weight: 600; }
+.member-sanctuary-card > span > span { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 11px; color: var(--portal-salmon); font-weight: 600; }
 .member-board-loading { color: var(--portal-muted); font-size: 12px; }
 .member-skeleton { border-radius: 10px; background: var(--portal-raised); }
 .member-skeleton--image { height: 115px; margin-bottom: 18px; }
@@ -78,7 +78,7 @@
 @media (max-width: 600px) {
   .member-board { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .member-board-toolbar { padding-bottom: 16px; margin-bottom: 14px; }
-  .member-board-date { font-size: 10px; }
+  .member-board-date { font-size: 11px; }
   .member-column-heading { margin-bottom: 8px; }
   .member-column-heading h2 { font-size: 13px; }
   .member-card-cover, .member-discover-card > img, .member-sanctuary-card > img { height: 170px; }

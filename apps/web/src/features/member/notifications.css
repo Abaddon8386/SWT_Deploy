@@ -33,7 +33,7 @@
 .notification-popover .notification-copy { gap: 4px; }
 .notification-popover .notification-copy strong { font-size: 13px; }
 .notification-popover .notification-copy span { font-size: 12px; }
-.notification-popover .notification-copy small { font-size: 10px; }
+.notification-popover .notification-copy small { font-size: 11px; }
 .notification-popover .notification-dot { margin-top: 5px; }
 .notification-popover .notification-pages { flex-shrink: 0; margin: 0; padding: 10px; gap: 12px; border-top: 1px solid var(--portal-border); font-size: 12px; }
 .notification-popover .notification-pages button { min-height: 44px; padding: 6px 12px; }
