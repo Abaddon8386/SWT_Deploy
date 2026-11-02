@@ -151,14 +151,14 @@ class MethodSecurityPolicyTest {
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể xem toàn bộ yêu cầu hỗ trợ -> Spring Security ném AccessDeniedException")
     void memberCannotViewAllSupportRequests() {
-        assertThrows(AccessDeniedException.class, () -> supportRequestController.getAllRequests(null, null));
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.getAllRequests(supportActor(), null, null));
     }
 
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist có quyền xem và xử lý yêu cầu hỗ trợ -> Không bị chặn")
     void receptionistCanViewAllSupportRequests() {
-        assertDoesNotThrow(() -> supportRequestController.getAllRequests(null, null));
+        assertDoesNotThrow(() -> supportRequestController.getAllRequests(supportActor(), null, null));
     }
 
     @Test
@@ -166,7 +166,7 @@ class MethodSecurityPolicyTest {
     @DisplayName("AC SCRUM-69: Member không thể cập nhật trạng thái yêu cầu hỗ trợ -> Spring Security ném AccessDeniedException")
     void memberCannotUpdateSupportRequestStatus() {
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
-        assertThrows(AccessDeniedException.class, () -> supportRequestController.updateStatus(1L, updateDto));
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.updateStatus(supportActor(), 1L, updateDto));
     }
 
     @Test
@@ -174,7 +174,7 @@ class MethodSecurityPolicyTest {
     @DisplayName("AC SCRUM-69: Center Manager có quyền cập nhật trạng thái yêu cầu hỗ trợ -> Không bị chặn")
     void centerManagerCanUpdateSupportRequestStatus() {
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
-        assertDoesNotThrow(() -> supportRequestController.updateStatus(1L, updateDto));
+        assertDoesNotThrow(() -> supportRequestController.updateStatus(supportActor(), 1L, updateDto));
     }
 
     @Test
@@ -200,5 +200,37 @@ class MethodSecurityPolicyTest {
     void receptionistCannotRefundPayment() {
         com.swp391.scms.finance.dto.PaymentRefundRequest req = new com.swp391.scms.finance.dto.PaymentRefundRequest();
         assertThrows(AccessDeniedException.class, () -> paymentController.refundPayment(1L, req));
+    }
+
+    private static com.swp391.scms.security.AuthenticatedPrincipal supportActor() {
+        return new com.swp391.scms.security.AuthenticatedPrincipal(1L, "actor", "RECEPTIONIST");
+    }
+
+    @Test
+    @WithMockUser(roles = "COACH")
+    @DisplayName("Huấn luyện viên không còn xem hay xử lý khiếu nại -> AccessDeniedException")
+    void coachCannotTouchSupportRequests() {
+        UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.getAllRequests(supportActor(), null, null));
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.updateStatus(supportActor(), 1L, updateDto));
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.getMessages(1L, supportActor()));
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.sendMessage(1L, supportActor(),
+                new com.swp391.scms.support.dto.CreateSupportMessageDto("Xin chào", null)));
+    }
+
+    @Test
+    @WithMockUser(roles = "CENTER_MANAGER")
+    @DisplayName("Chỉ lễ tân được chuyển khiếu nại lên quản lý; quản lý không tự chuyển -> AccessDeniedException")
+    void onlyReceptionistsCanEscalate() {
+        var dto = new com.swp391.scms.support.dto.EscalateSupportRequestDto("Cần quản lý quyết định");
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.escalate(supportActor(), 1L, dto));
+    }
+
+    @Test
+    @WithMockUser(roles = "RECEPTIONIST")
+    @DisplayName("Lễ tân được chuyển khiếu nại lên quản lý -> Không bị chặn")
+    void receptionistCanEscalate() {
+        var dto = new com.swp391.scms.support.dto.EscalateSupportRequestDto("Cần quản lý quyết định");
+        assertDoesNotThrow(() -> supportRequestController.escalate(supportActor(), 1L, dto));
     }
 }

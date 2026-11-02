@@ -22,7 +22,10 @@ public class SupportRequestMapper {
             entity.getDescription(),
             entity.getStatus(),
             entity.getCreatedAt(),
-            entity.getResolvedAt()
+            entity.getResolvedAt(),
+            entity.getEscalatedAt(),
+            entity.getEscalatedBy() != null ? entity.getEscalatedBy().getFullName() : null,
+            entity.getEscalationReason()
         );
     }
 

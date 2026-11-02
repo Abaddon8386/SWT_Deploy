@@ -44,6 +44,21 @@ class TriggerProvidersTest {
     }
 
     @Test
+    void checkinAndCoachBookingTriggersUseVietnamBusinessDate() throws Exception {
+        List<String> sql = new ArrayList<>();
+        JdbcTemplate jdbc = legacyCheckins(sql, true, DatabaseMetaData.columnNullable);
+
+        new PostgreSqlTriggerProvider().applyTriggers(jdbc);
+
+        String script = String.join(System.lineSeparator(), sql);
+        int start = script.indexOf("CREATE OR REPLACE FUNCTION scms_require_active_membership_for_checkin()");
+        String checkin = script.substring(start, script.indexOf("$$;", script.indexOf("BEGIN", start)));
+        assertTrue(checkin.contains("statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh'"));
+        assertTrue(checkin.contains("subscription.end_date >= business_date"));
+        assertFalse(script.contains("CURRENT_DATE"));
+    }
+
+    @Test
     void upgradesLegacyCheckinNullabilityBeforeInstallingTriggersAndOnlyOnce() throws Exception {
         List<String> sql = new ArrayList<>();
         JdbcTemplate jdbc = legacyCheckins(sql, true, DatabaseMetaData.columnNoNulls,

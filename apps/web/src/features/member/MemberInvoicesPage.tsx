@@ -4,15 +4,11 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { ApiError } from '../../shared/api/client';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { getMyPayments, type Payment } from './membershipApi';
 import { getMyInvoiceByPayment, getMyInvoicePdf, type MemberInvoice } from './memberInvoicesApi';
 import './member-invoices.css';
 
-function dateLabel(value: string | null) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(date);
-}
 
 export function MemberInvoicesPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -82,9 +78,9 @@ export function MemberInvoicesPage() {
         ) : payments.length === 0 ? <p>Chưa có giao dịch thanh toán thành công.</p> : (
           <div className="member-invoices__scroll">
             <table className="member-invoices__table">
-              <thead><tr><th scope="col">Mã giao dịch</th><th scope="col">Ngày thanh toán</th><th scope="col">Số tiền</th><th scope="col"><span className="sr-only">Chi tiết</span></th></tr></thead>
+              <thead><tr><th scope="col">Mã giao dịch</th><th scope="col">Ngày giờ thanh toán</th><th scope="col">Số tiền</th><th scope="col"><span className="sr-only">Chi tiết</span></th></tr></thead>
               <tbody>{payments.map((payment) => <tr key={payment.id}>
-                <td>#{payment.id}</td><td>{dateLabel(payment.paidAt)}</td><td>{formatPrice(payment.amount)}</td>
+                <td>#{payment.id}</td><td>{formatCenterDateTime(payment.paidAt)}</td><td>{formatPrice(payment.amount)}</td>
                 <td><button type="button" className="member-invoices__detail" onClick={() => setSelected(payment)} aria-label={`Xem hóa đơn giao dịch #${payment.id}`}>Xem hóa đơn <span aria-hidden="true">↗</span></button></td>
               </tr>)}</tbody>
             </table>
@@ -95,9 +91,10 @@ export function MemberInvoicesPage() {
         <div className="member-invoices__invoice">
           {invoiceLoading ? <LoadingSkeleton label="Đang tải hóa đơn…" variant="profile" /> : invoiceError ? <p role="alert">{invoiceError}</p> : invoice && <>
             <p className="member-invoices__number">{invoice.invoiceNumber}</p>
-            <p className="member-invoices__issued">Ngày phát hành {dateLabel(invoice.issuedAt)}</p>
+            <p className="member-invoices__issued">Phát hành lúc {formatCenterDateTime(invoice.issuedAt)}</p>
             <dl>
               <div><dt>Giao dịch</dt><dd>#{invoice.paymentId}</dd></div>
+              <div><dt>Thanh toán lúc</dt><dd>{formatCenterDateTime(selected.paidAt)}</dd></div>
               <div><dt>Trước thuế</dt><dd>{formatPrice(invoice.subtotalAmount)}</dd></div>
               <div><dt>VAT</dt><dd>{formatPrice(invoice.taxAmount)}</dd></div>
               <div className="member-invoices__total"><dt>Tổng tiền</dt><dd>{invoice.totalAmount == null ? 'Chưa có dữ liệu' : formatPrice(invoice.totalAmount)}</dd></div>

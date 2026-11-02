@@ -4,6 +4,7 @@ import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -40,6 +41,10 @@ public class MembershipSubscription {
 
     @Column(name = "qr_code", length = 255, unique = true)
     private String qrCode;
+
+    /** Quoted amount for an upgrade (difference or full price); null for ordinary purchases and renewals. */
+    @Column(name = "upgrade_charge", precision = 14, scale = 2)
+    private BigDecimal upgradeCharge;
 
     @Column(name = "hold_status", length = 20)
     private String holdStatus;
@@ -88,6 +93,13 @@ public class MembershipSubscription {
     public void setStatus(String status) { this.status = status; }
     public String getQrCode() { return qrCode; }
     public void setQrCode(String qrCode) { this.qrCode = qrCode; }
+    public BigDecimal getUpgradeCharge() { return upgradeCharge; }
+    public void setUpgradeCharge(BigDecimal upgradeCharge) { this.upgradeCharge = upgradeCharge; }
+    /** What the member owes at the counter: the quoted upgrade charge, else the package price. */
+    public BigDecimal payableAmount() {
+        if (upgradeCharge != null) return upgradeCharge;
+        return membershipPackage != null ? membershipPackage.getPrice() : null;
+    }
     public String getHoldStatus() { return holdStatus; }
     public void setHoldStatus(String holdStatus) { this.holdStatus = holdStatus; }
     public String getHoldReason() { return holdReason; }

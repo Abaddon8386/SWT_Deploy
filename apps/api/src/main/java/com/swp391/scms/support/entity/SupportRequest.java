@@ -39,6 +39,17 @@ public class SupportRequest {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
+    /** Set when the receptionist hands the complaint up; managers only ever see escalated requests. */
+    @Column(name = "escalated_at")
+    private LocalDateTime escalatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "escalated_by")
+    private User escalatedBy;
+
+    @Column(name = "escalation_reason", length = 500)
+    private String escalationReason;
+
     public SupportRequest() {}
 
     public SupportRequest(Member member, String subject, String description) {
@@ -63,6 +74,13 @@ public class SupportRequest {
     public void setStatus(String status) { this.status = status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getEscalatedAt() { return escalatedAt; }
+    public void setEscalatedAt(LocalDateTime escalatedAt) { this.escalatedAt = escalatedAt; }
+    public User getEscalatedBy() { return escalatedBy; }
+    public void setEscalatedBy(User escalatedBy) { this.escalatedBy = escalatedBy; }
+    public String getEscalationReason() { return escalationReason; }
+    public void setEscalationReason(String escalationReason) { this.escalationReason = escalationReason; }
+    public boolean isEscalated() { return escalatedAt != null; }
     public LocalDateTime getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
 }

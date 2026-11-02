@@ -152,10 +152,6 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/coaching/CoachTrainingPlanPage')).CoachTrainingPlanPage }),
           },
           {
-            path: '/coach/support',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachSupportPage')).CoachSupportPage }),
-          },
-          {
             path: '/staff/coach-classes',
             lazy: async () => ({ Component: (await import('../features/coaching/CoachClassesPage')).CoachClassesPage }),
           },
@@ -220,6 +216,10 @@ export const router = createBrowserRouter([
           {
             path: '/manager/coach-reviews',
             lazy: async () => ({ Component: (await import('../features/manager/ManagerCoachReviewsPage')).ManagerCoachReviewsPage }),
+          },
+          {
+            path: '/manager/support',
+            lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }),
           },
           {
             path: '/manager/requests',

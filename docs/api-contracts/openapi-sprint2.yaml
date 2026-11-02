@@ -173,6 +173,28 @@ components:
           type: string
           format: date-time
           nullable: true
+        escalatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Có giá trị khi lễ tân đã chuyển khiếu nại lên quản lý. Hội viên cũng thấy trường này.
+        escalatedByName:
+          type: string
+          nullable: true
+          description: Lễ tân đã chuyển cấp. Chỉ trả cho nhân viên, hội viên nhận null.
+        escalationReason:
+          type: string
+          nullable: true
+          description: Lý do chuyển cấp (tối đa 500 ký tự). Chỉ trả cho nhân viên, hội viên nhận null.
+
+    EscalateSupportRequestDto:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+          example: "Cần quản lý duyệt hoàn tiền"
 
 
 
@@ -248,6 +270,10 @@ components:
           format: date
           nullable: true
           description: GET /memberships/subscriptions/my trả hạn cuối chuỗi gia hạn cùng gói, liên tiếp và đã thanh toán (status active), bao gồm kỳ hiện tại. Không cộng pending_payment, frozen, cancelled, kỳ có khoảng trống hoặc chuỗi phân nhánh. Các response khác có thể trả null; client dùng endDate khi null. Không thay đổi ngày hoặc QR của từng kỳ.
+        upgradeCharge:
+          type: number
+          nullable: true
+          description: Số tiền phải thanh toán của yêu cầu nâng cấp, chốt lúc tạo yêu cầu. Đã dùng quá một nửa thời hạn gói hiện tại thì bằng đủ giá gói mới; chưa quá một nửa thì bằng chênh lệch giá gói mới trừ gói hiện tại (gói không rẻ hơn gói cũ cũng tính đủ giá gói mới). Null với đăng ký mới và gia hạn. Lễ tân chỉ thu đúng số này; gói cũ hết hiệu lực khi thanh toán được xác nhận.
         status:
           type: string
           enum: [pending_payment, active, frozen, expired, cancelled]
@@ -838,7 +864,7 @@ paths:
 
   /support/requests/{id}/status:
     patch:
-      summary: Cập nhật trạng thái phiếu hỗ trợ và người phụ trách (CENTER_MANAGER, RECEPTIONIST, COACH)
+      summary: Cập nhật trạng thái phiếu hỗ trợ và người phụ trách. Lễ tân chỉ xử lý phiếu chưa chuyển cấp, quản lý chỉ xử lý phiếu đã được chuyển lên (CENTER_MANAGER, RECEPTIONIST; huấn luyện viên không có quyền)
       tags: [Support]
       parameters:
         - name: id
@@ -870,6 +896,47 @@ paths:
           description: Quyền truy cập bị từ chối (FORBIDDEN)
         '404':
           description: Phiếu hỗ trợ không tồn tại
+
+  /support/requests/{id}/escalate:
+    post:
+      summary: Lễ tân chuyển khiếu nại không tự xử lý được lên quản lý (chỉ RECEPTIONIST)
+      description: >-
+        Luồng xử lý: hội viên gửi khiếu nại, lễ tân thấy và xử lý trước. Nếu không xử lý được, lễ tân chuyển lên quản lý.
+        Từ lúc đó người phụ trách bị bỏ, quản lý được báo và là người duy nhất xử lý phiếu; lễ tân chỉ xem.
+        GET /support/requests của quản lý chỉ trả các phiếu đã chuyển cấp. Huấn luyện viên không còn quyền với khiếu nại.
+      tags: [Support]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EscalateSupportRequestDto'
+      responses:
+        '200':
+          description: Đã chuyển cấp
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SupportRequestDto'
+        '400':
+          description: Thiếu lý do hoặc phiếu không ở trạng thái open/in_progress (SUPPORT_ESCALATE_INVALID_STATE)
+        '403':
+          description: Không phải lễ tân (FORBIDDEN)
+        '404':
+          description: Phiếu hỗ trợ không tồn tại
+        '409':
+          description: Phiếu đã được chuyển cấp (SUPPORT_ALREADY_ESCALATED)
 
   /support/requests/{id}/messages:
     post:

@@ -38,8 +38,8 @@ function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (['SCHEDULING_CLASS_FULL', 'CLASS_CAPACITY_EXCEEDED', 'SCHEDULING_CAPACITY_EXCEEDED'].includes(error.code ?? ''))
       return 'Lớp đã đầy. Bạn có thể tham gia hàng chờ để được tự động đôn lên khi có chỗ trống.';
-    if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED', 'SCHEDULING_NO_ACTIVE_SUBSCRIPTION'].includes(error.code ?? ''))
-      return 'Gói tập chưa hoạt động hoặc đã hết hạn. Vui lòng kích hoạt gói tập trước khi đặt lịch.';
+    if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED', 'SCHEDULING_NO_ACTIVE_SUBSCRIPTION', 'WAITLIST_MEMBERSHIP_INVALID'].includes(error.code ?? ''))
+      return 'Bạn chưa đăng ký gói tập, gói tập chưa kích hoạt hoặc đã hết hạn. Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch.';
     return error.message;
   }
   return 'Không thể tải lịch học. Vui lòng thử lại.';

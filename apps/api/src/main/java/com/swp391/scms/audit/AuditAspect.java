@@ -114,6 +114,7 @@ public class AuditAspect {
                     if (request == null) return null;
                     node.put("id", id).put("status", request.getStatus());
                     if (request.getAssignedTo() != null) node.put("assignedTo", request.getAssignedTo().getId());
+                    if (request.getEscalatedAt() != null) node.put("escalatedAt", request.getEscalatedAt().toString());
                 }
                 case "membership_packages" -> {
                     var pkg = entityManager.find(com.swp391.scms.facilities.entity.MembershipPackage.class, id, LockModeType.PESSIMISTIC_WRITE);

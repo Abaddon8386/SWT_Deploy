@@ -28,6 +28,7 @@ import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -393,6 +394,7 @@ public class MembershipSubscriptionService {
         int durationDays = Math.max(1, targetPackage.getDurationDays());
         upgradeSub.setStartDate(today);
         upgradeSub.setEndDate(today.plusDays(durationDays - 1L));
+        upgradeSub.setUpgradeCharge(upgradeCharge(current, currentPackage, targetPackage, today));
         upgradeSub.setStatus(STATUS_PENDING_PAYMENT);
         upgradeSub.setCreatedAt(LocalDateTime.now(clock));
         upgradeSub.setUpdatedAt(LocalDateTime.now(clock));
@@ -454,6 +456,26 @@ public class MembershipSubscriptionService {
         subscription.setUpdatedAt(LocalDateTime.now(clock));
 
         return toDto(subscriptions.saveAndFlush(subscription));
+    }
+
+    /**
+     * What an upgrade costs at the counter. Once more than half of the current period is used the member pays the
+     * full price of the new package; within the first half only the difference to the new package is charged.
+     * A package that is not cheaper than the old one (same price, longer term) has no difference to charge, so it
+     * is billed at its full price rather than as a zero payment.
+     */
+    public static BigDecimal upgradeCharge(MembershipSubscription current, MembershipPackage currentPackage,
+                                    MembershipPackage targetPackage, LocalDate today) {
+        BigDecimal targetPrice = targetPackage.getPrice() != null ? targetPackage.getPrice() : BigDecimal.ZERO;
+        BigDecimal currentPrice = currentPackage != null && currentPackage.getPrice() != null
+                ? currentPackage.getPrice() : BigDecimal.ZERO;
+        LocalDate start = current.getStartDate();
+        LocalDate end = current.getEndDate();
+        long totalDays = start != null && end != null ? ChronoUnit.DAYS.between(start, end) + 1 : 0;
+        long usedDays = start != null ? Math.max(0, ChronoUnit.DAYS.between(start, today)) : 0;
+        boolean usedMoreThanHalf = totalDays > 0 && usedDays * 2 > totalDays;
+        BigDecimal difference = targetPrice.subtract(currentPrice);
+        return usedMoreThanHalf || difference.signum() <= 0 ? targetPrice : difference;
     }
 
     private boolean isHigherPackage(MembershipPackage currentPackage, MembershipPackage targetPackage) {
@@ -907,14 +929,15 @@ public class MembershipSubscriptionService {
                 s.getHoldReason(),
                 s.getHoldRequestedAt(),
                 s.getHoldResolvedAt(),
-                paidThroughDate);
+                paidThroughDate,
+                s.getUpgradeCharge());
     }
 
     private com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto toPendingDto(MembershipSubscription s) {
         Member m = s.getMember();
         com.swp391.scms.users.entity.User u = m != null ? m.getUser() : null;
         MembershipPackage pkg = s.getMembershipPackage();
-        BigDecimal payablePrice = pkg != null ? pkg.getPrice() : null;
+        BigDecimal payablePrice = s.payableAmount();
         if (paymentRepository != null) {
             var pendingPayments = paymentRepository.findAllBySubscriptionId(s.getId()).stream()
                     .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus())

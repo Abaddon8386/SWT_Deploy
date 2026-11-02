@@ -138,7 +138,7 @@ class SupportRequestControllerTest {
     @Test
     @DisplayName("GET /api/v1/support/requests lấy tất cả yêu cầu cho Receptionist/Manager")
     void getAllRequests_Success() throws Exception {
-        when(supportRequestService.getAllRequests(any(), any()))
+        when(supportRequestService.getAllRequests(any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(sampleDto(1L, "open"), sampleDto(2L, "in_progress")), PageRequest.of(0, 20), 2));
 
         mockMvc.perform(get("/api/v1/support/requests"))
@@ -151,7 +151,7 @@ class SupportRequestControllerTest {
     @DisplayName("PATCH /api/v1/support/requests/{id}/status cập nhật trạng thái ticket")
     void updateStatus_Success() throws Exception {
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
-        when(supportRequestService.updateStatus(eq(1L), any(UpdateSupportRequestStatusDto.class)))
+        when(supportRequestService.updateStatus(eq(1L), any(UpdateSupportRequestStatusDto.class), any()))
                 .thenReturn(sampleDto(1L, "in_progress"));
 
         mockMvc.perform(patch("/api/v1/support/requests/1/status")
@@ -178,7 +178,7 @@ class SupportRequestControllerTest {
     @DisplayName("PATCH /api/v1/support/requests/{id}/status trả về 403 FORBIDDEN khi phân quyền bị chặn")
     void updateStatus_AccessDeniedReturns403() throws Exception {
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
-        when(supportRequestService.updateStatus(eq(1L), any(UpdateSupportRequestStatusDto.class)))
+        when(supportRequestService.updateStatus(eq(1L), any(UpdateSupportRequestStatusDto.class), any()))
                 .thenThrow(new AccessDeniedException("Access is denied"));
 
         mockMvc.perform(patch("/api/v1/support/requests/1/status")

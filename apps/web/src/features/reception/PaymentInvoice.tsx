@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { Modal } from '../../shared/ui/Modal';
 import type { PaymentResponseDto } from './receptionApi';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import './payment-invoice.css';
 
 interface InvoiceProps {
@@ -17,16 +18,13 @@ const methods: Record<string, string> = {
 };
 
 function InvoiceDocument({ payment, memberName, membershipCode, packageName, cashierName }: InvoiceProps) {
-  const paidAt = new Date(payment.paidAt);
   return <article className="invoice-document" aria-label="Hóa đơn thanh toán">
     <header className="invoice-document__header">
       <strong className="invoice-document__brand">SÖL</strong>
       <span>Wellness Sanctuary</span>
       <h3>HÓA ĐƠN THANH TOÁN</h3>
       <strong className="invoice-document__number">{payment.invoiceNumber || 'Chưa cấp số hóa đơn'}</strong>
-      <span>{Number.isNaN(paidAt.getTime()) ? 'Chưa có thời gian thanh toán' : paidAt.toLocaleString('vi-VN', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
-      })}</span>
+      <span>{formatCenterDateTime(payment.paidAt, 'Chưa có thời gian thanh toán')}</span>
     </header>
 
     <dl className="invoice-document__details">

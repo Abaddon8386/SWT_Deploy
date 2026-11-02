@@ -328,9 +328,14 @@ describe('SCRUM-86 packages', () => {
     api.packages.mockResolvedValue([lowerPackage, membershipPackage, higherPackage]);
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active]);
-    api.upgrade.mockResolvedValue(upgradePending);
+    api.upgrade.mockResolvedValue({ ...upgradePending, upgradeCharge: 1234000 });
 
     await render();
+
+    // The card previews the charge and the rule behind it before the member commits.
+    const quote = host.querySelector('[data-testid="upgrade-quote"]');
+    expect(quote?.textContent).toContain('Nâng cấp: thanh toán');
+    expect(quote?.textContent).toMatch(/quá nửa|bù chênh lệch/);
 
     expect(button('Đang có gói hoạt động')?.disabled).toBe(false);
     expect(button('Gia hạn')?.disabled).toBe(false);
@@ -345,6 +350,9 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).not.toHaveBeenCalled();
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Nâng cấp gói tập');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('VIP Sanctuary');
+    // The amount the backend quoted is shown, not the catalog price.
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Số tiền cần thanh toán để nâng cấp');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toMatch(/1\.234\.000/);
   });
 
   it('allows an active member to submit a hold request with a reason', async () => {

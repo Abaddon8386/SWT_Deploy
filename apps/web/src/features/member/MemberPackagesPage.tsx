@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { PortalIcon } from '../portal/PortalIcon';
+import { upgradeQuote } from '../../shared/lib/upgradeQuote';
 import './member-packages.css';
 import { notify, resolveNotice } from '../../shared/lib/portalNotices';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
@@ -558,8 +559,8 @@ export function MemberPackagesPage() {
   return (
     <div className="portal-container member-packages">
       {blockedMessage && <Modal returnFocusRef={membershipFocus} title="Chưa thể thực hiện" onClose={() => setBlockedMessage(null)}>
-        <div className="package-result">
-          <span className="package-result__icon" aria-hidden="true">!</span>
+        <div className="package-result package-result--error">
+          <span className="package-result__icon package-result__icon--error" aria-hidden="true">!</span>
           <p role="alert">{blockedMessage}</p>
           <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>Đóng</button>
         </div>
@@ -1065,6 +1066,16 @@ export function MemberPackagesPage() {
                     {formatPrice(membershipPackage.price)}
                     <span className="package-price-term"> / {membershipPackage.durationDays} ngày</span>
                   </div>
+                  {upgradeFrom && currentPackage && (() => {
+                    const quote = upgradeQuote(upgradeFrom, currentPackage.price, membershipPackage.price, todayKey());
+                    return <p className="row-card__meta" data-testid="upgrade-quote" style={{ margin: '8px 0 0' }}>
+                      <strong>Nâng cấp: thanh toán {formatPrice(quote.amount)}</strong>
+                      {quote.mode === 'full'
+                        ? ` — đã dùng ${quote.usedDays}/${quote.totalDays} ngày (quá nửa) nên đóng đủ giá gói mới.`
+                        : ` — bù chênh lệch so với gói hiện tại (đã dùng ${quote.usedDays}/${quote.totalDays} ngày).`}
+                      {' '}Gói hiện tại hết hiệu lực khi lễ tân xác nhận thanh toán.
+                    </p>;
+                  })()}
 
                   <button
                     type="button"
@@ -1116,7 +1127,9 @@ export function MemberPackagesPage() {
             <h3>{requestResult.membershipPackage.name}</h3>
             <p>{requestResult.action === 'upgrade' ? 'Nâng cấp gói tập' : requestResult.action === 'renew' ? 'Gia hạn gói tập' : 'Đăng ký gói tập'} · #{requestResult.subscription.id}</p>
             <p>Yêu cầu của bạn đang chờ xử lý.</p>
-            <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán do quầy lễ tân xác nhận.</p>
+            {requestResult.action === 'upgrade' && requestResult.subscription.upgradeCharge != null
+              ? <p className="row-card__meta">Số tiền cần thanh toán để nâng cấp: <strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> (giá gói mới {formatPrice(requestResult.membershipPackage.price)}). Gói hiện tại hết hiệu lực khi lễ tân xác nhận thanh toán.</p>
+              : <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán do quầy lễ tân xác nhận.</p>}
             <p className="row-card__meta">{paymentInstructionsNotice}</p>
             <div className="package-result__actions">
               <a

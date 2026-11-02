@@ -22,14 +22,23 @@ public final class SubscriptionResponses {
             String holdReason,
             LocalDateTime holdRequestedAt,
             LocalDateTime holdResolvedAt,
-            LocalDate paidThroughDate
+            LocalDate paidThroughDate,
+            java.math.BigDecimal upgradeCharge
     ) {
+        public SubscriptionDto(Long id, Long memberId, Long packageId, String packageName,
+                Long previousSubscriptionId, LocalDate startDate, LocalDate endDate, String status,
+                String qrCode, LocalDateTime createdAt, String holdStatus, String holdReason,
+                LocalDateTime holdRequestedAt, LocalDateTime holdResolvedAt, LocalDate paidThroughDate) {
+            this(id, memberId, packageId, packageName, previousSubscriptionId, startDate, endDate,
+                    status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, paidThroughDate, null);
+        }
+
         public SubscriptionDto(Long id, Long memberId, Long packageId, String packageName,
                 Long previousSubscriptionId, LocalDate startDate, LocalDate endDate, String status,
                 String qrCode, LocalDateTime createdAt, String holdStatus, String holdReason,
                 LocalDateTime holdRequestedAt, LocalDateTime holdResolvedAt) {
             this(id, memberId, packageId, packageName, previousSubscriptionId, startDate, endDate,
-                    status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, null);
+                    status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, null, null);
         }
 
         public SubscriptionDto(

@@ -41,7 +41,12 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
     Page<CourtBooking> findByMemberIdOrderByBookingDateDescStartTimeDescIdDesc(Long memberId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"room", "room.discipline", "member"})
-    @Query("select b from CourtBooking b where b.bookingDate = :date and b.room.id = coalesce(:roomId, b.room.id) "
+    @Query("select b from CourtBooking b where b.bookingDate = :date and b.member.deletedAt is null "
+            + "order by b.startTime, b.room.name, b.id")
+    Page<CourtBooking> findDaily(@Param("date") LocalDate date, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"room", "room.discipline", "member"})
+    @Query("select b from CourtBooking b where b.bookingDate = :date and b.room.id = :roomId "
             + "and b.member.deletedAt is null order by b.startTime, b.room.name, b.id")
-    Page<CourtBooking> findDaily(@Param("date") LocalDate date, @Param("roomId") Long roomId, Pageable pageable);
+    Page<CourtBooking> findDailyByRoom(@Param("date") LocalDate date, @Param("roomId") Long roomId, Pageable pageable);
 }
