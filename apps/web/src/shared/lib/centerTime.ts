@@ -37,3 +37,12 @@ export function formatCenterDateTime(value: string | null | undefined, fallback 
   const time = formatCenterTime(value, '');
   return time ? `${time} ${formatCenterDate(value)}` : fallback;
 }
+
+/** Ngày "YYYY-MM-DD" và giờ "HH:mm" hiện tại theo múi giờ trung tâm; so sánh được trực tiếp dưới dạng chuỗi. */
+export function centerNowParts(now = new Date()): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: CENTER_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(now);
+  const part = (name: string) => parts.find((item) => item.type === name)!.value;
+  return { date: `${part('year')}-${part('month')}-${part('day')}`, time: `${part('hour')}:${part('minute')}` };
+}

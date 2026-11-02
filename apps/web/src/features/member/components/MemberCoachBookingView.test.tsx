@@ -164,3 +164,52 @@ describe('MemberCoachBookingView Review Logic', () => {
     expect(host.textContent).toContain('Gửi đánh giá');
   });
 });
+
+describe('MemberCoachBookingView membership notice', () => {
+  const NO_PACKAGE_NOTICE = 'Bạn chưa đăng ký gói tập hoặc gói tập chưa được kích hoạt';
+  let host: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    host = document.createElement('div');
+    document.body.append(host);
+    root = createRoot(host);
+    mocks.getCoaches.mockResolvedValue([]);
+    mocks.getAvailableSlots.mockResolvedValue([]);
+    mocks.getMyCoachBookings.mockResolvedValue([]);
+    mocks.getMyCoachReviews.mockResolvedValue([]);
+    mocks.getCoachLeaderboard.mockResolvedValue([]);
+  });
+
+  afterEach(async () => {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const render = () => act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+
+  it('tells a member without a package to register one', async () => {
+    mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: null, monthlyQuota: 0, usedThisMonth: 0, remainingQuota: 0 });
+    await render();
+    expect(host.textContent).toContain(NO_PACKAGE_NOTICE);
+    expect(host.textContent).toContain('Đăng ký gói tập ngay');
+  });
+
+  it('does not claim the member has no package when the quota request fails', async () => {
+    mocks.getMemberQuotaStatus.mockRejectedValue(new Error('offline'));
+    await render();
+    expect(host.textContent).not.toContain(NO_PACKAGE_NOTICE);
+    expect(host.textContent).not.toContain('Bạn chưa có gói tập đang hoạt động');
+    expect(host.textContent).toContain('Nâng cấp gói tập');
+  });
+
+  it('shows the real package for a member who has one', async () => {
+    mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 0, usedThisMonth: 0, remainingQuota: 0 });
+    await render();
+    expect(host.textContent).toContain('Gói SILVER không bao gồm lượt tập PT 1:1 miễn phí.');
+    expect(host.textContent).not.toContain(NO_PACKAGE_NOTICE);
+  });
+});

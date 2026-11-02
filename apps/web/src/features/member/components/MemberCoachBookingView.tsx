@@ -23,7 +23,24 @@ import {
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { notify } from '../../../shared/lib/portalNotices';
+import { ApiError } from '../../../shared/api/client';
 import { formatCoachName, isSessionCompleted } from '../coachBookingUtils';
+
+function coachBookingErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'MEMBERSHIP_INACTIVE_OR_EXPIRED') {
+      return 'Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.';
+    }
+    if (err.code === 'COACH_BOOKING_PACKAGE_NO_QUOTA') {
+      return 'Gói tập hiện tại không bao gồm lượt tập PT 1:1 miễn phí. Vui lòng chọn hình thức thanh toán theo giờ.';
+    }
+    if (err.code === 'COACH_BOOKING_QUOTA_EXCEEDED') {
+      return 'Bạn đã sử dụng hết lượt tập PT 1:1 miễn phí trong tháng này của gói tập. Vui lòng chọn thanh toán theo giờ.';
+    }
+    return err.message;
+  }
+  return err instanceof Error ? err.message : 'Không thể đặt lịch. Vui lòng thử lại.';
+}
 
 function localToday(): string {
   const now = new Date();
