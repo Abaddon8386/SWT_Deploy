@@ -126,13 +126,14 @@ describe('mobile portal navigation', () => {
     expect(router.state.location.pathname).toBe('/login');
   });
 
-  it('offers floating direct messages without sidebar chat or AI, and hides it during scanning', async () => {
+  it('offers floating direct messages and AI assistant for members, and hides both during scanning', async () => {
     const router = await renderPortal('MEMBER', '/member/dashboard');
     expect(host.querySelector('.chat-widget')).not.toBeNull();
-    expect(host.querySelector('.member-ai-chat')).toBeNull();
+    expect(host.querySelector('.member-ai-chat')).not.toBeNull();
     expect(host.querySelector('.app-sidebar a[href="/messages"]')).toBeNull();
     await act(async () => router.navigate('/member/check-in'));
     expect(host.querySelector('.chat-widget')).toBeNull();
+    expect(host.querySelector('.member-ai-chat')).toBeNull();
   });
 
   it('closes install help before closing its parent navigation menu', async () => {

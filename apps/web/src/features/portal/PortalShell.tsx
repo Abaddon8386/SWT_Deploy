@@ -8,6 +8,7 @@ import { PortalIcon } from './PortalIcon';
 import { MOBILE_PRIMARY_NAV, PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
 import { ChatWidget } from '../chat/ChatWidget';
+import { LiquidGlassChatbot } from '../../shared/liquid-glass/LiquidGlassChatbot';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { NotificationsPopover } from '../member/NotificationsPopover';
 
@@ -168,6 +169,7 @@ export function PortalShell() {
         </button>
       </nav>
 
+      {isMember && location.pathname !== '/member/check-in' && <LiquidGlassChatbot />}
       {location.pathname !== '/member/check-in' && location.pathname !== '/messages' && <ChatWidget />}
       {canReceiveNotifications && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
       {dialog === 'logout' && <Modal title="Đăng xuất khỏi SÖL?" onClose={() => setDialog(null)}>

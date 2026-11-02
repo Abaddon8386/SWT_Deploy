@@ -140,7 +140,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await renderComponent();
 
     expect(host.textContent).toContain('Bàn làm việc: Soạn giáo án bài tập');
-    expect(host.textContent).not.toContain('Gợi ý giáo án bằng AI');
+    expect(host.textContent).toContain('Gợi ý giáo án bằng AI');
     expect(host.textContent).toContain('Lưu & Kích hoạt giáo án');
 
     // Verify all 7 day tabs render
@@ -175,17 +175,48 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.textContent).toContain('Dumbbell Hammer Curl');
   });
 
-  it('temporarily hides AI entry points and keeps manual editing available', async () => {
+  it('opens AI Assistant modal, generates recommendation, and applies it to the plan', async () => {
     await renderComponent();
+
+    // 1. Click AI Sparkle Button
     const aiBtn = Array.from(host.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Gợi ý giáo án bằng AI')
     );
-    expect(aiBtn).toBeUndefined();
-    expect(host.querySelector('.ai-modal-container')).toBeNull();
-    expect(aiApi.generateWorkoutPlan).not.toHaveBeenCalled();
-    expect(host.querySelector('form.exercise-form-card')).not.toBeNull();
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Thứ 3'))!.click());
-    expect(host.textContent).not.toContain('AI');
+    expect(aiBtn).toBeDefined();
+
+    await act(async () => {
+      aiBtn?.click();
+    });
+
+    // Check modal opened
+    expect(host.textContent).toContain('Trợ Lý AI: Gợi Ý Giáo Án Huấn Luyện Cá Nhân Hóa');
+    expect(host.textContent).toContain('Phân tích & Sinh giáo án bằng AI');
+
+    // 2. Click Generate AI Plan
+    const generateBtn = Array.from(host.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Phân tích & Sinh giáo án bằng AI')
+    );
+
+    await act(async () => {
+      generateBtn?.click();
+    });
+
+    // Verify AI analysis result appears
+    expect(host.textContent).toContain('Assisted Pull-up & Face Pull');
+    expect(host.textContent).toContain('Goblet Box Squat');
+
+    // 3. Click "Áp dụng vào giáo án"
+    const applyBtn = Array.from(host.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Áp dụng vào giáo án')
+    );
+    expect(applyBtn).toBeDefined();
+
+    await act(async () => {
+      applyBtn?.click();
+    });
+
+    // 4. Verify AI exercises are populated directly into the Coach's workspace
+    expect(host.textContent).toContain('Assisted Pull-up & Face Pull');
   });
 
   it('saves and activates plan when clicking "Lưu & Kích hoạt giáo án"', async () => {

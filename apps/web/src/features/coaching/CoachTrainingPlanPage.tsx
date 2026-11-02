@@ -17,7 +17,7 @@ import {
 import './coach-training-plan.css';
 
 // Tạm ẩn các điểm vào AI cho đến khi có provider thực tế.
-const AI_UI_ENABLED = false;
+const AI_UI_ENABLED = true;
 
 const DAYS_OF_WEEK = [
   { id: 1, name: 'Thứ 2' },

@@ -560,8 +560,8 @@
 
 /* SCRUM-126: inherit the Member Portal palette; preserve the existing glass shader. */
 .member-ai-chat { --color-accent-gold: var(--portal-salmon); color: var(--portal-paper); }
-.member-ai-chat .liquid-glass-chat-trigger { right: 20px; bottom: 20px; z-index: 90; }
-.member-ai-chat .liquid-glass-chat-window { right: 20px; bottom: 86px; z-index: 90; max-height: calc(100dvh - 110px); filter: drop-shadow(0 12px 32px #00000026); }
+.member-ai-chat .liquid-glass-chat-trigger { right: 24px; bottom: 92px; z-index: 95; }
+.member-ai-chat .liquid-glass-chat-window { right: 24px; bottom: 158px; z-index: 95; max-height: calc(100dvh - 180px); filter: drop-shadow(0 12px 32px #00000026); }
 /* Important declarations below override the legacy chat-only important rules above. */
 .member-ai-chat .liquid-glass-chat-container { background: color-mix(in srgb, var(--portal-surface) 94%, transparent) !important; border-color: var(--portal-border) !important; box-shadow: 0 16px 48px #00000026 !important; }
 .member-ai-chat .liquid-glass-chat-trigger .glass-button { background: color-mix(in srgb, var(--portal-surface) 94%, transparent) !important; border-color: var(--portal-salmon) !important; box-shadow: 0 6px 22px #00000026 !important; }
@@ -598,8 +598,8 @@
   .member-ai-chat *, .member-ai-chat *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 @media (max-width: 767px) {
-  .member-ai-chat .liquid-glass-chat-trigger { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(var(--portal-mobile-nav-height, 68px) + 12px); }
-  .member-ai-chat .liquid-glass-chat-window { right: max(12px, env(safe-area-inset-right, 0px)); width: calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); max-width: 420px; bottom: calc(var(--portal-mobile-nav-height, 68px) + 78px); max-height: calc(100dvh - var(--portal-mobile-nav-height, 68px) - 104px - env(safe-area-inset-top, 0px)); }
+  .member-ai-chat .liquid-glass-chat-trigger { right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(var(--portal-mobile-nav-height, 68px) + 78px); }
+  .member-ai-chat .liquid-glass-chat-window { right: max(16px, env(safe-area-inset-right, 0px)); width: calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); max-width: 420px; bottom: calc(var(--portal-mobile-nav-height, 68px) + 144px); max-height: calc(100dvh - var(--portal-mobile-nav-height, 68px) - 168px - env(safe-area-inset-top, 0px)); }
   .member-ai-chat :is(.liquid-glass-input, .ai-chat-session-label select) { font-size: 16px !important; }
   .member-ai-chat :is(.liquid-glass-send-btn, .liquid-glass-close-btn, .suggestion-chip) { min-height: 44px; min-width: 44px; }
 }
