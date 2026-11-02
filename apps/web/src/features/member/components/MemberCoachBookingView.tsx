@@ -324,7 +324,7 @@ export function MemberCoachBookingView({
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #202020)' }}>
-              🏆 Bảng Vinh Danh Top Huấn Luyện Viên Xuất Sắc Tháng Này
+              🏆 Bảng vinh danh top huấn luyện viên xuất sắc tháng này
             </h4>
             <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
               Dựa trên đánh giá và mức độ hài lòng của hội viên

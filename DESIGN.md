@@ -39,6 +39,8 @@ Theo yêu cầu mới nhất ngày 22/10/2026, portal đồng bộ màu với la
 
 Giữ nguyên tổ chức component: dashboard bốn cột, sidebar icon, ảnh/thẻ, thứ tự nội dung, khoảng cách bên trong, cỡ chữ và hiệu ứng. Không đổi sang dashboard hai cột hay sidebar có nhãn thường trực. “Full trang” áp dụng cho khung ngoài; giữ cuộn dọc native, không fixed toàn bộ nội dung hoặc khóa cuộn.
 
+Chữ portal (02/11/2026): tiêu đề trang, tab, nhãn form và nút viết hoa chữ đầu câu (“Điểm danh buổi học”), không viết hoa từng chữ; giữ nguyên tên riêng và tên bài tập. Chữ hiển thị trong portal tối thiểu 11px (riêng tagline wordmark). Mỗi mục sidebar trong cùng một role dùng icon khác nhau.
+
 Nội dung portal được rút gọn theo tác vụ; không dùng khẩu hiệu, quyền lợi gói tự suy đoán, độ tin cậy AI giả hoặc phản hồi “đã lưu” khi chỉ là dữ liệu minh họa tại máy. Thay câu chữ không đồng nghĩa với thay vị trí hay loại bỏ component.
 
 ## Nhận diện và màu

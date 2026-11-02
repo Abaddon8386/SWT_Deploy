@@ -37,7 +37,7 @@ interface RequestResult {
   action: 'register' | 'renew' | 'upgrade';
 }
 
-const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân để nhân viên xác nhận và kích hoạt gói tập.';
+const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại quầy lễ tân để nhân viên xác nhận và kích hoạt gói tập.';
 
 function formatDate(value: string): string {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
@@ -802,7 +802,7 @@ export function MemberPackagesPage() {
           </h2>
 
           <p className="row-card__meta">
-            Yêu cầu #{pending.id} đang ở trạng thái chờ thanh toán và đã được chuyển thẳng vào danh sách chờ tại Quầy Lễ Tân (POS).
+            Yêu cầu #{pending.id} đang ở trạng thái chờ thanh toán và đã được chuyển thẳng vào danh sách chờ tại quầy lễ tân (POS).
           </p>
           {pendingPackage && (
             <p className="row-card__meta" style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>

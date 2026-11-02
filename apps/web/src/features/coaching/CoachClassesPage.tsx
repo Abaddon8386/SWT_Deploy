@@ -375,7 +375,7 @@ export function CoachClassesPage() {
     <div className="portal-container coach-page">
       <PageHeader
         eyebrow="Huấn luyện viên"
-        title="Thời Khóa Biểu & Học Viên Phụ Trách"
+        title="Thời khóa biểu & học viên phụ trách"
         subtitle={
           activeTab === 'schedule'
             ? `HLV: ${currentUser?.name || 'Huấn luyện viên'} | Theo dõi lịch đứng lớp theo ngày và tuần.`
@@ -405,7 +405,7 @@ export function CoachClassesPage() {
         </button>
         <button type="button" role="tab" aria-selected={activeTab === 'ranking'}
           className={`coach-tab-btn ${activeTab === 'ranking' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('ranking')}>Đánh Giá & Bảng Xếp Hạng Tháng</button>
+          onClick={() => setActiveTab('ranking')}>Đánh giá & bảng xếp hạng tháng</button>
       </div>
 
       {/* ====================================================================
@@ -1045,7 +1045,7 @@ export function CoachClassesPage() {
               >
                 <div style={{ marginBottom: 18 }}>
                   <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
-                    🏆 Bảng Vinh Danh Top Huấn Luyện Viên Tháng {reviewMonth}/{reviewYear}
+                    🏆 Bảng vinh danh top huấn luyện viên tháng {reviewMonth}/{reviewYear}
                   </h3>
                   <span style={{ fontSize: 13, color: '#666' }}>
                     Danh sách các HLV có điểm đánh giá xuất sắc nhất toàn hệ thống
@@ -1182,7 +1182,7 @@ export function CoachClassesPage() {
               >
                 <div style={{ marginBottom: 18 }}>
                   <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
-                    💬 Đánh Giá & Nhận Xét Trực Tiếp Từ Học Viên
+                    💬 Đánh giá & nhận xét trực tiếp từ học viên
                   </h3>
                   <span style={{ fontSize: 13, color: '#666' }}>
                     Phản hồi thực tế từ hội viên sau các buổi học và buổi kèm riêng PT 1:1

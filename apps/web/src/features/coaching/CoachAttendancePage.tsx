@@ -566,12 +566,12 @@ export function CoachAttendancePage() {
         eyebrow="Huấn luyện viên"
         title={
           activeTab === 'evaluation'
-            ? 'Đánh Giá Tiến Bộ Học Viên'
+            ? 'Đánh giá tiến bộ học viên'
             : activeTab === 'attendance-history'
-            ? 'Lịch Sử Điểm Danh Lớp Học'
+            ? 'Lịch sử điểm danh lớp học'
             : activeTab === 'eval-history'
-            ? 'Lịch Sử Đánh Giá Học Viên'
-            : 'Điểm Danh Buổi Học'
+            ? 'Lịch sử đánh giá học viên'
+            : 'Điểm danh buổi học'
         }
         subtitle={
           activeTab === 'evaluation'

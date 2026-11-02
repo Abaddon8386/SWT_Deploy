@@ -176,7 +176,7 @@ export function ManagerAuditLogsPage() {
     <div className="audit-page portal-container">
       <PageHeader
         eyebrow="Quản trị trung tâm"
-        title="Giám Sát Audit Log & Báo Cáo Lấp Đầy Lớp"
+        title="Giám sát audit log & báo cáo lấp đầy lớp"
         subtitle="Tra cứu nhật ký kiểm toán hệ thống, phân tích diff thay đổi và theo dõi tỷ lệ lấp đầy phòng học theo bộ môn."
       />
 

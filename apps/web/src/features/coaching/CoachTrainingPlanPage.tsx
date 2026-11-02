@@ -378,14 +378,14 @@ export function CoachTrainingPlanPage() {
   if (!hasAccess) {
     return (
       <div className="portal-container">
-        <PageHeader eyebrow="Huấn luyện" title="Soạn Giáo Án Bài Tập" />
+        <PageHeader eyebrow="Huấn luyện" title="Soạn giáo án bài tập" />
         <div className="portal-card" style={{ padding: '36px', textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
             <StatusMark type="error" size={56} />
           </div>
           <h2 style={{ color: '#ef4444', marginBottom: '8px' }}>Truy cập bị từ chối (403 Forbidden)</h2>
           <p style={{ color: 'var(--color-text-muted)', maxWidth: '500px', margin: '0 auto' }}>
-            Bàn làm việc thiết kế giáo án chỉ dành cho tài khoản <strong>Huấn Luyện Viên (COACH)</strong> hoặc{' '}
+            Bàn làm việc thiết kế giáo án chỉ dành cho tài khoản <strong>Huấn luyện viên (COACH)</strong> hoặc{' '}
             <strong>Quản Lý (MANAGER)</strong>.
           </p>
         </div>
@@ -786,7 +786,7 @@ export function CoachTrainingPlanPage() {
 
       {/* AC: Modal Tương Tác AI Gợi Ý Giáo Án */}
       {AI_UI_ENABLED && isAiModalOpen && (
-        <Modal title="Trợ Lý AI: Gợi Ý Giáo Án Huấn Luyện Cá Nhân Hóa" onClose={() => setIsAiModalOpen(false)}>
+        <Modal title="Trợ lý AI: gợi ý giáo án huấn luyện cá nhân hóa" onClose={() => setIsAiModalOpen(false)}>
           <div className="ai-modal-container">
             <div>
               <label className="portal-label" htmlFor="ai-member-select">

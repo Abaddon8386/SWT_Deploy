@@ -641,7 +641,7 @@ export function StaffReceptionPage() {
               {/* BR-02: Số tiền hiển thị theo giá gói và KHÔNG cho sửa tay */}
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="pos-amount">
-                  Số tiền Thu (Không sửa tay)
+                  Số tiền thu (Không sửa tay)
                 </label>
                 <input
                   id="pos-amount"
@@ -663,7 +663,7 @@ export function StaffReceptionPage() {
               {/* BR-03: Bắt buộc chọn hình thức thanh toán */}
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="pos-method">
-                  Hình thức Thanh Toán *
+                  Hình thức thanh toán *
                 </label>
                 <Select
                   id="pos-method"
@@ -682,7 +682,7 @@ export function StaffReceptionPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="pos-notes">
-                Ghi Chú Giao Dịch
+                Ghi chú giao dịch
               </label>
               <input
                 id="pos-notes"
@@ -707,7 +707,7 @@ export function StaffReceptionPage() {
                   <span>Đang xử lý thu tiền...</span>
                 </>
               ) : (
-                'Xác Nhận Thu Tiền & Xuất Hóa Đơn'
+                'Xác nhận thu tiền & xuất hóa đơn'
               )}
             </button>
           </form>

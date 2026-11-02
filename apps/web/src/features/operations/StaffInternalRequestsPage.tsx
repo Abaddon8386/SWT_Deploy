@@ -131,7 +131,7 @@ export function StaffInternalRequestsPage() {
     <div className="portal-container">
       <PageHeader
         eyebrow="Vận hành nội bộ"
-        title="Đơn Từ & Đề Xuất Nội Bộ"
+        title="Đơn từ & đề xuất nội bộ"
         subtitle="Gửi và theo dõi đơn xin nghỉ phép, đổi ca làm việc hoặc đổi lịch dạy tới Ban Quản Lý."
       />
 
@@ -454,7 +454,7 @@ export function StaffInternalRequestsPage() {
 
       {/* Modal tạo đơn từ mới */}
       {showCreateModal && (
-        <Modal title="Tạo Đơn Từ & Đề Xuất Mới" onClose={() => setShowCreateModal(false)}>
+        <Modal title="Tạo đơn từ & đề xuất mới" onClose={() => setShowCreateModal(false)}>
           <form onSubmit={handleCreateSubmit} style={{ display: 'grid', gap: 16 }}>
             {formError && (
               <div

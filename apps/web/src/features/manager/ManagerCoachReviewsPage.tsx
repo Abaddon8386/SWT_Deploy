@@ -112,7 +112,7 @@ export function ManagerCoachReviewsPage() {
     <div className="portal-container" style={{ display: 'grid', gap: 20 }}>
       <PageHeader
         eyebrow="Quản lý Trung tâm"
-        title="Bảng Xếp Hạng & Đánh Giá Huấn Luyện Viên Tháng"
+        title="Bảng xếp hạng & đánh giá huấn luyện viên tháng"
         subtitle="Tổng hợp ý kiến đánh giá từ hội viên, xếp hạng thành tích và trao thưởng/danh hiệu cho Huấn luyện viên."
       />
 

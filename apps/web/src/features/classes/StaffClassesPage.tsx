@@ -1624,7 +1624,7 @@ export function StaffClassesPage() {
               <div className="grid-2">
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-start">
-                    Giờ Bắt Đầu *
+                    Giờ bắt đầu *
                   </label>
                   <TimePicker
                     id="session-start"
@@ -1637,7 +1637,7 @@ export function StaffClassesPage() {
 
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-end">
-                    Giờ Kết Thúc *
+                    Giờ kết thúc *
                   </label>
                   <TimePicker
                     id="session-end"
@@ -1711,7 +1711,7 @@ export function StaffClassesPage() {
                     <span>Đang lưu...</span>
                   </>
                 ) : (
-                  'Lưu & Xếp Lịch'
+                  'Lưu & xếp lịch'
                 )}
               </button>
             </div>

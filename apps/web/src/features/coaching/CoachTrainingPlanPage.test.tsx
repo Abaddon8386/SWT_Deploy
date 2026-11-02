@@ -195,7 +195,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     });
 
     // Check modal opened
-    expect(host.textContent).toContain('Trợ Lý AI: Gợi Ý Giáo Án Huấn Luyện Cá Nhân Hóa');
+    expect(host.textContent).toContain('Trợ lý AI: gợi ý giáo án huấn luyện cá nhân hóa');
     expect(host.textContent).toContain('Phân tích & Sinh giáo án bằng AI');
 
     // 2. Click Generate AI Plan

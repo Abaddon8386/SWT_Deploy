@@ -113,7 +113,7 @@ describe('ManagerCoachReviewsPage (SCRUM-134: Đánh giá HLV & Bảng xếp h�
   it('renders the manager coach reviews page with header and auto-generate button', async () => {
     await render();
 
-    expect(host.textContent).toContain('Bảng Xếp Hạng & Đánh Giá Huấn Luyện Viên Tháng');
+    expect(host.textContent).toContain('Bảng xếp hạng & đánh giá huấn luyện viên tháng');
     expect(host.textContent).toContain('Tự động tổng hợp số liệu tháng');
     expect(host.textContent).toContain('Huỳnh Đắc Tài');
     expect(host.textContent).toContain('Nguyễn Minh Quân');

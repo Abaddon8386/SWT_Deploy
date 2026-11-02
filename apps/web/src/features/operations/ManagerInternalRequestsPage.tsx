@@ -124,7 +124,7 @@ export function ManagerInternalRequestsPage() {
     <div className="portal-container">
       <PageHeader
         eyebrow="Quản lý trung tâm"
-        title="Phê Duyệt Đơn Từ Nội Bộ"
+        title="Phê duyệt đơn từ nội bộ"
         subtitle="Tiếp nhận, xử lý và phê duyệt đơn xin nghỉ phép, đổi ca làm việc và đổi lịch dạy từ đội ngũ nhân sự."
       />
 
@@ -526,8 +526,8 @@ export function ManagerInternalRequestsPage() {
         <Modal
           title={
             reviewAction === 'APPROVED'
-              ? `Phê Duyệt Đơn: ${reviewTarget.title}`
-              : `Từ Chối Đơn: ${reviewTarget.title}`
+              ? `Phê duyệt đơn: ${reviewTarget.title}`
+              : `Từ chối đơn: ${reviewTarget.title}`
           }
           onClose={() => setReviewTarget(null)}
         >

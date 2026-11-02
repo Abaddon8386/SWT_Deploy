@@ -87,7 +87,7 @@ describe('ManagerInternalRequestsPage (Phê duyệt đơn từ nội bộ)', () 
   it('renders manager review page with pending requests and approve/reject actions', async () => {
     await render();
 
-    expect(host.textContent).toContain('Phê Duyệt Đơn Từ Nội Bộ');
+    expect(host.textContent).toContain('Phê duyệt đơn từ nội bộ');
     expect(host.textContent).toContain('Huỳnh Đắc Tài');
     expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
     expect(host.textContent).toContain('Phê duyệt đơn');
@@ -106,7 +106,7 @@ describe('ManagerInternalRequestsPage (Phê duyệt đơn từ nội bộ)', () 
       approveBtn?.click();
     });
 
-    expect(host.textContent).toContain('Phê Duyệt Đơn: Xin nghỉ phép cá nhân');
+    expect(host.textContent).toContain('Phê duyệt đơn: Xin nghỉ phép cá nhân');
 
     vi.mocked(staffRequestApi.reviewStaffRequest).mockResolvedValue({
       ...mockRequests[0],
@@ -143,7 +143,7 @@ describe('ManagerInternalRequestsPage (Phê duyệt đơn từ nội bộ)', () 
       rejectBtn?.click();
     });
 
-    expect(host.textContent).toContain('Từ Chối Đơn: Xin nghỉ phép cá nhân');
+    expect(host.textContent).toContain('Từ chối đơn: Xin nghỉ phép cá nhân');
 
     const confirmRejectBtn = [...host.querySelectorAll('button')].find((b) =>
       b.textContent?.includes('Xác nhận Từ chối')

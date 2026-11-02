@@ -8,7 +8,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 type Tab = 'disciplines' | 'rooms' | 'packages';
 type Form = Record<string, string>;
 
-const ROOM_STATUS_LABEL = { available: 'Đang Hoạt Động', maintenance: 'Bảo Trì', closed: 'Đã Đóng' } as const;
+const ROOM_STATUS_LABEL = { available: 'Đang hoạt động', maintenance: 'Bảo trì', closed: 'Đã đóng' } as const;
 const vnd = (n: number) => `${n.toLocaleString('vi-VN')} đ`;
 
 export function ManagerCatalogsPage() {

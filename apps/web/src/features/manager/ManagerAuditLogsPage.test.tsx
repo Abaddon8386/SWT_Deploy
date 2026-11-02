@@ -118,7 +118,7 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
       root.render(<ManagerAuditLogsPage />);
     });
 
-    expect(host.textContent).toContain('Giám Sát Audit Log & Báo Cáo Lấp Đầy Lớp');
+    expect(host.textContent).toContain('Giám sát audit log & báo cáo lấp đầy lớp');
     expect(host.textContent).toContain('Vũ Hoàng Nam');
     expect(host.textContent).toContain('Nguyễn Thu Trang');
     expect(host.textContent).toContain('UPDATE');

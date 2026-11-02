@@ -88,7 +88,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
   it('renders staff internal requests list with status badges and create button', async () => {
     await render();
 
-    expect(host.textContent).toContain('Đơn Từ & Đề Xuất Nội Bộ');
+    expect(host.textContent).toContain('Đơn từ & đề xuất nội bộ');
     expect(host.textContent).toContain('Tạo đơn từ mới');
     expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
     expect(host.textContent).toContain('Xin đổi ca trực sáng');
@@ -109,7 +109,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
       createBtn?.click();
     });
 
-    expect(host.textContent).toContain('Tạo Đơn Từ & Đề Xuất Mới');
+    expect(host.textContent).toContain('Tạo đơn từ & đề xuất mới');
 
     vi.mocked(staffRequestApi.createStaffRequest).mockResolvedValue({
       ...mockRequests[0],

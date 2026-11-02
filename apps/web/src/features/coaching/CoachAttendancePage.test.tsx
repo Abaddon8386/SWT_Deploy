@@ -135,7 +135,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       (tabBtns[1] as HTMLButtonElement).click();
     });
 
-    expect(host.textContent).toContain('Đánh Giá Tiến Bộ Học Viên');
+    expect(host.textContent).toContain('Đánh giá tiến bộ học viên');
 
     const saveEvalBtn = host.querySelector('.btn-batch-save') as HTMLButtonElement;
     expect(saveEvalBtn.textContent).toContain('Lưu tất cả đánh giá');
