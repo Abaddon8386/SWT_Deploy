@@ -38,11 +38,11 @@ class CatalogSeederTest {
 
         verify(disciplines, times(5)).create(any());
         verify(rooms, times(5)).create(any());
-        verify(packages, times(9)).create(any());
+        verify(packages, times(6)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
-        verify(packages, times(9)).create(requests.capture());
+        verify(packages, times(6)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(199000, 299000, 599000, 999000, 1499000, 2999000, 1799000, 2699000, 5399000);
+                .containsExactly(199000, 299000, 599000, 1799000, 2699000, 5399000);
     }
 
     @Test
@@ -55,7 +55,7 @@ class CatalogSeederTest {
 
         verify(disciplines, never()).create(any());
         verify(rooms, never()).create(any());
-        verify(packages, times(9)).create(any());
+        verify(packages, times(6)).create(any());
     }
     @Test
     void correctsOriginalCatalogPricesWithoutChangingTermsOrManagerPrices() {
@@ -83,6 +83,23 @@ class CatalogSeederTest {
         when(packages.list()).thenReturn(List.of(new PackageDto(1L, CatalogSeeder.SILVER_NAME,
                 "Manager terms", new BigDecimal("450000"), 45, 3, "inactive")));
         seeder.run(null);
+        verify(packages, never()).update(any(), any());
+    }
+
+    @Test
+    void retiresSixMonthPackagesWithoutDeletingThem() {
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
+        when(packages.list()).thenReturn(List.of(
+                new PackageDto(7L, CatalogSeeder.SILVER_6M_NAME, null, new BigDecimal("999000"), 180, 2, "active"),
+                new PackageDto(8L, CatalogSeeder.GOLD_6M_NAME, null, new BigDecimal("1499000"), 180, 5, "inactive"),
+                new PackageDto(9L, CatalogSeeder.SILVER_12M_NAME, null, new BigDecimal("1799000"), 365, 2, "active")));
+
+        seeder.run(null);
+
+        verify(packages).updateStatus(7L, "inactive");
+        verify(packages, never()).updateStatus(8L, "inactive");
+        verify(packages, never()).updateStatus(9L, "inactive");
         verify(packages, never()).update(any(), any());
     }
 }
