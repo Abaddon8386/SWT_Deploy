@@ -19,6 +19,8 @@ export interface MemberSubscription {
   startDate: string;
   endDate: string;
   paidThroughDate?: string | null;
+  /** Quoted amount of a pending upgrade; null for other subscriptions. */
+  upgradeCharge?: number | null;
   status: string;
   qrCode: string | null;
   createdAt: string;
