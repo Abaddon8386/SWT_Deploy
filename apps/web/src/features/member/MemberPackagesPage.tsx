@@ -1,4 +1,4 @@
-﻿import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
 import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -559,8 +559,8 @@ export function MemberPackagesPage() {
   return (
     <div className="portal-container member-packages">
       {blockedMessage && <Modal returnFocusRef={membershipFocus} title="Chưa thể thực hiện" onClose={() => setBlockedMessage(null)}>
-        <div className="package-result">
-          <span className="package-result__icon" aria-hidden="true">!</span>
+        <div className="package-result package-result--error">
+          <span className="package-result__icon package-result__icon--error" aria-hidden="true">!</span>
           <p role="alert">{blockedMessage}</p>
           <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>Đóng</button>
         </div>
