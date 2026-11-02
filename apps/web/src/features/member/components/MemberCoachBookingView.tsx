@@ -501,6 +501,8 @@ export function MemberCoachBookingView({
                 <img
                   src={c.avatarUrl || coachIllustration(c.specialization)}
                   alt={c.fullName}
+                  loading="lazy"
+                  decoding="async"
                   style={{
                     width: 56,
                     height: 56,
