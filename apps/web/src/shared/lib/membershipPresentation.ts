@@ -33,6 +33,8 @@ export function getPackageDetails(pkg: MembershipPackage) {
     tierBadge = `Gói 12 tháng • 365 ngày (Tiết kiệm 25%)`;
   } else if (pkg.durationDays >= 170) {
     tierBadge = `Gói 6 tháng • 180 ngày (Tiết kiệm ~17%)`;
+  } else if (pkg.durationDays === 90) {
+    tierBadge = `Gói 3 tháng • 90 ngày`;
   } else if (pkg.durationDays === 30) {
     tierBadge = `Gói tháng • 30 ngày`;
   }

@@ -41,18 +41,6 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
         const details = getPackageDetails(pkg);
         const isFeatured = index === 1;
         return <article key={pkg.id} className={`fit-plan ${isFeatured ? 'fit-plan-featured' : ''}`} data-reveal="lift">
-          {pkg.durationDays >= 170 && <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-            {pkg.durationDays >= 360 && (
-              <span className="fit-plan-period fit-plan-period--highlight">
-                Tặng 3 tháng (Tiết kiệm 25%)
-              </span>
-            )}
-            {pkg.durationDays >= 170 && pkg.durationDays < 360 && (
-              <span className="fit-plan-period fit-plan-period--highlight">
-                Tiết kiệm ~17%
-              </span>
-            )}
-          </div>}
           <h3>{pkg.name}</h3>
           <div className="fit-plan-price">{formatPrice(pkg.price)}<span>/ {pkg.durationDays} ngày</span></div>
           <p className="fit-plan-summary">{details.summary}</p>

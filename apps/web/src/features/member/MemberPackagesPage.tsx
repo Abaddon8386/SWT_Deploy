@@ -39,8 +39,8 @@ interface RequestResult {
   action: 'register' | 'renew' | 'upgrade';
 }
 
-// Gói "đồng hành" dài hạn (6/12 tháng) tách khỏi gói 1 tháng bằng tab
-const LONG_TERM_DAYS = 180;
+// Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
+const LONG_TERM_DAYS = 60;
 const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại quầy lễ tân để nhân viên xác nhận và kích hoạt gói tập.';
 
 function formatDate(value: string): string {
