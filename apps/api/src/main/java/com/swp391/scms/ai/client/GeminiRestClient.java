@@ -24,7 +24,7 @@ public class GeminiRestClient implements AiClient {
 
     public GeminiRestClient(String apiKey, String model, RestClient restClient) {
         this.apiKey = apiKey;
-        this.model = (model != null && !model.isBlank()) ? model : "gemini-flash-latest";
+        this.model = (model != null && !model.isBlank()) ? model : "gemini-flash-lite-latest";
         this.restClient = restClient != null ? restClient : defaultRestClient();
     }
 
