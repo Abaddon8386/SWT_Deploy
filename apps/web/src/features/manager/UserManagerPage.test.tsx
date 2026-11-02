@@ -100,12 +100,13 @@ describe('UserManagerPage', () => {
   const button = (container: HTMLElement, label: string) =>
     [...container.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
 
-  it('renders user list with policy banner and frozen status badge', async () => {
+  it('renders user list with the cleanup option in a menu and frozen status badge', async () => {
     await act(async () => {
       root.render(<UserManagerPage />);
     });
 
-    expect(host.textContent).toContain('Chính sách tự động dọn dẹp tài khoản');
+    expect(host.textContent).not.toContain('Chính sách tự động dọn dẹp tài khoản');
+    expect(host.querySelector('.action-menu')?.textContent).toContain('Quét & Dọn dẹp ngay');
     expect(host.textContent).toContain('Frozen Member');
     expect(host.textContent).toContain('Đang bảo lưu tập');
     expect(host.textContent).toContain('Inactive Coach');

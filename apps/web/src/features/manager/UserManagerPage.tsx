@@ -11,6 +11,7 @@ import {
 import { Modal } from '../../shared/ui/Modal';
 import { toast } from '../../shared/ui/toast';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { ActionMenu } from '../../shared/ui/ActionMenu';
 
 export function UserManagerPage() {
   const [users, setUsers] = useState<UserAccount[]>([]);
@@ -363,45 +364,6 @@ export function UserManagerPage() {
         </div>
       ) : activeTab === 'USERS' ? (
         <div>
-          {/* Policy Notice: 6-month inactivity auto-deletion */}
-          <div
-            className="portal-card"
-            style={{
-              marginBottom: 16,
-              padding: '14px 18px',
-              background: 'rgba(235, 94, 40, 0.06)',
-              border: '1px solid rgba(235, 94, 40, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 16,
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: '1.35rem' }} role="img" aria-label="clock">⏱️</span>
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--portal-text-main, #211c18)' }}>
-                  Chính sách tự động dọn dẹp tài khoản (quá 6 tháng)
-                </strong>
-                <span style={{ fontSize: '0.82rem', color: 'var(--portal-muted)' }}>
-                  Tài khoản không đăng nhập quá 6 tháng sẽ tự động xóa mềm (Ngoại trừ hội viên đang bảo lưu tập).
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              style={{ borderColor: 'var(--color-accent-gold, #eb5e28)', color: 'var(--color-accent-gold, #eb5e28)' }}
-              onClick={() => {
-                setCleanupResult(null);
-                setShowCleanupModal(true);
-              }}
-            >
-              Quét & Dọn dẹp ngay
-            </button>
-          </div>
-
           {/* Controls / Filter Bar */}
           <div className="portal-toolbar">
             <input
@@ -433,6 +395,19 @@ export function UserManagerPage() {
             >
               + Thêm tài khoản
             </button>
+            <ActionMenu label="Tùy chọn quản trị">
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                title="Tài khoản không đăng nhập quá 6 tháng sẽ tự động xóa mềm (ngoại trừ hội viên đang bảo lưu)"
+                onClick={() => {
+                  setCleanupResult(null);
+                  setShowCleanupModal(true);
+                }}
+              >
+                Quét & Dọn dẹp ngay
+              </button>
+            </ActionMenu>
           </div>
 
           {/* User Table */}
@@ -534,9 +509,10 @@ export function UserManagerPage() {
                             >
                               Sửa
                             </button>
+                            <ActionMenu label={`Thao tác khác với ${u.name}`}>
                             <button
                               type="button"
-                              className={u.status === 'ACTIVE' ? 'btn-secondary btn-sm' : 'btn-primary btn-sm'}
+                              className="btn-secondary btn-sm"
                               disabled={u.role === 'CENTER_MANAGER'}
                               title={
                                 u.role === 'CENTER_MANAGER'
@@ -563,6 +539,7 @@ export function UserManagerPage() {
                             >
                               Xóa
                             </button>
+                            </ActionMenu>
                           </div>
                         </td>
                       </tr>
