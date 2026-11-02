@@ -357,17 +357,46 @@ public class AuthService {
                 initialStatusForNewUser);
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthService.class);
+
     private String issueAndSendOtp(String normalizedTarget) {
         String code = otpService.generateOtp(normalizedTarget);
         if (!debugOtpEnabled) {
-            try {
-                otpDeliveryPort.send(normalizedTarget, code);
-            } catch (RuntimeException deliveryFailure) {
-                otpService.invalidate(normalizedTarget);
-                throw deliveryFailure;
-            }
+            runAfterCommit(() -> {
+                try {
+                    otpDeliveryPort.send(normalizedTarget, code);
+                } catch (RuntimeException deliveryFailure) {
+                    otpService.invalidate(normalizedTarget);
+                    log.warn("OTP delivery failed for {}", maskEmail(normalizedTarget), deliveryFailure);
+                }
+            });
         }
         return code;
+    }
+
+    private void runAfterCommit(Runnable action) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            action.run();
+                        }
+                    });
+        } else {
+            action.run();
+        }
+    }
+
+    private static String maskEmail(String target) {
+        if (target == null || target.isBlank()) {
+            return "***";
+        }
+        int at = target.indexOf('@');
+        if (at <= 1) {
+            return "***";
+        }
+        return target.charAt(0) + "***" + target.substring(at);
     }
 
     @Transactional

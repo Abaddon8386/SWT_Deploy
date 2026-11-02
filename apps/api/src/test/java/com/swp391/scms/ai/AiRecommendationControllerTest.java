@@ -200,4 +200,73 @@ class AiRecommendationControllerTest {
         assertTrue(log.isApplied());
         verify(recommendationLogRepository).save(log);
     }
+
+    @Test
+    @DisplayName("AI generation must execute outside DB transaction between short read-only and write transactions")
+    void shouldNotHoldTransactionDuringAiCalls() throws Exception {
+        assertFalse(AiRecommendationService.class.isAnnotationPresent(
+                org.springframework.transaction.annotation.Transactional.class));
+        assertFalse(AiRecommendationService.class
+                .getMethod("generateRecommendation", Long.class, String.class)
+                .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class));
+        assertFalse(AiRecommendationService.class
+                .getMethod("generateWorkoutPlan", AiWorkoutPlanRequest.class, Long.class)
+                .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class));
+
+        var txManager = new org.springframework.transaction.support.AbstractPlatformTransactionManager() {
+            @Override
+            protected Object doGetTransaction() { return new Object(); }
+            @Override
+            protected void doBegin(Object transaction, org.springframework.transaction.TransactionDefinition definition) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
+            }
+            @Override
+            protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) {}
+            @Override
+            protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus status) {}
+            @Override
+            protected void doCleanupAfterCompletion(Object transaction) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(false);
+            }
+        };
+
+        var txActiveDuringAi = new java.util.concurrent.atomic.AtomicBoolean(true);
+        AiClient slowAiClient = new AiClient() {
+            @Override
+            public String generate(String systemPrompt, String userMessage) {
+                txActiveDuringAi.set(
+                        org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
+                return "{\"goal\":\"Test\",\"analysis\":\"OK\",\"items\":[]}";
+            }
+            @Override
+            public String getModelName() { return "test-model"; }
+            @Override
+            public String getProviderName() { return "test-provider"; }
+        };
+
+        Member member = new Member();
+        member.setUserId(10L);
+        member.setMembershipCode("MEM-10");
+        when(memberRepository.findById(10L)).thenAnswer(inv -> {
+            assertTrue(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
+            assertTrue(org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly());
+            return Optional.of(member);
+        });
+        when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> {
+            assertTrue(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
+            assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly());
+            return inv.getArgument(0);
+        });
+
+        AiRecommendationService txService = new AiRecommendationService(
+                slowAiClient, recommendationLogRepository, memberRepository,
+                coachRepository, progressLogRepository, trainingPlanService, objectMapper, txManager);
+
+        txService.generateRecommendation(10L, "healthy");
+        assertFalse(txActiveDuringAi.get(), "Transaction must NOT be active while calling AiClient.generate");
+
+        txActiveDuringAi.set(true);
+        txService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, "extra", 4), null);
+        assertFalse(txActiveDuringAi.get(), "Transaction must NOT be active while calling AiClient.generate in generateWorkoutPlan");
+    }
 }

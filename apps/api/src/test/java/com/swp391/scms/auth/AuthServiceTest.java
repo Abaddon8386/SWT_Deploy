@@ -191,4 +191,32 @@ class AuthServiceTest {
         assertEquals("locked", locked.getStatus());
         verify(userRepository, org.mockito.Mockito.never()).save(any());
     }
+
+    @Test
+    void requestGoogleOtpDefersSmtpDeliveryUntilAfterCommitAndInvalidatesOnFailure() {
+        Role memberRole = new Role();
+        memberRole.setCode("MEMBER");
+        when(userRepository.findByEmailIgnoreCase("slow@gmail.com")).thenReturn(Optional.empty());
+        when(userRepository.findByUsernameIgnoreCase("slow")).thenReturn(Optional.empty());
+        when(roleRepository.findByCodeIgnoreCase("MEMBER")).thenReturn(Optional.of(memberRole));
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(otpService.generateOtp("slow@gmail.com")).thenReturn("654321");
+        org.mockito.Mockito.doThrow(new RuntimeException("SMTP timeout"))
+                .when(otpDeliveryPort).send("slow@gmail.com", "654321");
+
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            String code = service.requestGoogleOtp("slow@gmail.com");
+            assertEquals("654321", code);
+            verify(otpDeliveryPort, org.mockito.Mockito.never()).send(any(), any());
+
+            for (var sync : org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()) {
+                sync.afterCommit();
+            }
+            verify(otpDeliveryPort).send("slow@gmail.com", "654321");
+            verify(otpService).invalidate("slow@gmail.com");
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
 }

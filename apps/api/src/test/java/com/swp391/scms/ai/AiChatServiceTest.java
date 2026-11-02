@@ -228,4 +228,59 @@ class AiChatServiceTest {
                 any()
         );
     }
+
+    @Test
+    void sendMessage_ShouldNotHoldTransactionWhileCallingProvider() throws Exception {
+        org.junit.jupiter.api.Assertions.assertFalse(AiChatService.class
+                .getMethod("sendMessage", Long.class, AiChatMessageCreateDto.class, Long.class, String.class)
+                .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class));
+        org.junit.jupiter.api.Assertions.assertFalse(AiChatService.class
+                .getMethod("sendQuickMessage", AiChatMessageCreateDto.class, Long.class, String.class)
+                .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class));
+
+        var txManager = new org.springframework.transaction.support.AbstractPlatformTransactionManager() {
+            @Override
+            protected Object doGetTransaction() { return new Object(); }
+            @Override
+            protected void doBegin(Object transaction, org.springframework.transaction.TransactionDefinition definition) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
+            }
+            @Override
+            protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) {}
+            @Override
+            protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus status) {}
+            @Override
+            protected void doCleanupAfterCompletion(Object transaction) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(false);
+            }
+        };
+
+        var txActiveDuringProvider = new java.util.concurrent.atomic.AtomicBoolean(true);
+        when(sessionRepository.findById(500L)).thenAnswer(inv -> {
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly());
+            return Optional.of(session);
+        });
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
+        when(chatProvider.generate(any(), any())).thenAnswer(inv -> {
+            txActiveDuringProvider.set(
+                    org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
+            return "Trả lời không giữ connection";
+        });
+        when(messageRepository.save(any(AiChatMessage.class))).thenAnswer(inv -> {
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly());
+            return inv.getArgument(0);
+        });
+
+        AiChatService txChatService = new AiChatService(
+                sessionRepository, messageRepository, memberRepository, messageService, chatProvider, null, txManager);
+        txChatService.sendMessage(500L, new AiChatMessageCreateDto("Xin chào"), 100L, "MEMBER");
+        org.junit.jupiter.api.Assertions.assertFalse(txActiveDuringProvider.get(),
+                "Transaction must NOT be active while calling AiChatProvider.generate");
+    }
 }

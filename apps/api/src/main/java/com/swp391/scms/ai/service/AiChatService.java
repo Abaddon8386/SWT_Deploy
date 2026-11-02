@@ -18,10 +18,13 @@ import com.swp391.scms.users.entity.Member;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Service managing 24/7 AI Chatbot sessions and messages for SCMS members (SCRUM-118).
@@ -48,12 +51,14 @@ public class AiChatService {
     private final MessageService messageService;
     private final AiChatProvider chatProvider;
     private final AiRagContextService ragContextService;
+    private final TransactionTemplate writeTx;
+    private final TransactionTemplate readOnlyTx;
 
     public AiChatService(AiChatSessionRepository sessionRepository,
                          AiChatMessageRepository messageRepository,
                          MemberRepository memberRepository,
                          MessageService messageService) {
-        this(sessionRepository, messageRepository, memberRepository, messageService, null, null);
+        this(sessionRepository, messageRepository, memberRepository, messageService, null, null, null);
     }
 
     public AiChatService(AiChatSessionRepository sessionRepository,
@@ -61,7 +66,16 @@ public class AiChatService {
                          MemberRepository memberRepository,
                          MessageService messageService,
                          AiChatProvider chatProvider) {
-        this(sessionRepository, messageRepository, memberRepository, messageService, chatProvider, null);
+        this(sessionRepository, messageRepository, memberRepository, messageService, chatProvider, null, null);
+    }
+
+    public AiChatService(AiChatSessionRepository sessionRepository,
+                         AiChatMessageRepository messageRepository,
+                         MemberRepository memberRepository,
+                         MessageService messageService,
+                         AiChatProvider chatProvider,
+                         AiRagContextService ragContextService) {
+        this(sessionRepository, messageRepository, memberRepository, messageService, chatProvider, ragContextService, null);
     }
 
     @Autowired
@@ -70,13 +84,30 @@ public class AiChatService {
                          MemberRepository memberRepository,
                          MessageService messageService,
                          AiChatProvider chatProvider,
-                         @Autowired(required = false) AiRagContextService ragContextService) {
+                         @Autowired(required = false) AiRagContextService ragContextService,
+                         @Autowired(required = false) PlatformTransactionManager txManager) {
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.memberRepository = memberRepository;
         this.messageService = messageService;
         this.chatProvider = chatProvider;
         this.ragContextService = ragContextService;
+        if (txManager != null) {
+            this.writeTx = new TransactionTemplate(txManager);
+            this.readOnlyTx = new TransactionTemplate(txManager);
+            this.readOnlyTx.setReadOnly(true);
+        } else {
+            this.writeTx = null;
+            this.readOnlyTx = null;
+        }
+    }
+
+    private <T> T inReadOnlyTx(Supplier<T> action) {
+        return readOnlyTx != null ? readOnlyTx.execute(status -> action.get()) : action.get();
+    }
+
+    private <T> T inWriteTx(Supplier<T> action) {
+        return writeTx != null ? writeTx.execute(status -> action.get()) : action.get();
     }
 
     /**
@@ -115,24 +146,24 @@ public class AiChatService {
      * Quick-send message flow: if dto.sessionId() is provided, appends to that session;
      * otherwise reuses the member's most recent active session or auto-creates one.
      */
-    @Transactional
     public AiChatReplyDto sendQuickMessage(AiChatMessageCreateDto dto, Long currentUserId, String currentRole) {
         if (dto == null || dto.message() == null || dto.message().isBlank()) {
             throw new BadRequestException(msg("validation.ai.chat.message.required"));
         }
         Long sessionId = dto.sessionId();
         if (sessionId == null) {
-            List<AiChatSession> existing = sessionRepository.findByMemberUserIdOrderByStartedAtDesc(currentUserId);
-            if (!existing.isEmpty() && existing.get(0).getEndedAt() == null) {
-                sessionId = existing.get(0).getId();
-            } else {
+            sessionId = inWriteTx(() -> {
+                List<AiChatSession> existing = sessionRepository.findByMemberUserIdOrderByStartedAtDesc(currentUserId);
+                if (!existing.isEmpty() && existing.get(0).getEndedAt() == null) {
+                    return existing.get(0).getId();
+                }
                 String derivedTopic = deriveTopicFromMessage(dto.topic(), dto.message());
                 AiChatSessionDto created = createSession(
                         new AiChatSessionCreateDto(currentUserId, derivedTopic),
                         currentUserId,
                         currentRole);
-                sessionId = created.id();
-            }
+                return created.id();
+            });
         }
         return sendMessage(sessionId, dto, currentUserId, currentRole);
     }
@@ -148,11 +179,17 @@ public class AiChatService {
         return cleaned.length() <= 60 ? cleaned : cleaned.substring(0, 57) + "...";
     }
 
+    private record PreparedChatRequest(
+            AiChatSession session,
+            String effectiveSystemPrompt,
+            List<AiChatProvider.Turn> turns,
+            String userMessage
+    ) {}
+
     /**
      * Sends a member message in an existing chat session, generates the AI reply with session context,
-     * and persists both messages in chronological order.
+     * and persists both messages in chronological order without holding a DB connection during the AI call.
      */
-    @Transactional
     public AiChatReplyDto sendMessage(Long sessionId,
                                       AiChatMessageCreateDto dto,
                                       Long currentUserId,
@@ -160,32 +197,62 @@ public class AiChatService {
         if (dto == null || dto.message() == null || dto.message().isBlank()) {
             throw new BadRequestException(msg("validation.ai.chat.message.required"));
         }
+        String trimmedUserMessage = dto.message().trim();
 
-        AiChatSession session = getAuthorizedSession(sessionId, currentUserId, currentRole);
-        List<AiChatMessage> existingHistory = messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId);
+        // Phase 1: short read-only transaction (check ownership, load history, build RAG context String)
+        PreparedChatRequest prepared = inReadOnlyTx(() -> {
+            AiChatSession session = getAuthorizedSession(sessionId, currentUserId, currentRole);
+            List<AiChatMessage> existingHistory = messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId);
+            if (chatProvider == null) {
+                throw new com.swp391.scms.common.exception.ServiceUnavailableException(
+                        "AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null,
+                        "The AI assistant is not configured.");
+            }
+            String effectiveSystemPrompt = SYSTEM_PROMPT;
+            if (ragContextService != null) {
+                String retrievedContext = ragContextService.buildRagContext(session.getMember(), trimmedUserMessage);
+                if (retrievedContext != null && !retrievedContext.isBlank()) {
+                    effectiveSystemPrompt = SYSTEM_PROMPT + "\n\n" + retrievedContext;
+                }
+            }
+            var turns = new java.util.ArrayList<AiChatProvider.Turn>();
+            existingHistory.subList(Math.max(0, existingHistory.size() - MAX_CONTEXT_MESSAGES), existingHistory.size())
+                    .forEach(message -> turns.add(new AiChatProvider.Turn(
+                            "ai".equals(message.getSender()) ? "assistant" : "user", message.getMessage())));
+            turns.add(new AiChatProvider.Turn("user", trimmedUserMessage));
+            return new PreparedChatRequest(session, effectiveSystemPrompt, List.copyOf(turns), trimmedUserMessage);
+        });
 
-        String aiReplyText = generateContextualReply(session.getMember(), existingHistory, dto.message().trim());
-        LocalDateTime now = LocalDateTime.now();
-        AiChatMessage memberMsg = new AiChatMessage();
-        memberMsg.setSession(session);
-        memberMsg.setSender("member");
-        memberMsg.setMessage(dto.message().trim());
-        memberMsg.setCreatedAt(now);
-        AiChatMessage savedMemberMsg = messageRepository.save(memberMsg);
+        // Phase 2: call AI provider outside transaction (no DB connection held)
+        String aiReplyText = stripMarkdown(chatProvider.generate(prepared.effectiveSystemPrompt(), prepared.turns()));
 
-        AiChatMessage aiMsg = new AiChatMessage();
-        aiMsg.setSession(session);
-        aiMsg.setSender("ai");
-        aiMsg.setMessage(aiReplyText);
-        aiMsg.setCreatedAt(now.plusNanos(1_000_000));
-        AiChatMessage savedAiMsg = messageRepository.save(aiMsg);
+        // Phase 3: short write transaction to persist user & AI messages
+        return inWriteTx(() -> {
+            AiChatSession sessionRef = sessionRepository.getReferenceById(sessionId);
+            AiChatSession targetSession = sessionRef != null ? sessionRef : prepared.session();
+            LocalDateTime now = LocalDateTime.now();
 
-        return new AiChatReplyDto(
-                session.getId(),
-                toMessageDto(savedMemberMsg),
-                toMessageDto(savedAiMsg),
-                savedAiMsg.getMessage()
-        );
+            AiChatMessage memberMsg = new AiChatMessage();
+            memberMsg.setSession(targetSession);
+            memberMsg.setSender("member");
+            memberMsg.setMessage(prepared.userMessage());
+            memberMsg.setCreatedAt(now);
+            AiChatMessage savedMemberMsg = messageRepository.save(memberMsg);
+
+            AiChatMessage aiMsg = new AiChatMessage();
+            aiMsg.setSession(targetSession);
+            aiMsg.setSender("ai");
+            aiMsg.setMessage(aiReplyText);
+            aiMsg.setCreatedAt(now.plusNanos(1_000_000));
+            AiChatMessage savedAiMsg = messageRepository.save(aiMsg);
+
+            return new AiChatReplyDto(
+                    targetSession.getId(),
+                    toMessageDto(savedMemberMsg),
+                    toMessageDto(savedAiMsg),
+                    savedAiMsg.getMessage()
+            );
+        });
     }
 
     /**
