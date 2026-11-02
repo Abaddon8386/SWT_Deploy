@@ -67,6 +67,11 @@
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.32), 0 0 20px rgba(194, 166, 132, 0.25);
 }
 
+.glass-button:focus-visible {
+  outline: 2px solid var(--color-accent-gold);
+  outline-offset: 2px;
+}
+
 .glass-button:active {
   transform: translateY(0) scale(0.97);
 }

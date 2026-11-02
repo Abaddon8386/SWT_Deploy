@@ -460,7 +460,9 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   .portal-v2 .grid-2, .portal-v2 .grid-3 { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .portal-v2 *, .portal-v2 *::before, .portal-v2 *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .portal-v2 *, .portal-v2 *::before, .portal-v2 *::after { animation: none !important; scroll-behavior: auto !important; }
+  /* Không chuyển động vị trí/kích thước nhưng vẫn đổi màu ngắn để người dùng thấy hover, focus và trạng thái chọn */
+  .portal-v2 *, .portal-v2 *::before, .portal-v2 *::after { transition-property: color, background-color, border-color, box-shadow, opacity !important; transition-duration: 120ms !important; transition-delay: 0ms !important; }
 }
 
 
@@ -601,4 +603,10 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 @media (max-width: 767px) {
   .portal-v2 .btn-metric-action, .portal-v2 .profile-metric-editing-bar button { min-height: 44px; }
   .portal-v2 .member-column-heading > a { min-width: 44px; min-height: 44px; }
+}
+
+/* Màn hình cảm ứng rộng hơn 767px (máy tính bảng): vùng chạm tối thiểu 44px */
+@media (pointer: coarse) and (min-width: 768px) {
+  .portal-v2 :is(.btn-primary, .btn-secondary, .btn-danger, .btn-sm, .filter-chip, .seg-btn, .btn-metric-action, .profile-metric-editing-bar button, .theme-toggle, .portal-search-trigger) { min-height: 44px; }
+  .portal-v2 :is(.portal-icon-button, .theme-toggle, .portal-search-trigger, .portal-dialog__close) { min-width: 44px; min-height: 44px; }
 }

@@ -914,7 +914,7 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
 
 
 /* Ô nhập đã có viền/ring focus riêng: bỏ outline mặc định để không bị viền đôi */
-input:focus-visible,
+input:not([type='range'], [type='checkbox'], [type='radio'], [type='file']):focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: none;
