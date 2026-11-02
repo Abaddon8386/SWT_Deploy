@@ -16,6 +16,9 @@ import {
 } from './aiApi';
 import './coach-training-plan.css';
 
+// Tạm ẩn các điểm vào AI cho đến khi có provider thực tế.
+const AI_UI_ENABLED = false;
+
 const DAYS_OF_WEEK = [
   { id: 1, name: 'Thứ 2' },
   { id: 2, name: 'Thứ 3' },
@@ -279,7 +282,7 @@ export function CoachTrainingPlanPage() {
   const handleSavePlan = async () => {
     if (exercises.length === 0) {
       showCenterNotification(
-        'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập hoặc bấm "Gợi ý giáo án bằng AI" trước khi lưu.',
+        'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập trước khi lưu.',
         'error',
         'Chưa có bài tập'
       );
@@ -382,7 +385,7 @@ export function CoachTrainingPlanPage() {
         title="Bàn làm việc: Soạn giáo án bài tập"
         actions={
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button
+            {AI_UI_ENABLED && <button
               type="button"
               className="btn-ai-sparkle"
               onClick={() => {
@@ -392,7 +395,7 @@ export function CoachTrainingPlanPage() {
             >
               <span aria-hidden="true">↗</span>
               <span>Gợi ý giáo án bằng AI</span>
-            </button>
+            </button>}
 
             <button
               type="button"
@@ -662,7 +665,7 @@ export function CoachTrainingPlanPage() {
               <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '8px' }}>GIÁO ÁN NGÀY</div>
               <div style={{ fontWeight: 600 }}>Chưa có bài tập nào cho ngày này</div>
               <p style={{ margin: '4px 0 14px 0', fontSize: '0.84rem' }}>
-                Thêm bài tập bằng form ở trên hoặc bấm nút <strong>"Gợi ý giáo án bằng AI"</strong> để tự động điền.
+                Thêm bài tập bằng form ở trên để xây dựng giáo án cho học viên.
               </p>
             </div>
           ) : (
@@ -730,7 +733,7 @@ export function CoachTrainingPlanPage() {
       </div>
 
       {/* AC: Modal Tương Tác AI Gợi Ý Giáo Án */}
-      {isAiModalOpen && (
+      {AI_UI_ENABLED && isAiModalOpen && (
         <Modal title="Trợ Lý AI: Gợi Ý Giáo Án Huấn Luyện Cá Nhân Hóa" onClose={() => setIsAiModalOpen(false)}>
           <div className="ai-modal-container">
             <div>
