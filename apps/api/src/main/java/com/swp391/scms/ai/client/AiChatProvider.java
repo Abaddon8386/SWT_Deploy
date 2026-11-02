@@ -25,7 +25,54 @@ public class AiChatProvider {
     public AiChatProvider(@Value("${scms.ai.chat.provider:disabled}") String provider,
                           @Value("${scms.ai.chat.api-key:}") String apiKey,
                           @Value("${scms.ai.chat.model:}") String model) {
-        this(provider, apiKey, model, builder());
+        this(resolveProviderWithDotEnv(provider), resolveApiKeyWithDotEnv(apiKey), resolveModelWithDotEnv(model), builder());
+    }
+
+    public static Map<String, String> readDefaultDotEnv() {
+        return readDotEnv(java.nio.file.Path.of(".env"), java.nio.file.Path.of("..", "..", ".env"));
+    }
+
+    public static Map<String, String> readDotEnv(java.nio.file.Path... candidates) {
+        var result = new java.util.LinkedHashMap<String, String>();
+        for (var path : candidates) {
+            if (path != null && java.nio.file.Files.isRegularFile(path)) {
+                try {
+                    for (String raw : java.nio.file.Files.readAllLines(path)) {
+                        String line = raw.trim();
+                        int sep = line.indexOf('=');
+                        if (!line.isEmpty() && !line.startsWith("#") && sep > 0) {
+                            result.putIfAbsent(line.substring(0, sep).trim(), line.substring(sep + 1).trim());
+                        }
+                    }
+                } catch (java.io.IOException ignored) {
+                }
+            }
+        }
+        return result;
+    }
+
+    private static String resolveProviderWithDotEnv(String provider) {
+        if (provider != null && !provider.isBlank() && !"disabled".equalsIgnoreCase(provider.trim())) {
+            return provider;
+        }
+        var dotEnv = readDefaultDotEnv();
+        return dotEnv.getOrDefault("SCMS_AI_CHAT_PROVIDER", dotEnv.getOrDefault("SCMS_AI_PROVIDER", provider));
+    }
+
+    private static String resolveApiKeyWithDotEnv(String apiKey) {
+        if (apiKey != null && !apiKey.isBlank()) {
+            return apiKey;
+        }
+        var dotEnv = readDefaultDotEnv();
+        return dotEnv.getOrDefault("SCMS_AI_CHAT_API_KEY", dotEnv.getOrDefault("SCMS_AI_API_KEY", apiKey));
+    }
+
+    private static String resolveModelWithDotEnv(String model) {
+        if (model != null && !model.isBlank()) {
+            return model;
+        }
+        var dotEnv = readDefaultDotEnv();
+        return dotEnv.getOrDefault("SCMS_AI_CHAT_MODEL", dotEnv.getOrDefault("SCMS_AI_MODEL", model));
     }
 
     public AiChatProvider(String provider, String apiKey, String model, RestClient.Builder builder) {

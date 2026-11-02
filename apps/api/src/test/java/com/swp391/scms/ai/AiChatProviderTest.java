@@ -76,4 +76,17 @@ class AiChatProviderTest {
         assertEquals("The AI assistant is temporarily unavailable.", exception.getMessage());
         assertEquals("AI_CHAT_UNAVAILABLE", exception.getErrorCode());
     }
+
+    @Test void readsDotEnvFallbackWhenSpringEnvIsBlank() throws Exception {
+        var tempFile = java.nio.file.Files.createTempFile("scms-ai-test", ".env");
+        try {
+            java.nio.file.Files.writeString(tempFile, "# Comment\nSCMS_AI_PROVIDER=gemini\nSCMS_AI_MODEL=gemini-3-flash-preview\nSCMS_AI_API_KEY=dotenv-test-key\n");
+            var dotEnv = AiChatProvider.readDotEnv(tempFile);
+            assertEquals("gemini", dotEnv.get("SCMS_AI_PROVIDER"));
+            assertEquals("gemini-3-flash-preview", dotEnv.get("SCMS_AI_MODEL"));
+            assertEquals("dotenv-test-key", dotEnv.get("SCMS_AI_API_KEY"));
+        } finally {
+            java.nio.file.Files.deleteIfExists(tempFile);
+        }
+    }
 }

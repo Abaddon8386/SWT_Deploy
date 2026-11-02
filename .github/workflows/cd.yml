@@ -102,6 +102,9 @@ jobs:
           DEPLOY_COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          SCMS_AI_PROVIDER: ${{ vars.SCMS_AI_PROVIDER || 'gemini' }}
+          SCMS_AI_MODEL: ${{ vars.SCMS_AI_MODEL || 'gemini-3-flash-preview' }}
+          SCMS_AI_API_KEY: ${{ secrets.SCMS_AI_API_KEY || secrets.GEMINI_API_KEY || vars.SCMS_AI_API_KEY }}
         run: |
           set -euo pipefail
           [[ "$RENDER_SERVICE_ID" =~ ^srv-[a-zA-Z0-9-]+$ ]] || { echo "Set RENDER_SERVICE_ID to your existing srv-... service ID" >&2; exit 1; }
@@ -162,6 +165,13 @@ jobs:
               exit 1
             fi
             for key in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY; do
+              payload=$(jq -nc --arg v "${!key}" '{value: $v}')
+              render_api PUT "services/$RENDER_SERVICE_ID/env-vars/$key" "$payload"
+            done
+          fi
+
+          if [ -n "${SCMS_AI_API_KEY:-}" ]; then
+            for key in SCMS_AI_PROVIDER SCMS_AI_MODEL SCMS_AI_API_KEY; do
               payload=$(jq -nc --arg v "${!key}" '{value: $v}')
               render_api PUT "services/$RENDER_SERVICE_ID/env-vars/$key" "$payload"
             done

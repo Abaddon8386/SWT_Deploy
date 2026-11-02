@@ -22,14 +22,24 @@ public class AiClientConfig {
 
     @Bean
     public AiClient aiClient() {
-        if ("openai".equalsIgnoreCase(provider) && apiKey != null && !apiKey.isBlank()) {
-            return new OpenAiRestClient(apiKey, model);
-        } else if ("groq".equalsIgnoreCase(provider) && apiKey != null && !apiKey.isBlank()) {
-            String groqModel = (model != null && !model.isBlank()) ? model : "llama-3.3-70b-versatile";
-            return new OpenAiRestClient(apiKey, groqModel, "https://api.groq.com/openai/v1", "groq");
-        } else if ("gemini".equalsIgnoreCase(provider) && apiKey != null && !apiKey.isBlank()) {
-            return new GeminiRestClient(apiKey, model);
+        String effectiveProvider = provider;
+        String effectiveApiKey = apiKey;
+        String effectiveModel = model;
+        if ((effectiveApiKey == null || effectiveApiKey.isBlank())
+                && (effectiveProvider == null || effectiveProvider.isBlank() || "mock".equalsIgnoreCase(effectiveProvider))) {
+            var dotEnv = AiChatProvider.readDefaultDotEnv();
+            effectiveProvider = dotEnv.getOrDefault("SCMS_AI_PROVIDER", effectiveProvider);
+            effectiveApiKey = dotEnv.getOrDefault("SCMS_AI_API_KEY", effectiveApiKey);
+            effectiveModel = dotEnv.getOrDefault("SCMS_AI_MODEL", effectiveModel);
         }
-        return new MockAiClient(model);
+        if ("openai".equalsIgnoreCase(effectiveProvider) && effectiveApiKey != null && !effectiveApiKey.isBlank()) {
+            return new OpenAiRestClient(effectiveApiKey, effectiveModel);
+        } else if ("groq".equalsIgnoreCase(effectiveProvider) && effectiveApiKey != null && !effectiveApiKey.isBlank()) {
+            String groqModel = (effectiveModel != null && !effectiveModel.isBlank()) ? effectiveModel : "llama-3.3-70b-versatile";
+            return new OpenAiRestClient(effectiveApiKey, groqModel, "https://api.groq.com/openai/v1", "groq");
+        } else if ("gemini".equalsIgnoreCase(effectiveProvider) && effectiveApiKey != null && !effectiveApiKey.isBlank()) {
+            return new GeminiRestClient(effectiveApiKey, effectiveModel);
+        }
+        return new MockAiClient(effectiveModel);
     }
 }
