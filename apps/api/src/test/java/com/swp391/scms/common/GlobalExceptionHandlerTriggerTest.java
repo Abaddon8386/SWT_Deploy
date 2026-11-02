@@ -36,8 +36,8 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String CAPACITY_EN = "Class is full; consider joining the waitlist";
     private static final String SCHEDULE_VI = "Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này";
     private static final String SCHEDULE_EN = "Schedule conflict: Coach or room is already booked during this time slot";
-    private static final String MEMBERSHIP_VI = "Gói tập của hội viên chưa được kích hoạt hoặc đã hết hạn";
-    private static final String MEMBERSHIP_EN = "Member has no active or unexpired subscription";
+    private static final String MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch";
+    private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
 
     @Test
     void scheduleContentionReturnsRetryableConflict() {
@@ -159,7 +159,7 @@ class GlobalExceptionHandlerTriggerTest {
                 Arguments.of("trg_court_bookings_check_conflict", 409, "COURT_BOOKING_SLOT_TAKEN", "en",
                         "This time overlaps an existing court booking or class"),
                 Arguments.of("trg_court_bookings_check_membership", 403, "COURT_BOOKING_MEMBERSHIP_INVALID", "vi",
-                        "Cần gói tập đang hoạt động và còn hạn đến ngày đặt sân"),
+                        "Bạn chưa đăng ký gói tập hoặc gói tập không còn hiệu lực đến ngày đặt sân. Vui lòng đăng ký gói tập đang hoạt động để đặt sân"),
                 Arguments.of("trg_court_bookings_check_limit", 409, "COURT_BOOKING_LIMIT_REACHED", "en",
                         "You can have at most two court bookings per day"),
                 Arguments.of("trg_court_bookings_check_slot", 400, "COURT_BOOKING_INVALID_SLOT", "en",

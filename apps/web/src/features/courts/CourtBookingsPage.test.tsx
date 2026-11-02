@@ -57,6 +57,19 @@ it('refreshes availability after 409 and retains the translated conflict in the 
   expect(courtsApi.availability).toHaveBeenCalledTimes(2);
 });
 
+it('offers the packages page only when the API says the membership is the problem', async () => {
+  vi.mocked(courtsApi.book)
+    .mockRejectedValueOnce(new ApiError('Bạn chưa có gói tập', 403, 'COURT_BOOKING_MEMBERSHIP_INVALID'))
+    .mockRejectedValueOnce(new ApiError('Hết khung này, hãy chọn gói tập khác', 409, 'COURT_BOOKING_SLOT_TAKEN'));
+  await render();
+  await click('Trống'); await click('Xác nhận đặt');
+  const dialog = () => host.querySelector('[role="dialog"]')!;
+  expect(dialog().querySelector('a[href="/member/packages"]')).not.toBeNull();
+  // Reopening and failing for another reason must not keep the stale package link.
+  await click('Quay lại'); await click('Trống'); await click('Xác nhận đặt');
+  expect(dialog().querySelector('a[href="/member/packages"]')).toBeNull();
+});
+
 it('shows staff daily empty state and queries the paginated daily endpoint', async () => {
   await render(true);
   expect(courtsApi.list).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), '', 0);

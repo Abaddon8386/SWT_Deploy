@@ -23,6 +23,23 @@ import {
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { notify } from '../../../shared/lib/portalNotices';
+import { ApiError } from '../../../shared/api/client';
+
+function coachBookingErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'MEMBERSHIP_INACTIVE_OR_EXPIRED') {
+      return 'Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.';
+    }
+    if (err.code === 'COACH_BOOKING_PACKAGE_NO_QUOTA') {
+      return 'Gói tập hiện tại không bao gồm lượt tập PT 1:1 miễn phí. Vui lòng chọn hình thức thanh toán theo giờ.';
+    }
+    if (err.code === 'COACH_BOOKING_QUOTA_EXCEEDED') {
+      return 'Bạn đã sử dụng hết lượt tập PT 1:1 miễn phí trong tháng này của gói tập. Vui lòng chọn thanh toán theo giờ.';
+    }
+    return err.message;
+  }
+  return err instanceof Error ? err.message : 'Không thể đặt lịch. Vui lòng thử lại.';
+}
 
 function localToday(): string {
   const now = new Date();
@@ -58,6 +75,9 @@ export function MemberCoachBookingView({
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
   const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
+  const [errorCode, setErrorCode] = useState<string | undefined>();
+  // quotaStatus stays null while loading or when the request fails; only a loaded answer without a package means none.
+  const hasNoPackage = quotaStatus !== null && !quotaStatus.packageName;
   const [leaderboard, setLeaderboard] = useState<CoachLeaderboardItemDto[]>([]);
   const [myReviews, setMyReviews] = useState<CoachReviewDto[]>([]);
 
@@ -188,7 +208,8 @@ export function MemberCoachBookingView({
         , 'success');
       }
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể đặt lịch. Vui lòng thử lại.'));
+      setErrorCode(err instanceof ApiError ? err.code : undefined);
+      setError(coachBookingErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -273,7 +294,7 @@ export function MemberCoachBookingView({
             alignItems: 'center',
           }}
         >
-          <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{error}</strong>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}><strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{error}</strong>{errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED' && <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')} style={{ padding: '4px 10px', fontSize: 12 }}>Đăng ký / Kích hoạt gói tập</button>}</div>
           <button
             type="button"
             className="btn-secondary btn-sm"
@@ -405,7 +426,7 @@ export function MemberCoachBookingView({
               </>
             ) : (
               <>
-                Gói {quotaStatus?.packageName || 'Silver'} không bao gồm lượt tập PT 1:1 miễn phí. Phí đặt lịch HLV kèm riêng là{' '}
+                {hasNoPackage ? 'Bạn chưa đăng ký gói tập hoặc gói tập chưa được kích hoạt (cần có gói tập đang hoạt động để đặt lịch HLV 1:1).' : `Gói ${quotaStatus?.packageName || 'hiện tại'} không bao gồm lượt tập PT 1:1 miễn phí.`} Phí đặt lịch HLV kèm riêng là{' '}
                 <strong style={{ color: 'var(--portal-salmon, #ce9180)' }}>200.000 đ / giờ</strong>. (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).
               </>
             )}
@@ -419,7 +440,7 @@ export function MemberCoachBookingView({
             onClick={() => navigate('/member/packages')}
             style={{ fontSize: 12 }}
           >
-            Nâng cấp gói tập
+            {hasNoPackage ? 'Đăng ký gói tập ngay' : 'Nâng cấp gói tập'}
           </button>
           <button
             type="button"
@@ -861,6 +882,7 @@ export function MemberCoachBookingView({
               <span>Đánh giá ẩn danh (Không hiển thị họ tên của tôi với Huấn luyện viên)</span>
             </label>
 
+            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(234, 179, 8, 0.45)', background: 'rgba(234, 179, 8, 0.1)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span>⚠️ <strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button
                 type="button"
@@ -977,7 +999,7 @@ export function MemberCoachBookingView({
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <strong>Đăng ký trả phí theo giờ (200.000 đ / giờ)</strong>
-                      {!hasRemainingQuota && (
+                      {!hasRemainingQuota && !hasNoPackage && (
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon, #ce9180)' }}>
                           (Khuyến nghị cho gói của bạn)
                         </span>
@@ -1005,6 +1027,7 @@ export function MemberCoachBookingView({
               />
             </div>
 
+            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(234, 179, 8, 0.45)', background: 'rgba(234, 179, 8, 0.1)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span>⚠️ <strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button
                 type="button"
