@@ -31,7 +31,7 @@ paths:
         '201': {description: ApiResponse containing CoachBookingDto; paymentStatus is pending or used_quota}
         '400': {description: Invalid slot, unavailable membership or exhausted quota}
         '403': {description: Role denied or trigger rejects inactive membership}
-        '409': {description: Schedule conflict}
+        '409': {description: Schedule conflict or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
   /coach-bookings/{id}:
     delete:
       summary: Cancel a PT booking

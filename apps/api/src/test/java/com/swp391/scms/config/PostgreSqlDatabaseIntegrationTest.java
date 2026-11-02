@@ -238,7 +238,8 @@ class PostgreSqlDatabaseIntegrationTest {
             ptBooking(member, coach, "18:00", "19:00");
             return true;
         } catch (DataIntegrityViolationException expected) {
-            assertTrue(expected.getMostSpecificCause().getMessage().contains("trg_sessions_check_conflict"));
+            String reason = expected.getMostSpecificCause().getMessage();
+            assertTrue(reason.contains("trg_sessions_check_conflict") || reason.contains("trg_pt_schedule_busy"));
             return false;
         }
     }

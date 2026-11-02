@@ -276,7 +276,11 @@ DECLARE
     schedule_conflict BOOLEAN := FALSE;
 BEGIN
     -- ponytail: serialize schedule writes for this MVP; use ordered participant locks if contention grows.
-    PERFORM pg_advisory_xact_lock(hashtext(current_schema()), 391133);
+    -- Never wait while a caller may already hold a class row lock.
+    IF NOT pg_try_advisory_xact_lock(hashtext(current_schema()), 391133) THEN
+        RAISE EXCEPTION 'trg_pt_schedule_busy'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_pt_schedule_busy';
+    END IF;
     IF TG_TABLE_NAME = 'coach_bookings' THEN
         IF NEW.status <> 'confirmed' THEN RETURN NEW; END IF;
         IF NOT EXISTS (
