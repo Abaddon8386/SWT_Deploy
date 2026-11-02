@@ -43,6 +43,7 @@ export const router = createBrowserRouter([
       {
         element: <RoleGuard allowedRoles={['MEMBER']} />,
         children: [
+          { path: '/member/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).MemberCourtsPage }) },
           {
             path: '/member/dashboard',
             lazy: async () => ({ Component: (await import('../features/member/MemberDashboardPage')).MemberDashboardPage }),
@@ -118,7 +119,10 @@ export const router = createBrowserRouter([
 
       {
         element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
-        children: [{ path: '/staff/support', lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }) }],
+        children: [
+          { path: '/staff/support', lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }) },
+          { path: '/staff/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).StaffCourtsPage }) },
+        ],
       },
 
       // Staff / Coach Routes

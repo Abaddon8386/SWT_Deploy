@@ -2,8 +2,9 @@ import { Select } from '../../shared/ui/Select';
 import { useCallback, useEffect, useState } from 'react';
 import { catalogApi, type Discipline, type MembershipPackage, type Room } from './catalogApi';
 import { Modal } from '../../shared/ui/Modal';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { isCourtDiscipline } from '../courts/courtsApi';
 
 type Tab = 'disciplines' | 'rooms' | 'packages';
 type Form = Record<string, string>;
@@ -19,6 +20,7 @@ export function ManagerCatalogsPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [editing, setEditing] = useState<{ id: number | null; form: Form } | null>(null);
 
   const load = useCallback(async () => {
@@ -47,11 +49,11 @@ export function ManagerCatalogsPage() {
       await action();
       setEditing(null);
       await load();
-      toast(successMsg, 'success');
+      notify(successMsg, 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Thao tác thất bại.';
       setError(msg);
-      toast(msg, 'error');
+      notify(msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +63,7 @@ export function ManagerCatalogsPage() {
     tab === 'disciplines'
       ? { name: '', description: '' }
       : tab === 'rooms'
-        ? { name: '', location: '', capacity: '10', status: 'available' }
+        ? { name: '', location: '', capacity: '10', status: 'available', disciplineId: '', openTime: '06:00', closeTime: '22:00' }
         : { name: '', description: '', price: '', durationDays: '30', classCreditLimit: '', status: 'active' };
 
   const submit = (e: React.FormEvent) => {
@@ -69,6 +71,11 @@ export function ManagerCatalogsPage() {
     if (!editing || isSubmitting) return;
     const { id, form: f } = editing;
     const isNew = id == null;
+    setFormError('');
+    if (tab === 'rooms' && f.disciplineId && (!/^\d{2}:00$/.test(f.openTime) || !/^\d{2}:00$/.test(f.closeTime) || f.openTime >= f.closeTime)) {
+      setFormError('Giờ mở và đóng cửa phải là giờ chẵn; giờ đóng phải sau giờ mở.');
+      return;
+    }
 
     void run(async () => {
       if (tab === 'disciplines') {
@@ -80,6 +87,9 @@ export function ManagerCatalogsPage() {
           location: f.location.trim(),
           capacity: Number(f.capacity),
           status: f.status as Room['status'],
+          disciplineId: f.disciplineId ? Number(f.disciplineId) : null,
+          openTime: f.disciplineId ? f.openTime : null,
+          closeTime: f.disciplineId ? f.closeTime : null,
         });
       }
       return catalogApi.savePackage(id, {
@@ -93,7 +103,13 @@ export function ManagerCatalogsPage() {
     }, isNew ? 'Đã thêm mới danh mục thành công!' : 'Đã cập nhật danh mục thành công!');
   };
 
-  const set = (key: string, value: string) => editing && setEditing({ ...editing, form: { ...editing.form, [key]: value } });
+  const openEditor = (value: { id: number | null; form: Form }) => {
+    setFormError(''); setError(''); setEditing(value);
+  };
+  const set = (key: string, value: string) => {
+    setFormError('');
+    if (editing) setEditing({ ...editing, form: { ...editing.form, [key]: value } });
+  };
 
   const modalTitle = () => {
     if (!editing) return '';
@@ -114,7 +130,7 @@ export function ManagerCatalogsPage() {
           <button
             type="button"
             className="btn-primary"
-            onClick={() => setEditing({ id: null, form: emptyForm() })}
+            onClick={() => openEditor({ id: null, form: emptyForm() })}
           >
             + Thêm mới
           </button>
@@ -154,8 +170,10 @@ export function ManagerCatalogsPage() {
 
       {/* Accessible Dialog Modal for Adding/Editing */}
       {editing && (
-        <Modal title={modalTitle()} onClose={() => !isSubmitting && setEditing(null)}>
+        <Modal title={modalTitle()} busy={isSubmitting} onClose={() => !isSubmitting && setEditing(null)}>
           <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
+            {formError && <p role="alert" className="portal-alert">{formError}</p>}
+            {error && <p role="alert" className="portal-alert">{error}</p>}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="cat-name">Tên hiển thị *</label>
               <input
@@ -172,6 +190,21 @@ export function ManagerCatalogsPage() {
 
             {tab === 'rooms' && (
               <>
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor="cat-discipline">Đặt sân / làn theo bộ môn</label>
+                  <Select id="cat-discipline" className="portal-select" value={editing.form.disciplineId ?? ''} onChange={event => {
+                    const value = event.target.value;
+                    setFormError('');
+                    setEditing({ ...editing, form: { ...editing.form, disciplineId: value, openTime: editing.form.openTime || '06:00', closeTime: editing.form.closeTime || '22:00' } });
+                  }}>
+                    <option value="">Không mở đặt sân</option>
+                    {disciplines.filter(discipline => isCourtDiscipline(discipline.name)).map(discipline => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
+                  </Select>
+                </div>
+                {editing.form.disciplineId && <div className="grid-2">
+                  <label className="portal-form-group" htmlFor="cat-open"><span className="portal-label">Giờ mở cửa</span><input id="cat-open" className="portal-input" type="time" step="3600" required value={editing.form.openTime ?? ''} onChange={event => set('openTime', event.target.value)} /></label>
+                  <label className="portal-form-group" htmlFor="cat-close"><span className="portal-label">Giờ đóng cửa</span><input id="cat-close" className="portal-input" type="time" step="3600" required value={editing.form.closeTime ?? ''} onChange={event => set('closeTime', event.target.value)} /></label>
+                </div>}
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="cat-location">Vị trí / tầng</label>
                   <input
@@ -333,7 +366,7 @@ export function ManagerCatalogsPage() {
             <button
               type="button"
               className="btn-primary"
-              onClick={() => setEditing({ id: null, form: emptyForm() })}
+              onClick={() => openEditor({ id: null, form: emptyForm() })}
             >
               + Thêm mới
             </button>
@@ -361,7 +394,7 @@ export function ManagerCatalogsPage() {
                           <button
                             type="button"
                             className="btn-secondary btn-sm"
-                            onClick={() => setEditing({ id: d.id, form: { name: d.name, description: d.description ?? '' } })}
+                            onClick={() => openEditor({ id: d.id, form: { name: d.name, description: d.description ?? '' } })}
                           >
                             Chỉnh sửa
                           </button>
@@ -386,7 +419,7 @@ export function ManagerCatalogsPage() {
                   <tbody>
                     {rooms.map((r) => (
                       <tr key={r.id}>
-                        <td><strong>{r.name}</strong></td>
+                        <td><strong>{r.name}</strong>{r.disciplineName && <div className="muted">{r.disciplineName}{r.openTime && r.closeTime ? ` · ${r.openTime.slice(0, 5)}–${r.closeTime.slice(0, 5)}` : ''}</div>}</td>
                         <td>{r.location || <span className="muted">—</span>}</td>
                         <td><strong>{r.capacity} người</strong></td>
                         <td>
@@ -399,9 +432,9 @@ export function ManagerCatalogsPage() {
                             type="button"
                             className="btn-secondary btn-sm"
                             onClick={() =>
-                              setEditing({
+                              openEditor({
                                 id: r.id,
-                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status },
+                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, disciplineId: r.disciplineId == null ? '' : String(r.disciplineId), openTime: r.openTime?.slice(0, 5) ?? '', closeTime: r.closeTime?.slice(0, 5) ?? '' },
                               })
                             }
                           >
@@ -446,7 +479,7 @@ export function ManagerCatalogsPage() {
                             type="button"
                             className="btn-secondary btn-sm"
                             onClick={() =>
-                              setEditing({
+                              openEditor({
                                 id: p.id,
                                 form: {
                                   name: p.name,

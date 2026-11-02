@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { SportPage } from './SportPage';
 import { SPORT_PAGES, sportIdFromPath } from './sportPages';
+import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 
 vi.mock('./publicCatalog', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./publicCatalog')>()),
@@ -19,6 +20,7 @@ vi.mock('./publicCatalog', async (importOriginal) => ({
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
+  localStorage.clear();
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.stubGlobal('IntersectionObserver', class { observe() {} unobserve() {} disconnect() {} });
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
@@ -57,4 +59,16 @@ it('resolves sport ids from both route shapes', () => {
   expect(sportIdFromPath('/sports/badminton')).toBe('badminton');
   expect(sportIdFromPath('/')).toBeUndefined();
   expect(Object.keys(SPORT_PAGES)).toEqual(['swimming', 'boxing', 'tennis', 'badminton', 'yoga']);
+});
+
+it.each([
+  ['/tennis', 'Tennis', 'courts'], ['/badminton', 'Cầu lông', 'courts'],
+  ['/swimming', 'Bơi lội', 'courts'], ['/boxing', 'Boxing', 'classes'], ['/yoga', 'Yoga', 'classes'],
+])('routes member primary booking from %s to the correct feature', async (path, name, feature) => {
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '1', name: 'Member', role: 'MEMBER' }));
+  await render(path);
+  expect([...host.querySelectorAll('a.fit-pill')].find(link => link.textContent?.startsWith('Đặt lịch'))?.getAttribute('href'))
+    .toBe(`/member/${feature}?discipline=${encodeURIComponent(name)}`);
+  if (feature === 'courts') expect([...host.querySelectorAll('a')].find(link => link.textContent?.startsWith('Xem lịch lớp'))?.getAttribute('href'))
+    .toBe(`/member/classes?discipline=${encodeURIComponent(name)}`);
 });

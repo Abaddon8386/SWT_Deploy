@@ -16,8 +16,9 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
   const user = getCurrentUser();
   const joinPath = user ? (user.role === 'MEMBER' ? '/member/packages' : homePath(user.role)) : '/register';
   const sportName = DISCIPLINES.find((item) => item.id === sport.id)!.name;
-  // Hội viên vào thẳng lịch lớp của đúng bộ môn; người khác đăng nhập trước khi đặt lịch
-  const bookPath = user?.role === 'MEMBER' ? `/member/classes?discipline=${encodeURIComponent(sportName)}` : '/login';
+  const classesPath = user?.role === 'MEMBER' ? `/member/classes?discipline=${encodeURIComponent(sportName)}` : '/login';
+  const hasCourts = ['tennis', 'badminton', 'swimming'].includes(sport.id);
+  const bookPath = user?.role === 'MEMBER' && hasCourts ? `/member/courts?discipline=${encodeURIComponent(sportName)}` : classesPath;
 
   return (
     <PublicLayout>
@@ -73,7 +74,7 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
                 </div>
               </div>
 
-              {catalog ? <CatalogSchedule catalog={catalog} sport={sport.id} joinPath={bookPath} /> : <CatalogStatus loading={!error} retry={retry} />}
+              {catalog ? <CatalogSchedule catalog={catalog} sport={sport.id} joinPath={classesPath} /> : <CatalogStatus loading={!error} retry={retry} />}
 
               <div className="fit-trainer-hero-actions">
                 <Link to={bookPath} className="fit-pill">
@@ -83,6 +84,7 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
                 <Link to={joinPath} className="fit-text-link">
                   Xem gói tập <RoundArrow diagonal />
                 </Link>
+                {hasCourts && <Link to={classesPath} className="fit-text-link">Xem lịch lớp <RoundArrow diagonal /></Link>}
               </div>
             </div>
           </div>

@@ -12,6 +12,10 @@ export interface Room {
   location: string | null;
   capacity: number;
   status: 'available' | 'maintenance' | 'closed';
+  disciplineId?: number | null;
+  disciplineName?: string | null;
+  openTime?: string | null;
+  closeTime?: string | null;
 }
 
 export interface MembershipPackage {
@@ -34,7 +38,7 @@ export const catalogApi = {
     apiFetch<Discipline>(id ? `/disciplines/${id}` : '/disciplines', json(id ? 'PUT' : 'POST', b)),
 
   rooms: () => apiFetch<Room[]>('/rooms'),
-  saveRoom: (id: number | null, b: Body<Room>) =>
+  saveRoom: (id: number | null, b: Omit<Body<Room>, 'disciplineName'>) =>
     apiFetch<Room>(id ? `/rooms/${id}` : '/rooms', json(id ? 'PUT' : 'POST', b)),
 
   packages: () => apiFetch<MembershipPackage[]>('/packages'),
