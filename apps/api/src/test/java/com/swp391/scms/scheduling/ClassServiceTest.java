@@ -67,6 +67,27 @@ class ClassServiceTest {
     private ClassService service;
     private GymClass gymClass;
 
+    @Test
+    void sessionCreationChecksCourtBookingsEvenWhenThereAreNoOtherClasses() {
+        var courts = org.mockito.Mockito.mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
+        service = new ClassService(gymClasses, sessions, enrollments, waitlists, disciplines, coaches, rooms,
+                mapper, clock, courts);
+        Room room = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(room, "id", 4L);
+        gymClass.setRoom(room);
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        var date = LocalDate.of(2026, 10, 17);
+        var start = LocalTime.of(10, 0);
+        var end = LocalTime.of(11, 0);
+        when(courts.existsRoomOverlap(4L, date, start, end)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.createSession(1L, new CreateSessionRequest(date, start, end)))
+                .isInstanceOf(ConflictException.class)
+                .satisfies(error -> assertThat(((ConflictException) error).getErrorCode())
+                        .isEqualTo("COURT_BOOKING_SLOT_TAKEN"));
+        org.mockito.Mockito.verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
     @BeforeEach
     void setUp() {
         service = new ClassService(gymClasses, sessions, enrollments, waitlists, disciplines, coaches, rooms, mapper, clock);

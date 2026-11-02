@@ -2,6 +2,7 @@ package com.swp391.scms.facilities.dto;
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+import java.time.LocalTime;
 
 /** Request DTOs for the master catalogs (disciplines, rooms, packages). */
 public final class CatalogRequests {
@@ -17,7 +18,12 @@ public final class CatalogRequests {
             @Size(max = 100, message = "{validation.catalog.name.size}") String name,
             @Size(max = 150, message = "{validation.catalog.location.size}") String location,
             @Min(value = 1, message = "{validation.catalog.capacity.min}") int capacity,
-            @Pattern(regexp = "available|maintenance|closed", message = "{validation.catalog.room_status.pattern}") String status) {}
+            @Pattern(regexp = "available|maintenance|closed", message = "{validation.catalog.room_status.pattern}") String status,
+            Long disciplineId, LocalTime openTime, LocalTime closeTime) {
+        public RoomRequest(String name, String location, int capacity, String status) {
+            this(name, location, capacity, status, null, null, null);
+        }
+    }
 
     public record PackageRequest(
             @NotBlank(message = "{validation.catalog.name.not_blank}")

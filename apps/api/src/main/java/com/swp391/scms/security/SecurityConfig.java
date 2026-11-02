@@ -149,6 +149,14 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
 
+                    // Court booking roles are enforced here and at controller boundaries.
+                    .requestMatchers(HttpMethod.GET, "/api/v1/courts", "/api/v1/courts/**").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/cancel").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/court-bookings/**", "/api/v1/courts/**").denyAll()
+
                     // 1:1 Coach Bookings & Favorite Disciplines (SCRUM-133)
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coaches").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/available-slots").authenticated()

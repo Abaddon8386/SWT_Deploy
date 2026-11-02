@@ -1,6 +1,10 @@
 package com.swp391.scms.facilities.service;
 
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.facilities.entity.Discipline;
+import com.swp391.scms.facilities.repository.DisciplineRepository;
+import com.swp391.scms.courts.service.CourtBookingService;
 import com.swp391.scms.facilities.dto.CatalogRequests.RoomRequest;
 import com.swp391.scms.facilities.dto.CatalogResponses.RoomDto;
 import com.swp391.scms.facilities.entity.Room;
@@ -14,9 +18,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class RoomService {
 
     private final RoomRepository rooms;
+    private final DisciplineRepository disciplines;
 
     public RoomService(RoomRepository rooms) {
+        this(rooms, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public RoomService(RoomRepository rooms, DisciplineRepository disciplines) {
         this.rooms = rooms;
+        this.disciplines = disciplines;
     }
 
     @Transactional(readOnly = true)
@@ -39,6 +50,17 @@ public class RoomService {
     }
 
     private void apply(Room room, RoomRequest request) {
+        Discipline discipline = request.disciplineId() == null ? null : disciplines.findById(request.disciplineId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
+        if (discipline != null && !CourtBookingService.isCourtDiscipline(discipline.getName())) {
+            throw new BadRequestException("COURT_BOOKING_INVALID_COURT", "error.courts.invalid_court", null, null);
+        }
+        if (discipline != null && !CourtBookingService.validHours(request.openTime(), request.closeTime())) {
+            throw new BadRequestException("COURT_BOOKING_INVALID_SLOT", "error.courts.invalid_hours", null, null);
+        }
+        room.setDiscipline(discipline);
+        room.setOpenTime(discipline == null ? null : request.openTime());
+        room.setCloseTime(discipline == null ? null : request.closeTime());
         room.setName(request.name().trim());
         room.setLocation(request.location());
         room.setCapacity(request.capacity());

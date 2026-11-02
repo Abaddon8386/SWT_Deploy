@@ -1,6 +1,7 @@
 package com.swp391.scms.facilities.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalTime;
 
 /** Entity mapping table rooms (Module B: Master Facilities). */
 @Entity
@@ -24,7 +25,24 @@ public class Room {
     @Column(nullable = false, length = 20)
     private String status = "available"; // available, maintenance, closed
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "discipline_id")
+    private Discipline discipline;
+
+    @Column(name = "open_time")
+    private LocalTime openTime;
+
+    @Column(name = "close_time")
+    private LocalTime closeTime;
+
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Discipline getDiscipline() { return discipline; }
+    public void setDiscipline(Discipline discipline) { this.discipline = discipline; }
+    public LocalTime getOpenTime() { return openTime; }
+    public void setOpenTime(LocalTime openTime) { this.openTime = openTime; }
+    public LocalTime getCloseTime() { return closeTime; }
+    public void setCloseTime(LocalTime closeTime) { this.closeTime = closeTime; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getLocation() { return location; }

@@ -193,6 +193,40 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
+            String courtCode = null;
+            String courtKey = null;
+            HttpStatus courtStatus = HttpStatus.CONFLICT;
+            if (normalizedRootMsg.contains("trg_court_bookings_check_conflict")) {
+                courtCode = "COURT_BOOKING_SLOT_TAKEN";
+                courtKey = "slot_taken";
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_membership")) {
+                courtCode = "COURT_BOOKING_MEMBERSHIP_INVALID";
+                courtKey = "membership_invalid";
+                courtStatus = HttpStatus.FORBIDDEN;
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_limit")) {
+                courtCode = "COURT_BOOKING_LIMIT_REACHED";
+                courtKey = "limit_reached";
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_court")) {
+                courtCode = "COURT_BOOKING_COURT_UNAVAILABLE";
+                courtKey = "court_unavailable";
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_past")) {
+                courtCode = "COURT_BOOKING_PAST_SLOT";
+                courtKey = "past_slot";
+                courtStatus = HttpStatus.BAD_REQUEST;
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_horizon")) {
+                courtCode = "COURT_BOOKING_TOO_FAR";
+                courtKey = "too_far";
+                courtStatus = HttpStatus.BAD_REQUEST;
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_slot")) {
+                courtCode = "COURT_BOOKING_INVALID_SLOT";
+                courtKey = "invalid_slot";
+                courtStatus = HttpStatus.BAD_REQUEST;
+            }
+            if (courtCode != null) {
+                String key = "error.courts." + courtKey;
+                return ResponseEntity.status(courtStatus).body(
+                        ApiResponse.error(courtStatus.value(), courtCode, resolveMessage(key, key)));
+            }
             if (normalizedRootMsg.contains("trg_pt_schedule_busy")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULE_UPDATE_IN_PROGRESS",

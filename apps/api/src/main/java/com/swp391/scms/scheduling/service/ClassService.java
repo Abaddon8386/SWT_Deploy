@@ -4,6 +4,7 @@ import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -64,6 +65,7 @@ public class ClassService {
     private final RoomRepository rooms;
     private final SchedulingMapper mapper;
     private final Clock clock;
+    private final CourtBookingRepository courtBookings;
 
     public ClassService(GymClassRepository gymClasses,
                         ClassSessionRepository sessions,
@@ -76,7 +78,6 @@ public class ClassService {
         this(gymClasses, sessions, enrollments, null, disciplines, coaches, rooms, mapper, clock);
     }
 
-    @Autowired
     public ClassService(GymClassRepository gymClasses,
                         ClassSessionRepository sessions,
                         ClassEnrollmentRepository enrollments,
@@ -86,6 +87,20 @@ public class ClassService {
                         RoomRepository rooms,
                         SchedulingMapper mapper,
                         Clock clock) {
+        this(gymClasses, sessions, enrollments, waitlists, disciplines, coaches, rooms, mapper, clock, null);
+    }
+
+    @Autowired
+    public ClassService(GymClassRepository gymClasses,
+                        ClassSessionRepository sessions,
+                        ClassEnrollmentRepository enrollments,
+                        ClassWaitlistRepository waitlists,
+                        DisciplineRepository disciplines,
+                        CoachRepository coaches,
+                        RoomRepository rooms,
+                        SchedulingMapper mapper,
+                        Clock clock,
+                        CourtBookingRepository courtBookings) {
         this.gymClasses = gymClasses;
         this.sessions = sessions;
         this.enrollments = enrollments;
@@ -95,6 +110,7 @@ public class ClassService {
         this.rooms = rooms;
         this.mapper = mapper;
         this.clock = clock;
+        this.courtBookings = courtBookings;
     }
 
     /**
@@ -427,6 +443,10 @@ public class ClassService {
                                          Long idempotentClassId) {
         if (sessionDate == null || startTime == null || endTime == null) {
             return;
+        }
+        if (courtBookings != null && roomId != null
+                && courtBookings.existsRoomOverlap(roomId, sessionDate, startTime, endTime)) {
+            throw new ConflictException("COURT_BOOKING_SLOT_TAKEN", "error.courts.slot_taken", null, null);
         }
         List<ClassSession> existingOnDate = sessions.searchSessions(sessionDate, sessionDate, null, null);
         if (existingOnDate == null || existingOnDate.isEmpty()) {

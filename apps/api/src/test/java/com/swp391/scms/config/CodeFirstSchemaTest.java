@@ -131,6 +131,34 @@ class CodeFirstSchemaTest {
     }
 
     @Test
+    void courtsAreCodeFirstAndNewRoomConfigurationPreservesLegacyNullability() throws Exception {
+        String ddl = generateDdl();
+        assertTrue(ddl.contains("create table court_bookings"), ddl);
+        assertTrue(ddl.contains("foreign key (room_id) references rooms"), ddl);
+        assertTrue(ddl.contains("booking_date"), ddl);
+        var room = com.swp391.scms.facilities.entity.Room.class;
+        assertTrue(room.getDeclaredField("discipline").getAnnotation(jakarta.persistence.JoinColumn.class).nullable());
+        assertTrue(room.getDeclaredField("openTime").getAnnotation(jakarta.persistence.Column.class).nullable());
+        assertTrue(room.getDeclaredField("closeTime").getAnnotation(jakarta.persistence.Column.class).nullable());
+    }
+
+    @Test
+    void courtJpqlCompilesAgainstEntityMappingsWithoutConnectingToDatabase() throws Exception {
+        Class<?> repository = Class.forName("com.swp391.scms.courts.repository.CourtBookingRepository");
+        generateDdl(factory -> {
+            try (var session = factory.openSession()) {
+                for (var method : repository.getMethods()) {
+                    var query = method.getAnnotation(org.springframework.data.jpa.repository.Query.class);
+                    if (query != null && !query.nativeQuery()) {
+                        session.createQuery(query.value());
+                        if (!query.countQuery().isBlank()) session.createQuery(query.countQuery());
+                    }
+                }
+            }
+        });
+    }
+
+    @Test
     void postgresGeneratesStoredComputedColumnsAndNativeJson() throws Exception {
         String ddl = generateDdl();
         assertTrue(ddl.contains("generated always as (subtotal_amount + tax_amount) stored"), ddl);

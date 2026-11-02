@@ -8,6 +8,10 @@ import static org.mockito.Mockito.when;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.facilities.dto.CatalogRequests.RoomRequest;
 import com.swp391.scms.facilities.entity.Room;
+import com.swp391.scms.facilities.entity.Discipline;
+import com.swp391.scms.facilities.repository.DisciplineRepository;
+import com.swp391.scms.common.exception.BadRequestException;
+import java.time.LocalTime;
 import com.swp391.scms.facilities.repository.RoomRepository;
 import com.swp391.scms.facilities.service.RoomService;
 import java.util.Optional;
@@ -21,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class RoomServiceTest {
 
     @Mock RoomRepository rooms;
+    @Mock DisciplineRepository disciplines;
     @InjectMocks RoomService service;
 
     @Test
@@ -45,5 +50,22 @@ class RoomServiceTest {
         when(rooms.findById(9L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.update(9L, new RoomRequest("A", null, 1, null)));
+    }
+
+    @Test void assignsCourtDisciplineAndHours() {
+        Discipline tennis = new Discipline(); tennis.setName("Tennis");
+        when(disciplines.findById(2L)).thenReturn(Optional.of(tennis));
+        when(rooms.save(any(Room.class))).thenAnswer(i -> i.getArgument(0));
+        var dto = service.create(new RoomRequest("Court A", "L1", 2, "available", 2L, LocalTime.of(6,0), LocalTime.of(22,0)));
+        assertEquals("Tennis", dto.disciplineName()); assertEquals(LocalTime.of(6,0), dto.openTime());
+    }
+    @Test void rejectsCourtHoursAndUnsupportedDiscipline() {
+        Discipline tennis = new Discipline(); tennis.setName("Tennis");
+        when(disciplines.findById(2L)).thenReturn(Optional.of(tennis));
+        assertThrows(BadRequestException.class, () -> service.create(new RoomRequest("Court", null, 2, null, 2L, LocalTime.of(22,0), LocalTime.of(6,0))));
+        assertThrows(BadRequestException.class, () -> service.create(new RoomRequest("Court", null, 2, null, 2L, LocalTime.of(6,30), LocalTime.of(22,0))));
+        assertThrows(BadRequestException.class, () -> service.create(new RoomRequest("Court", null, 2, null, 2L, null, null)));
+        tennis.setName("Gym");
+        assertThrows(BadRequestException.class, () -> service.create(new RoomRequest("Gym", null, 2, null, 2L, LocalTime.of(6,0), LocalTime.of(22,0))));
     }
 }

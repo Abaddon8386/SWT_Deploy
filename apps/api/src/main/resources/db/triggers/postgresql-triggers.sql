@@ -94,6 +94,16 @@ BEGIN
             USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_conflict';
     END IF;
 
+    IF NEW.status <> 'cancelled' AND EXISTS (
+        SELECT 1 FROM court_bookings b
+        WHERE b.room_id = session_room_id AND b.booking_date = NEW.session_date
+          AND b.status = 'booked'
+          AND NEW.start_time < b.end_time AND NEW.end_time > b.start_time
+    ) THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_conflict'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_court_bookings_check_conflict';
+    END IF;
+
     RETURN NEW;
 END;
 $$;
@@ -102,6 +112,115 @@ DROP TRIGGER IF EXISTS trg_sessions_check_conflict ON class_sessions;
 CREATE TRIGGER trg_sessions_check_conflict
 AFTER INSERT OR UPDATE OF class_id, session_date, start_time, end_time, status ON class_sessions
 FOR EACH ROW EXECUTE FUNCTION scms_check_session_conflict();
+
+-- Room and member locks serialize independent application instances as well as direct SQL.
+-- The room key is shared with class-session creation/rescheduling above.
+CREATE OR REPLACE FUNCTION scms_guard_court_booking()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    lock_key BIGINT;
+    court rooms%ROWTYPE;
+    discipline_name TEXT;
+    business_now TIMESTAMP := statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh';
+BEGIN
+    IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
+
+    FOR lock_key IN
+        SELECT DISTINCT hashtextextended(resource_key, 0)
+        FROM unnest(ARRAY['room:' || NEW.room_id::TEXT,
+                          'court-member:' || NEW.member_id::TEXT]) AS resources(resource_key)
+        ORDER BY 1
+    LOOP
+        PERFORM pg_advisory_xact_lock(lock_key);
+    END LOOP;
+
+    SELECT * INTO court FROM rooms WHERE id = NEW.room_id FOR SHARE;
+    SELECT name INTO discipline_name FROM disciplines WHERE id = court.discipline_id;
+    IF court.id IS NULL OR court.status <> 'available' OR court.open_time IS NULL
+       OR court.close_time IS NULL OR court.discipline_id IS NULL
+       OR discipline_name NOT IN ('Tennis', 'Cầu lông', 'Bơi lội') THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_court'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_court';
+    END IF;
+
+    IF NEW.booking_date + NEW.start_time <= business_now THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_past'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_past';
+    END IF;
+    IF NEW.booking_date > business_now::date + 7 THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_horizon'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_horizon';
+    END IF;
+    IF EXTRACT(MINUTE FROM NEW.start_time) <> 0 OR EXTRACT(SECOND FROM NEW.start_time) <> 0
+       OR NEW.end_time - NEW.start_time <> INTERVAL '1 hour'
+       OR NEW.start_time < court.open_time OR NEW.end_time > court.close_time
+       OR court.open_time >= court.close_time THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_slot'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_slot';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM membership_subscriptions s JOIN users u ON u.id = s.member_id
+        WHERE s.member_id = NEW.member_id AND s.status = 'active'
+          AND s.start_date <= business_now::date AND s.end_date >= business_now::date
+          AND s.start_date <= NEW.booking_date AND s.end_date >= NEW.booking_date
+          AND u.deleted_at IS NULL AND u.status = 'active'
+        FOR SHARE OF s, u
+    ) THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_membership'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_membership';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM court_bookings b WHERE b.id IS DISTINCT FROM NEW.id
+          AND b.booking_date = NEW.booking_date AND b.status = 'booked'
+          AND (b.room_id = NEW.room_id OR b.member_id = NEW.member_id)
+          AND NEW.start_time < b.end_time AND NEW.end_time > b.start_time
+    ) OR EXISTS (
+        SELECT 1 FROM class_sessions s JOIN classes c ON c.id = s.class_id
+        WHERE c.room_id = NEW.room_id AND s.session_date = NEW.booking_date
+          AND s.status <> 'cancelled'
+          AND NEW.start_time < s.end_time AND NEW.end_time > s.start_time
+    ) THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_conflict'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_court_bookings_check_conflict';
+    END IF;
+    IF (SELECT count(*) FROM court_bookings b
+        WHERE b.member_id = NEW.member_id AND b.booking_date = NEW.booking_date
+          AND b.status = 'booked' AND b.id IS DISTINCT FROM NEW.id) >= 2 THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_limit'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_limit';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_court_bookings_check_conflict ON court_bookings;
+CREATE TRIGGER trg_court_bookings_check_conflict
+BEFORE INSERT OR UPDATE OF room_id, member_id, booking_date, start_time, end_time, status ON court_bookings
+FOR EACH ROW EXECUTE FUNCTION scms_guard_court_booking();
+
+-- Changing the room of an existing class moves its sessions without updating their rows.
+CREATE OR REPLACE FUNCTION scms_guard_class_court_room()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.room_id IS NOT DISTINCT FROM OLD.room_id THEN RETURN NEW; END IF;
+    PERFORM pg_advisory_xact_lock(hashtextextended('room:' || NEW.room_id::TEXT, 0));
+    IF EXISTS (
+        SELECT 1 FROM class_sessions s JOIN court_bookings b
+          ON b.room_id = NEW.room_id AND b.booking_date = s.session_date
+         AND b.status = 'booked' AND s.start_time < b.end_time AND s.end_time > b.start_time
+        WHERE s.class_id = NEW.id AND s.status <> 'cancelled'
+    ) THEN
+        RAISE EXCEPTION 'trg_court_bookings_check_conflict'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_court_bookings_check_conflict';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_classes_check_court_room ON classes;
+CREATE TRIGGER trg_classes_check_court_room AFTER UPDATE OF room_id ON classes
+FOR EACH ROW EXECUTE FUNCTION scms_guard_class_court_room();
 
 CREATE OR REPLACE FUNCTION scms_require_active_membership_for_enrollment()
 RETURNS trigger
