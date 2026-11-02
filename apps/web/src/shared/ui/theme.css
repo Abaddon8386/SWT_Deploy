@@ -50,7 +50,7 @@
 :root[data-theme='light'] .portal-v2 .seg-btn--ok { --tone: #226442; }
 :root[data-theme='light'] .portal-v2 .seg-btn--warn { --tone: #805400; }
 :root[data-theme='light'] .portal-v2 .seg-btn--bad { --tone: #a33030; }
-:root[data-theme='light'] .portal-v2 :is(.portal-skeleton, .portal-skeleton-line, .member-skeleton) { background-image: linear-gradient(90deg, #eeefec 25%, #e4e2de 50%, #eeefec 75%); }
+:root[data-theme='light'] .portal-v2 :is(.portal-skeleton, .portal-skeleton-line, .member-skeleton) { background: var(--portal-raised); }
 
 :root[data-theme='light'] .fit-site {
   --fit-paper: #202020;

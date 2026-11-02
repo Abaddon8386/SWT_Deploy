@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { QrCameraScanner } from '../checkin/QrCameraScanner';
 import { memberCheckinApi } from './memberCheckinApi';
 import type { CheckinDto } from '../reception/checkinApi';
@@ -69,7 +70,7 @@ export function MemberCheckInPage() {
         </section>
         <section className="portal-card" aria-label="Lịch sử ra vào hôm nay">
           <h2 className="portal-card-title">Ra vào hôm nay</h2>
-          {loading ? <p role="status">Đang tải lịch sử…</p> : historyError ? <><p role="alert">{historyError}</p><button className="btn-secondary" onClick={() => void loadHistory()}>Thử lại</button></> : history.length === 0 ? <p className="qr-checkin-hint">Chưa có lượt ra vào hôm nay.</p> : <div className="stack">{history.slice(0, 5).map((visit) => <div key={visit.id} className="qr-checkin-result">
+          {loading ? <LoadingSkeleton label="Đang tải lịch sử…" count={3} /> : historyError ? <><p role="alert">{historyError}</p><button className="btn-secondary" onClick={() => void loadHistory()}>Thử lại</button></> : history.length === 0 ? <p className="qr-checkin-hint">Chưa có lượt ra vào hôm nay.</p> : <div className="stack">{history.slice(0, 5).map((visit) => <div key={visit.id} className="qr-checkin-result">
             <strong>{visit.status.toUpperCase() === 'GRANTED' ? visit.checkOutTime ? 'Đã ra về' : 'Đã vào trung tâm' : 'Check-in bị từ chối'}</strong>
             <p>{visit.gate} · {new Date(visit.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
             {visit.denialReason && <p>{visit.denialReason}</p>}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../api/client';
+import { LoadingSkeleton } from '../ui/LoadingSkeleton';
 import { LiquidGlassContainer } from './LiquidGlassContainer';
 import { LiquidGlassButton } from './LiquidGlassButton';
 import { createAiChatSession, getAiChatHistory, listAiChatSessions, sendAiChatMessage, type AiChatMessage, type AiChatSession } from './aiChatApi';
@@ -151,7 +152,8 @@ export function LiquidGlassChatbot() {
           {initialized && messages.length === 0 && !pending && phase === 'idle' && <p className="ai-chat-empty">Bạn muốn trao đổi về điều gì?</p>}
           {messages.map((message, index) => <div key={`${message.id}-${index}`} className={`chat-bubble-row ${message.sender === 'member' ? 'user-row' : 'bot-row'}`}><div className={`chat-bubble ${message.sender === 'member' ? 'user-bubble' : 'bot-bubble'}`}><div className="chat-bubble-text" style={{ whiteSpace: 'pre-wrap' }}>{phase === 'typing' && index === messages.length - 1 ? message.message.slice(0, typed) : message.message}</div><time className="chat-bubble-meta" dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</time></div></div>)}
           {pending && <div className="chat-bubble-row user-row"><div className="chat-bubble user-bubble"><div className="chat-bubble-text">{pending.text}</div></div></div>}
-          {(phase === 'sending' || phase === 'loading') && <div className="chat-bubble bot-bubble typing-bubble" role="status" aria-label={phase === 'sending' ? 'AI đang trả lời' : 'Đang tải hội thoại'}><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /></div>}
+          {phase === 'loading' && <LoadingSkeleton label="Đang tải hội thoại" count={2} />}
+          {phase === 'sending' && <div className="chat-bubble bot-bubble typing-bubble" role="status" aria-label="AI đang trả lời"><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /></div>}
           {phase === 'typing' && <span className="ai-chat-empty" role="status">Đang hiển thị câu trả lời…</span>}
           <div ref={endRef} />
         </div>

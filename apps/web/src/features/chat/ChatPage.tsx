@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { chatRoleLabel, getConversations, openConversation, type ChatContact, type ChatConversation } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
 import { useChatConversation } from './useChatConversation';
@@ -82,7 +83,7 @@ function ChatWorkspace({ member }: { member: boolean }) {
           {member && <button type="button" className="direct-chat__link" aria-expanded={showContacts} aria-controls="chat-directory" onClick={() => setShowContacts(v => !v)}>{showContacts ? 'Đóng danh bạ' : 'Cuộc trò chuyện mới'} <span aria-hidden="true">＋</span></button>}</div>
         {showContacts && <div id="chat-directory">{openError && <p role="alert" className="direct-chat__error">{openError}</p>}<ChatContacts onChoose={contact => void choose(contact)} pending={pending} /></div>}
         {listError && <div role="alert" className="direct-chat__error"><p>{listError}</p><button type="button" className="direct-chat__link" onClick={() => void loadInbox(page)}>Thử lại</button></div>}
-        {loading ? <p role="status" className="direct-chat__empty">Đang tải hội thoại…</p>
+        {loading ? <LoadingSkeleton label="Đang tải hội thoại…" count={4} />
           : conversations.length === 0 && !listError ? <p className="direct-chat__empty">{member ? 'Chưa có hội thoại. Chọn “Cuộc trò chuyện mới” để bắt đầu.' : 'Chưa có hội thoại. Tin nhắn của hội viên gửi cho bạn sẽ xuất hiện tại đây.'}</p>
             : <ul className="direct-chat__list">{conversations.map(c => <li key={c.id}><button type="button" className={`direct-chat__person${chat.selectedId === c.id ? ' is-selected' : ''}`} onClick={() => select(c)} aria-current={chat.selectedId === c.id ? 'true' : undefined}>
               <span className="direct-chat__avatar" aria-hidden="true">{c.peer.name.slice(0, 1)}</span><span><strong>{c.peer.name}</strong><small>{chatRoleLabel(c.peer.role)}{!c.peer.available ? ' · Không khả dụng' : ''}</small></span>

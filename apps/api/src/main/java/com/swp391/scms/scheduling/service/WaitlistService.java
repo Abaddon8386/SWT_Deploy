@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -67,7 +66,8 @@ public class WaitlistService {
      */
     @Transactional
     public WaitlistDto join(AuthenticatedPrincipal principal, Long sessionId) {
-        Member member = findMember(principal.id());
+        Member member = members.findByUserIdForUpdate(principal.id())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
         ClassSession session = findSession(sessionId);
         // Serialize bookings and waitlist joins for this class before checking either state.
         Long classId = session.getGymClass().getId();
@@ -83,7 +83,7 @@ public class WaitlistService {
         SessionEligibility.ensureBookable(session, clock);
 
         // BR-03: same membership requirement as booking (Trigger P4).
-        ensureActiveMembership(member.getUserId());
+        SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), session.getSessionDate(), clock);
 
         // BR-02: a member already holding a booking may not also wait.
         if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED)
@@ -98,8 +98,8 @@ public class WaitlistService {
         // BR-01: only allowed when there is no free seat (taking active reservations into account).
         LocalDateTime now = LocalDateTime.now(clock);
         long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
-        long activeReservations = waitlists
-                .countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(gymClass.getId(), "notified", now);
+        long activeReservations = waitlists.countLiveOffers(classId, now,
+                now.minusHours(EnrollmentService.WAITLIST_RESERVATION_HOURS));
         if (booked + activeReservations < gymClass.getCapacity()) {
             throw new BadRequestException(
                     "SCHEDULING_WAITLIST_CLASS_HAS_SPACE",
@@ -109,14 +109,20 @@ public class WaitlistService {
         }
 
         // BR-02: unique active waitlist entry per member/class (mirrors uq_waitlist_active).
-        if (waitlists.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), WAITING)
-                .isPresent()) {
+        var waiting = waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), WAITING);
+        var notified = waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), "notified");
+        if (waiting.isPresent() || notified.filter(offer -> !EnrollmentService.isExpired(offer, now)).isPresent()) {
             throw new BadRequestException(
                     "SCHEDULING_WAITLIST_DUPLICATE",
                     "error.scheduling.waitlist_duplicate",
                     null,
                     "Member is already waiting for this class");
         }
+        // A terminal/expired offer no longer owns a seat and may rejoin at the end of the queue.
+        notified.ifPresent(offer -> {
+            offer.setStatus("expired");
+            waitlists.saveAndFlush(offer);
+        });
 
         ClassWaitlist waitlist = new ClassWaitlist();
         waitlist.setGymClass(gymClass);
@@ -132,7 +138,13 @@ public class WaitlistService {
      */
     @Transactional
     public WaitlistDto withdraw(AuthenticatedPrincipal principal, Long waitlistId) {
-        ClassWaitlist waitlist = waitlists.findById(waitlistId)
+        members.findByUserIdForUpdate(principal.id())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
+        Long classId = waitlists.findClassIdById(waitlistId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.class_waitlist", waitlistId));
+        gymClasses.findByIdForUpdate(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+        ClassWaitlist waitlist = waitlists.findByIdForUpdate(waitlistId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.class_waitlist", waitlistId));
 
         if (waitlist.getMember() == null || !waitlist.getMember().getUserId().equals(principal.id())) {
@@ -174,17 +186,6 @@ public class WaitlistService {
         return waitlists.findByMemberUserIdOrderByRequestedAtAsc(principal.id()).stream()
                 .map(this::toDto)
                 .toList();
-    }
-
-    private void ensureActiveMembership(Long memberId) {
-        boolean hasActive = subscriptions.hasActiveMembership(memberId, LocalDate.now(clock));
-        if (!hasActive) {
-            throw new ForbiddenException(
-                    "SCHEDULING_MEMBERSHIP_INVALID",
-                    "error.scheduling.membership_expired_or_inactive",
-                    null,
-                    "Member has no active or unexpired subscription");
-        }
     }
 
     private ClassSession findSession(Long sessionId) {

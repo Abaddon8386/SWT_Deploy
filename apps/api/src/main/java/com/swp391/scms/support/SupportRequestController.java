@@ -38,6 +38,12 @@ public class SupportRequestController {
         this.messageService = messageService;
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER')")
+    public ApiResponse<SupportRequestDto> getRequest(@PathVariable Long id, @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("support.list.success"), supportRequestService.getRequest(id, principal.id(), principal.role()));
+    }
+
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }

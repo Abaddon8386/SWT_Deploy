@@ -129,7 +129,7 @@ public class SupportRequestService {
     @Transactional
     @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
     public SupportRequestDto updateStatus(Long id, UpdateSupportRequestStatusDto dto) {
-        SupportRequest request = supportRequestRepository.findById(id)
+        SupportRequest request = supportRequestRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", id));
 
         if ("closed".equalsIgnoreCase(request.getStatus())) {
@@ -199,7 +199,7 @@ public class SupportRequestService {
 
     @Transactional
     public SupportRequestMessageDto sendMessage(Long requestId, Long senderUserId, String senderRole, CreateSupportMessageDto dto) {
-        SupportRequest request = supportRequestRepository.findById(requestId)
+        SupportRequest request = supportRequestRepository.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", requestId));
 
         boolean staff = isStaffRole(senderRole);
@@ -215,6 +215,16 @@ public class SupportRequestService {
             }
         }
 
+        User sender = requireActor(senderUserId, senderRole);
+        if (dto.clientMessageId() != null) {
+            var existing = supportRequestMessageRepository.findBySupportRequestIdAndSenderIdAndClientMessageId(requestId, senderUserId, dto.clientMessageId());
+            if (existing.isPresent()) {
+                if (!Objects.equals(existing.get().getMessage(), dto.message().trim()))
+                    throw new com.swp391.scms.common.exception.ConflictException("SUPPORT_MESSAGE_KEY_REUSED", "support.message.key_reused", null, null);
+                return supportRequestMapper.toMessageDto(existing.get());
+            }
+        }
+
         if ("closed".equalsIgnoreCase(request.getStatus())) {
             throw new BadRequestException(
                     "TICKET_CLOSED",
@@ -223,9 +233,6 @@ public class SupportRequestService {
                     "Cannot send message to a closed support request"
             );
         }
-
-        User sender = userRepository.findByIdAndDeletedAtIsNull(senderUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("resource.user", senderUserId));
 
         // 1-step convenience: when staff replies to an open ticket, auto-transition to in_progress
         // and auto-assign if unassigned so staff don't have to make a separate status PATCH first.
@@ -245,6 +252,7 @@ public class SupportRequestService {
         }
 
         SupportRequestMessage message = new SupportRequestMessage(request, sender, dto.message().trim());
+        message.setClientMessageId(dto.clientMessageId());
         SupportRequestMessage saved = supportRequestMessageRepository != null
                 ? supportRequestMessageRepository.save(message)
                 : message;
@@ -306,12 +314,38 @@ public class SupportRequestService {
             }
         }
 
+        requireActor(currentUserId, currentRole);
         if (supportRequestMessageRepository == null) {
             return List.of();
         }
 
         List<SupportRequestMessage> messages = supportRequestMessageRepository.findBySupportRequestIdOrderByCreatedAtAsc(requestId);
         return messages.stream().map(supportRequestMapper::toMessageDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public SupportRequestDto getRequest(Long requestId, Long actorId, String role) {
+        return supportRequestMapper.toDto(requireTicket(requestId, actorId, role));
+    }
+
+    @Transactional(readOnly = true)
+    public SupportRequest requireTicket(Long requestId, Long actorId, String role) {
+        requireActor(actorId, role);
+        SupportRequest request = supportRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", requestId));
+        if (!isStaffRole(role) && (request.getMember() == null || !Objects.equals(request.getMember().getUserId(), actorId)))
+            throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
+        return request;
+    }
+
+    public User requireActor(Long actorId, String role) {
+        User actor = userRepository.findByIdAndDeletedAtIsNull(actorId)
+                .orElseThrow(() -> new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null));
+        if (!"active".equalsIgnoreCase(actor.getStatus()) || actor.getRole() == null
+                || !Objects.equals(actor.getRole().getCode(), role)
+                || !("MEMBER".equals(role) || STAFF_ROLES.contains(role)))
+            throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
+        return actor;
     }
 
     private boolean isStaffRole(String role) {

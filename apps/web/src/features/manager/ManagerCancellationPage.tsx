@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import type { MembershipCancellationRequest } from '../member/membershipApi';
 
 const loadRequests = () => apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations');
@@ -55,7 +56,7 @@ export function ManagerCancellationPage() {
       subtitle="Xem xét lý do và quyền lợi liên quan trước khi quyết định." />
     {error && <div className="portal-alert" role="alert">{error} <button type="button" className="btn-secondary btn-sm" onClick={() => void refresh()}>Thử lại</button></div>}
     {message && <div className="portal-alert portal-alert--info" role="status">{message}</div>}
-    {loading ? <div className="portal-card" role="status">Đang tải yêu cầu…</div> : items.length === 0 ?
+    {loading ? <LoadingSkeleton label="Đang tải yêu cầu hủy gói tập…" count={3} /> : items.length === 0 ?
       <div className="portal-card portal-empty">Chưa có yêu cầu hủy gói tập.</div> :
       <div className="stack" style={{ gap: 16 }}>
         {items.map((item) => <article className="portal-card" key={item.id}>

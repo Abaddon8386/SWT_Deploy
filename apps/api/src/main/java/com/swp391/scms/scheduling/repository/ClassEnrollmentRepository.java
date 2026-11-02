@@ -6,12 +6,24 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment, Long> {
+
+    @Query("select e.gymClass.id from ClassEnrollment e where e.id = :id")
+    Optional<Long> findClassIdById(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select e from ClassEnrollment e where e.id = :id")
+    Optional<ClassEnrollment> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("select distinct e.gymClass.id from ClassEnrollment e where e.member.userId = :memberId and e.status = 'booked'")
+    List<Long> findBookedClassIdsByMemberId(@Param("memberId") Long memberId);
 
     List<ClassEnrollment> findByMemberUserId(Long memberId);
 

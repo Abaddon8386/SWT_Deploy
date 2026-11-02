@@ -1,3 +1,5 @@
+import { LoadingImage } from '../../../shared/ui/LoadingImage';
+import { PRIMARY_DISCIPLINES } from '../../../shared/lib/disciplines';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
@@ -7,19 +9,15 @@ import { RoundArrow } from './PublicLayout';
 import { SportStack } from './SportStack';
 
 const tickerItems = [
+  ...PRIMARY_DISCIPLINES.map(discipline => discipline.name.toUpperCase()),
   'STRENGTH FLOOR',
-  'LAP POOL 25M',
-  'TENNIS COURTS',
-  'BADMINTON',
-  'BASKETBALL',
   'MOVEMENT STUDIO',
   'FREE WEIGHTS',
-  'HYDRO-RECOVERY',
   'BARBELL CLUB',
-  'MULTI-SPORT PASS',
+  'GROUP TRAINING',
 ];
 
-const manifestoWords = 'Mạnh mẽ trong phòng tạ. Nhẹ nhàng dưới làn nước. Linh hoạt trên sân đấu.'.split(' ');
+const manifestoWords = 'Mạnh mẽ trong phòng tạ. Linh hoạt qua từng chuyển động. Bền bỉ sau mỗi hiệp tập.'.split(' ');
 
 const services = [
   { title: 'WeightLifting', description: 'Tập tạ đúng kỹ thuật, tăng sức mạnh nền tảng.', icon: 'weights' },
@@ -215,12 +213,12 @@ const journeySteps = [
 ];
 const memberBenefits = [
   {
-    tag: 'Sân & Hồ bơi',
+    tag: 'Bộ môn',
     idx: '01',
-    title: 'Đặt sân & lịch bơi online',
+    title: 'Đặt lịch tập trên Portal',
     description: 'Xem lịch lớp theo bộ môn trong Portal. Bạn có thể đặt lớp khi gói tập đang hoạt động, còn hạn và còn lượt đặt theo quy định của gói.',
     perks: [
-      'Hồ bơi bốn mùa 25m · 02 sân Tennis tiêu chuẩn',
+      'Gym · Yoga · Pilates · Boxing',
       'Khu Strength Floor, Free Weights & Movement Studio',
       'Thấy ngay khung giờ nào đang thoáng',
       'Vào cửa bằng mã QR, không cần giấy tờ',
@@ -242,7 +240,7 @@ const memberBenefits = [
     tag: 'HLV',
     idx: '03',
     title: 'HLV theo dõi từng buổi tập',
-    description: 'Mỗi buổi HLV ghi lại chỉ số của bạn — mức tạ, thời gian, cự ly bơi, nhịp đánh bóng. Bạn xem lại tiến độ cá nhân bất cứ lúc nào.',
+    description: 'Mỗi buổi HLV ghi lại chỉ số của bạn — mức tạ, số lần tập, thời gian và tiến độ. Bạn xem lại tiến độ cá nhân bất cứ lúc nào.',
     perks: [
       'HLV có chứng chỉ đúng từng bộ môn',
       'Kết quả từng buổi, lưu trên Portal',
@@ -430,9 +428,9 @@ export function FitnessLanding() {
       <div className="fit-hero-lines" aria-hidden="true" />
       <h1 id="hero-title" className="fit-hero-title"><span>BUILD YOUR</span><span>BODY SHAPES<span className="fit-title-dot">.</span></span></h1>
       <div className="fit-hero-copy"><p>Mạnh mẽ từ thể chất.<br />Tự tin từ bên trong.</p>
-        <a href="#stories" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{stories.slice(0, 3).map((story) => <img key={story.name} src={`/images/fitness/${story.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span><span className="fit-review-label">Đội ngũ đồng hành</span></a>
+        <a href="#stories" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{stories.slice(0, 3).map((story) => <LoadingImage key={story.name} src={`/images/fitness/${story.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span><span className="fit-review-label">Đội ngũ đồng hành</span></a>
       </div>
-      <img className="fit-hero-athlete" src="/images/fitness/hero-athlete.png" alt="Vận động viên ngồi tập tạ đơn, hướng ánh nhìn xuống, trên nền tối" fetchPriority="high" />
+      <LoadingImage className="fit-hero-athlete" src="/images/fitness/hero-athlete.png" alt="Vận động viên ngồi tập tạ đơn, hướng ánh nhìn xuống, trên nền tối" fetchPriority="high" />
       <div className="fit-hero-anatomy-stage" onPointerLeave={scheduleClearMuscle}>
         <svg
           className="fit-hero-anatomy"
@@ -547,7 +545,7 @@ export function FitnessLanding() {
         {manifestoWords.map((word, idx) => <span key={idx} className="fit-manifesto-word"><span>{word}</span> </span>)}
       </p>
       <div className="fit-space-image" data-reveal="image" onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}>
-        <img key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" />
+        <LoadingImage key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" />
         <div className="fit-space-shade" />
         <div key={space} className="fit-space-content fit-blur-morph">
           <span className="fit-kicker">05 PHÂN KHU TẬP LUYỆN</span>
@@ -562,7 +560,7 @@ export function FitnessLanding() {
           </div>
           <a className="fit-pill" href="#contact">Ghé thăm SÖL<RoundArrow diagonal /></a>
         </div>
-        <div className="fit-space-tabs" aria-label="Khám phá không gian">{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><img src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span className="fit-space-tab-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></button>)}</div>
+        <div className="fit-space-tabs" aria-label="Khám phá không gian">{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><LoadingImage src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span className="fit-space-tab-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></button>)}</div>
         <span className="fit-space-number">0{space + 1} / 0{spaces.length}</span>
       </div>
       <div className="fit-rhythm-explorer" data-reveal="lift" aria-label="Nhịp sinh hoạt trong ngày tại câu lạc bộ">
@@ -613,7 +611,7 @@ export function FitnessLanding() {
         <span className="fit-kicker">BETTER WITH A COACH</span>
         <SplitHeading id="trainers-title" lines={['Our Trainers']} />
       </div>
-      <div>{catalog ? <CatalogTrainers catalog={catalog} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} />}</div>
+      <div>{catalog ? <CatalogTrainers catalog={catalog} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="trainers" />}</div>
     </section>
     <section className="fit-section fit-schedule" id="schedule" aria-labelledby="schedule-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="schedule-title" lines={['Weekly Class', 'Schedule']} /></div>
@@ -728,11 +726,11 @@ export function FitnessLanding() {
     </section>
     <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
-      {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} />}
+      {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="packages" />}
     </section>
     <section className="fit-section fit-stories" id="stories" aria-labelledby="stories-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="stories-title" lines={['Mỗi người,', 'một nhịp tập']} /></div>
-      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><Link to="/#trainers" className="fit-story-link"><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={story.name} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></Link></article>)}</div>
+      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><Link to="/#trainers" className="fit-story-link"><div className="fit-story-photo"><LoadingImage src={`/images/fitness/${story.image}`} alt={story.name} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></Link></article>)}</div>
     </section>
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">

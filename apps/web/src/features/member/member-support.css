@@ -29,4 +29,12 @@
 .member-support-error { color: var(--portal-danger, #e99090); }
 .member-support-notice { color: var(--portal-success, var(--member-support-success)); }
 .member-support button:not(.ui-select__trigger):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+.member-support .portal-dialog:has(.member-support-conversation) { width: min(680px, calc(100vw - 32px)); margin: auto; }
+.member-support-conversation { min-width: 0; }
+.member-support-description { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.member-support-conversation .member-support-messages { max-height: 40dvh; overflow-y: auto; overscroll-behavior: contain; }
+.member-support-conversation .member-support-messages:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+.member-support-conversation .portal-textarea { width: 100%; min-width: 0; resize: vertical; }
+.member-support-conversation :is(button, .portal-textarea) { min-height: 44px; }
 @media (max-width: 760px) { .member-support-grid { grid-template-columns: minmax(0, 1fr); } .member-support-messages li { max-width: 90%; } }
+@media (max-width: 760px) { .member-support-conversation .portal-textarea { font-size: 16px; } }

@@ -9,7 +9,7 @@ import org.hibernate.Length;
 
 /** Entity mapping table support_request_messages (schema is generated code-first by Hibernate). */
 @Entity
-@Table(name = "support_request_messages")
+@Table(name = "support_request_messages", uniqueConstraints = @UniqueConstraint(name = "uq_support_message_client", columnNames = {"support_request_id", "sender_user_id", "client_message_id"}))
 public class SupportRequestMessage {
 
     @Id
@@ -30,6 +30,11 @@ public class SupportRequestMessage {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "client_message_id")
+    private java.util.UUID clientMessageId;
+    public java.util.UUID getClientMessageId() { return clientMessageId; }
+    public void setClientMessageId(java.util.UUID clientMessageId) { this.clientMessageId = clientMessageId; }
 
     public SupportRequestMessage() {}
 

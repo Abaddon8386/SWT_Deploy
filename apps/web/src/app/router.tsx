@@ -16,6 +16,7 @@ export const router = createBrowserRouter([
 
   // Protected Portal App Shell
   {
+    id: 'portal',
     lazy: async () => ({ Component: (await import('../shared/ui/AppLayout')).AppLayout }),
     children: [
       { path: '/portal', element: <PortalHome /> },
@@ -98,6 +99,11 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/member/MemberProfilePage')).MemberProfilePage }),
           },
         ],
+      },
+
+      {
+        element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
+        children: [{ path: '/staff/support', lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }) }],
       },
 
       // Staff / Coach Routes

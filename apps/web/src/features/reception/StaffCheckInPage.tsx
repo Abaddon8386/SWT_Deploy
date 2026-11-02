@@ -1,3 +1,4 @@
+import { LoadingImage } from '../../shared/ui/LoadingImage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
@@ -248,7 +249,7 @@ export function StaffCheckInPage() {
               </div>
 
               {isGranted && currentResult.avatarUrl && (
-                <img src={currentResult.avatarUrl} alt={`Ảnh hội viên ${currentResult.memberName || ''}`}
+                <LoadingImage src={currentResult.avatarUrl} alt={`Ảnh hội viên ${currentResult.memberName || ''}`}
                   referrerPolicy="no-referrer" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '50%', marginBottom: 12 }} />
               )}
 

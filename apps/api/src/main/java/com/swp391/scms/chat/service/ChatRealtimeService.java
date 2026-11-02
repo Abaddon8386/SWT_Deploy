@@ -49,4 +49,16 @@ public class ChatRealtimeService {
                 .issuedAt(Date.from(now)).expiration(Date.from(expires)).signWith(signingKey, Jwts.SIG.HS256).compact();
         return new ChatRealtimeSession(true, principal.id(), url, publishableKey, "scms:chat:" + userId, token, expires);
     }
+    /** Signs a support capability after the support service authorizes its exact topic. */
+    public ChatRealtimeSession supportSession(Long actorId, String topic) {
+        if (url.isBlank() || publishableKey.isBlank() || signingKey == null)
+            return new ChatRealtimeSession(false, actorId, null, null, null, null, null);
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        Instant expires = now.plusSeconds(300);
+        String subject = UUID.nameUUIDFromBytes(("scms-support:" + actorId).getBytes(StandardCharsets.UTF_8)).toString();
+        String token = Jwts.builder().issuer(url + "/auth/v1").subject(subject).audience().add("authenticated").and()
+                .claim("role", "authenticated").claim("scms_support_scope", "receive").claim("scms_support_topic", topic)
+                .issuedAt(Date.from(now)).expiration(Date.from(expires)).signWith(signingKey, Jwts.SIG.HS256).compact();
+        return new ChatRealtimeSession(true, actorId, url, publishableKey, topic, token, expires);
+    }
 }

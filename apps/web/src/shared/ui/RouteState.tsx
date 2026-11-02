@@ -1,8 +1,9 @@
+import { LoadingSkeleton } from './LoadingSkeleton';
 import './route-state.css';
 
 export function RouteLoading() {
-  return <main className="route-state" role="status" aria-live="polite" aria-busy="true">
-    <p>Đang tải trang…</p>
+  return <main className="route-state route-state--loading">
+    <LoadingSkeleton label="Đang tải trang…" variant="cards" count={3} />
   </main>;
 }
 

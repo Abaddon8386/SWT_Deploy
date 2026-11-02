@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { DatePicker } from '../../shared/ui/DatePicker';
@@ -36,6 +37,9 @@ export function CoachTrainingPlanPage() {
 
   // Danh sách học viên và thông tin tổng quan giáo án
   const [members, setMembers] = useState<MemberOption[]>(SAMPLE_MEMBERS);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [membersError, setMembersError] = useState('');
+  const [membersAttempt, setMembersAttempt] = useState(0);
   const [selectedMemberId, setSelectedMemberId] = useState<number>(SAMPLE_MEMBERS[0].id);
   const [planTitle, setPlanTitle] = useState('Giáo án Cá nhân hóa 4 Tuần');
   const [planGoal, setPlanGoal] = useState(SAMPLE_MEMBERS[0].fitnessGoal || 'Tăng cường sức mạnh và cải thiện tư thế');
@@ -129,17 +133,24 @@ export function CoachTrainingPlanPage() {
   const [appliedRecommendationId, setAppliedRecommendationId] = useState<number | undefined>();
 
   useEffect(() => {
+    if (!hasAccess) return;
     let active = true;
+    setMembersLoading(true);
+    setMembersError('');
     void aiApi.getCoachMembers().then((loaded) => {
       if (!active || loaded.length === 0) return;
       setMembers(loaded);
       setSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0].id));
       setAiSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0].id));
+    }).catch(() => {
+      if (active) setMembersError('Không thể tải danh sách học viên. Vui lòng thử lại.');
+    }).finally(() => {
+      if (active) setMembersLoading(false);
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [hasAccess, membersAttempt]);
 
   // Học viên đang chọn trong form
   const selectedMember: MemberOption = useMemo(() => {
@@ -354,6 +365,14 @@ export function CoachTrainingPlanPage() {
         </div>
       </div>
     );
+  }
+
+  if (membersLoading || membersError) {
+    return <div className="portal-container plan-editor-page">
+      <PageHeader eyebrow="Huấn luyện &amp; Bài tập" title="Bàn làm việc: Soạn giáo án bài tập" />
+      {membersLoading ? <LoadingSkeleton label="Đang tải học viên và thông tin giáo án…" variant="profile" />
+        : <div className="portal-card" role="alert"><p>{membersError}</p><button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>Thử lại</button></div>}
+    </div>;
   }
 
   return (
@@ -790,15 +809,7 @@ export function CoachTrainingPlanPage() {
 
             {/* Trạng thái Loading AI */}
             {isGeneratingAi && (
-              <div className="ai-loading-box">
-                <div className="ai-pulse-orb" />
-                <h4 style={{ margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
-                  Đang phân tích dữ liệu thể trạng học viên...
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--portal-muted)' }}>
-                  Mô hình AI đang đối chiếu tiền sử chấn thương và tối ưu hóa các bài tập, hiệp, lần lặp phù hợp nhất.
-                </p>
-              </div>
+              <LoadingSkeleton label="Đang phân tích và tạo gợi ý giáo án…" count={4} />
             )}
 
             {/* Kết quả AI trả về */}

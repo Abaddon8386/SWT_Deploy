@@ -249,6 +249,22 @@ describe('userApi.ts (User Management & RBAC)', () => {
     );
   });
 
+  it('cleanupInactiveUsers propagates server failures instead of reporting zero deletions', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ success: false, message: 'Access denied', code: 'FORBIDDEN' }),
+    }));
+
+    await expect(userApi.cleanupInactiveUsers()).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+  });
+
+  it('cleanupInactiveUsers propagates a network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+    await expect(userApi.cleanupInactiveUsers()).rejects.toMatchObject({ status: 0 });
+  });
+
   it('cleanupInactiveUsers calls POST /api/v1/users/cleanup-inactive', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,

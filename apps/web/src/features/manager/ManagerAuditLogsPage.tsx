@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import {
@@ -31,7 +32,7 @@ export function ManagerAuditLogsPage() {
 
   // Occupancy Report state
   const [occupancyList, setOccupancyList] = useState<ClassOccupancyItem[]>([]);
-  const [loadingOccupancy, setLoadingOccupancy] = useState<boolean>(false);
+  const [loadingOccupancy, setLoadingOccupancy] = useState<boolean>(true);
 
   // Fetch Audit Logs
   useEffect(() => {
@@ -266,10 +267,7 @@ export function ManagerAuditLogsPage() {
           {/* Audit Table */}
           <div className="audit-table-card">
             {loadingLogs ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-                <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
-                <p>Đang tải nhật ký kiểm toán...</p>
-              </div>
+              <LoadingSkeleton label="Đang tải nhật ký kiểm toán…" variant="table" count={8} />
             ) : filteredLogs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
                 <p>Không tìm thấy bản ghi nhật ký kiểm toán nào phù hợp.</p>
@@ -364,7 +362,7 @@ export function ManagerAuditLogsPage() {
       ) : (
         /* Tab 2: Occupancy Chart Section */
         <section aria-label="Biểu đồ tỷ lệ lấp đầy phòng học theo bộ môn">
-          <div className="occupancy-summary-cards">
+          {loadingOccupancy ? <LoadingSkeleton label="Đang tải tổng quan công suất lớp học…" variant="cards" count={3} /> : <div className="occupancy-summary-cards">
             <div className="occupancy-stat-card">
               <span className="stat-card-title">Tỷ lệ lấp đầy trung bình</span>
               <span className="stat-card-number">{occupancyMetrics.avgUtilization}%</span>
@@ -381,7 +379,7 @@ export function ManagerAuditLogsPage() {
                 {occupancyMetrics.totalEnrolled} / {occupancyMetrics.totalCapacity}
               </span>
             </div>
-          </div>
+          </div>}
 
           <div className="occupancy-chart-card">
             <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-main)', margin: '0 0 6px' }}>
@@ -392,10 +390,7 @@ export function ManagerAuditLogsPage() {
             </p>
 
             {loadingOccupancy ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-                <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
-                <p>Đang tải biểu đồ công suất lớp học...</p>
-              </div>
+              <LoadingSkeleton label="Đang tải biểu đồ công suất lớp học…" count={4} />
             ) : occupancyList.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-muted)' }}>
                 <p>Không có dữ liệu lớp học nào.</p>

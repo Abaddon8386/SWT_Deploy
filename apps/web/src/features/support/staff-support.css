@@ -1,0 +1,7 @@
+.staff-support-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px; }
+.staff-support-toolbar .portal-select { width: auto; min-width: 180px; }
+.staff-support .member-support-messages li.is-staff { justify-self: end; background: var(--portal-salmon); color: var(--portal-ink, #242424); }
+.staff-support .member-support-messages li.is-member { justify-self: start; background: var(--portal-raised); }
+.staff-support .member-support-messages li.is-staff time { color: inherit; }
+.staff-support .member-support-ticket, .staff-support-toolbar button { min-height: 44px; }
+@media (max-width: 767px) { .staff-support .portal-select { font-size: 16px; max-width: 100%; } }

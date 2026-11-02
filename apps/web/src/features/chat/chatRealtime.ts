@@ -5,7 +5,8 @@ import type { ChatRealtimeSession } from './chatApi';
 export type ChatConnection = 'connecting' | 'connected' | 'reconnecting' | 'disabled';
 
 /** Broadcast only invalidates data. Never render or trust its payload. */
-export function subscribeChat(changed: () => void, status: (state: ChatConnection) => void): () => void {
+export function subscribeChat(changed: () => void, status: (state: ChatConnection) => void,
+  sessionPath = '/chat/realtime-session'): () => void {
   let disposed = false, connecting = false, failures = 0;
   let client: SupabaseClient | null = null;
   let chatToken: string | null = null;
@@ -32,7 +33,7 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
     if (disposed || connecting) return;
     connecting = true;
     try {
-      const session = await apiFetch<ChatRealtimeSession>('/chat/realtime-session', { method: 'POST' });
+      const session = await apiFetch<ChatRealtimeSession>(sessionPath, { method: 'POST' });
       if (disposed) return;
       if (!session.enabled) { clearTimeout(renewTimer); closeClient(); status('disabled'); return; }
       if (!session.url || !session.publishableKey?.startsWith('sb_publishable_') || !session.topic || !session.token || !session.expiresAt)

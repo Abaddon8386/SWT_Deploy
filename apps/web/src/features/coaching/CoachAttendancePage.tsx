@@ -1,5 +1,7 @@
+import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { toast } from '../../shared/ui/toast';
@@ -50,56 +52,15 @@ export interface EvaluationHistoryRecord {
   students: AttendanceStudent[];
 }
 
-const STORAGE_KEY_HISTORY = 'sol_coach_attendance_history';
-const STORAGE_KEY_EVAL_HISTORY = 'sol_coach_evaluation_history';
-
-const INITIAL_HISTORY: AttendanceHistoryRecord[] = [
-  {
-    id: 'hist-101-yesterday',
-    sessionId: 101,
-    className: 'Reformer Core & Spinal Alignment',
-    roomName: 'Studio 01 (Tầng 2)',
-    sessionDate: '2026-10-27',
-    startTime: '17:30',
-    endTime: '18:30',
-    savedAt: '27/10/2026 18:35',
-    presentCount: 3,
-    absentCount: 1,
-    totalStudents: 4,
-    students: [
-      { id: 1, memberId: 101, fullName: 'Nguyễn Văn An', membershipCode: 'MB-2026-089', status: 'present', progressScore: 85, notes: 'Kiểm soát cơ lõi tốt.' },
-      { id: 2, memberId: 102, fullName: 'Trần Thị Mai', membershipCode: 'MB-2026-054', status: 'present', progressScore: 80, notes: 'Thực hiện đúng tư thế.' },
-      { id: 3, memberId: 103, fullName: 'Lê Quốc Bảo', membershipCode: 'MB-2026-112', status: 'present', progressScore: 75, notes: 'Cải thiện biên độ kéo cáp.' },
-      { id: 4, memberId: 104, fullName: 'Vũ Minh Hằng', membershipCode: 'MB-2026-077', status: 'absent', progressScore: 50, notes: 'Vắng không phép.' },
-    ],
-  },
-];
-
-const INITIAL_EVAL_HISTORY: EvaluationHistoryRecord[] = [
-  {
-    id: 'eval-101-yesterday',
-    sessionId: 101,
-    className: 'Reformer Core & Spinal Alignment',
-    roomName: 'Studio 01 (Tầng 2)',
-    sessionDate: '2026-10-27',
-    startTime: '17:30',
-    endTime: '18:30',
-    savedAt: '27/10/2026 18:40',
-    averageScore: 78,
-    totalStudents: 4,
-    students: [
-      { id: 1, memberId: 101, fullName: 'Nguyễn Văn An', membershipCode: 'MB-2026-089', status: 'present', progressScore: 85, notes: 'Kiểm soát cơ lõi tốt, động tác ổn định.' },
-      { id: 2, memberId: 102, fullName: 'Trần Thị Mai', membershipCode: 'MB-2026-054', status: 'present', progressScore: 80, notes: 'Thực hiện đúng tư thế, cơ vai bớt gồng.' },
-      { id: 3, memberId: 103, fullName: 'Lê Quốc Bảo', membershipCode: 'MB-2026-112', status: 'present', progressScore: 75, notes: 'Cải thiện biên độ kéo cáp, cần khởi động kỹ.' },
-      { id: 4, memberId: 104, fullName: 'Vũ Minh Hằng', membershipCode: 'MB-2026-077', status: 'absent', progressScore: 50, notes: 'Chưa tham gia buổi tập, cần theo dõi buổi sau.' },
-    ],
-  },
-];
 
 export function CoachAttendancePage() {
+  const STORAGE_KEY_HISTORY = coachHistoryStorageKey('attendance');
+  const STORAGE_KEY_EVAL_HISTORY = coachHistoryStorageKey('evaluation');
   const [activeTab, setActiveTab] = useState<'attendance' | 'evaluation' | 'attendance-history' | 'eval-history'>('attendance');
   const [sessions, setSessions] = useState<CoachClassSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [loadedSessionId, setLoadedSessionId] = useState<number | null>(null);
+  const [rosterError, setRosterError] = useState<string | null>(null);
   const [students, setStudents] = useState<AttendanceStudent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -131,7 +92,7 @@ export function CoachAttendancePage() {
     } catch {
       // Fallback
     }
-    return INITIAL_HISTORY;
+    return [];
   });
 
   // Lịch sử đánh giá học viên (hỗ trợ lưu, sửa trong popup, xoá)
@@ -144,7 +105,7 @@ export function CoachAttendancePage() {
     } catch {
       // Fallback
     }
-    return INITIAL_EVAL_HISTORY;
+    return [];
   });
 
   // Đồng bộ lịch sử điểm danh vào localStorage
@@ -202,17 +163,10 @@ export function CoachAttendancePage() {
     let mounted = true;
     const fetchStudents = async () => {
       setLoading(true);
+      setStudents([]);
+      setLoadedSessionId(null);
+      setRosterError(null);
       try {
-        // Kiểm tra xem buổi học này đã có dữ liệu lưu trong lịch sử chưa
-        const existingRecord = history.find((h) => h.sessionId === selectedSessionId);
-        if (existingRecord && existingRecord.students.length > 0) {
-          if (mounted) {
-            setStudents(existingRecord.students);
-            setLoading(false);
-            return;
-          }
-        }
-
         const list = await attendanceApi.getSessionStudents(selectedSessionId);
         if (mounted) {
           // Chuẩn hóa trạng thái: chỉ giữ 'present' hoặc 'absent'
@@ -223,9 +177,11 @@ export function CoachAttendancePage() {
             notes: item.notes || '',
           }));
           setStudents(normalized);
+          setLoadedSessionId(selectedSessionId);
         }
       } catch {
         if (mounted) {
+          setRosterError('Không thể tải danh sách học viên của buổi học. Vui lòng chọn lại buổi học.');
           toast.error('Không thể tải danh sách học viên của buổi học.');
         }
       } finally {
@@ -237,10 +193,12 @@ export function CoachAttendancePage() {
     return () => {
       mounted = false;
     };
-  }, [selectedSessionId, history]);
+  }, [selectedSessionId]);
+
+  const rosterReady = selectedSessionId !== null && loadedSessionId === selectedSessionId && !loading && !rosterError;
 
   const activeSession = useMemo(() => {
-    return sessions.find((s) => s.id === selectedSessionId) || sessions[0];
+    return sessions.find((s) => s.id === selectedSessionId) ;
   }, [sessions, selectedSessionId]);
 
   // Kiểm tra buổi hiện tại đã được lưu hay chưa
@@ -277,7 +235,7 @@ export function CoachAttendancePage() {
 
   // Lưu hoặc Cập nhật điểm danh (Tab Điểm danh)
   const handleSaveAttendance = async () => {
-    if (!selectedSessionId || !activeSession) {
+    if (!selectedSessionId || !activeSession || !rosterReady || saving || savingEvaluation) {
       toast.error('Vui lòng chọn buổi học cần lưu điểm danh.');
       return;
     }
@@ -336,7 +294,7 @@ export function CoachAttendancePage() {
 
   // Lưu Đánh giá học viên (Tab Đánh giá riêng)
   const handleSaveEvaluations = async () => {
-    if (!selectedSessionId || !activeSession) {
+    if (!selectedSessionId || !activeSession || !rosterReady || saving || savingEvaluation) {
       toast.error('Vui lòng chọn buổi học cần lưu đánh giá.');
       return;
     }
@@ -392,21 +350,14 @@ export function CoachAttendancePage() {
   const handleDeleteCurrentAttendance = () => {
     if (!selectedSessionId) return;
     const confirmDelete = window.confirm(
-      'Bạn có chắc chắn muốn xoá dữ liệu điểm danh đã lưu của buổi học này không?'
+      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.'
     );
     if (!confirmDelete) return;
 
     const filtered = history.filter((h) => h.sessionId !== selectedSessionId);
     saveHistoryToStorage(filtered);
 
-    setStudents((prev) =>
-      prev.map((s) => ({
-        ...s,
-        status: 'present',
-        notes: '',
-      }))
-    );
-    toast.success('Đã xoá dữ liệu điểm danh của buổi học thành công.');
+    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
   };
 
   // Mở modal sửa điểm danh trực tiếp giữa màn hình (Không chuyển tab)
@@ -431,37 +382,61 @@ export function CoachAttendancePage() {
   // Lưu cập nhật từ Modal sửa điểm danh
   const handleSaveModalAttendance = async () => {
     if (!editingAttendanceRecord) return;
+    setSaving(true);
+    try {
+      const latest = await attendanceApi.getSessionStudents(editingAttendanceRecord.sessionId);
+      const latestByMember = new Map(latest.map(student => [student.memberId, student]));
+      const updatedStudents = editingAttendanceRecord.students.map(student => {
+        const current = latestByMember.get(student.memberId);
+        return {
+          ...student,
+          progressScore: current?.progressScore ?? student.progressScore,
+          notes: current?.notes ?? student.notes,
+        };
+      });
+      await attendanceApi.saveBatchAttendance(editingAttendanceRecord.sessionId, updatedStudents.map(student => ({
+        memberId: student.memberId,
+        status: student.status,
+        progressScore: student.progressScore,
+        notes: student.notes.trim(),
+      })));
 
-    const presentCount = editingAttendanceRecord.students.filter((s) => s.status === 'present').length;
-    const absentCount = editingAttendanceRecord.students.filter((s) => s.status === 'absent').length;
-    const nowFormatted = new Date().toLocaleString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+      const presentCount = editingAttendanceRecord.students.filter((s) => s.status === 'present').length;
+      const absentCount = editingAttendanceRecord.students.filter((s) => s.status === 'absent').length;
+      const nowFormatted = new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
 
-    const updatedRecord: AttendanceHistoryRecord = {
-      ...editingAttendanceRecord,
-      presentCount,
-      absentCount,
-      savedAt: nowFormatted,
-    };
+      const updatedRecord: AttendanceHistoryRecord = {
+        ...editingAttendanceRecord,
+        students: updatedStudents,
+        presentCount,
+        absentCount,
+        savedAt: nowFormatted,
+      };
 
-    const newHistory = history.map((h) =>
-      h.id === updatedRecord.id ? updatedRecord : h
-    );
-    saveHistoryToStorage(newHistory);
+      const newHistory = history.map((h) =>
+        h.id === updatedRecord.id ? updatedRecord : h
+      );
+      saveHistoryToStorage(newHistory);
 
-    if (selectedSessionId === updatedRecord.sessionId) {
-      setStudents(updatedRecord.students);
+      if (selectedSessionId === updatedRecord.sessionId) {
+        setStudents(updatedRecord.students);
+      }
+
+      setEditingAttendanceRecord(null);
+      setTimeout(() => {
+        showCenterNotification('Cập nhật thành công');
+      }, 50);
+    } catch {
+      toast.error('Không thể lưu cập nhật. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
     }
-
-    setEditingAttendanceRecord(null);
-    setTimeout(() => {
-      showCenterNotification('Cập nhật thành công');
-    }, 50);
   };
 
   // Mở modal sửa đánh giá trực tiếp giữa màn hình (Không chuyển tab)
@@ -495,65 +470,85 @@ export function CoachAttendancePage() {
   };
 
   // Lưu cập nhật từ Modal sửa đánh giá
-  const handleSaveModalEval = () => {
+  const handleSaveModalEval = async () => {
     if (!editingEvalRecord) return;
+    setSaving(true);
+    try {
+      const latest = await attendanceApi.getSessionStudents(editingEvalRecord.sessionId);
+      const latestByMember = new Map(latest.map(student => [student.memberId, student]));
+      const updatedStudents = editingEvalRecord.students.map(student => {
+        const current = latestByMember.get(student.memberId);
+        return { ...student, status: current?.status ?? student.status };
+      });
+      await attendanceApi.saveBatchAttendance(editingEvalRecord.sessionId, updatedStudents.map(student => ({
+        memberId: student.memberId,
+        status: student.status,
+        progressScore: student.progressScore,
+        notes: student.notes.trim(),
+      })));
 
-    const totalScore = editingEvalRecord.students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
-    const averageScore =
-      editingEvalRecord.students.length > 0
-        ? Math.round(totalScore / editingEvalRecord.students.length)
-        : 0;
-    const nowFormatted = new Date().toLocaleString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+      const totalScore = editingEvalRecord.students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
+      const averageScore =
+        editingEvalRecord.students.length > 0
+          ? Math.round(totalScore / editingEvalRecord.students.length)
+          : 0;
+      const nowFormatted = new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
 
-    const updatedRecord: EvaluationHistoryRecord = {
-      ...editingEvalRecord,
-      averageScore,
-      savedAt: nowFormatted,
-    };
+      const updatedRecord: EvaluationHistoryRecord = {
+        ...editingEvalRecord,
+        students: updatedStudents,
+        averageScore,
+        savedAt: nowFormatted,
+      };
 
-    const newEvalHistory = evalHistory.map((h) =>
-      h.id === updatedRecord.id ? updatedRecord : h
-    );
-    saveEvalHistoryToStorage(newEvalHistory);
+      const newEvalHistory = evalHistory.map((h) =>
+        h.id === updatedRecord.id ? updatedRecord : h
+      );
+      saveEvalHistoryToStorage(newEvalHistory);
 
-    if (selectedSessionId === updatedRecord.sessionId) {
-      setStudents(updatedRecord.students);
+      if (selectedSessionId === updatedRecord.sessionId) {
+        setStudents(updatedRecord.students);
+      }
+
+      setEditingEvalRecord(null);
+      setTimeout(() => {
+        showCenterNotification('Cập nhật thành công');
+      }, 50);
+    } catch {
+      toast.error('Không thể lưu cập nhật. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
     }
-
-    setEditingEvalRecord(null);
-    setTimeout(() => {
-      showCenterNotification('Cập nhật thành công');
-    }, 50);
   };
 
   // Xoá bản ghi trong Lịch sử điểm danh
-  const handleDeleteFromHistory = (recordId: string, className: string) => {
+  const handleDeleteFromHistory = (recordId: string) => {
     const confirmDelete = window.confirm(
-      `Bạn có chắc chắn muốn xoá lịch sử điểm danh của buổi "${className}" không?`
+      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu trên hệ thống vẫn được giữ nguyên.'
     );
     if (!confirmDelete) return;
 
     const updated = history.filter((h) => h.id !== recordId);
     saveHistoryToStorage(updated);
-    toast.success('Đã xoá bản ghi điểm danh khỏi lịch sử.');
+    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
   };
 
   // Xoá bản ghi trong Lịch sử đánh giá
-  const handleDeleteFromEvalHistory = (recordId: string, className: string) => {
+  const handleDeleteFromEvalHistory = (recordId: string) => {
     const confirmDelete = window.confirm(
-      `Bạn có chắc chắn muốn xoá lịch sử đánh giá của buổi "${className}" không?`
+      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu trên hệ thống vẫn được giữ nguyên.'
     );
     if (!confirmDelete) return;
 
     const updated = evalHistory.filter((h) => h.id !== recordId);
     saveEvalHistoryToStorage(updated);
-    toast.success('Đã xoá bản ghi đánh giá khỏi lịch sử.');
+    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
   };
 
   // Thống kê nhanh trạng thái (chỉ Có mặt và Vắng mặt)
@@ -582,9 +577,9 @@ export function CoachAttendancePage() {
           activeTab === 'evaluation'
             ? 'Khu vực đánh giá chuyên biệt: Chấm thang điểm tiến bộ và nhận xét kỹ thuật, bài tập cho từng học viên.'
             : activeTab === 'attendance-history'
-            ? 'Theo dõi toàn bộ lịch sử điểm danh các buổi học đã diễn ra, cho phép chỉnh sửa ngay tại chỗ hoặc xoá bản ghi.'
+            ? 'Lịch sử điểm danh của tài khoản này đã lưu trên trình duyệt này. Cập nhật được lưu lên hệ thống; ẩn bản ghi chỉ áp dụng trên trình duyệt.'
             : activeTab === 'eval-history'
-            ? 'Lưu trữ tiến trình đánh giá kỹ thuật và thang điểm của từng lớp học, hỗ trợ xem lại và sửa đổi trực tiếp.'
+            ? 'Lịch sử đánh giá của tài khoản này đã lưu trên trình duyệt này. Chỉnh sửa được lưu lên hệ thống.'
             : 'Ghi nhận chuyên cần nhanh chóng cho học viên tham gia buổi học với 2 trạng thái: Có mặt hoặc Vắng mặt.'
         }
       />
@@ -661,6 +656,7 @@ export function CoachAttendancePage() {
             <Select
               className="portal-select"
               value={String(selectedSessionId || '')}
+              disabled={saving || savingEvaluation}
               onChange={(e) => setSelectedSessionId(Number(e.target.value))}
               aria-label="Chọn buổi học cần quản lý"
             >
@@ -672,6 +668,10 @@ export function CoachAttendancePage() {
             </Select>
           </div>
         </div>
+      )}
+
+      {rosterError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
+        <div className="coach-error-box" role="alert">{rosterError}</div>
       )}
 
       {/* =========================================================================
@@ -711,7 +711,7 @@ export function CoachAttendancePage() {
                 type="button"
                 className="btn-quick-present"
                 onClick={handleMarkAllPresent}
-                disabled={loading || students.length === 0}
+                disabled={!rosterReady || saving || savingEvaluation || students.length === 0}
               >
                 Điểm danh nhanh tất cả Có mặt
               </button>
@@ -720,9 +720,9 @@ export function CoachAttendancePage() {
                   type="button"
                   className="btn-delete-attendance"
                   onClick={handleDeleteCurrentAttendance}
-                  title="Xoá dữ liệu điểm danh đã lưu của buổi học này"
+                  title="Ẩn bản ghi trên trình duyệt này"
                 >
-                  Xoá điểm danh
+                  Ẩn trên trình duyệt này
                 </button>
               )}
             </div>
@@ -730,10 +730,7 @@ export function CoachAttendancePage() {
 
           {/* Danh sách học viên ĐIỂM DANH */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
-              <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
-              <p>Đang tải danh sách học viên buổi học...</p>
-            </div>
+            <LoadingSkeleton label="Đang tải danh sách học viên buổi học…" count={5} />
           ) : students.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
               <p>Chưa có học viên nào book buổi học này.</p>
@@ -808,7 +805,7 @@ export function CoachAttendancePage() {
               type="button"
               className="btn-batch-save"
               onClick={handleSaveAttendance}
-              disabled={saving || loading || students.length === 0}
+              disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
             >
               {saving
                 ? 'Đang lưu...'
@@ -835,10 +832,7 @@ export function CoachAttendancePage() {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
-              <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
-              <p>Đang tải danh sách học viên...</p>
-            </div>
+            <LoadingSkeleton label="Đang tải danh sách học viên…" variant="cards" count={3} />
           ) : students.length === 0 ? (
             <div className="attendance-empty-state">
               <p>Chưa có học viên nào trong buổi học này để đánh giá.</p>
@@ -912,7 +906,7 @@ export function CoachAttendancePage() {
               type="button"
               className="btn-batch-save"
               onClick={handleSaveEvaluations}
-              disabled={savingEvaluation || loading || students.length === 0}
+              disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
             >
               {savingEvaluation ? 'Đang lưu đánh giá...' : 'Lưu tất cả đánh giá'}
             </button>
@@ -994,9 +988,9 @@ export function CoachAttendancePage() {
                       <button
                         type="button"
                         className="btn-history-delete"
-                        onClick={() => handleDeleteFromHistory(record.id, record.className)}
+                        onClick={() => handleDeleteFromHistory(record.id)}
                       >
-                        Xoá bản ghi
+                  Ẩn trên trình duyệt này
                       </button>
                     </div>
                   </div>
@@ -1068,9 +1062,9 @@ export function CoachAttendancePage() {
                       <button
                         type="button"
                         className="btn-history-delete"
-                        onClick={() => handleDeleteFromEvalHistory(record.id, record.className)}
+                        onClick={() => handleDeleteFromEvalHistory(record.id)}
                       >
-                        Xoá bản ghi
+                  Ẩn trên trình duyệt này
                       </button>
                     </div>
                   </div>
@@ -1087,6 +1081,7 @@ export function CoachAttendancePage() {
       {editingAttendanceRecord && (
         <Modal
           title={`Sửa điểm danh: ${editingAttendanceRecord.className}`}
+          busy={saving}
           onClose={() => setEditingAttendanceRecord(null)}
         >
           <div className="modal-edit-container">
@@ -1149,6 +1144,7 @@ export function CoachAttendancePage() {
               <button
                 type="button"
                 className="btn-modal-cancel"
+                disabled={saving}
                 onClick={() => setEditingAttendanceRecord(null)}
               >
                 Hủy bỏ
@@ -1156,6 +1152,7 @@ export function CoachAttendancePage() {
               <button
                 type="button"
                 className="btn-modal-save"
+                disabled={saving}
                 onClick={handleSaveModalAttendance}
               >
                 Lưu cập nhật
@@ -1171,6 +1168,7 @@ export function CoachAttendancePage() {
       {editingEvalRecord && (
         <Modal
           title={`Sửa đánh giá tiến bộ: ${editingEvalRecord.className}`}
+          busy={saving}
           onClose={() => setEditingEvalRecord(null)}
         >
           <div className="modal-edit-container">
@@ -1237,6 +1235,7 @@ export function CoachAttendancePage() {
               <button
                 type="button"
                 className="btn-modal-cancel"
+                disabled={saving}
                 onClick={() => setEditingEvalRecord(null)}
               >
                 Hủy bỏ
@@ -1244,6 +1243,7 @@ export function CoachAttendancePage() {
               <button
                 type="button"
                 className="btn-modal-save"
+                disabled={saving}
                 onClick={handleSaveModalEval}
               >
                 Lưu cập nhật

@@ -38,10 +38,12 @@ jobs:
       # SHA là mã định danh commit. Bỏ qua SHA cũ để tránh CI chậm đẩy lùi production.
       - name: Skip commits superseded on main
         id: commit
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TESTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
+          set -euo pipefail
           latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
           if [ "$TESTED_SHA" = "$latest_sha" ]; then
             echo 'current=true' >> "$GITHUB_OUTPUT"
@@ -49,11 +51,6 @@ jobs:
             echo 'current=false' >> "$GITHUB_OUTPUT"
             echo 'Skipping deployment: main has a newer commit.' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/checkout@v4
-        if: steps.commit.outputs.current == 'true'
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          persist-credentials: false
       # Kiểm tra CI mới nhất của đúng SHA: phải completed/success trên main.
       # Không lấy riêng các run success, vì như vậy có thể bỏ qua lần CI mới hơn bị lỗi.
       - name: Verify latest CI for this exact commit
@@ -63,10 +60,228 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TESTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          gh api --method GET --paginate --slurp \
+          set -euo pipefail
+          latest=$(gh api --method GET --paginate --slurp \
             "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
             -f branch=main -f head_sha="$TESTED_SHA" -f per_page=100 \
-            | python3 scripts/verify_production_ci.py
+            | jq -c --arg sha "$TESTED_SHA" --arg repo "$GITHUB_REPOSITORY" '
+              [.[].workflow_runs[]?
+                | select(
+                    .head_sha == $sha
+                    and .head_branch == "main"
+                    and (.head_repository.full_name? == $repo)
+                    and (.event == "push" or .event == "workflow_dispatch")
+                  )
+              ] | if length == 0 then null else max_by(.run_number) end
+            ')
+          if [ -z "$latest" ] || [ "$latest" = "null" ]; then
+            echo "CI verification failed: Không tìm thấy CI của đúng SHA trên main trong repository này." >&2
+            exit 1
+          fi
+          status=$(jq -r '.status // ""' <<<"$latest")
+          conclusion=$(jq -r '.conclusion // ""' <<<"$latest")
+          run_id=$(jq -r '.id' <<<"$latest")
+          if [ "$status" != "completed" ] || [ "$conclusion" != "success" ]; then
+            echo "CI verification failed: CI mới nhất ($run_id) chưa thành công (status=$status, conclusion=$conclusion)." >&2
+            exit 1
+          fi
+          echo "CI verified: run $run_id, commit $TESTED_SHA"
+
+  backend:
+    name: Deploy backend to Render
+    needs: release
+    if: needs.release.outputs.current == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Deploy tested commit and wait until live
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          DEPLOY_COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          [[ "$RENDER_SERVICE_ID" =~ ^srv-[a-zA-Z0-9-]+$ ]] || { echo "Set RENDER_SERVICE_ID to your existing srv-... service ID" >&2; exit 1; }
+          [[ -n "$RENDER_API_KEY" ]] || { echo "Set the RENDER_API_KEY secret" >&2; exit 1; }
+          [[ "$DEPLOY_COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "DEPLOY_COMMIT must be the full tested Git commit SHA" >&2; exit 1; }
+
+          resp_file=$(mktemp)
+          trap 'rm -f "$resp_file"' EXIT
+
+          render_api() {
+            local method="$1" path="$2" body="${3-}" code
+            local args=(--silent --connect-timeout 10 --max-time 30 -X "$method" -H "Content-Type: application/json" -o "$resp_file" -w '%{http_code}')
+            if [ -n "$body" ]; then
+              args+=(--data "$body")
+            fi
+            code=$(printf 'header = "Authorization: Bearer %s"\n' "$RENDER_API_KEY" \
+              | curl "${args[@]}" --config - "https://api.render.com/v1/$path" || echo "000")
+            if [[ ! "$code" =~ ^2[0-9][0-9]$ ]]; then
+              local safe_path="${path//"$RENDER_SERVICE_ID"/srv-***}"
+              local err_msg
+              err_msg=$(jq -r '.message // empty' "$resp_file" 2>/dev/null | tr '\r\n' '  ' | cut -c1-200 || true)
+              err_msg="${err_msg//"$RENDER_API_KEY"/***}"
+              err_msg="${err_msg//"$RENDER_SERVICE_ID"/srv-***}"
+              echo "::warning::Render API $method /$safe_path returned HTTP $code${err_msg:+ - $err_msg}" >&2
+              return 1
+            fi
+          }
+
+          find_live_deploy() {
+            jq -r --arg sha "$DEPLOY_COMMIT" '
+              [.[]? | (.deploy // .)
+                | select((.commit.id? // .commitId? // "") == $sha and .status == "live")
+              ][0].id // empty
+            ' "$resp_file"
+          }
+
+          find_active_deploy() {
+            local exclude="${1-}"
+            jq -r --arg sha "$DEPLOY_COMMIT" --arg ex "$exclude" '
+              [.[]? | (.deploy // .)
+                | select(
+                    .id != $ex
+                    and (.commit.id? // .commitId? // "") == $sha
+                    and .status != "live"
+                    and .status != "build_failed"
+                    and .status != "update_failed"
+                    and .status != "pre_deploy_failed"
+                    and .status != "canceled"
+                    and .status != "deactivated"
+                  )
+              ][0].id // empty
+            ' "$resp_file"
+          }
+
+          if [ -n "${SUPABASE_URL:-}" ] || [ -n "${SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+            if [[ ! "${SUPABASE_URL:-}" =~ ^https://[a-z0-9]{20}\.supabase\.co$ ]] || [[ "${SUPABASE_PUBLISHABLE_KEY:-}" != sb_publishable_* ]]; then
+              echo "Set both SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY; never use a secret key" >&2
+              exit 1
+            fi
+            for key in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY; do
+              payload=$(jq -nc --arg v "${!key}" '{value: $v}')
+              render_api PUT "services/$RENDER_SERVICE_ID/env-vars/$key" "$payload"
+            done
+          fi
+
+          # Kiểm tra nếu Render Auto-Deploy đã đưa đúng commit này lên live hoặc đang build thì tái sử dụng, tránh tạo deploy trùng.
+          deploy_id=""
+          if render_api GET "services/$RENDER_SERVICE_ID/deploys?limit=20"; then
+            recent=$(jq -r '[.[:5][]? | (.deploy // .) | "\(.id):\(.status):\((.commit.id? // .commitId? // "none")[:7])"] | join(", ")' "$resp_file" 2>/dev/null || true)
+            echo "::notice::Recent Render deploys before trigger: ${recent:-none}"
+            live_id=$(find_live_deploy)
+            if [ -n "$live_id" ]; then
+              echo "::notice::Render commit ${DEPLOY_COMMIT:0:7} is already live ($live_id)"
+              exit 0
+            fi
+            deploy_id=$(find_active_deploy)
+            if [ -n "$deploy_id" ]; then
+              echo "::notice::Reusing in-progress Render deployment $deploy_id for commit ${DEPLOY_COMMIT:0:7}"
+            fi
+          fi
+
+          if [ -z "$deploy_id" ]; then
+            payload=$(jq -nc --arg c "$DEPLOY_COMMIT" '{commitId: $c}')
+            if render_api POST "services/$RENDER_SERVICE_ID/deploys" "$payload"; then
+              deploy_id=$(jq -er '(.deploy // .).id' "$resp_file")
+              echo "::notice::Triggered Render deployment $deploy_id, commit ${DEPLOY_COMMIT:0:7}"
+            else
+              sleep 5
+              render_api GET "services/$RENDER_SERVICE_ID/deploys?limit=20"
+              live_id=$(find_live_deploy)
+              if [ -n "$live_id" ]; then
+                echo "::notice::Render commit ${DEPLOY_COMMIT:0:7} is already live ($live_id)"
+                exit 0
+              fi
+              deploy_id=$(find_active_deploy)
+              if [ -z "$deploy_id" ]; then
+                echo "::error::Deployment failed: Unable to trigger or find active Render deployment for ${DEPLOY_COMMIT:0:7}" >&2
+                exit 1
+              fi
+              echo "::notice::Attached to Render deployment $deploy_id for commit ${DEPLOY_COMMIT:0:7}"
+            fi
+          fi
+
+          deadline=$((SECONDS + 1800))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            if ! render_api GET "services/$RENDER_SERVICE_ID/deploys/$deploy_id"; then
+              sleep 15
+              continue
+            fi
+            status=$(jq -er '(.deploy // .).status' "$resp_file")
+            echo "Render deployment $deploy_id status: $status"
+            if [ "$status" = "live" ]; then
+              exit 0
+            fi
+            case "$status" in
+              build_failed|update_failed|pre_deploy_failed)
+                echo "::error::Deployment failed: Render deployment $deploy_id ended with status: $status" >&2
+                exit 1
+                ;;
+              canceled|deactivated)
+                if render_api GET "services/$RENDER_SERVICE_ID/deploys?limit=20"; then
+                  live_id=$(find_live_deploy)
+                  if [ -n "$live_id" ]; then
+                    echo "::notice::Render commit ${DEPLOY_COMMIT:0:7} is live via deployment $live_id"
+                    exit 0
+                  fi
+                  next_id=$(find_active_deploy "$deploy_id")
+                  if [ -n "$next_id" ]; then
+                    echo "::notice::Switching to active Render deployment $next_id for commit ${DEPLOY_COMMIT:0:7}"
+                    deploy_id="$next_id"
+                    sleep 15
+                    continue
+                  fi
+                fi
+                echo "::error::Deployment failed: Render deployment $deploy_id ended with status: $status" >&2
+                exit 1
+                ;;
+            esac
+            sleep 15
+          done
+
+          echo "Deployment failed: Render deployment did not become live within 30 minutes" >&2
+          exit 1
+      # Render báo live chưa đủ: gọi health thật và yêu cầu status=UP, service=scms-api.
+      # Lấy URL từ service Render hiện có; token chỉ gửi tới Render API, không gửi tới app.
+      - name: Verify deployed backend is healthy
+        timeout-minutes: 5
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          resp_file=$(mktemp)
+          trap 'rm -f "$resp_file"' EXIT
+
+          backend_url=$(printf 'header = "Authorization: Bearer %s"\n' "$RENDER_API_KEY" \
+            | curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+              --config - "https://api.render.com/v1/services/$RENDER_SERVICE_ID" \
+            | jq -er '(.service // .).serviceDetails.url')
+
+          [[ "$backend_url" =~ ^https://[^/@]+ ]] || { echo "Invalid backend HTTPS URL" >&2; exit 1; }
+          health_url="${backend_url%/}/api/v1/health"
+
+          for attempt in $(seq 1 12); do
+            code=$(curl --silent --connect-timeout 10 --max-time 15 \
+              -H 'Cache-Control: no-cache' -H 'User-Agent: SCMS-CD-health-check' \
+              -o "$resp_file" -w '%{http_code}' "$health_url" || echo "000")
+            if [ "$code" = "200" ] && jq -e '.status == "UP" and .service == "scms-api"' "$resp_file" >/dev/null 2>&1; then
+              echo "backend smoke check passed ($health_url)"
+              exit 0
+            fi
+            echo "backend check $attempt/12 failed (HTTP $code)"
+            if [ "$attempt" -eq 12 ]; then
+              echo "Deployment verification failed: backend smoke check failed after 12 attempts" >&2
+              exit 1
+            fi
+            sleep 5
+          done
+      # Luồng này không rollback tự động; API mới vẫn cần tương thích với frontend cũ.
 
   frontend:
     name: Deploy frontend to Vercel
@@ -87,80 +302,128 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - name: Validate Vercel configuration
+        shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
         run: |
+          set -euo pipefail
           : "${VERCEL_TOKEN:?Set the VERCEL_TOKEN secret}"
           : "${VERCEL_ORG_ID:?Set the VERCEL_ORG_ID secret}"
           : "${VERCEL_PROJECT_ID:?Set the VERCEL_PROJECT_ID secret}"
-          [[ "$VERCEL_CLI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Set VERCEL_CLI_VERSION to an exact reviewed version (x.y.z).'; exit 1; }
+          [[ "$VERCEL_CLI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Set VERCEL_CLI_VERSION to an exact reviewed version (x.y.z).' >&2; exit 1; }
       - name: Install pinned Vercel CLI
+        shell: bash
         env:
           VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
         run: npm install --global "vercel@$VERCEL_CLI_VERSION"
       # Chạy từ gốc repo; Root Directory của project Vercel phải được đặt là apps/web.
       - name: Pull production settings
+        shell: bash
         run: vercel pull --yes --environment=production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       - name: Build production frontend
+        shell: bash
         run: vercel build --prod
       - name: Deploy production frontend
         id: deploy
         shell: bash
-        run: |
-          deployment_url=$(vercel deploy --prebuilt --prod)
-          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          deployment_url=$(vercel deploy --prebuilt --prod)
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
       # FRONTEND_URL (Variable, tùy chọn): tên miền production công khai cần kiểm tra.
-      # Nếu không đặt, dùng URL deployment vừa tạo. URL được bảo vệ sẽ làm check thất bại.
-      # Check yêu cầu HTTP 200 và HTML ứng dụng React; retry tối đa 12 lần, cách nhau 5 giây.
+      # Nếu chưa đặt FRONTEND_URL, tự lấy public production domain từ Vercel API để tránh lỗi 401 trên URL hash riêng của deployment.
       - name: Verify deployed frontend responds
-        timeout-minutes: 5
-        env:
-          FRONTEND_URL: ${{ vars.FRONTEND_URL || steps.deploy.outputs.url }}
-        run: python scripts/check_deployment.py frontend "$FRONTEND_URL"
-
-  backend:
-    name: Deploy backend to Render
-    needs: release
-    if: needs.release.outputs.current == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Deploy tested commit and wait until live
-        run: python scripts/deploy-render.py
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
-          DEPLOY_COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
-          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
-      # Render báo live chưa đủ: gọi health thật và yêu cầu status=UP, service=scms-api.
-      # Lấy URL từ service Render hiện có; token chỉ gửi tới Render API, không gửi tới app.
-      - name: Verify deployed backend is healthy
         timeout-minutes: 5
         shell: bash
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          CONFIGURED_FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          backend_url=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
-            --header "Authorization: Bearer $RENDER_API_KEY" \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID" \
-            | jq -er '.serviceDetails.url')
-          python scripts/check_deployment.py backend "${backend_url%/}/api/v1/health"
-      # Luồng này không rollback tự động; API mới vẫn cần tương thích với frontend cũ.
+          set -euo pipefail
+          resp_file=$(mktemp)
+          trap 'rm -f "$resp_file"' EXIT
+
+          target_url="${CONFIGURED_FRONTEND_URL:-}"
+          if [ -z "$target_url" ]; then
+            team_query=""
+            if [[ "$VERCEL_ORG_ID" == team_* ]]; then
+              team_query="?teamId=$VERCEL_ORG_ID"
+            fi
+            deploy_host="${DEPLOYMENT_URL#https://}"
+            deploy_host="${deploy_host%%/*}"
+
+            vercel_get() {
+              printf 'header = "Authorization: Bearer %s"\n' "$VERCEL_TOKEN" \
+                | curl --fail --silent --connect-timeout 10 --max-time 20 \
+                  --config - "https://api.vercel.com$1"
+            }
+
+            alias_host=""
+            if [ -n "$deploy_host" ]; then
+              alias_host=$(vercel_get "/v13/deployments/${deploy_host}${team_query}" \
+                | jq -r '
+                  (.alias // [])
+                  | map(select(type == "string" and length > 0))
+                  | (
+                      map(select(endswith(".vercel.app") | not))
+                      + map(select(endswith(".vercel.app") and (contains("-git-") | not)))
+                      + .
+                    )
+                  | .[0] // empty
+                ' 2>/dev/null || true)
+            fi
+
+            if [ -z "$alias_host" ]; then
+              alias_host=$(vercel_get "/v9/projects/${VERCEL_PROJECT_ID}${team_query}" \
+                | jq -r '
+                  . as $root
+                  | (
+                      ((.targets.production.alias // []) | map(select(type == "string" and length > 0)))
+                      + ((.alias // []) | map(if type == "string" then . else (.domain // .alias // empty) end) | map(select(type == "string" and length > 0)))
+                    )
+                  | (
+                      map(select(endswith(".vercel.app") | not))
+                      + map(select(endswith(".vercel.app") and (contains("-git-") | not)))
+                      + .
+                    )
+                  | .[0] // (if ($root.name? // "") != "" then "\($root.name).vercel.app" else empty end)
+                ' 2>/dev/null || true)
+            fi
+
+            if [ -n "$alias_host" ]; then
+              target_url="https://${alias_host#https://}"
+            else
+              target_url="$DEPLOYMENT_URL"
+            fi
+          fi
+
+          [[ "$target_url" =~ ^https://[^/@]+ ]] || { echo "::error::Health check requires an HTTPS URL without embedded credentials" >&2; exit 1; }
+          echo "::notice::Verifying frontend URL: $target_url"
+
+          for attempt in $(seq 1 12); do
+            meta=$(curl --silent --location --proto '=https' --connect-timeout 10 --max-time 15 \
+              -H 'Cache-Control: no-cache' -H 'User-Agent: SCMS-CD-health-check' \
+              -o "$resp_file" -w '%{http_code} %{content_type}' "$target_url" || echo "000 none")
+            code="${meta%% *}"
+            ctype="${meta#* }"
+            if [ "$code" = "200" ] \
+              && [[ "${ctype,,}" == text/html* ]] \
+              && tr '\r\n' '  ' < "$resp_file" | grep -Eio '<div[^>]*>' | grep -Eiq '(^|[[:space:]])id=["'\'']?root(["'\''[:space:]>]|$)' \
+              && tr '\r\n' '  ' < "$resp_file" | grep -Eio '<script[^>]*>' | grep -Ei '(^|[[:space:]])type=["'\'']?module(["'\''[:space:]>]|$)' | grep -Eiq '(^|[[:space:]])src=["'\'']?[^"'\''[:space:]>]+'; then
+              echo "::notice::Frontend smoke check passed ($target_url)"
+              exit 0
+            fi
+            echo "frontend check $attempt/12 failed (HTTP $code)"
+            if [ "$attempt" -eq 12 ]; then
+              echo "::error::Deployment verification failed: frontend smoke check failed after 12 attempts ($target_url returned HTTP $code)" >&2
+              exit 1
+            fi
+            sleep 5
+          done

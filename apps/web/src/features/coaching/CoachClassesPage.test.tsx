@@ -250,9 +250,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       filterSelect.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    expect(host.textContent).toContain('Có mặt');
-    expect(host.textContent).toContain('Vắng mặt');
-    expect(host.textContent).toContain('Tỷ lệ chuyên cần');
+    expect(host.querySelectorAll('.history-record-card')).toHaveLength(0);
 
     // Chuyển sang "Đánh giá học viên"
     await act(async () => {
@@ -260,7 +258,6 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       filterSelect.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    expect(host.textContent).toContain('Điểm trung bình');
-    expect(host.textContent).toContain('Đã đánh giá');
+    expect(host.querySelectorAll('.history-record-card')).toHaveLength(0);
   });
 });

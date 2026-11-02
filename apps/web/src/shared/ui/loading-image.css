@@ -1,0 +1,2 @@
+.loading-image[aria-busy='true'] { background-color: var(--portal-raised, #ffffff12); }
+:root[data-theme='light'] .loading-image[aria-busy='true'] { background-color: #eeefec; }
