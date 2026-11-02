@@ -130,6 +130,7 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
           <ul className="fit-sport-story-programs">{sport.programs.map(program => <li key={program}>{program}</li>)}</ul>
           <div className="fit-sport-story-footer">
             <Link className="fit-pill" to={classPath}>Xem lịch học<RoundArrow diagonal /></Link>
+            {sport.tier === 'secondary' && <Link className="fit-text-link" to={`/${sport.id}`}>Giới thiệu {sport.name}</Link>}
           </div>
           <figure className="fit-sport-story-inline" data-reveal="image">{illustration(sport)}</figure>
         </article>)}

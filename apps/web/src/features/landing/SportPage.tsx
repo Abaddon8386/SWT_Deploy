@@ -4,62 +4,12 @@ import { CatalogSchedule, CatalogStatus } from './components/CatalogSections';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../shared/api/client';
 import { PublicLayout, RoundArrow } from './components/PublicLayout';
+import { SPORT_PAGES, SPORT_PAGE_LIST, sportIdFromPath, type SportPageId } from './sportPages';
 
-interface SportPageData {
-  id: 'swimming' | 'tennis';
-  path: string;
-  kicker: string;
-  title: string;
-  subtitle: string;
-  image: string;
-  stats: { value: string; label: string }[];
-  programs: { code: string; title: string; tag: string }[];
-}
-
-const SPORT_PAGES: Record<'swimming' | 'tennis', SportPageData> = {
-  swimming: {
-    id: 'swimming',
-    path: '/swimming',
-    kicker: 'AQUATICS CLUB',
-    title: 'Hồ Bơi Bốn Mùa',
-    subtitle: 'Bơi lội · Sức bền · Thả lỏng',
-    image: '/images/fitness/aquatics-pool.jpg',
-    stats: [
-      { value: '06 Làn', label: 'Phân luồng tốc độ' },
-      { value: 'Nước Ấm', label: 'Bơi thoải mái 4 mùa' },
-      { value: '06:00 — 22:00', label: 'Mở cửa mỗi ngày' },
-    ],
-    programs: [
-      { code: '01', title: 'Làm Quen & Nhịp Thở', tag: 'Dành cho người mới' },
-      { code: '02', title: 'Bơi Sải & Sức Bền', tag: 'Kỹ thuật lướt nước' },
-      { code: '03', title: 'Thả Lỏng Dưới Nước', tag: 'Phục hồi sau buổi tập' },
-    ],
-  },
-  tennis: {
-    id: 'tennis',
-    path: '/tennis',
-    kicker: 'TENNIS CLUB',
-    title: 'Sân Tennis Câu Lạc Bộ',
-    subtitle: 'Kỹ thuật · Bộ chân · Đánh đôi',
-    image: '/images/fitness/tennis-court.jpg',
-    stats: [
-      { value: '02 Sân', label: 'Mặt sân tiêu chuẩn' },
-      { value: 'Máy Tập', label: 'Hỗ trợ tập cá nhân' },
-      { value: '06:00 — 22:00', label: 'Mở cửa mỗi ngày' },
-    ],
-    programs: [
-      { code: '01', title: 'Nhập Môn & Cầm Vợt', tag: 'Cảm giác bóng cơ bản' },
-      { code: '02', title: 'Giao Bóng & Lên Lưới', tag: 'Forehand · Backhand · Serve' },
-      { code: '03', title: 'Bộ Chân & Đánh Đôi', tag: 'Giao lưu cuối tuần' },
-    ],
-  },
-};
-
-export function SportPage({ forcedSport }: { forcedSport?: 'swimming' | 'tennis' }) {
+export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
   const { sportId } = useParams<{ sportId?: string }>();
   const { pathname } = useLocation();
-  const key: 'swimming' | 'tennis' =
-    forcedSport ?? (sportId === 'tennis' || pathname.includes('tennis') ? 'tennis' : 'swimming');
+  const key: SportPageId = forcedSport ?? sportIdFromPath(sportId ? `/sports/${sportId}` : pathname) ?? 'swimming';
   const sport = SPORT_PAGES[key];
   const { catalog, error, retry } = usePublicCatalog();
   const user = getCurrentUser();
@@ -74,22 +24,17 @@ export function SportPage({ forcedSport }: { forcedSport?: 'swimming' | 'tennis'
               ← Quay lại Trang chủ
             </Link>
             <div className="fit-trainer-switcher" role="navigation" aria-label="Chọn bộ môn">
-              <Link
-                to="/swimming"
-                className={`fit-trainer-switch-pill ${sport.id === 'swimming' ? 'is-active' : ''}`}
-                aria-current={sport.id === 'swimming' ? 'page' : undefined}
-              >
-                <span>Hồ Bơi</span>
-                <small>Aquatics Club</small>
-              </Link>
-              <Link
-                to="/tennis"
-                className={`fit-trainer-switch-pill ${sport.id === 'tennis' ? 'is-active' : ''}`}
-                aria-current={sport.id === 'tennis' ? 'page' : undefined}
-              >
-                <span>Sân Tennis</span>
-                <small>Tennis Club</small>
-              </Link>
+              {SPORT_PAGE_LIST.map((item) => (
+                <Link
+                  key={item.id}
+                  to={item.path}
+                  className={`fit-trainer-switch-pill ${sport.id === item.id ? 'is-active' : ''}`}
+                  aria-current={sport.id === item.id ? 'page' : undefined}
+                >
+                  <span>{item.label}</span>
+                  <small>{item.club}</small>
+                </Link>
+              ))}
             </div>
           </div>
 

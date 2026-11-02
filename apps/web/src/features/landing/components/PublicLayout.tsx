@@ -7,6 +7,7 @@ import { useComponentReveal } from '../hooks/useComponentReveal';
 import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
 import { ChatWidget } from '../../chat/ChatWidget';
 import '../fitness-public.css';
+import { SPORT_PAGES, sportIdFromPath } from '../sportPages';
 
 const links = [
   { to: '/#about', hash: 'about', label: 'Về SÖL' },
@@ -39,8 +40,8 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   useComponentReveal(root, pathname);
 
   const isNavActive = (to: string, target?: string) => {
-    if (to === '/swimming') return pathname === '/swimming' || pathname === '/sports/swimming';
-    if (to === '/tennis') return pathname === '/tennis' || pathname === '/sports/tennis';
+    const sportTarget = sportIdFromPath(to);
+    if (sportTarget && to === SPORT_PAGES[sportTarget].path) return sportIdFromPath(pathname) === sportTarget;
     if (target === 'trainers') return pathname.startsWith('/trainers') || (pathname === '/' && hash === '#trainers');
     if (target) return pathname === '/' && hash === `#${target}`;
     return pathname === to;
@@ -51,13 +52,11 @@ export function PublicLayout({ children }: { children: ReactNode }) {
       ? 'Đăng nhập'
       : pathname === '/register'
         ? 'Đăng ký hội viên'
-        : pathname === '/swimming' || pathname === '/sports/swimming'
-          ? 'Hồ Bơi Bốn Mùa'
-          : pathname === '/tennis' || pathname === '/sports/tennis'
-            ? 'Sân Tennis Câu Lạc Bộ'
-            : pathname.startsWith('/trainers')
-              ? 'Huấn luyện viên'
-              : 'Build your body. Find your balance.';
+        : sportIdFromPath(pathname)
+          ? SPORT_PAGES[sportIdFromPath(pathname)!].title
+          : pathname.startsWith('/trainers')
+            ? 'Huấn luyện viên'
+            : 'Build your body. Find your balance.';
     document.title = `${pageTitle} · SÖL Fitness`;
     if (hash) {
       const targetId = hash.slice(1);

@@ -7,6 +7,7 @@ import { RoundArrow } from './PublicLayout';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
+import { DISCIPLINES, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
 
 export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
   loading: boolean; retry: () => void; kind?: 'packages' | 'trainers' | 'schedule';
@@ -63,10 +64,11 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
 }
 
 export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
-  catalog: PublicCatalog; joinPath: string; coachId?: number; sport?: 'swimming' | 'tennis';
+  catalog: PublicCatalog; joinPath: string; coachId?: number; sport?: DisciplineId;
 }) {
   const [discipline, setDiscipline] = useState('all');
-  const matchesSport = (value: string) => !sport || (sport === 'swimming' ? /bơi|swim|aquatic/i : /tennis/i).test(value);
+  const sportName = DISCIPLINES.find((item) => item.id === sport)?.name;
+  const matchesSport = (value: string) => !sportName || matchesDiscipline(value, sportName);
   const sessions = catalog.sessions.filter(session => matchesSport(session.disciplineName)
     && (!coachId || session.coachId === coachId));
   const disciplines = [...new Set(sessions.map(session => session.disciplineName))];

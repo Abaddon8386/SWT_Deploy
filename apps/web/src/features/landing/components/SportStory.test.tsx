@@ -41,7 +41,8 @@ it('keeps every sport and CTA readable in document flow with inline mobile illus
   expect([...host.querySelectorAll('.fit-sport-story-step h3')].map(heading => heading.textContent)).toEqual(['Gym', 'Bơi lội', 'Boxing', 'Tennis', 'Cầu lông']);
   expect([...host.querySelectorAll('.fit-sport-story-tier')].map(tier => tier.textContent)).toEqual(['Bộ môn chính', 'Bộ môn phụ', 'Bộ môn phụ', 'Bộ môn phụ', 'Bộ môn phụ']);
   expect(host.querySelectorAll('.fit-sport-story-inline img')).toHaveLength(5);
-  expect([...host.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(Array(5).fill('/login'));
+  expect([...host.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(
+    ['/login', '/login', '/swimming', '/login', '/boxing', '/login', '/tennis', '/login', '/badminton']);
   expect(host.querySelector('[inert], .fit-sport-stack-deck')).toBeNull();
 });
 
