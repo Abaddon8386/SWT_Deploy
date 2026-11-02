@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
@@ -74,7 +74,7 @@ export function CourtBookingFeature() {
       <p><strong>{selection.court.name}</strong> · {selection.court.disciplineName}</p>
       <p>{displayDate(selection.date)} · {shortTime(selection.slot.startTime)}–{shortTime(selection.slot.endTime)}</p>
       <p className="muted">Không phát sinh phí. Tối đa 2 lượt/ngày; hủy trước giờ bắt đầu ít nhất 2 giờ.</p>
-      {actionError && <p className="portal-alert" role="alert">{actionError}</p>}
+      {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{actionError}</p>{actionError.includes('gói tập') && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">Xem / Đăng ký gói tập</Link></div>}</div>}
       <div className="court-modal-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>Quay lại</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? 'Đang đặt…' : 'Xác nhận đặt'}</button></div>
     </Modal>}
   </div>;

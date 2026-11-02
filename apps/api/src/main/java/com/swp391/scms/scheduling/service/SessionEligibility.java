@@ -41,12 +41,12 @@ final class SessionEligibility {
         LocalDate today = clock.instant().atZone(CENTER_ZONE).toLocalDate();
         if (!subscriptions.hasActiveMembership(memberId, today)) {
             throw new ForbiddenException("SCHEDULING_MEMBERSHIP_INVALID",
-                    "error.scheduling.membership_expired_or_inactive", null, null);
+                    "error.scheduling.membership_expired_or_inactive", null, "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch");
         }
         // One currently active period must cover both dates; do not combine future renewals.
         if (!subscriptions.hasActiveMembershipCoveringSession(memberId, today, sessionDate)) {
             throw new ForbiddenException("SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION",
-                    "error.scheduling.membership_session_not_covered", new Object[]{sessionDate}, null);
+                    "error.scheduling.membership_session_not_covered", new Object[]{sessionDate}, "Gói tập hiện tại không bao phủ ngày học " + sessionDate + ". Vui lòng chọn buổi học nằm trong thời hạn gói tập hoặc gia hạn thêm.");
         }
     }
 }

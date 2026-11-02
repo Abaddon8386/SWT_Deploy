@@ -262,7 +262,7 @@ public class CoachBookingService {
         if (classSessionRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate()).stream()
                 .anyMatch(cs -> request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime()))) {
             throw new ConflictException("MEMBER_SCHEDULE_CONFLICT", "error.coach_booking.member_busy", null,
-                    "You already have a group class in this time slot.");
+                    "Bạn đã có lịch học lớp trong khung giờ này.");
         }
 
         List<MembershipSubscription> validSubscriptions = subscriptionRepository
@@ -275,7 +275,7 @@ public class CoachBookingService {
                 .toList();
         if (validSubscriptions.isEmpty()) {
             throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription",
-                    "An active membership covering the booking date is required.");
+                    "Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.");
         }
 
         // Rule 4: Payment / PT Quota verification

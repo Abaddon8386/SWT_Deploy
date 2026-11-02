@@ -57,7 +57,7 @@ export function MemberCheckInPage() {
         {result && <div role="status" aria-live="polite" className="qr-checkin-result" data-granted={granted}>
           <h2>{granted ? 'Check-in thành công' : 'Chưa thể check-in'}</h2>
           <p>{granted ? `${result.memberName || 'Hội viên'} · ${result.gate || 'Cổng trung tâm'}` : result.denialReason || 'Vui lòng kiểm tra gói tập hoặc liên hệ lễ tân.'}</p>
-          {granted && <p>Giờ vào: {new Date(result.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>}
+          {granted ? <p>Giờ vào: {new Date(result.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p> : <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}><Link className="btn-primary btn-sm" to="/member/packages">Đăng ký / Gia hạn gói tập</Link><Link className="btn-secondary btn-sm" to="/member/card">Kiểm tra thẻ hội viên</Link></div>}
         </div>}
         <QrCameraScanner onScan={(code) => void scan(code)} disabled={pending || !online} />
       </div>

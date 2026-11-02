@@ -38,7 +38,7 @@ export const displayDate = (date: string) => date.split('-').reverse().join('/')
 export function courtError(error: unknown): string {
   const messages: Record<string, string> = {
     COURT_BOOKING_SLOT_TAKEN: 'Khung giờ vừa được đặt hoặc đang có lớp. Vui lòng chọn khung khác.',
-    COURT_BOOKING_MEMBERSHIP_INVALID: 'Bạn cần gói tập đang hoạt động và còn hạn đến ngày đặt sân.',
+    COURT_BOOKING_MEMBERSHIP_INVALID: 'Bạn chưa đăng ký gói tập hoặc gói tập không còn hiệu lực đến ngày đặt sân. Vui lòng đăng ký gói tập trước khi đặt sân.',
     COURT_BOOKING_PAST_SLOT: 'Khung giờ đã qua. Vui lòng chọn khung khác.',
     COURT_BOOKING_TOO_FAR: 'Bạn chỉ có thể đặt trước tối đa 7 ngày.',
     COURT_BOOKING_LIMIT_REACHED: 'Bạn đã có đủ 2 lượt đặt trong ngày này.',
