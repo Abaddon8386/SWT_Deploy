@@ -34,6 +34,10 @@ components:
         location: { type: string }
         capacity: { type: integer, minimum: 1 }
         status: { type: string, enum: [available, maintenance, closed] }
+        disciplineId: { type: integer, format: int64, nullable: true, description: 'Court discipline; null for ordinary rooms' }
+        disciplineName: { type: string, nullable: true, readOnly: true }
+        openTime: { type: string, nullable: true, example: '06:00:00', description: 'Required whole hour when disciplineId assigned' }
+        closeTime: { type: string, nullable: true, example: '22:00:00', description: 'Whole hour strictly after openTime; no overnight opening' }
     MembershipPackage:
       type: object
       properties:

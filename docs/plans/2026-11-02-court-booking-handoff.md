@@ -1,7 +1,7 @@
 # Bàn giao: Tính năng đặt sân (Tennis, Cầu lông, Bơi lội)
 
 > Dành cho coding agent tiếp nhận. Đọc cùng `AGENTS.md`, `docs/rules/backend-architecture.md`, `DESIGN.md` (chỉ là bản ghi chép, không phải ràng buộc) và `docs/PROJECT_MASTER_GUIDE.md`.
-> Ngày lập: 02/11/2026. Trạng thái: **chưa có dòng code nào cho tính năng này**; file này là đặc tả và danh sách việc.
+> Ngày lập: 02/11/2026. Trạng thái: đặc tả này đã được triển khai theo [kế hoạch triển khai](2026-11-02-court-booking-implementation.md) (người dùng duyệt cả tám mặc định ở mục 3 và cả hai giai đoạn). Bằng chứng kiểm thử nằm cuối file kế hoạch; riêng test trigger với Supabase thật (`CourtBookingPostgreSqlTest`) chưa chạy vì thiếu `SCMS_POSTGRES_TEST_URL`. Một số chi tiết triển khai khác đề xuất ở dưới (ví dụ route availability dùng `{id}`, thêm mã lỗi `COURT_BOOKING_INVALID_SLOT/FORBIDDEN/INVALID_COURT`) — kế hoạch triển khai là nguồn đúng.
 
 ## 1. Mục tiêu
 

@@ -1,0 +1,200 @@
+openapi: 3.0.3
+info:
+  title: SCMS court booking
+  version: 1.0.0
+  description: >
+    Tennis, badminton and swimming lane reservations. No payment is created.
+    All responses use ApiResponse and Accept-Language (vi by default).
+    Dates/times use Asia/Ho_Chi_Minh. Book from today through today+7 inclusive,
+    at whole hours for 60 minutes within the configured room opening hours.
+    Maximum two booked reservations per member per day; one currently active
+    subscription must cover today and the reservation date.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /courts:
+    get:
+      description: Available configured courts. MEMBER, RECEPTIONIST, STAFF or CENTER_MANAGER.
+      parameters:
+        - {name: discipline, in: query, schema: {type: string}, description: 'Exact discipline name, case insensitive'}
+      responses:
+        '200':
+          description: Courts; empty array if none configured
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiResponse'}
+                  - properties:
+                      data: {type: array, items: {$ref: '#/components/schemas/Court'}}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /courts/{roomId}/availability:
+    get:
+      description: Anonymous slot statuses; never returns member identities. Same roles as court list.
+      parameters:
+        - {$ref: '#/components/parameters/RoomId'}
+        - {name: date, in: query, required: true, schema: {type: string, format: date}}
+      responses:
+        '200':
+          description: Whole-hour slots in room opening hours
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiResponse'}
+                  - properties:
+                      data: {type: array, items: {$ref: '#/components/schemas/Slot'}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /court-bookings:
+    post:
+      description: MEMBER only. Authenticated member is the booking owner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, date, startTime]
+              properties:
+                roomId: {type: integer, format: int64}
+                date: {type: string, format: date}
+                startTime: {type: string, example: '12:00:00'}
+      responses:
+        '201': {$ref: '#/components/responses/Booking'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+    get:
+      description: Daily booking list. RECEPTIONIST, STAFF or CENTER_MANAGER only. Excludes soft-deleted members.
+      parameters:
+        - {name: date, in: query, required: true, schema: {type: string, format: date}}
+        - {name: roomId, in: query, schema: {type: integer, format: int64}}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200': {$ref: '#/components/responses/BookingPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /court-bookings/my:
+    get:
+      description: MEMBER only. Own bookings, newest date first, including cancelled/past reservations.
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200': {$ref: '#/components/responses/BookingPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /court-bookings/{id}/cancel:
+    patch:
+      description: >
+        MEMBER owner may cancel at least two hours before start (boundary inclusive).
+        RECEPTIONIST, STAFF and CENTER_MANAGER may cancel any future reservation.
+        Repeated cancellation is idempotent after ownership authorization.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: {type: string, maxLength: 255, nullable: true}
+      responses:
+        '200': {$ref: '#/components/responses/Booking'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    RoomId: {name: roomId, in: path, required: true, schema: {type: integer, format: int64}}
+    Page: {name: page, in: query, schema: {type: integer, default: 0, minimum: 0}}
+    Size: {name: size, in: query, schema: {type: integer, default: 20, minimum: 1, maximum: 100}}
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success: {type: boolean}
+        status: {type: integer}
+        message: {type: string}
+        code: {type: string}
+        data: {}
+        details: {}
+        timestamp: {type: string, format: date-time}
+    Court:
+      type: object
+      properties:
+        id: {type: integer, format: int64}
+        name: {type: string}
+        location: {type: string, nullable: true}
+        disciplineId: {type: integer, format: int64}
+        disciplineName: {type: string, enum: [Tennis, Cầu lông, Bơi lội]}
+        openTime: {type: string, example: '06:00:00'}
+        closeTime: {type: string, example: '22:00:00'}
+    Slot:
+      type: object
+      properties:
+        startTime: {type: string}
+        endTime: {type: string}
+        status: {type: string, enum: [free, booked, class, past]}
+    Booking:
+      type: object
+      properties:
+        id: {type: integer, format: int64}
+        roomId: {type: integer, format: int64}
+        roomName: {type: string}
+        disciplineName: {type: string, nullable: true}
+        memberId: {type: integer, format: int64}
+        memberName: {type: string}
+        date: {type: string, format: date}
+        startTime: {type: string}
+        endTime: {type: string}
+        status: {type: string, enum: [booked, cancelled]}
+        createdAt: {type: string, format: date-time}
+        cancelledAt: {type: string, format: date-time, nullable: true}
+        cancelReason: {type: string, nullable: true}
+        canCancel: {type: boolean, description: Calculated for authenticated actor and current time}
+    BookingPage:
+      type: object
+      properties:
+        content: {type: array, items: {$ref: '#/components/schemas/Booking'}}
+        totalElements: {type: integer}
+        totalPages: {type: integer}
+        number: {type: integer}
+        size: {type: integer}
+        first: {type: boolean}
+        last: {type: boolean}
+  responses:
+    Booking:
+      description: Reservation
+      content:
+        application/json:
+          schema:
+            allOf:
+              - {$ref: '#/components/schemas/ApiResponse'}
+              - properties:
+                  data: {$ref: '#/components/schemas/Booking'}
+    BookingPage:
+      description: Paginated reservations
+      content:
+        application/json:
+          schema:
+            allOf:
+              - {$ref: '#/components/schemas/ApiResponse'}
+              - properties:
+                  data: {$ref: '#/components/schemas/BookingPage'}
+    BadRequest:
+      description: 'COURT_BOOKING_PAST_SLOT, TOO_FAR, INVALID_SLOT, INVALID_COURT or CANCEL_TOO_LATE (all prefixed COURT_BOOKING_); invalid input also uses shared validation errors'
+    Forbidden:
+      description: 'COURT_BOOKING_MEMBERSHIP_INVALID, COURT_BOOKING_FORBIDDEN or role denied'
+    NotFound:
+      description: COURT_BOOKING_NOT_FOUND
+    Conflict:
+      description: 'COURT_BOOKING_SLOT_TAKEN, COURT_BOOKING_LIMIT_REACHED or COURT_BOOKING_COURT_UNAVAILABLE'
