@@ -139,6 +139,10 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/coaching/CoachTrainingPlanPage')).CoachTrainingPlanPage }),
           },
           {
+            path: '/coach/support',
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachSupportPage')).CoachSupportPage }),
+          },
+          {
             path: '/staff/coach-classes',
             lazy: async () => ({ Component: (await import('../features/coaching/CoachClassesPage')).CoachClassesPage }),
           },

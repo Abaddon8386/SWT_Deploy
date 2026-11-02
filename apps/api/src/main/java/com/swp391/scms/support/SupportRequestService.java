@@ -34,7 +34,7 @@ import java.util.Set;
 public class SupportRequestService {
 
     private static final Set<String> VALID_STATUSES = Set.of("open", "in_progress", "resolved", "closed");
-    private static final Set<String> STAFF_ROLES = Set.of("CENTER_MANAGER", "RECEPTIONIST");
+    private static final Set<String> STAFF_ROLES = Set.of("CENTER_MANAGER", "RECEPTIONIST", "COACH");
 
     private final SupportRequestRepository supportRequestRepository;
     private final SupportRequestMapper supportRequestMapper;
@@ -319,7 +319,8 @@ public class SupportRequestService {
         String normalized = role.startsWith("ROLE_") ? role.substring(5) : role;
         return STAFF_ROLES.contains(normalized.toUpperCase(Locale.ROOT))
                 || "MANAGER".equalsIgnoreCase(normalized)
-                || "STAFF".equalsIgnoreCase(normalized);
+                || "STAFF".equalsIgnoreCase(normalized)
+                || "COACH".equalsIgnoreCase(normalized);
     }
 
     private void validateStatusTransition(String currentStatus, String targetStatus) {

@@ -62,9 +62,9 @@ public class SupportRequestController {
         return ApiResponse.ok(msg("support.list.success"), requests);
     }
 
-    @Operation(summary = "Xem toàn bộ yêu cầu, lọc theo status (Manager/Receptionist)")
+    @Operation(summary = "Xem toàn bộ yêu cầu, lọc theo status (Manager/Receptionist/Coach)")
     @GetMapping
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST', 'COACH')")
     public ApiResponse<Page<SupportRequestDto>> getAllRequests(
             @RequestParam(required = false) String status,
             @PageableDefault(size = 20) Pageable pageable) {
@@ -72,9 +72,9 @@ public class SupportRequestController {
         return ApiResponse.ok(msg("support.list.success"), requests);
     }
 
-    @Operation(summary = "Cập nhật trạng thái và người phụ trách yêu cầu (Manager/Receptionist)")
+    @Operation(summary = "Cập nhật trạng thái và người phụ trách yêu cầu (Manager/Receptionist/Coach)")
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST', 'COACH')")
     public ApiResponse<SupportRequestDto> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateSupportRequestStatusDto request) {
@@ -84,7 +84,7 @@ public class SupportRequestController {
 
     @Operation(summary = "Gửi tin nhắn mới vào yêu cầu hỗ trợ (SCRUM-106)")
     @PostMapping("/{id}/messages")
-    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER', 'COACH')")
     public ApiResponse<SupportRequestMessageDto> sendMessage(
             @PathVariable Long id,
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -95,7 +95,7 @@ public class SupportRequestController {
 
     @Operation(summary = "Lấy lịch sử hội thoại trong yêu cầu hỗ trợ theo thời gian (SCRUM-106)")
     @GetMapping("/{id}/messages")
-    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER', 'COACH')")
     public ApiResponse<List<SupportRequestMessageDto>> getMessages(
             @PathVariable Long id,
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
