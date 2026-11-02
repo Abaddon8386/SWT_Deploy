@@ -391,11 +391,8 @@ public class AuthService {
         // BR-03 & BR-04: Match by googleSub/email or auto-create active MEMBER account
         User user = resolveOrCreateGoogleUser(googleUser, "active", false);
 
-        // BR-05: Only role MEMBER is allowed! COACH / STAFF / RECEPTIONIST / CENTER_MANAGER / MANAGER -> 403 Forbidden!
-        String roleCode = user.getRole().getCode();
-        if (!"MEMBER".equalsIgnoreCase(roleCode)) {
-            throw new ForbiddenException("STAFF_GOOGLE_NOT_ALLOWED", "auth.google.staff_not_allowed", null, "Staff accounts are not allowed to log in via Google");
-        }
+        // Existing staff accounts retain the database role; new Google accounts are always Members.
+        ensureGoogleOtpAccountAllowed(user);
 
         // BR-06: Locked / inactive / deleted accounts rejected
         if (user.getDeletedAt() != null || !"active".equalsIgnoreCase(user.getStatus())) {
@@ -422,11 +419,13 @@ public class AuthService {
     }
 
     private void ensureGoogleOtpAccountAllowed(User user) {
-        if (user.getRole() == null || !"MEMBER".equalsIgnoreCase(user.getRole().getCode())) {
-            throw new ForbiddenException("STAFF_GOOGLE_NOT_ALLOWED", "auth.google.staff_not_allowed", null, "Staff accounts are not allowed to log in via Google");
+        if (user.getRole() == null || !java.util.Set.of("MEMBER", "COACH", "RECEPTIONIST")
+                .contains(user.getRole().getCode().toUpperCase(Locale.ROOT))) {
+            throw new ForbiddenException("STAFF_GOOGLE_NOT_ALLOWED", "auth.google.staff_not_allowed", null, null);
         }
         String status = user.getStatus();
-        boolean allowedStatus = "active".equalsIgnoreCase(status) || "inactive".equalsIgnoreCase(status);
+        boolean allowedStatus = "active".equalsIgnoreCase(status)
+                || ("MEMBER".equalsIgnoreCase(user.getRole().getCode()) && "inactive".equalsIgnoreCase(status));
         if (user.getDeletedAt() != null || !allowedStatus) {
             throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
         }

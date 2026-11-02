@@ -192,7 +192,7 @@ class GoogleAuthServiceTest {
     }
 
     @Test
-    @DisplayName("Case 5: Tài khoản nhân sự (COACH/RECEPTIONIST/STAFF/MANAGER) -> Ném lỗi ForbiddenException (403)")
+    @DisplayName("Manager vẫn dùng đăng nhập thường")
     void testGoogleLogin_StaffNotAllowed() {
         GoogleUserInfo coachGoogleUser = new GoogleUserInfo(
                 "sub-coach",
@@ -208,7 +208,7 @@ class GoogleAuthServiceTest {
         coachUser.setEmail("coach@center.com");
         coachUser.setUsername("head_coach");
         coachUser.setStatus("active");
-        coachUser.setRole(createRole("COACH")); // Role COACH
+        coachUser.setRole(createRole("CENTER_MANAGER"));
 
         when(userRepository.findByGoogleSub("sub-coach")).thenReturn(Optional.of(coachUser));
 
@@ -336,7 +336,7 @@ class GoogleAuthServiceTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.CsvSource({"locked,MEMBER,false", "active,COACH,false", "active,MEMBER,true"})
+    @org.junit.jupiter.params.provider.CsvSource({"locked,MEMBER,false", "locked,COACH,false", "active,CENTER_MANAGER,false", "active,ADMIN,false", "active,RECEPTIONIST,true", "active,MEMBER,true"})
     void googleCallbackStillRejectsLockedStaffAndDeletedAccounts(String status, String role, boolean deleted) {
         var member = new User();
         member.setEmail("blocked@gmail.com");
@@ -348,6 +348,45 @@ class GoogleAuthServiceTest {
         when(userRepository.findByGoogleSub("blocked-sub")).thenReturn(Optional.of(member));
         assertThrows(ForbiddenException.class, () -> authService.authenticateGoogle(new GoogleOAuthCallbackRequest("blocked-token")));
         verifyNoInteractions(jwtService, otpService, otpDeliveryPort);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
+    void provisionedStaffGoogleCallbackLinksByEmailAndKeepsRole(String role) {
+        User staff = new User();
+        staff.setId(81L);
+        staff.setEmail("staff@gmail.com");
+        staff.setStatus("active");
+        staff.setRole(createRole(role));
+        when(googleTokenVerifierPort.verify("staff-token")).thenReturn(
+                new GoogleUserInfo("staff-sub", "STAFF@gmail.com", true, "Staff", null));
+        when(userRepository.findByEmailIgnoreCase("staff@gmail.com")).thenReturn(Optional.of(staff));
+        when(jwtService.generateToken(81L, "staff@gmail.com", role)).thenReturn("staff-jwt");
+
+        var result = authService.authenticateGoogle(new GoogleOAuthCallbackRequest("staff-token"));
+
+        assertEquals(role, result.authentication().role());
+        assertEquals("staff-jwt", result.authentication().token());
+        assertEquals("staff-sub", staff.getGoogleSub());
+        verify(userRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(roleRepository, otpService, otpDeliveryPort);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
+    void linkedStaffDirectGoogleLoginKeepsDatabaseRole(String role) {
+        User staff = new User();
+        staff.setId(82L);
+        staff.setEmail("staff@gmail.com");
+        staff.setStatus("active");
+        staff.setRole(createRole(role));
+        staff.setGoogleSub("staff-sub");
+        when(googleTokenVerifierPort.verify("staff-token")).thenReturn(
+                new GoogleUserInfo("staff-sub", "staff@gmail.com", true, "Staff", null));
+        when(userRepository.findByGoogleSub("staff-sub")).thenReturn(Optional.of(staff));
+        when(jwtService.generateToken(82L, "staff@gmail.com", role)).thenReturn("staff-jwt");
+        assertEquals(role, authService.loginWithGoogle(new GoogleLoginRequest("staff-token")).role());
+        verifyNoInteractions(roleRepository);
     }
 
 }
