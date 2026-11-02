@@ -68,6 +68,16 @@ components:
         phone: { type: string, maxLength: 20, nullable: true }
         roleId: { type: integer, format: int64, nullable: true }
         gender: { type: string, enum: [male, female, other], nullable: true }
+    StaffAccountCreate:
+      type: object
+      required: [fullName, email, password, gender, roleCode]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 150 }
+        email: { type: string, format: email, maxLength: 150 }
+        phone: { type: string, maxLength: 20, nullable: true }
+        password: { type: string, minLength: 6, maxLength: 50 }
+        gender: { type: string, enum: [male, female, other] }
+        roleCode: { type: string, enum: [COACH, RECEPTIONIST] }
 security:
   - bearerAuth: []
 paths:
@@ -103,11 +113,13 @@ paths:
       responses: { '200': { description: OK }, '400': { description: OTP_EXPIRED / INVALID_OTP }, '403': { description: ACCOUNT_INACTIVE }, '429': { description: MAX_ATTEMPTS } }
   /auth/google/oauth-callback:
     post:
-      summary: Authenticate active Google members or send activation OTP (SCRUM-89, public)
+      summary: Authenticate Google Member or provisioned staff accounts (public)
       description: >
         Accepts an ID token or an access token bound to this application client. Authorization codes are accepted only by the state-protected GET callback.
-        Active MEMBER accounts receive JWT authentication immediately without OTP generation or email. New/inactive MEMBER accounts receive activation OTP.
-        Staff, deleted and locked accounts are rejected. Pending accounts complete activation through /auth/google/verify-otp.
+        Active MEMBER, COACH and RECEPTIONIST accounts receive JWT authentication with their stored database role.
+        New Google identities create only MEMBER accounts; new/inactive Members receive activation OTP.
+        Inactive staff, Manager, Admin, deleted and locked accounts are rejected.
+        Existing Google bindings cannot be replaced. Email linking requires a verified Gmail or Google Workspace identity.
       security: []
       requestBody:
         required: true
@@ -235,7 +247,7 @@ paths:
   /auth/google:
     post:
       summary: Authenticate via Google ID Token (SCRUM-89, public). data = { token, username, role }
-      description: Requires GOOGLE_CLIENT_ID. Only active MEMBER accounts may sign in through Google. Existing Google bindings cannot be replaced. Linking existing accounts with third-party email requires additional verification.
+      description: Requires GOOGLE_CLIENT_ID. Active MEMBER, COACH and RECEPTIONIST accounts may sign in with their stored role. New accounts are always MEMBER. Existing Google bindings cannot be replaced. Linking existing accounts with third-party email requires additional verification.
       requestBody:
         required: true
         content:
@@ -247,10 +259,31 @@ paths:
                 idToken: {type: string, minLength: 1}
       security: []
       responses: { '200': { description: OK }, '401': { description: INVALID_GOOGLE_TOKEN / GOOGLE_EMAIL_NOT_VERIFIED / GOOGLE_LOGIN_NOT_CONFIGURED / GOOGLE_ACCOUNT_LINK_REQUIRED }, '403': { description: STAFF_GOOGLE_NOT_ALLOWED / ACCOUNT_INACTIVE } }
-  /users:
-    get: { summary: List users (non deleted), responses: { '200': { description: OK } } }
+  /staff-accounts:
+    get:
+      summary: List non-deleted Coach and Receptionist accounts (CENTER_MANAGER or ADMIN)
+      responses:
+        '200': { description: 'ApiResponse.data = UserDto[], restricted to COACH and RECEPTIONIST' }
+        '401': { description: Authentication required }
+        '403': { description: CENTER_MANAGER or ADMIN required }
     post:
-      summary: Create user (CENTER_MANAGER)
+      summary: Provision Coach or Receptionist (CENTER_MANAGER or ADMIN)
+      description: Creates an active account and its matching professional profile. Role codes other than COACH and RECEPTIONIST are rejected. Email is normalized and must be unique. A verified Google sign-in using the provisioned email preserves the assigned role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StaffAccountCreate' }
+      responses:
+        '201': { description: 'ApiResponse.data = UserDto, without password or password hash' }
+        '400': { description: Invalid fields or role code }
+        '401': { description: Authentication required }
+        '403': { description: CENTER_MANAGER or ADMIN required }
+        '409': { description: EMAIL_EXISTS / PHONE_EXISTS }
+  /users:
+    get: { summary: List users (non deleted, ADMIN only), responses: { '200': { description: OK }, '403': { description: ADMIN required } } }
+    post:
+      summary: Create user including Manager accounts (ADMIN only)
       requestBody:
         required: true
         content:
@@ -259,14 +292,14 @@ paths:
       responses:
         '201': { description: Created }
         '400': { description: Validation failed, including missing or invalid gender }
-        '403': { description: CENTER_MANAGER role required }
+        '403': { description: ADMIN role required }
         '409': { description: EMAIL_EXISTS / PHONE_EXISTS }
   /users/cleanup-inactive:
     post:
-      summary: Soft-delete users inactive for more than six calendar months (CENTER_MANAGER)
+      summary: Soft-delete users inactive for more than six calendar months (ADMIN)
       description: >-
         Uses lastLoginAt, or createdAt if the user has never logged in.
-        Excludes CENTER_MANAGER accounts and users with a frozen subscription.
+        Excludes ADMIN and CENTER_MANAGER accounts and users with a frozen subscription.
         The same policy runs daily at 02:00 in the scheduler's configured time zone.
         User list/detail responses include subscriptionFrozen for members (boolean; omitted or null for other roles).
       responses:
@@ -283,12 +316,12 @@ paths:
                     properties:
                       deletedCount: { type: integer, minimum: 0 }
         '401': { description: Authentication required }
-        '403': { description: CENTER_MANAGER role required }
+        '403': { description: ADMIN role required }
   /users/{id}:
     parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
     get: { summary: User detail, responses: { '200': { description: OK }, '404': { description: NOT_FOUND } } }
     put:
-      summary: Update user (CENTER_MANAGER)
+      summary: Update user (ADMIN, including role changes)
       requestBody:
         required: true
         content:
@@ -297,26 +330,26 @@ paths:
       responses:
         '200': { description: OK }
         '400': { description: Validation failed, including invalid gender }
-        '403': { description: CENTER_MANAGER role required }
+        '403': { description: ADMIN role required }
     delete: { summary: Soft delete user, responses: { '200': { description: OK } } }
   /users/{id}/lock:
     patch: { summary: Lock account, parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
   /users/{id}/unlock:
     patch: { summary: Unlock account, parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
   /users/{id}/receptionist:
-    put: { summary: Update receptionist profile (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
+    put: { summary: Update receptionist profile (ADMIN), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
   /roles:
-    get: { summary: List roles, responses: { '200': { description: OK } } }
+    get: { summary: List roles (ADMIN), responses: { '200': { description: OK } } }
   /roles/permissions:
-    get: { summary: List permissions, responses: { '200': { description: OK } } }
+    get: { summary: List permissions (ADMIN), responses: { '200': { description: OK } } }
   /roles/{id}/permissions:
     get: { summary: Permissions of a role, parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
   /roles/{id}/permissions/{permissionId}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer } }
       - { name: permissionId, in: path, required: true, schema: { type: integer } }
-    put: { summary: Grant permission to role (audited; CENTER_MANAGER), responses: { '200': { description: OK }, '404': { description: NOT_FOUND } } }
-    delete: { summary: Revoke permission from role (audited; CENTER_MANAGER), responses: { '200': { description: OK } } }
+    put: { summary: Grant permission to role (audited; ADMIN), responses: { '200': { description: OK }, '404': { description: NOT_FOUND } } }
+    delete: { summary: Revoke permission from role (audited; ADMIN), responses: { '200': { description: OK } } }
   /profile:
     get: { summary: Current user profile, responses: { '200': { description: OK } } }
     put: { summary: Update current user profile, responses: { '200': { description: OK } } }

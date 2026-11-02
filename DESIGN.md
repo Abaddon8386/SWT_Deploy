@@ -1,5 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Phân quyền tài khoản (02/11/2026, quyết định mới nhất): portal có Member, Coach, Receptionist, Manager và Admin. Admin dùng `/admin/users` cho quản trị tài khoản/phân quyền, tạo Manager và nhân sự. Manager dùng `/manager/users` cho danh sách và form tạo Coach/Receptionist; không có tab phân quyền, sửa role hoặc các thao tác quản trị user tại màn hình này. Mã backend Manager vẫn là `CENTER_MANAGER`, session lễ tân hiện dùng `STAFF`. Giữ theme charcoal–salmon, rail icon, mobile navigation và bố cục hiện hành; form nhân sự dùng component/token có sẵn, có trạng thái tải/rỗng/lỗi/thử lại/đang gửi/thành công. Google trả đúng role Coach/Receptionist khi email đã được cấp tài khoản; đăng ký công khai chỉ tạo Member.
+
 Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của người dùng trong lần làm lại UI công khai. Đây là nguồn quy chuẩn UI hiện hành cho contributor và coding agent. Đọc cùng [AGENTS.md](AGENTS.md) trước khi thiết kế hoặc sửa frontend.
 
 ## Phạm vi

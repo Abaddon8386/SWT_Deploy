@@ -50,7 +50,11 @@ Runner đọc `.env` và mặc định dùng Supabase PostgreSQL. Hibernate tạ
 
 `npm run db:init` kiểm tra cấu hình và hướng dẫn khởi động API. Công cụ khởi chạy không có chức năng reset database.
 
-Trên DB rỗng, có thể tạo manager ban đầu bằng hai biến `APP_BOOTSTRAP_MANAGER_EMAIL` và `APP_BOOTSTRAP_MANAGER_PASSWORD`. Không có mật khẩu manager mặc định khi dùng Supabase. Sau khi tạo manager, bỏ hai biến bootstrap và dùng chức năng quản lý user của hệ thống.
+Khởi tạo Admin đầu tiên bằng `APP_BOOTSTRAP_ADMIN_EMAIL` và `APP_BOOTSTRAP_ADMIN_PASSWORD`, dùng email mới chưa thuộc tài khoản khác. Không có mật khẩu mặc định. Khởi động API với profile `supabase`, đăng nhập bằng email/password tại `/login`, rồi tạo Manager trong `/admin/users`. Sau đó bỏ hai biến bootstrap. Khởi tạo chạy lặp không tạo trùng và không tự thăng quyền tài khoản trùng email.
+
+Manager hiện có vẫn giữ role `CENTER_MANAGER`; username `admin` cũ không đồng nghĩa role `ADMIN`. Cấu hình `APP_BOOTSTRAP_MANAGER_*` cũ không còn tạo Manager: Manager mới phải do Admin tạo. Manager vào `/manager/users` để tạo Coach/Receptionist; Admin tạo các tài khoản này tại `/admin/users` hoặc API `/staff-accounts`. API quản trị `/users` và `/roles` chỉ dành cho Admin.
+
+Google: tài khoản Coach/Receptionist phải được Manager/Admin tạo trước bằng email sẽ dùng đăng nhập Google. Gmail hoặc Google Workspace đã xác minh có thể liên kết với tài khoản đó; role trả về lấy từ database. Google mới chưa có tài khoản chỉ tạo Member. Giữ chặn tài khoản khóa/xóa và Google identity khác đã liên kết; Google dùng email bên thứ ba cần xác minh bổ sung theo cơ chế hiện có. Admin/Manager tiếp tục đăng nhập bằng email/password.
 
 
 ## Kiểm thử trên PostgreSQL thật

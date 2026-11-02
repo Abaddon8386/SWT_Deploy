@@ -127,7 +127,7 @@ Mô hình dữ liệu được triển khai bằng **JPA Entity trên Supabase P
 
 #### Module A: Định danh & Phân quyền (Identity & RBAC)
 Áp dụng chiến lược thiết kế **Table-per-Type (TPT) Inheritance**. Bảng `users` lưu giữ toàn bộ thông tin tài khoản dùng chung (auth, email, hash password, status), trong khi các bảng con kế thừa liên kết 1-1 bằng khóa ngoại trỏ về `users.id` với hành vi `ON DELETE CASCADE`:
-1. `roles`: Vai trò hệ thống (`id`, `code`, `name`, `description`). Mặc định có 4 role code: `CENTER_MANAGER`, `COACH`, `MEMBER`, `RECEPTIONIST`.
+1. `roles`: Vai trò hệ thống (`id`, `code`, `name`, `description`). Có 5 role code: `ADMIN`, `CENTER_MANAGER` (Manager), `COACH`, `MEMBER`, `RECEPTIONIST`. Admin quản trị tài khoản/phân quyền và tạo Manager; Manager chỉ tạo Coach/Receptionist qua chức năng tài khoản nhân sự. Admin cũng tạo được Coach/Receptionist. Đăng ký công khai chỉ tạo Member. Google đăng nhập Member hoặc Coach/Receptionist đã được cấp tài khoản bằng email đã xác minh, trả role từ database; không tự cấp role nhân sự và không ghi đè role thành Member.
 2. `permissions`: Danh mục quyền hạn chi tiết (`id`, `code`, `name`, `module`).
 3. `role_permissions`: Bảng liên kết nhiều-nhiều (N-N) gán quyền cho vai trò, có `UNIQUE(role_id, permission_id)`.
 4. `users`: Bảng trung tâm người dùng (`id`, `role_id` -> `roles`, `email`, `phone`, `password_hash`, `gender` CHECK `male/female/other`, `status` CHECK `active/inactive/locked`, `deleted_at` cho soft delete).
