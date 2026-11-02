@@ -541,8 +541,8 @@ export function MemberPackagesPage() {
       </Modal>}
       <PageHeader
         eyebrow="Hội viên"
-        title="Gói tập & Đặc quyền"
-        subtitle="So sánh gói tập, theo dõi yêu cầu và gia hạn tại quầy lễ tân."
+        title="Gói tập"
+        subtitle="Chọn gói, gia hạn và theo dõi yêu cầu của bạn."
       />
 
       {syncError && <div className="portal-alert" role="alert">
@@ -806,36 +806,13 @@ export function MemberPackagesPage() {
             {pending.packageName}
           </h2>
 
-          <p className="row-card__meta">
-            Yêu cầu #{pending.id} đang ở trạng thái chờ thanh toán và đã được chuyển thẳng vào danh sách chờ tại quầy lễ tân (POS).
-          </p>
           {pendingPackage && (
             <p className="row-card__meta" style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>
-              Số tiền thanh toán: {formatPrice(pendingPackage.price)} ({pendingPackage.durationDays} ngày)
+              {formatPrice(pendingPackage.price)} · {pendingPackage.durationDays} ngày
             </p>
           )}
           {paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage && (
-            <>
-              <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }}
-                >
-                  Tải lại trạng thái
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
-                  disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
-                  onClick={() => { setActionError(null); setPendingToCancel(pending); }}
-                >
-                  {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
-                </button>
-              </div>
-            </>
+            <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending') && (
             <p className="row-card__meta" role="status">Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.</p>
@@ -852,26 +829,24 @@ export function MemberPackagesPage() {
           {paymentsState.status === 'success' && relatedPayments.length === 0 && !pendingPackage && (
             <p role="alert">Không tìm thấy giá gói để gửi yêu cầu. Vui lòng thử lại sau.</p>
           )}
-          {!(paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage) && (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }}
-              >
-                Tải lại trạng thái
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
-                disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
-                onClick={() => { setActionError(null); setPendingToCancel(pending); }}
-              >
-                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
-              </button>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }}
+            >
+              Tải lại trạng thái
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
+              disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
+              onClick={() => { setActionError(null); setPendingToCancel(pending); }}
+            >
+              {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
+            </button>
+          </div>
         </section>
       )}
 
