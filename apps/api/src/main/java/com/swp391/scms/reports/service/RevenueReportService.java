@@ -2,10 +2,8 @@ package com.swp391.scms.reports.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.swp391.scms.attendance.entity.SessionAttendance;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
-import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.finance.entity.Payment;
 import com.swp391.scms.finance.repository.PaymentRepository;
@@ -22,8 +20,6 @@ import com.swp391.scms.reports.entity.ReportSnapshot;
 import com.swp391.scms.reports.repository.ReportSnapshotRepository;
 import com.swp391.scms.reports.repository.SessionAttendanceReportRepository;
 import com.swp391.scms.reports.repository.TransactionReportRepository;
-import com.swp391.scms.scheduling.entity.ClassEnrollment;
-import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.users.UserRepository;
@@ -209,23 +205,24 @@ public class RevenueReportService {
             throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
                     "Start date cannot be after end date");
         }
-        if (gymClassRepository == null) {
+        if (sessionAttendanceReportRepository == null) {
             return List.of();
         }
 
-        List<GymClass> classes = gymClassRepository.findAll();
-        List<ClassUtilizationDto> results = new ArrayList<>();
+        LocalDateTime startTs = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endTs = endDate != null ? endDate.plusDays(1).atStartOfDay() : null;
 
-        for (GymClass gymClass : classes) {
-            Discipline discipline = gymClass.getDiscipline();
-            Long dId = discipline != null ? discipline.getId() : null;
-            if (disciplineId != null && !disciplineId.equals(dId)) {
-                continue;
-            }
+        List<SessionAttendanceReportRepository.ClassUtilizationRow> rows =
+                sessionAttendanceReportRepository.classUtilization(startDate, endDate, startTs, endTs, disciplineId);
+        if (rows == null) {
+            return List.of();
+        }
 
-            long enrolledCount = countActiveEnrollments(gymClass.getId(), startDate, endDate);
-            long presentCount = countPresentAttendances(gymClass.getId(), startDate, endDate);
-            int capacity = gymClass.getCapacity();
+        List<ClassUtilizationDto> results = new ArrayList<>(rows.size());
+        for (SessionAttendanceReportRepository.ClassUtilizationRow row : rows) {
+            int capacity = row.getCapacity() != null ? row.getCapacity() : 0;
+            long enrolledCount = row.getEnrolledCount() != null ? row.getEnrolledCount() : 0L;
+            long presentCount = row.getPresentCount() != null ? row.getPresentCount() : 0L;
 
             double utilizationRate = 0.0;
             if (capacity > 0) {
@@ -242,10 +239,10 @@ public class RevenueReportService {
             }
 
             results.add(new ClassUtilizationDto(
-                    gymClass.getId(),
-                    gymClass.getName(),
-                    dId,
-                    discipline != null ? discipline.getName() : null,
+                    row.getClassId(),
+                    row.getClassName(),
+                    row.getDisciplineId(),
+                    row.getDisciplineName(),
                     capacity,
                     enrolledCount,
                     presentCount,
@@ -255,49 +252,6 @@ public class RevenueReportService {
         }
 
         return results;
-    }
-
-    private long countActiveEnrollments(Long classId, LocalDate startDate, LocalDate endDate) {
-        if (classEnrollmentRepository == null || classId == null) {
-            return 0L;
-        }
-        List<ClassEnrollment> enrollments = classEnrollmentRepository.findByGymClassId(classId);
-        if (enrollments == null) {
-            return 0L;
-        }
-        return enrollments.stream()
-                .filter(e -> "booked".equalsIgnoreCase(e.getStatus()) || "completed".equalsIgnoreCase(e.getStatus()))
-                .filter(e -> {
-                    if (e.getEnrolledAt() == null) return true;
-                    LocalDate d = e.getEnrolledAt().toLocalDate();
-                    if (startDate != null && d.isBefore(startDate)) return false;
-                    if (endDate != null && d.isAfter(endDate)) return false;
-                    return true;
-                })
-                .count();
-    }
-
-    private long countPresentAttendances(Long classId, LocalDate startDate, LocalDate endDate) {
-        if (sessionAttendanceReportRepository == null || classId == null) {
-            return 0L;
-        }
-        List<SessionAttendance> attendances = sessionAttendanceReportRepository.findBySessionGymClassId(classId);
-        if (attendances == null) {
-            return 0L;
-        }
-        return attendances.stream()
-                .filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
-                .filter(a -> {
-                    LocalDate sessionDate = a.getSession() != null ? a.getSession().getSessionDate() : null;
-                    if (sessionDate == null && a.getCheckedInAt() != null) {
-                        sessionDate = a.getCheckedInAt().toLocalDate();
-                    }
-                    if (sessionDate == null) return true;
-                    if (startDate != null && sessionDate.isBefore(startDate)) return false;
-                    if (endDate != null && sessionDate.isAfter(endDate)) return false;
-                    return true;
-                })
-                .count();
     }
 
     public ReportSnapshotDto generateSnapshot(ReportSnapshotCreateDto dto, Long currentUserId) {

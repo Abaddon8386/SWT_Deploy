@@ -177,4 +177,14 @@ class MembershipCancellationServiceTest {
         when(requests.findByIdForUpdate(7L)).thenReturn(Optional.of(pending));
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
     }
+
+    @Test
+    void all_UsesFindAllForManagerQueryInsteadOfFindAll() {
+        when(requests.findAllForManager()).thenReturn(List.of(pending));
+        var list = service.all();
+        assertThat(list).hasSize(1);
+        assertThat(list.get(0).memberName()).isEqualTo("Member");
+        verify(requests).findAllForManager();
+        verify(requests, never()).findAll();
+    }
 }

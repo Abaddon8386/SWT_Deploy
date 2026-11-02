@@ -537,11 +537,7 @@ public class ClassService {
 
     @Transactional(readOnly = true)
     public List<CoachOptionDto> listActiveCoaches() {
-        return coaches.findAll().stream()
-                .filter(c -> COACH_ACTIVE.equalsIgnoreCase(c.getEmploymentStatus())
-                        && c.getUser() != null
-                        && c.getUser().getDeletedAt() == null
-                        && "active".equalsIgnoreCase(c.getUser().getStatus()))
+        return coaches.findActiveWithUser().stream()
                 .map(c -> new CoachOptionDto(
                         c.getUserId(),
                         c.getUser().getFullName(),

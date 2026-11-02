@@ -12,9 +12,12 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.hibernate.SessionFactory;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
@@ -26,38 +29,54 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 class CodeFirstSchemaTest {
 
     private static final Path SCHEMA = Path.of("..", "..", "db", "databaseschema.sql");
+    private static StandardServiceRegistry sharedRegistry;
+    private static SessionFactory sharedFactory;
+    private static String sharedDdl;
 
-    private static String generateDdl() throws Exception {
-        return generateDdl(factory -> {});
-    }
-
-    private static String generateDdl(java.util.function.Consumer<org.hibernate.SessionFactory> verify) throws Exception {
+    @BeforeAll
+    static void initSharedHibernateMetadata() throws Exception {
         Path out = Files.createTempFile("ddl", ".sql");
-        StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
+        sharedRegistry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
                 .applySetting("hibernate.boot.allow_jdbc_metadata_access", "false")
                 .applySetting("jakarta.persistence.schema-generation.database.action", "none")
                 .applySetting("jakarta.persistence.schema-generation.scripts.action", "create")
                 .applySetting("jakarta.persistence.schema-generation.scripts.create-target", out.toString())
                 .build();
-        try {
-            MetadataSources sources = new MetadataSources(registry);
-            ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
-            scanner.addIncludeFilter(new AnnotationTypeFilter(Entity.class));
-            scanner.findCandidateComponents("com.swp391.scms").forEach(bd -> {
-                try {
-                    sources.addAnnotatedClass(Class.forName(bd.getBeanClassName()));
-                } catch (ClassNotFoundException e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-            try (var factory = sources.buildMetadata().buildSessionFactory()) {
-                verify.accept(factory);
+        MetadataSources sources = new MetadataSources(sharedRegistry);
+        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AnnotationTypeFilter(Entity.class));
+        scanner.findCandidateComponents("com.swp391.scms").forEach(bd -> {
+            try {
+                sources.addAnnotatedClass(Class.forName(bd.getBeanClassName()));
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException(e);
             }
-            return Files.readString(out, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
-        } finally {
-            StandardServiceRegistryBuilder.destroy(registry);
+        });
+        sharedFactory = sources.buildMetadata().buildSessionFactory();
+        sharedDdl = Files.readString(out, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
+        Files.deleteIfExists(out);
+    }
+
+    @AfterAll
+    static void closeSharedHibernateMetadata() {
+        if (sharedFactory != null) {
+            sharedFactory.close();
+            sharedFactory = null;
         }
+        if (sharedRegistry != null) {
+            StandardServiceRegistryBuilder.destroy(sharedRegistry);
+            sharedRegistry = null;
+        }
+    }
+
+    private static String generateDdl() {
+        return sharedDdl;
+    }
+
+    private static String generateDdl(java.util.function.Consumer<SessionFactory> verify) {
+        verify.accept(sharedFactory);
+        return sharedDdl;
     }
 
     private static Set<String> schemaTables() throws IOException {
@@ -119,6 +138,28 @@ class CodeFirstSchemaTest {
                 session.createQuery(jpql, com.swp391.scms.scheduling.dto.ClassBookingCount.class)
                         .setParameter("classIds", java.util.List.of(11L, 12L))
                         .setParameter("status", "booked");
+            }
+        });
+    }
+
+    @Test
+    void performanceOptimizedQueriesCompileAgainstEntityMappingsWithoutDatabase() throws Exception {
+        var utilMethod = com.swp391.scms.reports.repository.SessionAttendanceReportRepository.class.getMethod(
+                "classUtilization", java.time.LocalDate.class, java.time.LocalDate.class,
+                java.time.LocalDateTime.class, java.time.LocalDateTime.class, Long.class);
+        String utilJpql = utilMethod.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
+
+        var coachMethod = com.swp391.scms.users.CoachRepository.class.getMethod("findActiveWithUser");
+        String coachJpql = coachMethod.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
+
+        var cancelMethod = com.swp391.scms.membership.repository.MembershipCancellationRequestRepository.class.getMethod("findAllForManager");
+        String cancelJpql = cancelMethod.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
+
+        generateDdl(factory -> {
+            try (var session = factory.openSession()) {
+                session.createQuery(utilJpql);
+                session.createQuery(coachJpql, com.swp391.scms.users.entity.Coach.class);
+                session.createQuery(cancelJpql, com.swp391.scms.membership.entity.MembershipCancellationRequest.class);
             }
         });
     }

@@ -1,6 +1,7 @@
 package com.swp391.scms.finance.repository;
 
 import com.swp391.scms.finance.entity.Payment;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,12 +13,20 @@ import java.util.Optional;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
+    @EntityGraph(attributePaths = {"invoice", "member", "member.user", "receivedBy"})
     List<Payment> findByMemberUserId(Long memberId);
 
+    @Override
+    @EntityGraph(attributePaths = {"invoice", "member", "member.user", "receivedBy"})
+    Optional<Payment> findById(Long id);
+
+    @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findByStatus(String status);
 
+    @EntityGraph(attributePaths = {"invoice"})
     Optional<Payment> findBySubscriptionId(Long subscriptionId);
 
+    @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findAllBySubscriptionId(Long subscriptionId);
 
     boolean existsBySubscriptionIdAndStatus(Long subscriptionId, String status);
@@ -34,9 +43,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     boolean hasUnsettledUpcomingEnrollmentPayment(@Param("memberId") Long memberId,
             @Param("today") java.time.LocalDate today, @Param("nowTime") java.time.LocalTime nowTime);
 
+    @EntityGraph(attributePaths = {"invoice"})
     Optional<Payment> findByClassEnrollmentId(Long classEnrollmentId);
 
+    @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findByStatusAndPaidAtBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 
+    @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findByPaidAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

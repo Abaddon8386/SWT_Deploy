@@ -233,51 +233,39 @@ class RevenueReportServiceTest {
     @Test
     @DisplayName("Should calculate class utilization and safely handle zero capacity or zero booked")
     void shouldCalculateClassUtilizationSafely() {
-        Discipline yoga = new Discipline();
-        ReflectionTestUtils.setField(yoga, "id", 2L);
-        yoga.setName("Yoga");
+        SessionAttendanceReportRepository.ClassUtilizationRow row1 = new SessionAttendanceReportRepository.ClassUtilizationRow() {
+            @Override public Long getClassId() { return 10L; }
+            @Override public String getClassName() { return "Morning Yoga"; }
+            @Override public Long getDisciplineId() { return 2L; }
+            @Override public String getDisciplineName() { return "Yoga"; }
+            @Override public Integer getCapacity() { return 20; }
+            @Override public Long getEnrolledCount() { return 2L; }
+            @Override public Long getPresentCount() { return 1L; }
+        };
+        SessionAttendanceReportRepository.ClassUtilizationRow row2 = new SessionAttendanceReportRepository.ClassUtilizationRow() {
+            @Override public Long getClassId() { return 11L; }
+            @Override public String getClassName() { return "Open Workshop"; }
+            @Override public Long getDisciplineId() { return 2L; }
+            @Override public String getDisciplineName() { return "Yoga"; }
+            @Override public Integer getCapacity() { return 0; }
+            @Override public Long getEnrolledCount() { return 0L; }
+            @Override public Long getPresentCount() { return 0L; }
+        };
 
-        GymClass class1 = new GymClass();
-        ReflectionTestUtils.setField(class1, "id", 10L);
-        class1.setName("Morning Yoga");
-        class1.setDiscipline(yoga);
-        class1.setCapacity(20);
+        LocalDate start = LocalDate.of(2026, 10, 1);
+        LocalDate end = LocalDate.of(2026, 10, 5);
+        when(sessionAttendanceReportRepository.classUtilization(
+                start, end, start.atStartOfDay(), end.plusDays(1).atStartOfDay(), 2L))
+                .thenReturn(List.of(row1, row2));
 
-        GymClass zeroCapClass = new GymClass();
-        ReflectionTestUtils.setField(zeroCapClass, "id", 11L);
-        zeroCapClass.setName("Open Workshop");
-        zeroCapClass.setDiscipline(yoga);
-        zeroCapClass.setCapacity(0);
-
-        ClassEnrollment e1 = new ClassEnrollment();
-        e1.setStatus("booked");
-        e1.setEnrolledAt(LocalDateTime.of(2026, 10, 2, 8, 0));
-
-        ClassEnrollment e2 = new ClassEnrollment();
-        e2.setStatus("completed");
-        e2.setEnrolledAt(LocalDateTime.of(2026, 10, 3, 8, 0));
-
-        ClassSession s1 = new ClassSession();
-        s1.setSessionDate(LocalDate.of(2026, 10, 3));
-
-        SessionAttendance a1 = new SessionAttendance();
-        a1.setSession(s1);
-        a1.setStatus("present");
-
-        when(gymClassRepository.findAll()).thenReturn(List.of(class1, zeroCapClass));
-        when(classEnrollmentRepository.findByGymClassId(10L)).thenReturn(List.of(e1, e2));
-        when(classEnrollmentRepository.findByGymClassId(11L)).thenReturn(List.of());
-        when(sessionAttendanceReportRepository.findBySessionGymClassId(10L)).thenReturn(List.of(a1));
-        when(sessionAttendanceReportRepository.findBySessionGymClassId(11L)).thenReturn(List.of());
-
-        List<ClassUtilizationDto> list = service.getClassUtilization(
-                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5), 2L);
+        List<ClassUtilizationDto> list = service.getClassUtilization(start, end, 2L);
 
         assertEquals(2, list.size());
         assertEquals(10.0, list.get(0).utilizationRate()); // 2 / 20 = 10%
         assertEquals(50.0, list.get(0).attendanceRate());  // 1 / 2 = 50%
         assertEquals(0.0, list.get(1).utilizationRate());  // zero capacity -> 0.0
         assertEquals(0.0, list.get(1).attendanceRate());   // zero booked -> 0.0
+        verifyNoInteractions(gymClassRepository, classEnrollmentRepository);
     }
 
     @Test

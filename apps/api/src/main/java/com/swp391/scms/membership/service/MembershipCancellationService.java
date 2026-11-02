@@ -88,10 +88,7 @@ public class MembershipCancellationService {
 
     @Transactional(readOnly = true)
     public List<CancellationDtos.Response> all() {
-        return requests.findAll().stream()
-                .filter(request -> request.getMember() != null
-                        && request.getMember().getUser() != null
-                        && request.getMember().getUser().getDeletedAt() == null)
+        return requests.findAllForManager().stream()
                 .map(this::toDto).toList();
     }
 
@@ -102,7 +99,7 @@ public class MembershipCancellationService {
             throw new ForbiddenException("CANCELLATION_MANAGER_ONLY", "error.membership.cancellation_manager_only", null, null);
         }
         MembershipCancellationRequest initial = requests.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("resource.cancellation_request", requestId));
+            .orElseThrow(() -> new ResourceNotFoundException("resource.cancellation_request", requestId));
         Long memberId = initial.getMember().getUserId();
         lockMember(memberId);
         MembershipCancellationRequest request = requests.findByIdForUpdate(requestId)

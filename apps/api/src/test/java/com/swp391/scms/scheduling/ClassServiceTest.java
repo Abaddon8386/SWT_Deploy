@@ -390,4 +390,36 @@ class ClassServiceTest {
                 .extracting("errorCode")
                 .isEqualTo("SCHEDULING_COACH_CONFLICT");
     }
+
+    @Test
+    void listActiveCoaches_UsesDatabaseQueryAndRoleEntitiesUseLazyOneToOne() throws Exception {
+        for (Class<?> entityClass : new Class<?>[]{
+                com.swp391.scms.users.entity.Member.class,
+                com.swp391.scms.users.entity.Coach.class,
+                com.swp391.scms.users.entity.Receptionist.class,
+                com.swp391.scms.users.entity.CenterManager.class
+        }) {
+            var oneToOne = entityClass.getDeclaredField("user").getAnnotation(jakarta.persistence.OneToOne.class);
+            assertThat(oneToOne.fetch()).as(entityClass.getSimpleName() + ".user fetch type")
+                    .isEqualTo(jakarta.persistence.FetchType.LAZY);
+        }
+
+        var user = new com.swp391.scms.users.entity.User();
+        user.setFullName("Coach Active");
+        user.setEmail("coach@sol.vn");
+        user.setPhone("0900000001");
+        user.setStatus("active");
+        var coach = new Coach();
+        coach.setUserId(42L);
+        coach.setEmploymentStatus("active");
+        coach.setUser(user);
+
+        when(coaches.findActiveWithUser()).thenReturn(java.util.List.of(coach));
+
+        var options = service.listActiveCoaches();
+        assertThat(options).hasSize(1);
+        assertThat(options.get(0).fullName()).isEqualTo("Coach Active");
+        verify(coaches).findActiveWithUser();
+        verify(coaches, org.mockito.Mockito.never()).findAll();
+    }
 }
