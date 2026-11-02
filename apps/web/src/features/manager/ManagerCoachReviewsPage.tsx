@@ -12,6 +12,7 @@ import {
 } from '../coaching/coachReviewApi';
 import { getCoaches } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
+import { ActionMenu } from '../../shared/ui/ActionMenu';
 
 export function ManagerCoachReviewsPage() {
   const now = new Date();
@@ -158,14 +159,28 @@ export function ManagerCoachReviewsPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={generating}
-            onClick={() => void handleAutoGenerate()}
-          >
-            {generating ? 'Đang tổng hợp…' : '⚡ Tự động tổng hợp số liệu tháng'}
-          </button>
+          {/* Chưa có bảng tổng kết: đây là việc chính; đã có thì chỉ cần khi muốn tính lại */}
+          {reviews.length === 0 ? (
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={generating}
+              onClick={() => void handleAutoGenerate()}
+            >
+              {generating ? 'Đang tổng hợp…' : '⚡ Tự động tổng hợp số liệu tháng'}
+            </button>
+          ) : (
+            <ActionMenu label="Tùy chọn kỳ đánh giá">
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                disabled={generating}
+                onClick={() => void handleAutoGenerate()}
+              >
+                {generating ? 'Đang tổng hợp…' : '⚡ Tự động tổng hợp số liệu tháng'}
+              </button>
+            </ActionMenu>
+          )}
         </div>
       </div>
 
