@@ -1,6 +1,6 @@
 /**
  * Danh mục bộ môn chuẩn của SÖL, dùng chung cho landing, lịch lớp và bộ lọc portal.
- * Gym là bộ môn chính; Bơi lội, Boxing, Tennis và Cầu lông là bộ môn phụ.
+ * Gym là bộ môn chính; Bơi lội, Boxing, Tennis, Cầu lông và Yoga là bộ môn phụ.
  */
 export const DISCIPLINES = [
   { id: 'gym', name: 'Gym', tier: 'main' },
@@ -8,6 +8,7 @@ export const DISCIPLINES = [
   { id: 'boxing', name: 'Boxing', tier: 'secondary' },
   { id: 'tennis', name: 'Tennis', tier: 'secondary' },
   { id: 'badminton', name: 'Cầu lông', tier: 'secondary' },
+  { id: 'yoga', name: 'Yoga', tier: 'secondary' },
 ] as const;
 
 export type DisciplineId = typeof DISCIPLINES[number]['id'];
@@ -22,6 +23,7 @@ const ALIASES: Record<DisciplineId, RegExp> = {
   boxing: /boxing|kickfit|đấm bốc/i,
   tennis: /tennis/i,
   badminton: /cầu lông|badminton/i,
+  yoga: /yoga|mindful/i,
 };
 
 export function matchesDiscipline(name: string, selected: string): boolean {

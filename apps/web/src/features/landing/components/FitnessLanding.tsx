@@ -218,7 +218,7 @@ const memberBenefits = [
     title: 'Đặt lịch tập trên Portal',
     description: 'Xem lịch lớp theo bộ môn trong Portal. Bạn có thể đặt lớp khi gói tập đang hoạt động, còn hạn và còn lượt đặt theo quy định của gói.',
     perks: [
-      'Gym · Bơi lội · Boxing · Tennis · Cầu lông',
+      'Gym · Bơi lội · Boxing · Tennis · Cầu lông · Yoga',
       'Khu Strength Floor, Free Weights & Movement Studio',
       'Thấy ngay khung giờ nào đang thoáng',
       'Vào cửa bằng mã QR, không cần giấy tờ',

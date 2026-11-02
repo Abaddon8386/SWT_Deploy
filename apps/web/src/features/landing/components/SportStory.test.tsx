@@ -37,12 +37,12 @@ const shown = () => host.querySelector<HTMLElement>('.fit-sport-story-visual.is-
 
 it('keeps every sport and CTA readable in document flow with inline mobile illustrations', async () => {
   await render();
-  expect(host.querySelectorAll('.fit-sport-story-step')).toHaveLength(5);
-  expect([...host.querySelectorAll('.fit-sport-story-step h3')].map(heading => heading.textContent)).toEqual(['Gym', 'Bơi lội', 'Boxing', 'Tennis', 'Cầu lông']);
-  expect([...host.querySelectorAll('.fit-sport-story-tier')].map(tier => tier.textContent)).toEqual(['Bộ môn chính', 'Bộ môn phụ', 'Bộ môn phụ', 'Bộ môn phụ', 'Bộ môn phụ']);
-  expect(host.querySelectorAll('.fit-sport-story-inline img')).toHaveLength(5);
+  expect(host.querySelectorAll('.fit-sport-story-step')).toHaveLength(6);
+  expect([...host.querySelectorAll('.fit-sport-story-step h3')].map(heading => heading.textContent)).toEqual(['Gym', 'Bơi lội', 'Boxing', 'Tennis', 'Cầu lông', 'Yoga']);
+  expect([...host.querySelectorAll('.fit-sport-story-tier')].map(tier => tier.textContent)).toEqual(['Bộ môn chính', ...Array(5).fill('Bộ môn phụ')]);
+  expect(host.querySelectorAll('.fit-sport-story-inline img')).toHaveLength(6);
   expect([...host.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(
-    ['/login', '/login', '/swimming', '/login', '/boxing', '/login', '/tennis', '/login', '/badminton']);
+    ['/login', '/login', '/swimming', '/login', '/boxing', '/login', '/tennis', '/login', '/badminton', '/login', '/yoga']);
   expect(host.querySelector('[inert], .fit-sport-stack-deck')).toBeNull();
 });
 
@@ -52,7 +52,7 @@ it('switches illustrations after the exit, tracks the rail, and reverses when sc
   await activate(2);
   expect(host.querySelector('.fit-sport-story-step.is-active')?.getAttribute('data-sport')).toBe('boxing');
   expect(host.querySelector('.fit-sport-story-visual.is-leaving')?.getAttribute('data-sport')).toBe('gym');
-  expect(host.querySelector<HTMLElement>('.fit-sport-story-rail i')?.style.top).toBe(`${2 / 4 * 100}%`);
+  expect(host.querySelector<HTMLElement>('.fit-sport-story-rail i')?.style.top).toBe(`${2 / 5 * 100}%`);
   await advance();
   expect(shown()).toBe('boxing');
   await activate(0); await advance();

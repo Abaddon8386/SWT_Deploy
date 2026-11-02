@@ -10,6 +10,7 @@ export const router = createBrowserRouter([
   { path: '/tennis', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/boxing', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/badminton', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/yoga', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/sports/:sportId', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/trainers', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
   { path: '/trainers/:trainerId', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },

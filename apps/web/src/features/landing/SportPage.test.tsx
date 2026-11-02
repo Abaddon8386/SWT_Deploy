@@ -48,7 +48,7 @@ it.each([
   expect([...host.querySelectorAll('a.fit-pill')].map((link) => link.textContent)).toContain(`Đặt lịch ${name}`);
   expect([...host.querySelectorAll('a.fit-pill')].find((link) => link.textContent?.startsWith('Đặt lịch'))?.getAttribute('href')).toBe('/login');
   expect([...host.querySelectorAll('.fit-trainer-switch-pill')].map((link) => link.getAttribute('href')))
-    .toEqual(['/swimming', '/boxing', '/tennis', '/badminton']);
+    .toEqual(['/swimming', '/boxing', '/tennis', '/badminton', '/yoga']);
   expect(host.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe(path);
 });
 
@@ -56,5 +56,5 @@ it('resolves sport ids from both route shapes', () => {
   expect(sportIdFromPath('/boxing')).toBe('boxing');
   expect(sportIdFromPath('/sports/badminton')).toBe('badminton');
   expect(sportIdFromPath('/')).toBeUndefined();
-  expect(Object.keys(SPORT_PAGES)).toEqual(['swimming', 'boxing', 'tennis', 'badminton']);
+  expect(Object.keys(SPORT_PAGES)).toEqual(['swimming', 'boxing', 'tennis', 'badminton', 'yoga']);
 });

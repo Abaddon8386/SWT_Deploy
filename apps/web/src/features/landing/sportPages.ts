@@ -77,6 +77,21 @@ export const SPORT_PAGES: Record<SportPageId, SportPageData> = {
       { code: '03', title: 'Thi Đấu Đôi', tag: 'Giao lưu theo cặp' },
     ],
   },
+  yoga: {
+    id: 'yoga',
+    path: '/yoga',
+    label: 'Yoga',
+    club: 'Yoga Studio',
+    kicker: 'YOGA STUDIO',
+    title: 'Phòng Tập Yoga',
+    subtitle: 'Hơi thở · Thăng bằng · Linh hoạt',
+    image: '/images/yoga-aerial-silk-studio.jpg',
+    programs: [
+      { code: '01', title: 'Hơi Thở & Tư Thế', tag: 'Dành cho người mới' },
+      { code: '02', title: 'Thăng Bằng & Linh Hoạt', tag: 'Kiểm soát chuyển động' },
+      { code: '03', title: 'Giãn Cơ & Thư Giãn', tag: 'Phục hồi sau buổi tập' },
+    ],
+  },
 };
 
 export const SPORT_PAGE_LIST = Object.values(SPORT_PAGES);

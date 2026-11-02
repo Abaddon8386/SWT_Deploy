@@ -111,7 +111,7 @@ describe('MemberClassesPage', () => {
     expect(host.textContent).not.toContain('Gym sáng');
     await act(async () => root.unmount());
     root = createRoot(host);
-    await render('/member/classes?discipline=Yoga');
+    await render('/member/classes?discipline=Karate');
     expect(host.textContent).toContain('Gym sáng');
     expect(host.textContent).toContain('Boxing tối');
   });

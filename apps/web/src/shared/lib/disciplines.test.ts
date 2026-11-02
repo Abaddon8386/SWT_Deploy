@@ -5,7 +5,7 @@ describe('disciplines', () => {
   it('has Gym as the only main discipline followed by the four secondary ones', () => {
     expect(MAIN_DISCIPLINE.name).toBe('Gym');
     expect(DISCIPLINES.filter((discipline) => discipline.tier === 'main')).toHaveLength(1);
-    expect(SECONDARY_DISCIPLINES.map((discipline) => discipline.name)).toEqual(['Bơi lội', 'Boxing', 'Tennis', 'Cầu lông']);
+    expect(SECONDARY_DISCIPLINES.map((discipline) => discipline.name)).toEqual(['Bơi lội', 'Boxing', 'Tennis', 'Cầu lông', 'Yoga']);
   });
 
   it.each([
@@ -16,6 +16,8 @@ describe('disciplines', () => {
     ['Cầu lông', 'Cầu lông', true],
     ['Badminton', 'Cầu lông', true],
     ['Tennis', 'Tennis', true],
+    ['Mindful Yoga', 'Yoga', true],
+    ['Yoga cơ bản', 'Gym', false],
     ['Tennis', 'Gym', false],
     ['Bơi lội', 'Boxing', false],
   ])('matches catalog name "%s" against filter "%s" -> %s', (name, filter, expected) => {

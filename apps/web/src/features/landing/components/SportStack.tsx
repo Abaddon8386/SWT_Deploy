@@ -31,6 +31,11 @@ const content: Record<DisciplineId, { image: string; summary: string; programs: 
     summary: 'Rèn bộ chân, phản xạ và kỹ thuật đánh cầu.',
     programs: ['Kỹ thuật đánh cầu', 'Bộ chân và phản xạ', 'Thi đấu đôi'],
   },
+  yoga: {
+    image: '/images/yoga-aerial-silk-studio.jpg',
+    summary: 'Kết hợp hơi thở, tư thế và chuyển động linh hoạt.',
+    programs: ['Hơi thở và tư thế', 'Thăng bằng và linh hoạt', 'Giãn cơ và thư giãn'],
+  },
 };
 const sports = DISCIPLINES.map(sport => ({ ...sport, ...content[sport.id] }));
 // The existing import remains stable; this section now uses a scrolling story rather than a deck.
