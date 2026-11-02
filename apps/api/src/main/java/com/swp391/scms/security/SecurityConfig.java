@@ -105,6 +105,12 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/monthly-reviews/my").hasRole("COACH")
                     .requestMatchers("/api/v1/coaching/monthly-reviews/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
 
+                    // Internal Staff Requests (SCRUM-135)
+                    .requestMatchers(HttpMethod.POST, "/api/v1/operations/requests").hasAnyRole("STAFF", "COACH", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/operations/requests/my").hasAnyRole("STAFF", "COACH", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/operations/requests/*/cancel").hasAnyRole("STAFF", "COACH", "RECEPTIONIST")
+                    .requestMatchers("/api/v1/operations/requests/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
+
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending",
