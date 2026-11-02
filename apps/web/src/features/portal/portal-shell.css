@@ -429,6 +429,14 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   .portal-v2 :is(.portal-icon-button, .theme-toggle, .portal-search-trigger) { min-width: 44px; flex-shrink: 0; }
   .portal-v2 .member-notification-bell { min-width: 44px; min-height: 44px; }
   .portal-v2 .portal-table-wrapper { overflow-x: auto; overscroll-behavior-x: contain; }
+  /* Bóng mờ ở mép báo còn cột bị ẩn; lớp phủ "local" che bóng khi đã cuộn tới đầu/cuối */
+  .portal-v2 .portal-table-wrapper {
+    background:
+      linear-gradient(to right, var(--portal-surface) 30%, transparent) left / 40px 100% no-repeat local,
+      linear-gradient(to left, var(--portal-surface) 30%, transparent) right / 40px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, #0000002e, transparent) left / 14px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, #0000002e, transparent) right / 14px 100% no-repeat scroll;
+  }
   .portal-v2 #portal-main { padding-bottom: 72px; }
   .portal-v2:has(.member-ai-chat) #portal-main { padding-bottom: 140px; }
   .portal-v2 :is(input, select, textarea, button, a, [tabindex]) { scroll-margin-top: calc(90px + env(safe-area-inset-top, 0px)); scroll-margin-bottom: calc(20px + var(--portal-mobile-nav-height)); }

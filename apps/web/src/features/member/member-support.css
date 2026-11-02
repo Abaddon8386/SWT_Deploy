@@ -6,6 +6,8 @@
 .member-support-form .btn-primary, .member-support-compose .btn-primary { justify-self: start; margin-top: 8px; }
 .member-support-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .member-support-link, .member-support-pages button { border: 0; background: transparent; color: var(--portal-salmon); cursor: pointer; font: inherit; font-weight: 650; }
+.member-support-link { min-height: 32px; padding: 0 4px; }
+@media (max-width: 767px) { .member-support-link { min-height: 44px; } }
 .member-support-link:disabled, .member-support-pages button:disabled { opacity: .45; cursor: not-allowed; }
 .member-support-list { display: grid; gap: 10px; }
 .member-support-ticket { display: grid; gap: 8px; width: 100%; min-width: 0; padding: 16px; text-align: left; color: inherit; border: 1px solid var(--portal-border); background: var(--portal-surface); border-radius: 14px; cursor: pointer; }

@@ -937,6 +937,12 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 }
 
 @media (max-width: 760px) {
+  /* Tab xuống dòng thay vì tràn khỏi màn hình */
+  .coach-nav-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
   .coach-metrics-grid {
     grid-template-columns: 1fr;
   }
