@@ -12,6 +12,7 @@ import com.swp391.scms.ai.entity.AiChatSession;
 import com.swp391.scms.ai.repository.AiChatMessageRepository;
 import com.swp391.scms.ai.repository.AiChatSessionRepository;
 import com.swp391.scms.ai.service.AiChatService;
+import com.swp391.scms.ai.service.AiRagContextService;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
@@ -30,14 +31,15 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class AiChatServiceTest {
@@ -205,5 +207,25 @@ class AiChatServiceTest {
         assertEquals(2, history.size());
         assertEquals("member", history.get(0).sender());
         assertEquals("ai", history.get(1).sender());
+    }
+
+    @Test
+    void sendMessage_WhenRagContextPresent_AppendsRetrievedContextToSystemPrompt() {
+        AiRagContextService ragContextService = mock(AiRagContextService.class);
+        when(ragContextService.buildRagContext(eq(member), any())).thenReturn("[DỮ LIỆU RAG]: Gói SÖL Signature 499.000đ");
+        AiChatService ragChatService = new AiChatService(
+                sessionRepository, messageRepository, memberRepository, messageService, chatProvider, ragContextService);
+
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
+        when(messageRepository.save(any(AiChatMessage.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ragChatService.sendMessage(500L, new AiChatMessageCreateDto("Giá gói tập bao nhiêu?"), 100L, "MEMBER");
+
+        verify(chatProvider).generate(
+                argThat(prompt -> prompt.startsWith(AiChatService.SYSTEM_PROMPT)
+                        && prompt.contains("[DỮ LIỆU RAG]: Gói SÖL Signature 499.000đ")),
+                any()
+        );
     }
 }

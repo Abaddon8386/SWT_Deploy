@@ -46,24 +46,36 @@ public class AiChatService {
     private final MemberRepository memberRepository;
     private final MessageService messageService;
     private final AiChatProvider chatProvider;
+    private final AiRagContextService ragContextService;
 
     public AiChatService(AiChatSessionRepository sessionRepository,
                          AiChatMessageRepository messageRepository,
                          MemberRepository memberRepository,
                          MessageService messageService) {
-        this(sessionRepository, messageRepository, memberRepository, messageService, null);
+        this(sessionRepository, messageRepository, memberRepository, messageService, null, null);
+    }
+
+    public AiChatService(AiChatSessionRepository sessionRepository,
+                         AiChatMessageRepository messageRepository,
+                         MemberRepository memberRepository,
+                         MessageService messageService,
+                         AiChatProvider chatProvider) {
+        this(sessionRepository, messageRepository, memberRepository, messageService, chatProvider, null);
     }
 
     @Autowired
     public AiChatService(AiChatSessionRepository sessionRepository,
                          AiChatMessageRepository messageRepository,
                          MemberRepository memberRepository,
-                         MessageService messageService, AiChatProvider chatProvider) {
+                         MessageService messageService,
+                         AiChatProvider chatProvider,
+                         @Autowired(required = false) AiRagContextService ragContextService) {
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.memberRepository = memberRepository;
         this.messageService = messageService;
         this.chatProvider = chatProvider;
+        this.ragContextService = ragContextService;
     }
 
     /**
@@ -151,7 +163,7 @@ public class AiChatService {
         AiChatSession session = getAuthorizedSession(sessionId, currentUserId, currentRole);
         List<AiChatMessage> existingHistory = messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId);
 
-        String aiReplyText = generateContextualReply(existingHistory, dto.message().trim());
+        String aiReplyText = generateContextualReply(session.getMember(), existingHistory, dto.message().trim());
         LocalDateTime now = LocalDateTime.now();
         AiChatMessage memberMsg = new AiChatMessage();
         memberMsg.setSession(session);
@@ -212,19 +224,27 @@ public class AiChatService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", targetId));
     }
 
-    private String generateContextualReply(List<AiChatMessage> history,
+    private String generateContextualReply(Member member,
+                                           List<AiChatMessage> history,
                                            String userMessage) {
         if (chatProvider == null) {
             throw new com.swp391.scms.common.exception.ServiceUnavailableException(
                     "AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null,
                     "The AI assistant is not configured.");
         }
+        String effectiveSystemPrompt = SYSTEM_PROMPT;
+        if (ragContextService != null) {
+            String retrievedContext = ragContextService.buildRagContext(member, userMessage);
+            if (retrievedContext != null && !retrievedContext.isBlank()) {
+                effectiveSystemPrompt = SYSTEM_PROMPT + "\n\n" + retrievedContext;
+            }
+        }
         var turns = new java.util.ArrayList<AiChatProvider.Turn>();
         history.subList(Math.max(0, history.size() - MAX_CONTEXT_MESSAGES), history.size())
                 .forEach(message -> turns.add(new AiChatProvider.Turn(
                         "ai".equals(message.getSender()) ? "assistant" : "user", message.getMessage())));
         turns.add(new AiChatProvider.Turn("user", userMessage));
-        return chatProvider.generate(SYSTEM_PROMPT, turns);
+        return chatProvider.generate(effectiveSystemPrompt, turns);
     }
 
     private AiChatSessionDto toSessionDto(AiChatSession session) {
