@@ -4,8 +4,9 @@ import { beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { StaffSupportPage } from './StaffSupportPage';
 import * as api from '../member/memberSupportApi';
 import { subscribeSupport } from '../member/supportRealtime';
+import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 
-vi.mock('../member/memberSupportApi', () => ({ getSupportInbox: vi.fn(), getSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn(), updateSupportStatus: vi.fn() }));
+vi.mock('../member/memberSupportApi', () => ({ getSupportInbox: vi.fn(), getSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn(), updateSupportStatus: vi.fn(), escalateSupportTicket: vi.fn() }));
 vi.mock('../member/supportRealtime', () => ({ subscribeSupport: vi.fn() }));
 const ticket: api.SupportTicket = { id: 7, memberId: 10, subject: 'Máy chạy', description: 'Cần hỗ trợ', status: 'open', createdAt: '2026-10-31T09:00:00', assignedToName: null };
 let host: HTMLDivElement, root: Root;
@@ -20,7 +21,7 @@ beforeEach(() => {
   vi.mocked(api.getSupportMessages).mockResolvedValue([]);
   vi.mocked(subscribeSupport).mockReturnValue(stop);
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.resetAllMocks(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); localStorage.clear(); vi.restoreAllMocks(); vi.resetAllMocks(); vi.unstubAllGlobals(); });
 async function render() { await act(async () => root.render(<StaffSupportPage />)); }
 async function open() { await act(async () => host.querySelector<HTMLButtonElement>('.member-support-ticket')!.click()); }
 async function type(value: string) {
@@ -245,4 +246,48 @@ it('retains send failure after a realtime refresh and guards duplicate submit', 
     expect(host.querySelector('textarea')!.value).toBe('Giữ bản nháp');
     expect(host.querySelector('dialog [role="alert"]')).not.toBeNull();
   } finally { vi.useRealTimers(); }
+});
+
+const asRole = (role: 'STAFF' | 'MANAGER') => localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '1', name: 'Nhân viên', identifier: 'staff', role }));
+const escalated: api.SupportTicket = { ...ticket, escalatedAt: '2026-11-02T09:30:00', escalatedByName: 'Lễ tân Hoa', escalationReason: 'Cần quản lý duyệt hoàn tiền' };
+const buttonByText = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === text);
+
+it('lets the receptionist escalate an open complaint with a reason', async () => {
+  asRole('STAFF');
+  vi.mocked(api.escalateSupportTicket).mockResolvedValue(escalated);
+  await render(); await open();
+  expect(host.textContent).toContain('Hộp thư hỗ trợ');
+  await act(async () => buttonByText('Chuyển lên quản lý')!.click());
+  const submitButton = () => [...document.querySelectorAll<HTMLButtonElement>('form button[type="submit"]')].find(button => button.textContent === 'Chuyển lên quản lý')!;
+  expect(submitButton().disabled).toBe(true);
+  const field = document.querySelector<HTMLTextAreaElement>('#staff-support-escalation')!;
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(field, 'Cần quản lý duyệt hoàn tiền'); field.dispatchEvent(new Event('input', { bubbles: true })); });
+  await act(async () => submitButton().click());
+  expect(api.escalateSupportTicket).toHaveBeenCalledExactlyOnceWith(7, 'Cần quản lý duyệt hoàn tiền');
+});
+
+it('locks an escalated complaint for the receptionist', async () => {
+  asRole('STAFF');
+  vi.mocked(api.getSupportInbox).mockResolvedValue({ content: [escalated], totalPages: 1 });
+  vi.mocked(api.getSupportTicket).mockResolvedValue(escalated);
+  await render();
+  expect(host.textContent).toContain('Đã chuyển quản lý');
+  await open();
+  expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('Quản lý đang xử lý');
+  expect(buttonByText('Chuyển lên quản lý')).toBeUndefined();
+  expect(host.querySelector('.member-support-compose')).toBeNull();
+  expect(host.querySelector<HTMLSelectElement>('#staff-support-status')!.disabled).toBe(true);
+});
+
+it('shows managers the escalation reason and lets them reply', async () => {
+  asRole('MANAGER');
+  vi.mocked(api.getSupportInbox).mockResolvedValue({ content: [escalated], totalPages: 1 });
+  vi.mocked(api.getSupportTicket).mockResolvedValue(escalated);
+  await render();
+  expect(host.textContent).toContain('Khiếu nại chuyển lên quản lý');
+  await open();
+  expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('Cần quản lý duyệt hoàn tiền');
+  expect(buttonByText('Chuyển lên quản lý')).toBeUndefined();
+  expect(host.querySelector('.member-support-compose')).not.toBeNull();
+  expect(host.querySelector<HTMLSelectElement>('#staff-support-status')!.disabled).toBe(false);
 });

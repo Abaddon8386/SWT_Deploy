@@ -11,6 +11,11 @@ export interface SupportTicket {
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   createdAt: string;
   assignedToName: string | null;
+  /** Set once a receptionist hands the complaint up to a manager. */
+  escalatedAt?: string | null;
+  /** Staff only: who escalated and why (hidden from members by the API). */
+  escalatedByName?: string | null;
+  escalationReason?: string | null;
 }
 
 export interface SupportMessage {
@@ -47,3 +52,6 @@ export const getSupportInbox = (page = 0, status = '') =>
 
 export const updateSupportStatus = (id: number, status: SupportTicket['status'], assignedTo?: number) =>
   apiFetch<SupportTicket>(`/support/requests/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, assignedTo }) });
+
+export const escalateSupportTicket = (id: number, reason: string) =>
+  apiFetch<SupportTicket>(`/support/requests/${id}/escalate`, { method: 'POST', body: JSON.stringify({ reason }) });
