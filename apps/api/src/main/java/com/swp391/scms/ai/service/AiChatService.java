@@ -37,6 +37,7 @@ public class AiChatService {
             3. Tuyệt đối bảo mật dữ liệu cá nhân của các hội viên khác.
             4. Từ chối lịch sự mọi câu hỏi ngoài phạm vi thể thao, sức khỏe, dinh dưỡng hoặc dịch vụ trung tâm SCMS.
             5. Không suy đoán bảng giá, lịch lớp, trạng thái gói tập hay dữ liệu cá nhân khi chưa có dữ liệu xác thực; hướng dẫn hội viên tra cứu các màn hình portal tương ứng.
+            6. Trả lời ngắn gọn, súc tích (tối đa 3-5 câu hoặc các gạch đầu dòng chính), đi thẳng vào trọng tâm.
             """;
 
     private static final int MAX_CONTEXT_MESSAGES = 6;

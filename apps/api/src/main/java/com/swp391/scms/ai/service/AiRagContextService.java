@@ -32,6 +32,15 @@ public class AiRagContextService {
 
     private static final int MAX_SESSION_ITEMS = 15;
     private static final int MAX_PLAN_ITEMS = 10;
+    private static final long CATALOG_CACHE_TTL_MS = 60_000L;
+    private static final long MEMBER_CACHE_TTL_MS = 30_000L;
+
+    private record CachedCatalog(CatalogDto catalog, long expiresAt) {}
+    private record CachedMemberSnapshot(String memberSection, Set<Long> bookedClassIds, long expiresAt) {}
+
+    private volatile CachedCatalog cachedCatalog;
+    private final java.util.concurrent.ConcurrentHashMap<Long, CachedMemberSnapshot> memberCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     private final PublicCatalogService catalogService;
     private final MembershipSubscriptionRepository subscriptionRepository;
@@ -60,7 +69,21 @@ public class AiRagContextService {
 
         Set<Long> bookedClassIds = new HashSet<>();
         if (member != null) {
-            appendMemberContext(sb, member, bookedClassIds);
+            Long memberId = member.getUserId();
+            long now = System.currentTimeMillis();
+            CachedMemberSnapshot cached = memberId != null ? memberCache.get(memberId) : null;
+            if (cached != null && cached.expiresAt() > now) {
+                sb.append(cached.memberSection());
+                bookedClassIds.addAll(cached.bookedClassIds());
+            } else {
+                StringBuilder memberSb = new StringBuilder();
+                appendMemberContext(memberSb, member, bookedClassIds);
+                String memberSection = memberSb.toString();
+                sb.append(memberSection);
+                if (memberId != null) {
+                    memberCache.put(memberId, new CachedMemberSnapshot(memberSection, Set.copyOf(bookedClassIds), now + MEMBER_CACHE_TTL_MS));
+                }
+            }
         }
         appendCatalogContext(sb, bookedClassIds);
         appendPolicyContext(sb);
@@ -130,7 +153,7 @@ public class AiRagContextService {
         if (catalogService == null) {
             return;
         }
-        CatalogDto catalog = catalogService.getCatalog();
+        CatalogDto catalog = getCachedCatalog();
         if (catalog == null) {
             return;
         }
@@ -180,6 +203,19 @@ public class AiRagContextService {
                 sb.append("\n");
             });
         }
+    }
+
+    private CatalogDto getCachedCatalog() {
+        long now = System.currentTimeMillis();
+        CachedCatalog current = this.cachedCatalog;
+        if (current != null && current.expiresAt() > now) {
+            return current.catalog();
+        }
+        CatalogDto fresh = catalogService.getCatalog();
+        if (fresh != null) {
+            this.cachedCatalog = new CachedCatalog(fresh, now + CATALOG_CACHE_TTL_MS);
+        }
+        return fresh;
     }
 
     private void appendPolicyContext(StringBuilder sb) {

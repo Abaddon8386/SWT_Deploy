@@ -54,7 +54,8 @@ public class GeminiRestClient implements AiClient {
             return new MockAiClient(model).generate(systemPrompt, userMessage);
         }
         try {
-            Map<String, Object> body = Map.of(
+            Map<String, Object> generationConfig = model.contains("lite") ? Map.of("temperature", 0.4) : Map.of("temperature", 0.4, "thinkingConfig", Map.of("thinkingBudget", 0));
+            Map<String, Object> body = Map.of("generationConfig", generationConfig,
                     "systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt != null ? systemPrompt : ""))),
                     "contents", List.of(Map.of(
                             "role", "user",

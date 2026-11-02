@@ -96,8 +96,8 @@ public class AiChatProvider {
 
     private static RestClient.Builder builder() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10_000);
-        factory.setReadTimeout(30_000);
+        factory.setConnectTimeout(8_000);
+        factory.setReadTimeout(15_000);
         return RestClient.builder().requestFactory(factory);
     }
 
@@ -126,16 +126,7 @@ public class AiChatProvider {
                         .retrieve().body(JsonNode.class);
                 content = response == null ? "" : response.path("choices").path(0).path("message").path("content").asText("");
             } else {
-                var contents = turns.stream().map(turn -> Map.of("role", "assistant".equals(turn.role()) ? "model" : "user",
-                        "parts", List.of(Map.of("text", turn.content())))).toList();
-                response = client.post().uri("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent")
-                        .header("x-goog-api-key", apiKey).contentType(MediaType.APPLICATION_JSON)
-                        .body(Map.of("systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt))), "contents", contents))
-                        .retrieve().body(JsonNode.class);
-                StringBuilder text = new StringBuilder();
-                if (response != null) response.path("candidates").path(0).path("content").path("parts")
-                        .forEach(part -> { if (!part.path("thought").asBoolean(false)) text.append(part.path("text").asText("")); });
-                content = text.toString();
+                content = callGeminiWithFallback(systemPrompt, turns);
             }
             if (content.isBlank()) throw unavailable();
             return content;
@@ -143,6 +134,44 @@ public class AiChatProvider {
             // Do not expose upstream bodies, credentials or prompts in errors/logs.
             throw unavailable();
         }
+    }
+
+    private String callGeminiWithFallback(String systemPrompt, List<Turn> turns) {
+        try {
+            String primary = callGeminiModel(this.model, systemPrompt, turns);
+            if (!primary.isBlank()) {
+                return primary;
+            }
+        } catch (RestClientException ex) {
+            if ("gemini-flash-lite-latest".equals(this.model)) {
+                throw ex;
+            }
+        }
+        if (!"gemini-flash-lite-latest".equals(this.model)) {
+            return callGeminiModel("gemini-flash-lite-latest", systemPrompt, turns);
+        }
+        return "";
+    }
+
+    private String callGeminiModel(String targetModel, String systemPrompt, List<Turn> turns) {
+        var contents = turns.stream().map(turn -> Map.of("role", "assistant".equals(turn.role()) ? "model" : "user",
+                "parts", List.of(Map.of("text", turn.content())))).toList();
+        Map<String, Object> generationConfig = targetModel.contains("lite")
+                ? Map.of("maxOutputTokens", 350, "temperature", 0.4)
+                : Map.of("maxOutputTokens", 350, "temperature", 0.4, "thinkingConfig", Map.of("thinkingBudget", 0));
+        JsonNode response = client.post().uri("https://generativelanguage.googleapis.com/v1beta/models/" + targetModel + ":generateContent")
+                .header("x-goog-api-key", apiKey).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of(
+                        "systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt))),
+                        "contents", contents,
+                        "generationConfig", generationConfig))
+                .retrieve().body(JsonNode.class);
+        StringBuilder text = new StringBuilder();
+        if (response != null) {
+            response.path("candidates").path(0).path("content").path("parts")
+                    .forEach(part -> { if (!part.path("thought").asBoolean(false)) text.append(part.path("text").asText("")); });
+        }
+        return text.toString();
     }
 
     private ServiceUnavailableException unavailable() {

@@ -89,4 +89,17 @@ class AiChatProviderTest {
             java.nio.file.Files.deleteIfExists(tempFile);
         }
     }
+
+    @Test void geminiFallsBackToFlashLiteWhenPrimaryModelFails() {
+        RestClient.Builder builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"))
+                .andExpect(jsonPath("$.generationConfig.thinkingConfig.thinkingBudget").value(0))
+                .andRespond(withServerError());
+        server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent"))
+                .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Fast fallback answer\"}]}}]}", MediaType.APPLICATION_JSON));
+        assertEquals("Fast fallback answer", new AiChatProvider("gemini", "unit-test-key", "gemini-3-flash-preview", builder)
+                .generate("System", List.of(new AiChatProvider.Turn("user", "Question"))));
+        server.verify();
+    }
 }
