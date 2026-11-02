@@ -1,5 +1,6 @@
 package com.swp391.scms;
 
+import com.swp391.scms.common.CenterTime;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -14,6 +15,7 @@ import java.util.List;
 @SpringBootApplication
 public class ScmsApplication {
     public static void main(String[] args) {
+        CenterTime.useAsDefault();
         loadDotEnv();
         SpringApplication.run(ScmsApplication.class, args);
     }
