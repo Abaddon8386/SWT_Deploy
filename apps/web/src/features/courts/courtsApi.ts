@@ -1,8 +1,9 @@
 import { apiFetch, ApiError } from '../../shared/api/client';
-import { DISCIPLINES, matchesDiscipline } from '../../shared/lib/disciplines';
+import { DISCIPLINES } from '../../shared/lib/disciplines';
 
 export const COURT_DISCIPLINES = DISCIPLINES.filter(item => ['tennis', 'badminton', 'swimming'].includes(item.id));
-export const isCourtDiscipline = (name: string) => COURT_DISCIPLINES.some(item => matchesDiscipline(name, item.name));
+// Backend accepts only the canonical names, so aliases ("Tennis nâng cao") must not be offered as bookable.
+export const isCourtDiscipline = (name: string) => COURT_DISCIPLINES.some(item => item.name === name.trim());
 export interface Court {
   id: number; name: string; location: string | null; disciplineId: number; disciplineName: string;
   openTime: string; closeTime: string;
@@ -29,6 +30,13 @@ export function centerDate(value = new Date()): string {
   const part = (name: string) => parts.find(item => item.type === name)!.value;
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
+/** "YYYY-MM-DDTHH:mm" in the center's timezone, comparable as a string with a booking's date and time. */
+export function centerDateTime(value = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(value);
+  const part = (name: string) => parts.find(item => item.type === name)!.value;
+  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
+}
+export const bookingEnded = (booking: Pick<CourtBooking, 'date' | 'endTime'>, now = centerDateTime()) => `${booking.date}T${shortTime(booking.endTime)}` <= now;
 export function dateAfter(date: string, days: number): string {
   const value = new Date(`${date}T12:00:00Z`); value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);

@@ -145,4 +145,13 @@ class CourtBookingServiceTest {
         error("COURT_BOOKING_INVALID_SLOT", () -> service.my(member, 0, 101));
         error("COURT_BOOKING_FORBIDDEN", () -> service.daily(member, date, null, 0, 20));
     }
+    @Test void staffDailyListUsesRoomFilterOnlyWhenGiven() {
+        var staff = new AuthenticatedPrincipal(2L, "staff", "RECEPTIONIST");
+        CourtBooking booking = existing(LocalTime.NOON);
+        when(bookings.findDaily(eq(date), any())).thenReturn(new PageImpl<>(List.of(booking)));
+        when(bookings.findDailyByRoom(eq(date), eq(10L), any())).thenReturn(new PageImpl<>(List.of(booking, booking)));
+        assertEquals(1, service.daily(staff, date, null, 0, 20).getTotalElements());
+        assertEquals(2, service.daily(staff, date, 10L, 0, 20).getTotalElements());
+        verify(bookings, never()).findDailyByRoom(eq(date), isNull(), any());
+    }
 }
