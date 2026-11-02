@@ -40,7 +40,7 @@ public class AiChatProvider {
             return configuredModel.trim();
         }
         return switch (provider) {
-            case "gemini" -> "gemini-2.0-flash";
+            case "gemini" -> "gemini-flash-latest";
             case "groq" -> "llama-3.3-70b-versatile";
             case "openai" -> "gpt-4o-mini";
             default -> "";
