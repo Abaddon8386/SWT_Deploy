@@ -33,6 +33,8 @@ export interface AiWorkoutPlanResult {
 
 export interface TrainingPlanPayload {
   memberId: number;
+  /** Bắt buộc khi Manager soạn giáo án; Coach luôn dùng danh tính của chính mình. */
+  coachId?: number;
   title: string;
   goal: string;
   startDate: string;
@@ -55,100 +57,55 @@ export interface MemberOption {
   bmi?: number;
 }
 
-export const SAMPLE_MEMBERS: MemberOption[] = [
-  {
-    id: 1,
-    memberCode: 'MB-2026-001',
-    fullName: 'Lê Hoàng Long',
-    fitnessGoal: 'Tăng khối lượng cơ nạc (Hypertrophy), giảm mỡ bụng dưới.',
-    healthNotes: 'Tiền sử thoát vị đĩa đệm nhẹ L4-L5 (năm 2024). Tránh Deadlift tạ nặng.',
-    fitnessLevel: 'intermediate',
-    heightCm: 175,
-    weightKg: 74,
-    bmi: 24.2,
-  },
-  {
-    id: 2,
-    memberCode: 'MB-2026-014',
-    fullName: 'Trần Thị Thu Thảo',
-    fitnessGoal: 'Săn chắc cơ mông đùi, tăng cường độ dẻo dai cột sống và cải thiện dáng đứng.',
-    healthNotes: 'Khớp cổ tay phải yếu do hội chứng ống cổ tay văn phòng, cần quấn bảo hộ.',
-    fitnessLevel: 'beginner',
-    heightCm: 160,
-    weightKg: 52,
-    bmi: 20.3,
-  },
-  {
-    id: 3,
-    memberCode: 'MB-2026-027',
-    fullName: 'Nguyễn Văn Minh',
-    fitnessGoal: 'Chuẩn bị thể lực Half Marathon (21km), tăng sức bền chân và Core.',
-    healthNotes: 'Không có tiền sử chấn thương, thể trạng rất tốt.',
-    fitnessLevel: 'advanced',
-    heightCm: 178,
-    weightKg: 69,
-    bmi: 21.8,
-  },
-  {
-    id: 4,
-    memberCode: 'MB-2026-039',
-    fullName: 'Đỗ Quỳnh Anh',
-    fitnessGoal: 'Giảm mỡ toàn thân sau sinh, tăng độ săn chắc bụng và lưng trên.',
-    healthNotes: 'Khớp gối trái từng chấn thương dây chằng chéo trước, tránh Squat tạ quá sâu.',
-    fitnessLevel: 'beginner',
-    heightCm: 158,
-    weightKg: 57,
-    bmi: 22.8,
-  },
-];
+export interface CoachOption {
+  id: number;
+  fullName: string;
+  email?: string;
+}
 
 export const aiApi = {
   /**
-   * Lấy danh sách học viên thực tế đã ghi danh trong các lớp học từ Backend
+   * Lấy danh sách học viên thực tế đã ghi danh trong các lớp học từ Backend.
+   * Danh sách rỗng nghĩa là chưa có học viên; lỗi tải được ném ra để UI báo lỗi, không bao giờ thay bằng dữ liệu mẫu.
    */
   getCoachMembers: async (): Promise<MemberOption[]> => {
-    try {
-      const classes = await apiFetch<Array<{ id: number }>>('/classes');
-      if (!Array.isArray(classes) || classes.length === 0) {
-        return SAMPLE_MEMBERS;
-      }
-      const byMemberId = new Map<number, MemberOption>();
-      const rosters = await Promise.allSettled(classes.map(async cls => apiFetch<
-        Array<{
-          memberId: number;
-          membershipCode?: string;
-          fullName?: string;
-          fitnessGoal?: string;
-          healthNotes?: string;
-          fitnessLevel?: string;
-        }>
-      >(`/classes/${cls.id}/students`)));
-      for (const roster of rosters) {
-        if (roster.status === 'rejected') continue;
-        try {
-          const students = roster.value;
-          if (Array.isArray(students)) {
-            for (const s of students) {
-              if (s.memberId && !byMemberId.has(s.memberId)) {
-                byMemberId.set(s.memberId, {
-                  id: s.memberId,
-                  memberCode: s.membershipCode || `MEM-${s.memberId}`,
-                  fullName: s.fullName || `Hội viên #${s.memberId}`,
-                  fitnessGoal: s.fitnessGoal || 'Cải thiện thể lực toàn diện',
-                  healthNotes: s.healthNotes || 'Bình thường',
-                  fitnessLevel: s.fitnessLevel || 'beginner',
-                });
-              }
-            }
-          }
-        } catch {
-          // Ignore individual class fetch errors
+    const classes = await apiFetch<Array<{ id: number }>>('/classes');
+    if (!Array.isArray(classes) || classes.length === 0) return [];
+    const byMemberId = new Map<number, MemberOption>();
+    const rosters = await Promise.allSettled(classes.map(async cls => apiFetch<
+      Array<{
+        memberId: number;
+        membershipCode?: string;
+        fullName?: string;
+        fitnessGoal?: string;
+        healthNotes?: string;
+        fitnessLevel?: string;
+      }>
+    >(`/classes/${cls.id}/students`)));
+    const failed = rosters.filter((roster): roster is PromiseRejectedResult => roster.status === 'rejected');
+    if (failed.length === rosters.length) throw failed[0].reason;
+    for (const roster of rosters) {
+      if (roster.status === 'rejected' || !Array.isArray(roster.value)) continue;
+      for (const s of roster.value) {
+        if (s.memberId && !byMemberId.has(s.memberId)) {
+          byMemberId.set(s.memberId, {
+            id: s.memberId,
+            memberCode: s.membershipCode || `MEM-${s.memberId}`,
+            fullName: s.fullName || `Hội viên #${s.memberId}`,
+            fitnessGoal: s.fitnessGoal || 'Cải thiện thể lực toàn diện',
+            healthNotes: s.healthNotes || 'Bình thường',
+            fitnessLevel: s.fitnessLevel || 'beginner',
+          });
         }
       }
-      return byMemberId.size > 0 ? Array.from(byMemberId.values()) : SAMPLE_MEMBERS;
-    } catch {
-      return SAMPLE_MEMBERS;
     }
+    return Array.from(byMemberId.values());
+  },
+
+  /** Huấn luyện viên đang hoạt động để Manager chọn người phụ trách giáo án. */
+  getActiveCoaches: async (): Promise<CoachOption[]> => {
+    const coaches = await apiFetch<CoachOption[]>('/classes/coaches');
+    return Array.isArray(coaches) ? coaches : [];
   },
 
   /**
@@ -181,6 +138,7 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify({
         member_id: payload.memberId,
+        ...(payload.coachId != null ? { coach_id: payload.coachId } : {}),
         title: payload.title,
         goal: payload.goal,
         start_date: payload.startDate,

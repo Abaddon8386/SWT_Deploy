@@ -1,9 +1,10 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { purchaseAuthPath } from '../lib/purchaseIntent';
-import { getCurrentUser, homePath } from '../api/client';
+import { homePath } from '../api/client';
+import { useCurrentUser } from '../api/useCurrentUser';
 
 export function RoleGuard({ allowedRoles }: { allowedRoles: string[] }) {
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const location = useLocation();
   if (!user) {
     return <Navigate to={purchaseAuthPath('/login', `?returnTo=${encodeURIComponent(location.pathname + location.search)}`)} replace />;

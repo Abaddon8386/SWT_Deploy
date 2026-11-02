@@ -9,7 +9,7 @@ import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
 import {
   aiApi,
-  SAMPLE_MEMBERS,
+  type CoachOption,
   type MemberOption,
   type WorkoutExerciseItem,
   type AiWorkoutPlanResult,
@@ -38,14 +38,19 @@ export function CoachTrainingPlanPage() {
     return currentUser.role === 'COACH' || currentUser.role === 'MANAGER';
   }, [currentUser]);
 
-  // Danh sách học viên và thông tin tổng quan giáo án
-  const [members, setMembers] = useState<MemberOption[]>(SAMPLE_MEMBERS);
+  const isManager = currentUser?.role === 'MANAGER';
+
+  // Danh sách học viên thật (không có dữ liệu mẫu) và thông tin tổng quan giáo án
+  const [members, setMembers] = useState<MemberOption[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
   const [membersError, setMembersError] = useState('');
   const [membersAttempt, setMembersAttempt] = useState(0);
-  const [selectedMemberId, setSelectedMemberId] = useState<number>(SAMPLE_MEMBERS[0].id);
+  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
+  // Manager phải chỉ định Coach phụ trách vì Manager không có hồ sơ Coach của riêng mình
+  const [coaches, setCoaches] = useState<CoachOption[]>([]);
+  const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [planTitle, setPlanTitle] = useState('Giáo án Cá nhân hóa 4 Tuần');
-  const [planGoal, setPlanGoal] = useState(SAMPLE_MEMBERS[0].fitnessGoal || 'Tăng cường sức mạnh và cải thiện tư thế');
+  const [planGoal, setPlanGoal] = useState('Tăng cường sức mạnh và cải thiện tư thế');
   const todayStr = useMemo(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -127,7 +132,7 @@ export function CoachTrainingPlanPage() {
 
   // AI Modal States
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [aiSelectedMemberId, setAiSelectedMemberId] = useState<number>(SAMPLE_MEMBERS[0].id);
+  const [aiSelectedMemberId, setAiSelectedMemberId] = useState<number | null>(null);
   const [aiCoachPrompt, setAiCoachPrompt] = useState(
     'Học viên bận việc văn phòng, chỉ tập được tối đa 3-4 buổi/tuần. Chú ý tiền sử cơ xương khớp để bảo đảm an toàn.'
   );
@@ -140,11 +145,18 @@ export function CoachTrainingPlanPage() {
     let active = true;
     setMembersLoading(true);
     setMembersError('');
-    void aiApi.getCoachMembers().then((loaded) => {
-      if (!active || loaded.length === 0) return;
+    const loadCoaches = isManager ? aiApi.getActiveCoaches() : Promise.resolve<CoachOption[]>([]);
+    void Promise.all([aiApi.getCoachMembers(), loadCoaches]).then(([loaded, loadedCoaches]) => {
+      if (!active) return;
       setMembers(loaded);
-      setSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0].id));
-      setAiSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0].id));
+      setCoaches(loadedCoaches);
+      setSelectedCoachId((prev) => (loadedCoaches.some((c) => c.id === prev) ? prev : null));
+      setSelectedMemberId((prev) => {
+        if (loaded.some((m) => m.id === prev)) return prev;
+        if (loaded[0]?.fitnessGoal) setPlanGoal(loaded[0].fitnessGoal);
+        return loaded[0]?.id ?? null;
+      });
+      setAiSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0]?.id ?? null));
     }).catch(() => {
       if (active) setMembersError('Không thể tải danh sách học viên. Vui lòng thử lại.');
     }).finally(() => {
@@ -153,16 +165,16 @@ export function CoachTrainingPlanPage() {
     return () => {
       active = false;
     };
-  }, [hasAccess, membersAttempt]);
+  }, [hasAccess, isManager, membersAttempt]);
 
   // Học viên đang chọn trong form
-  const selectedMember: MemberOption = useMemo(() => {
-    return members.find((m) => m.id === selectedMemberId) || members[0] || SAMPLE_MEMBERS[0];
+  const selectedMember: MemberOption | undefined = useMemo(() => {
+    return members.find((m) => m.id === selectedMemberId);
   }, [members, selectedMemberId]);
 
   // Học viên đang chọn trong AI Modal
-  const aiSelectedMember: MemberOption = useMemo(() => {
-    return members.find((m) => m.id === aiSelectedMemberId) || members[0] || SAMPLE_MEMBERS[0];
+  const aiSelectedMember: MemberOption | undefined = useMemo(() => {
+    return members.find((m) => m.id === aiSelectedMemberId) ?? members[0];
   }, [members, aiSelectedMemberId]);
 
   // Thêm bài tập thủ công vào ngày đang chọn
@@ -212,6 +224,7 @@ export function CoachTrainingPlanPage() {
 
   // Xử lý gọi AI gợi ý
   const handleGenerateAiPlan = async () => {
+    if (aiSelectedMemberId == null) return;
     setIsGeneratingAi(true);
     setAiResult(null);
     try {
@@ -297,11 +310,21 @@ export function CoachTrainingPlanPage() {
       return;
     }
 
+    if (!selectedMember) {
+      showCenterNotification('Chưa xác minh được học viên từ hệ thống. Vui lòng tải lại danh sách học viên.', 'error', 'Chưa chọn học viên');
+      return;
+    }
+    if (isManager && selectedCoachId == null) {
+      showCenterNotification('Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.', 'error', 'Chưa chọn huấn luyện viên');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const savedRes = await aiApi.saveTrainingPlan(
         {
-          memberId: selectedMemberId,
+          memberId: selectedMember.id,
+          coachId: isManager ? selectedCoachId ?? undefined : undefined,
           title: planTitle,
           goal: planGoal,
           startDate,
@@ -322,7 +345,7 @@ export function CoachTrainingPlanPage() {
         const storedPlans = JSON.parse(localStorage.getItem('sol_coach_training_plans') || '[]');
         const planRecord = {
           id: (savedRes as { id?: number })?.id || Date.now(),
-          memberId: selectedMemberId,
+          memberId: selectedMember.id,
           memberName: selectedMember.fullName,
           title: planTitle,
           goal: planGoal,
@@ -378,6 +401,17 @@ export function CoachTrainingPlanPage() {
     </div>;
   }
 
+  if (!selectedMember || !aiSelectedMember) {
+    return <div className="portal-container plan-editor-page">
+      <PageHeader eyebrow="Huấn luyện &amp; Bài tập" title="Bàn làm việc: Soạn giáo án bài tập" />
+      <div className="portal-card" role="status">
+        <p><strong>Chưa có học viên để soạn giáo án.</strong></p>
+        <p>Danh sách học viên lấy từ các lớp đã có hội viên ghi danh. Khi có hội viên đăng ký lớp, họ sẽ xuất hiện ở đây.</p>
+        <button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>Tải lại danh sách</button>
+      </div>
+    </div>;
+  }
+
   return (
     <div className="portal-container plan-editor-page">
       <PageHeader
@@ -401,7 +435,8 @@ export function CoachTrainingPlanPage() {
               type="button"
               className="btn-primary"
               onClick={() => void handleSavePlan()}
-              disabled={isSaving}
+              disabled={isSaving || (isManager && selectedCoachId == null)}
+              title={isManager && selectedCoachId == null ? 'Chọn huấn luyện viên phụ trách để lưu' : undefined}
             >
               {isSaving ? 'Đang lưu...' : 'Lưu & Kích hoạt giáo án'}
             </button>
@@ -465,6 +500,23 @@ export function CoachTrainingPlanPage() {
               ))}
             </Select>
           </div>
+
+          {isManager && <div>
+            <label className="portal-label" htmlFor="plan-coach-select">
+              Huấn luyện viên phụ trách
+            </label>
+            <Select
+              id="plan-coach-select"
+              className="portal-select"
+              value={selectedCoachId == null ? '' : String(selectedCoachId)}
+              onChange={(e) => setSelectedCoachId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">{coaches.length === 0 ? 'Chưa có huấn luyện viên hoạt động' : '— Chọn huấn luyện viên —'}</option>
+              {coaches.map((c) => (
+                <option key={c.id} value={String(c.id)}>{c.fullName}</option>
+              ))}
+            </Select>
+          </div>}
 
           <div>
             <label className="portal-label" htmlFor="plan-start-date">

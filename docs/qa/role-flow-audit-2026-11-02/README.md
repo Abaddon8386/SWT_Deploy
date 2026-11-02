@@ -62,6 +62,21 @@ Mốc source được kiểm tra: `4082e02`. Phạm vi là audit; không sửa p
 - Nguồn: `apps/web/src/shared/api/client.ts:82`, `apps/web/src/shared/api/client.ts:106`.
 - Hướng sửa: chỉ xử lý mất phiên nếu token gây 401 vẫn là token của phiên hiện tại; bỏ response thuộc phiên đã bị thay thế.
 
+## Trạng thái sửa (02/11/2026)
+
+Cả sáu vấn đề đã được đối chiếu lại với code và sửa. Phần mô tả bên trên giữ nguyên làm hồ sơ lúc phát hiện.
+
+| # | Cách sửa | Kiểm chứng |
+| --- | --- | --- |
+| 1 | `SecurityConfig`: thêm matcher GET `renewal-candidates` và POST `renew/{id}` cho `CENTER_MANAGER`/`RECEPTIONIST` đứng trước matcher MEMBER | `OperationsSecurityRegressionTest`: staff 200/201, Member/Coach 403, cả hai prefix URL |
+| 2 | `aiApi.getCoachMembers` bỏ `SAMPLE_MEMBERS`: rỗng trả `[]`, lỗi được ném; trang giáo án có empty state, error state và không cho lưu khi chưa có học viên thật | `aiApi.test.ts`, `CoachTrainingPlanPage.test.tsx` |
+| 3 | `client.ts` có `subscribeAuthSession` (cùng tab và sự kiện `storage`); `RoleGuard` dùng `useCurrentUser`; `PortalShell` remount theo `identifier:role` nên chat/state tài khoản cũ bị bỏ | `PortalShell.session.test.tsx`, `client.test.ts` |
+| 4 | Manager chọn Coach phụ trách (`GET /classes/coaches`) và gửi `coach_id`; Coach không gửi `coach_id` | `CoachTrainingPlanPage.test.tsx`, `aiApi.test.ts` |
+| 5 | Thêm `GET /api/v1/auth/me` (role hiện hành từ DB); portal gọi `syncSessionWithServer` khi vào và khi quay lại tab, role đổi thì cập nhật session và `RoleGuard` điều hướng lại | `AuthSessionEndpointTest`, `PortalShell.session.test.tsx`, `client.test.ts` |
+| 6 | `apiFetch`/`apiFetchPdf` chỉ xóa phiên khi token gây 401 vẫn là token đang lưu; response của phiên bị thay thế bị bỏ qua (`SESSION_REPLACED`) | `client.test.ts` |
+
+Chưa kiểm chứng: luồng POS và đổi role trên database Supabase thật, và hai tab trình duyệt thật. Các test dùng MockMvc/jsdom với service được mock.
+
 ## Các phần đã kiểm tra và giới hạn
 
 | Kiểm tra | Kết quả |

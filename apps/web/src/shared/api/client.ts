@@ -12,10 +12,38 @@ export interface LoginResponse {
 
 export const AUTH_STORAGE_KEY = 'fitcenter_auth_session';
 
-// Lấy thông tin user hiện tại
-export function getCurrentUser(): UserSession | null {
+export const TOKEN_STORAGE_KEY = 'fitcenter_token';
+
+const sessionListeners = new Set<() => void>();
+
+function notifySessionChange(): void {
+  sessionListeners.forEach((listener) => listener());
+}
+
+/** Theo dõi thay đổi session ở tab hiện tại và (qua sự kiện `storage`) ở các tab khác. */
+export function subscribeAuthSession(listener: () => void): () => void {
+  sessionListeners.add(listener);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === AUTH_STORAGE_KEY || event.key === TOKEN_STORAGE_KEY) listener();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    sessionListeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+/** Chuỗi session thô: dùng làm snapshot ổn định cho useSyncExternalStore. */
+export function readRawAuthSession(): string | null {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    return localStorage.getItem(AUTH_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function parseAuthSession(raw: string | null): UserSession | null {
+  try {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as UserSession;
     return { ...parsed, role: SESSION_ROLE[parsed.role] ?? parsed.role };
@@ -24,18 +52,37 @@ export function getCurrentUser(): UserSession | null {
   }
 }
 
+// Lấy thông tin user hiện tại
+export function getCurrentUser(): UserSession | null {
+  return parseAuthSession(readRawAuthSession());
+}
+
 // Lưu session
 export function setCurrentUser(user: UserSession): void {
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+  notifySessionChange();
 }
 
 // Xóa session (Logout hoặc khi gặp 401)
 export function clearAuthSession(): void {
   localStorage.removeItem(AUTH_STORAGE_KEY);
-  localStorage.removeItem('fitcenter_token');
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  notifySessionChange();
 }
 
-export const TOKEN_STORAGE_KEY = 'fitcenter_token';
+/**
+ * Chỉ kết thúc phiên khi token gây ra 401 vẫn là token đang lưu. Nếu người dùng đã đăng nhập tài khoản khác
+ * trong lúc request cũ còn bay, response muộn đó không được xóa phiên mới.
+ * Trả về true nếu phiên đã bị thay thế (response cần bị bỏ qua).
+ */
+function handleUnauthorized(token: string): boolean {
+  if (localStorage.getItem(TOKEN_STORAGE_KEY) !== token) return true;
+  clearAuthSession();
+  window.location.assign(expiredLoginPath());
+  return false;
+}
+
+const SESSION_REPLACED_MESSAGE = 'Phiên đăng nhập đã thay đổi. Vui lòng tải lại trang.';
 
 function expiredLoginPath(): string {
   const target = window.location.pathname === '/member/packages' ? window.location.pathname + window.location.search : null;
@@ -79,10 +126,9 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.', 0);
   }
   const body = await res.json().catch(() => null);
-  if (res.status === 401 && token && !path.startsWith('/auth/')) {
+  if (res.status === 401 && token && (!path.startsWith('/auth/') || path === '/auth/me')) {
     // Phiên đăng nhập hết hạn: đưa người dùng về trang đăng nhập kèm lời giải thích
-    clearAuthSession();
-    window.location.assign(expiredLoginPath());
+    if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED');
   }
   if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code);
   // ApiResponse omits null data (Jackson NON_NULL); never pass its HTTP status to feature DTOs.
@@ -104,8 +150,7 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
     throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng thử lại.', 0);
   }
   if (res.status === 401 && token) {
-    clearAuthSession();
-    window.location.assign(expiredLoginPath());
+    if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED');
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
@@ -133,6 +178,36 @@ export function setAuthSession(token: string, username: string, roleCode: string
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
   setCurrentUser(user);
   return user;
+}
+
+/**
+ * Đối chiếu role/username trong localStorage với dữ liệu hiện hành trên server (JWT filter luôn đọc role từ DB).
+ * Nhờ vậy khi Admin đổi vai trò, portal tự cập nhật route/menu thay vì giữ role cũ cho tới lần đăng nhập sau.
+ * Lỗi mạng/5xx bị bỏ qua; 401 do apiFetch xử lý (chỉ khi token vẫn là token hiện tại).
+ */
+export async function syncSessionWithServer(): Promise<void> {
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (!token) return;
+  let me: { username?: string; role?: string } | null;
+  try {
+    me = await apiFetch<{ username?: string; role?: string }>('/auth/me');
+  } catch {
+    return;
+  }
+  if (localStorage.getItem(TOKEN_STORAGE_KEY) !== token) return;
+  const role = me?.role ? SESSION_ROLE[me.role] : undefined;
+  if (!me?.username || !role) {
+    // Vai trò hiện tại không được portal hỗ trợ: không thể giữ phiên cũ
+    clearAuthSession();
+    window.location.assign(expiredLoginPath());
+    return;
+  }
+  const current = getCurrentUser();
+  if (!current) return;
+  if (current.role === role && current.identifier === me.username) return;
+  setCurrentUser(current.identifier === me.username
+    ? { ...current, role }
+    : { id: me.username, name: me.username, identifier: me.username, role });
 }
 
 // Màn hình mặc định sau đăng nhập theo từng vai trò

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { aiApi, SAMPLE_MEMBERS } from './aiApi';
+import { aiApi } from './aiApi';
 
 describe('aiApi errors', () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -35,10 +35,33 @@ describe('aiApi errors', () => {
     expect(result[0].fullName).toBe('Học viên đầu tiên');
   });
 
-  it.each([{ classes: [] }, { classes: [{ id: 1 }, { id: 2 }] }])('keeps the existing fallback when no class supplies members (%j)', async ({ classes }) => {
+  it('returns an empty list instead of sample members when no class has enrolled members', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve(url === '/api/v1/classes'
-      ? new Response(JSON.stringify(classes))
-      : new Response('{}', { status: 500 }))));
-    expect(await aiApi.getCoachMembers()).toBe(SAMPLE_MEMBERS);
+      ? new Response(JSON.stringify([{ id: 1 }]))
+      : new Response(JSON.stringify([])))));
+    expect(await aiApi.getCoachMembers()).toEqual([]);
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify([])))));
+    expect(await aiApi.getCoachMembers()).toEqual([]);
+  });
+
+  it('surfaces a load failure instead of inventing members when every roster or the class list fails', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve(url === '/api/v1/classes'
+      ? new Response(JSON.stringify([{ id: 1 }, { id: 2 }]))
+      : new Response(JSON.stringify({ message: 'roster offline' }), { status: 500 }))));
+    await expect(aiApi.getCoachMembers()).rejects.toThrow('roster offline');
+
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ message: 'classes offline' }), { status: 500 }))));
+    await expect(aiApi.getCoachMembers()).rejects.toThrow('classes offline');
+  });
+
+  it('sends coach_id only when a manager chooses the responsible coach', async () => {
+    const fetch = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: { id: 5, status: 'active' } }))));
+    vi.stubGlobal('fetch', fetch);
+    const base = { memberId: 8, title: 'Plan', goal: 'Goal', startDate: '2026-11-03', endDate: '2026-11-30', items: [] };
+    await aiApi.saveTrainingPlan({ ...base, coachId: 12 });
+    await aiApi.saveTrainingPlan(base);
+    const bodies = (fetch.mock.calls as unknown as Array<[string, RequestInit]>).map(([, init]) => JSON.parse(String(init.body)));
+    expect(bodies[0].coach_id).toBe(12);
+    expect(bodies[1]).not.toHaveProperty('coach_id');
   });
 });

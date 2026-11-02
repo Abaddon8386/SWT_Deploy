@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigation } from 'react-router-dom';
-import { clearAuthSession, getCurrentUser } from '../../shared/api/client';
+import { clearAuthSession, syncSessionWithServer, type UserSession } from '../../shared/api/client';
+import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -16,8 +17,17 @@ function searchable(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
 }
 
+/**
+ * Vỏ portal gắn với một danh tính: khi đổi tài khoản/role (kể cả từ tab khác) toàn bộ cây con bị remount,
+ * nên chat, thông báo và state trang của phiên cũ không còn hiển thị cho người dùng mới.
+ */
 export function PortalShell() {
-  const user = getCurrentUser();
+  const user = useCurrentUser();
+  if (!user) return <Navigate to="/login" replace />;
+  return <PortalShellContent key={sessionIdentityKey(user)} user={user} />;
+}
+
+function PortalShellContent({ user }: { user: UserSession }) {
   const location = useLocation();
   const navigate = useNavigate();
   const navigation = useNavigation();
@@ -38,21 +48,21 @@ export function PortalShell() {
   const previousPath = useRef(location.pathname);
   const mainRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
-  const isMember = user?.role === 'MEMBER';
-  const isCoach = user?.role === 'COACH';
+  const isMember = user.role === 'MEMBER';
+  const isCoach = user.role === 'COACH';
   const canReceiveNotifications = isMember || isCoach;
   const profileLabel = isMember ? 'Hồ sơ & Sức khỏe' : 'Hồ sơ cá nhân';
-  const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => {
+  const navItems = PORTAL_NAV.filter((item) => item.roles.includes(user.role)).map((item) => {
     if (item.to === '/member/profile') return { ...item, label: profileLabel };
-    if (item.to === '/staff/classes' && user?.role === 'STAFF') return { ...item, label: 'Xem lịch học trung tâm' };
+    if (item.to === '/staff/classes' && user.role === 'STAFF') return { ...item, label: 'Xem lịch học trung tâm' };
     return item;
   });
   const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? 'Không gian của bạn';
   const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
-  const mobileItems = user ? MOBILE_PRIMARY_NAV[user.role].flatMap(item => {
+  const mobileItems = MOBILE_PRIMARY_NAV[user.role].flatMap(item => {
     const authorizedItem = navItems.find(candidate => candidate.to === item.to);
     return authorizedItem ? [{ ...authorizedItem, label: item.label }] : [];
-  }) : [];
+  });
   const secondaryScreen = !mobileItems.some(item => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
 
   useEffect(() => {
@@ -76,6 +86,25 @@ export function PortalShell() {
   }, [canReceiveNotifications]);
 
   useEffect(() => {
+    // Role có thể bị Admin đổi sau khi đăng nhập: đối chiếu với server khi vào portal và khi quay lại tab.
+    let lastSync = 0;
+    const sync = () => {
+      const now = Date.now();
+      if (now - lastSync < 5000) return;
+      lastSync = now;
+      void syncSessionWithServer();
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+    sync();
+    window.addEventListener('focus', sync);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', sync);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+
+  useEffect(() => {
     const previousTitle = document.title;
     document.title = `${pageTitle} · SÖL Portal`;
     return () => { document.title = previousTitle; };
@@ -95,8 +124,6 @@ export function PortalShell() {
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [canReceiveNotifications, location.state, location.pathname, navigate]);
-
-  if (!user) return <Navigate to="/login" replace />;
 
   const initials = user.name.trim().split(/\s+/).slice(-2).map((part) => part[0]).join('').toUpperCase() || 'S';
   const openNavigation = (mode: 'search' | 'menu') => {

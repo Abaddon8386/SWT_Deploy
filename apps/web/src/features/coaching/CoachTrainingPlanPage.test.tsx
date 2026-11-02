@@ -4,7 +4,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoachTrainingPlanPage } from './CoachTrainingPlanPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
-import { aiApi, SAMPLE_MEMBERS, type MemberOption } from './aiApi';
+import { aiApi, type MemberOption } from './aiApi';
+
+const MEMBERS: MemberOption[] = [
+  { id: 1, memberCode: 'MB-2026-001', fullName: 'Lê Hoàng Long', fitnessGoal: 'Tăng cơ nạc', healthNotes: 'Tránh Deadlift tạ nặng', fitnessLevel: 'intermediate' },
+  { id: 2, memberCode: 'MB-2026-014', fullName: 'Trần Thị Thu Thảo', fitnessGoal: 'Săn chắc cơ mông', healthNotes: 'Bình thường', fitnessLevel: 'beginner' },
+];
 
 describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập Tích hợp AI Gợi ý)', () => {
   let host: HTMLDivElement;
@@ -85,7 +90,8 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     vi.spyOn(aiApi, 'generateWorkoutPlan').mockResolvedValue(mockAiResponse);
     vi.spyOn(aiApi, 'saveTrainingPlan').mockResolvedValue({ id: 101, status: 'active' });
-    vi.spyOn(aiApi, 'getCoachMembers').mockResolvedValue(SAMPLE_MEMBERS);
+    vi.spyOn(aiApi, 'getCoachMembers').mockResolvedValue(MEMBERS);
+    vi.spyOn(aiApi, 'getActiveCoaches').mockResolvedValue([{ id: 31, fullName: 'HLV Marcus Vance' }, { id: 32, fullName: 'HLV Elena Cruz' }]);
   });
 
   afterEach(async () => {
@@ -127,10 +133,10 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     await renderComponent();
     expect(host.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(host.textContent).not.toContain(SAMPLE_MEMBERS[0].fullName);
+    expect(host.textContent).not.toContain(MEMBERS[0].fullName);
     expect(host.querySelector('#plan-member')).toBeNull();
 
-    await act(async () => finishMembers([{ ...SAMPLE_MEMBERS[0], id: 42, fullName: 'Học viên đã tải' }]));
+    await act(async () => finishMembers([{ ...MEMBERS[0], id: 42, fullName: 'Học viên đã tải' }]));
     expect(host.querySelector('[aria-busy="true"]')).toBeNull();
     expect(host.textContent).toContain('Học viên đã tải');
     expect(host.textContent).toContain('Lưu & Kích hoạt giáo án');
@@ -235,6 +241,50 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.querySelector('.center-toast-card')).not.toBeNull();
     expect(host.textContent).toContain('Đã lưu & kích hoạt giáo án');
     expect(host.querySelector('.plan-saved-badge')).not.toBeNull();
+  });
+
+  it('shows an empty state and blocks saving when the live roster has no members (no sample students)', async () => {
+    vi.mocked(aiApi.getCoachMembers).mockResolvedValue([]);
+    await renderComponent();
+
+    expect(host.textContent).toContain('Chưa có học viên để soạn giáo án');
+    expect(host.textContent).not.toContain('Lê Hoàng Long');
+    expect(Array.from(host.querySelectorAll('button')).some((b) => b.textContent?.includes('Lưu & Kích hoạt giáo án'))).toBe(false);
+    expect(aiApi.saveTrainingPlan).not.toHaveBeenCalled();
+  });
+
+  it('shows a retryable error instead of sample students when the roster fails to load', async () => {
+    vi.mocked(aiApi.getCoachMembers).mockRejectedValue(new Error('offline'));
+    await renderComponent();
+
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không thể tải danh sách học viên');
+    expect(host.textContent).not.toContain('Lê Hoàng Long');
+    expect(host.textContent).toContain('Thử lại');
+  });
+
+  it('lets a manager pick the responsible coach and sends that coach id with the plan', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'mgr', name: 'Manager', identifier: 'mgr', role: 'MANAGER' }));
+    await renderComponent();
+
+    const saveBtn = () => Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Lưu & Kích hoạt giáo án')) as HTMLButtonElement;
+    expect(host.querySelector('#plan-coach-select')).not.toBeNull();
+    expect(saveBtn().disabled).toBe(true);
+
+    await act(async () => { (host.querySelector('#plan-coach-select') as HTMLElement).click(); });
+    const option = Array.from(host.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('HLV Elena Cruz')) as HTMLElement;
+    await act(async () => { option.click(); });
+    expect(saveBtn().disabled).toBe(false);
+
+    await act(async () => { saveBtn().click(); });
+    expect(aiApi.saveTrainingPlan).toHaveBeenCalledWith(expect.objectContaining({ memberId: 1, coachId: 32 }), true);
+  });
+
+  it('does not ask a coach to choose a coach and never sends coach id for them', async () => {
+    await renderComponent();
+    expect(host.querySelector('#plan-coach-select')).toBeNull();
+    const saveBtn = Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Lưu & Kích hoạt giáo án')) as HTMLButtonElement;
+    await act(async () => { saveBtn.click(); });
+    expect(vi.mocked(aiApi.saveTrainingPlan).mock.calls[0][0].coachId).toBeUndefined();
   });
 
   it('enforces that endDate min constraint is set to startDate', async () => {

@@ -7,6 +7,8 @@ import {
   loginApi,
   setAuthSession,
   setCurrentUser,
+  subscribeAuthSession,
+  syncSessionWithServer,
   AUTH_STORAGE_KEY,
   TOKEN_STORAGE_KEY,
 } from './client';
@@ -157,5 +159,66 @@ describe('client.ts (API client & Auth session)', () => {
     expect(() => setAuthSession('jwt-2', 'x', 'UNKNOWN_ROLE')).toThrow(
       'Vai trò tài khoản chưa được hỗ trợ trên portal.',
     );
+  });
+  it('ignores a late 401 from a replaced session and keeps the newly signed-in account', async () => {
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    setAuthSession('member-token', 'member01', 'MEMBER');
+    let respond!: (value: unknown) => void;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise((resolve) => { respond = resolve; })));
+    const pending = apiFetch('/memberships/subscriptions/my');
+
+    setAuthSession('coach-token', 'coach01', 'COACH');
+    respond({ ok: false, status: 401, json: async () => ({ message: 'Expired' }) });
+
+    await expect(pending).rejects.toMatchObject({ status: 401, code: 'SESSION_REPLACED' });
+    expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBe('coach-token');
+    expect(getCurrentUser()?.identifier).toBe('coach01');
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('notifies subscribers when the session changes in this tab or another tab', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeAuthSession(listener);
+    setAuthSession('t1', 'member01', 'MEMBER');
+    clearAuthSession();
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    window.dispatchEvent(new StorageEvent('storage', { key: AUTH_STORAGE_KEY }));
+    window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated' }));
+    expect(listener).toHaveBeenCalledTimes(3);
+
+    unsubscribe();
+    setAuthSession('t2', 'member01', 'MEMBER');
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+
+  it('updates the stored role when the server reports a different role for the current token', async () => {
+    setAuthSession('jwt', 'user01', 'MEMBER');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: { username: 'user01', role: 'CENTER_MANAGER' } }) }));
+    await syncSessionWithServer();
+    expect(getCurrentUser()).toMatchObject({ identifier: 'user01', role: 'MANAGER' });
+    expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBe('jwt');
+  });
+
+  it('does not touch the session when the role is unchanged or the server is unreachable', async () => {
+    setAuthSession('jwt', 'user01', 'COACH');
+    const listener = vi.fn();
+    const unsubscribe = subscribeAuthSession(listener);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: { username: 'user01', role: 'COACH' } }) }));
+    await syncSessionWithServer();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    await syncSessionWithServer();
+    unsubscribe();
+    expect(listener).not.toHaveBeenCalled();
+    expect(getCurrentUser()?.role).toBe('COACH');
+  });
+
+  it('ends the session when the server rejects the current token', async () => {
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    setAuthSession('revoked', 'user01', 'MEMBER');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ message: 'Unauthorized' }) }));
+    await syncSessionWithServer();
+    expect(getCurrentUser()).toBeNull();
+    expect(assign).toHaveBeenCalledWith(expect.stringContaining('/login?expired=1'));
   });
 });
