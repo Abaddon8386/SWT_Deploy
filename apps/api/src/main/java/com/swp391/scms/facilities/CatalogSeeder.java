@@ -216,18 +216,24 @@ public class CatalogSeeder implements ApplicationRunner {
         var existingList = packages.list();
         for (var pkg : existingList) {
             if (name.equalsIgnoreCase(pkg.name())) {
-                packages.update(pkg.id(), new PackageRequest(name, desc, price, duration, creditLimit, "active"));
                 return;
             }
             if (legacyAliases != null) {
                 for (String alias : legacyAliases) {
                     if (alias.equalsIgnoreCase(pkg.name())) {
-                        packages.update(pkg.id(), new PackageRequest(name, desc, price, duration, creditLimit, "active"));
+                        packages.update(pkg.id(), new PackageRequest(name, pkg.description(),
+                                correctedLegacyPrice(pkg.name(), pkg.price()), pkg.durationDays(), pkg.classCreditLimit(), pkg.status()));
                         return;
                     }
                 }
             }
         }
         packages.create(new PackageRequest(name, desc, price, duration, creditLimit, "active"));
+    }
+    private BigDecimal correctedLegacyPrice(String name, BigDecimal currentPrice) {
+        if ("The Essential".equalsIgnoreCase(name) && currentPrice.compareTo(new BigDecimal("2800000")) == 0) return new BigDecimal("299000");
+        if ("The Sanctuary VIP".equalsIgnoreCase(name) && currentPrice.compareTo(new BigDecimal("7500000")) == 0) return new BigDecimal("499000");
+        if ("The Sovereign Annual".equalsIgnoreCase(name) && currentPrice.compareTo(new BigDecimal("26000000")) == 0) return new BigDecimal("999000");
+        return currentPrice;
     }
 }

@@ -267,3 +267,85 @@ $$;
 DROP TRIGGER IF EXISTS trg_subscriptions_realtime ON membership_subscriptions;
 CREATE TRIGGER trg_subscriptions_realtime AFTER INSERT OR UPDATE ON membership_subscriptions
 FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
+
+-- SCRUM-133: PT and group scheduling must share the same database guard.
+CREATE OR REPLACE FUNCTION scms_guard_pt_schedule()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    target_coach BIGINT;
+    schedule_conflict BOOLEAN := FALSE;
+BEGIN
+    -- ponytail: serialize schedule writes for this MVP; use ordered participant locks if contention grows.
+    PERFORM pg_advisory_xact_lock(hashtext(current_schema()), 391133);
+    IF TG_TABLE_NAME = 'coach_bookings' THEN
+        IF NEW.status <> 'confirmed' THEN RETURN NEW; END IF;
+        IF NOT EXISTS (
+            SELECT 1 FROM membership_subscriptions m
+            WHERE m.member_id = NEW.member_id AND m.status = 'active'
+              AND m.start_date <= CURRENT_DATE AND m.end_date >= CURRENT_DATE
+              AND m.start_date <= NEW.booking_date AND m.end_date >= NEW.booking_date
+        ) THEN
+            RAISE EXCEPTION 'trg_enrollments_check_membership'
+                USING ERRCODE = '23514', CONSTRAINT = 'trg_enrollments_check_membership';
+        END IF;
+        SELECT EXISTS (
+            SELECT 1 FROM coach_bookings b
+            WHERE b.id IS DISTINCT FROM NEW.id AND b.status = 'confirmed'
+              AND b.booking_date = NEW.booking_date
+              AND b.start_time < NEW.end_time AND b.end_time > NEW.start_time
+              AND (b.coach_id = NEW.coach_id OR b.member_id = NEW.member_id)
+        ) OR EXISTS (
+            SELECT 1 FROM class_sessions s JOIN classes c ON c.id = s.class_id
+            WHERE s.status = 'scheduled' AND s.session_date = NEW.booking_date
+              AND s.start_time < NEW.end_time AND s.end_time > NEW.start_time
+              AND (c.coach_id = NEW.coach_id OR EXISTS (
+                  SELECT 1 FROM class_enrollments e WHERE e.class_id = c.id
+                    AND e.member_id = NEW.member_id AND e.status = 'booked'))
+        ) INTO schedule_conflict;
+    ELSIF TG_TABLE_NAME = 'class_enrollments' THEN
+        IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
+        SELECT EXISTS (
+            SELECT 1 FROM class_sessions s JOIN coach_bookings b ON b.booking_date = s.session_date
+            WHERE s.class_id = NEW.class_id AND s.status = 'scheduled'
+              AND b.member_id = NEW.member_id AND b.status = 'confirmed'
+              AND b.start_time < s.end_time AND b.end_time > s.start_time
+        ) INTO schedule_conflict;
+    ELSIF TG_TABLE_NAME = 'class_sessions' THEN
+        IF NEW.status <> 'scheduled' THEN RETURN NEW; END IF;
+        SELECT coach_id INTO target_coach FROM classes WHERE id = NEW.class_id;
+        SELECT EXISTS (
+            SELECT 1 FROM coach_bookings b
+            WHERE b.status = 'confirmed' AND b.booking_date = NEW.session_date
+              AND b.start_time < NEW.end_time AND b.end_time > NEW.start_time
+              AND (b.coach_id = target_coach OR EXISTS (
+                  SELECT 1 FROM class_enrollments e WHERE e.class_id = NEW.class_id
+                    AND e.member_id = b.member_id AND e.status = 'booked'))
+        ) INTO schedule_conflict;
+    ELSIF TG_TABLE_NAME = 'classes' THEN
+        SELECT EXISTS (
+            SELECT 1 FROM class_sessions s JOIN coach_bookings b ON b.booking_date = s.session_date
+            WHERE s.class_id = NEW.id AND s.status = 'scheduled' AND b.status = 'confirmed'
+              AND b.coach_id = NEW.coach_id
+              AND b.start_time < s.end_time AND b.end_time > s.start_time
+        ) INTO schedule_conflict;
+    END IF;
+    IF schedule_conflict THEN
+        RAISE EXCEPTION 'trg_sessions_check_conflict'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_sessions_check_conflict';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_pt_schedule_booking ON coach_bookings;
+CREATE TRIGGER trg_pt_schedule_booking BEFORE INSERT OR UPDATE ON coach_bookings
+FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
+DROP TRIGGER IF EXISTS trg_pt_schedule_enrollment ON class_enrollments;
+CREATE TRIGGER trg_pt_schedule_enrollment BEFORE INSERT OR UPDATE ON class_enrollments
+FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
+DROP TRIGGER IF EXISTS trg_pt_schedule_session ON class_sessions;
+CREATE TRIGGER trg_pt_schedule_session BEFORE INSERT OR UPDATE ON class_sessions
+FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
+DROP TRIGGER IF EXISTS trg_pt_schedule_class ON classes;
+CREATE TRIGGER trg_pt_schedule_class BEFORE UPDATE OF coach_id ON classes
+FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();

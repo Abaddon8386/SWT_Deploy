@@ -11,6 +11,9 @@ import java.util.List;
 
 @Repository
 public interface CoachReviewRepository extends JpaRepository<CoachReview, Long> {
+    boolean existsByMemberUserIdAndBookingId(Long memberId, Long bookingId);
+    boolean existsByMemberUserIdAndClassSessionId(Long memberId, Long classSessionId);
+
 
     @Query("SELECT r FROM CoachReview r JOIN FETCH r.coach c JOIN FETCH c.user JOIN FETCH r.member m JOIN FETCH m.user " +
             "WHERE r.coach.userId = :coachId AND r.status = 'approved' ORDER BY r.createdAt DESC")

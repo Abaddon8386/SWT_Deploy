@@ -101,6 +101,11 @@ class CoachBookingServiceTest {
     @Test
     @DisplayName("Đặt lịch 1:1 thành công với hình thức trả phí theo giờ")
     void createBooking_success_hourlyPay() {
+        MembershipSubscription active = new MembershipSubscription();
+        active.setStartDate(LocalDate.of(2026, 10, 1));
+        active.setEndDate(LocalDate.of(2026, 11, 30));
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active));
+
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
@@ -129,7 +134,7 @@ class CoachBookingServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.id()).isEqualTo(100L);
         assertThat(result.paymentMethod()).isEqualTo("bank_transfer");
-        assertThat(result.paymentStatus()).isEqualTo("paid");
+        assertThat(result.paymentStatus()).isEqualTo("pending");
         assertThat(result.status()).isEqualTo("confirmed");
     }
 
@@ -201,6 +206,8 @@ class CoachBookingServiceTest {
         MembershipSubscription sub = new MembershipSubscription();
         sub.setMembershipPackage(pkg);
         sub.setStatus("active");
+        sub.setStartDate(LocalDate.of(2026, 10, 1));
+        sub.setEndDate(LocalDate.of(2026, 11, 30));
 
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
         // Used 1 quota out of 3
@@ -242,6 +249,8 @@ class CoachBookingServiceTest {
         MembershipSubscription sub = new MembershipSubscription();
         sub.setMembershipPackage(pkg);
         sub.setStatus("active");
+        sub.setStartDate(LocalDate.of(2026, 10, 1));
+        sub.setEndDate(LocalDate.of(2026, 11, 30));
 
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
 
@@ -277,5 +286,52 @@ class CoachBookingServiceTest {
         // Slot 11:00 (more than 2 hours) should be available
         CoachAvailableSlotDto slot11 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(11, 0))).findFirst().orElseThrow();
         assertThat(slot11.available()).isTrue();
+    }
+    @Test
+    void unrelatedCoachCannotCancelAnotherCoachBooking() {
+        CoachBooking booking = new CoachBooking();
+        booking.setId(77L);
+        booking.setMember(member);
+        booking.setCoach(coach);
+        booking.setStatus("confirmed");
+        when(coachBookingRepository.findById(77L)).thenReturn(Optional.of(booking));
+        assertThatThrownBy(() -> service.cancelBooking(new AuthenticatedPrincipal(99L, "other", "COACH"), 77L, null))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+        assertThat(booking.getStatus()).isEqualTo("confirmed");
+    }
+
+    @Test
+    void paidBookingRequiresActiveMembership() {
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
+                LocalTime.of(14, 0), LocalTime.of(15, 0), "bank_transfer", null);
+        assertThatThrownBy(() -> service.createBooking(principal, request))
+                .isInstanceOf(BadRequestException.class)
+                .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("MEMBERSHIP_INACTIVE_OR_EXPIRED"));
+        verify(coachBookingRepository, never()).save(any());
+    }
+    @Test
+    void rejectsMultiHourBookingChargedAsOneSession() {
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
+                LocalTime.of(14, 0), LocalTime.of(18, 0), "package_quota", null);
+        assertThatThrownBy(() -> service.createBooking(principal, request))
+                .isInstanceOf(BadRequestException.class)
+                .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("INVALID_COACH_BOOKING_SLOT"));
+        verify(coachBookingRepository, never()).save(any());
+    }
+
+    @Test
+    void availabilityIncludesMembersGroupClass() {
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        ClassSession session = new ClassSession();
+        session.setStartTime(LocalTime.of(11, 0)); session.setEndTime(LocalTime.NOON);
+        when(classSessionRepository.findActiveByMemberAndDate(10L, LocalDate.of(2026, 10, 31))).thenReturn(List.of(session));
+        var slot = service.getAvailableSlots(20L, LocalDate.of(2026, 10, 31), 10L).stream()
+                .filter(item -> item.startTime().equals(LocalTime.of(11, 0))).findFirst().orElseThrow();
+        assertThat(slot.available()).isFalse();
+        assertThat(slot.reason()).isEqualTo("member_busy");
     }
 }

@@ -6,7 +6,7 @@ export interface CoachReviewDto {
   coachName: string;
   coachSpecialization: string;
   coachAvatarUrl: string | null;
-  memberId: number;
+  memberId: number | null;
   memberName: string;
   bookingId: number | null;
   classSessionId: number | null;

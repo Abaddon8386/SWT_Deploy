@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
@@ -10,7 +10,7 @@ import {
   type CoachMonthlyReviewDto,
   type CoachReviewDto,
 } from '../coaching/coachReviewApi';
-import { getCoaches, type CoachPublicDto } from '../member/coachBookingApi';
+import { getCoaches } from '../member/coachBookingApi';
 
 export function ManagerCoachReviewsPage() {
   const now = new Date();
@@ -19,7 +19,6 @@ export function ManagerCoachReviewsPage() {
 
   const [reviews, setReviews] = useState<CoachMonthlyReviewDto[]>([]);
   const [memberReviews, setMemberReviews] = useState<CoachReviewDto[]>([]);
-  const [coaches, setCoaches] = useState<CoachPublicDto[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [generating, setGenerating] = useState<boolean>(false);
@@ -36,7 +35,7 @@ export function ManagerCoachReviewsPage() {
   const [editBonus, setEditBonus] = useState<number>(0);
   const [editFeedback, setEditFeedback] = useState<string>('');
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -45,7 +44,6 @@ export function ManagerCoachReviewsPage() {
         getCoaches().catch(() => []),
       ]);
       setReviews(monthlyList);
-      setCoaches(coachList);
 
       // Load sample member reviews for all coaches
       if (coachList.length > 0) {
@@ -54,16 +52,16 @@ export function ManagerCoachReviewsPage() {
         );
         setMemberReviews(allReviewsArrays.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       }
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải dữ liệu bảng xếp hạng.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể tải dữ liệu bảng xếp hạng.'));
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedYear, selectedMonth]);
 
   useEffect(() => {
     void loadData();
-  }, [selectedYear, selectedMonth]);
+  }, [loadData]);
 
   async function handleAutoGenerate() {
     setGenerating(true);
@@ -73,8 +71,8 @@ export function ManagerCoachReviewsPage() {
       const generated = await generateMonthlyReviews(selectedYear, selectedMonth);
       setReviews(generated);
       setNotice(`Đã tự động tổng hợp đánh giá và tạo Bảng xếp hạng tháng ${selectedMonth}/${selectedYear} thành công!`);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tổng hợp đánh giá.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể tổng hợp đánh giá.'));
     } finally {
       setGenerating(false);
     }
@@ -103,8 +101,8 @@ export function ManagerCoachReviewsPage() {
       setReviews((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setNotice(`Đã cập nhật và gửi thông báo vinh danh cho HLV ${updated.coachName}!`);
       setEditingReview(null);
-    } catch (err: any) {
-      setError(err.message || 'Không thể lưu bản đánh giá.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể lưu bản đánh giá.'));
     } finally {
       setSavingId(null);
     }

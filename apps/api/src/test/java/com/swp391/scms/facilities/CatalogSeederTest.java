@@ -38,11 +38,11 @@ class CatalogSeederTest {
 
         verify(disciplines, times(5)).create(any());
         verify(rooms, times(5)).create(any());
-        verify(packages, times(3)).create(any());
+        verify(packages, times(9)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
-        verify(packages, times(3)).create(requests.capture());
+        verify(packages, times(9)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(299000, 499000, 999000);
+                .containsExactly(199000, 299000, 599000, 999000, 1499000, 2999000, 1799000, 2699000, 5399000);
     }
 
     @Test
@@ -55,7 +55,7 @@ class CatalogSeederTest {
 
         verify(disciplines, never()).create(any());
         verify(rooms, never()).create(any());
-        verify(packages, never()).create(any());
+        verify(packages, times(9)).create(any());
     }
     @Test
     void correctsOriginalCatalogPricesWithoutChangingTermsOrManagerPrices() {
@@ -76,4 +76,13 @@ class CatalogSeederTest {
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().classCreditLimit()).isEqualTo(8);
     }
 
+    @Test
+    void preservesManagerChangesToSeededPackage() {
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
+        when(packages.list()).thenReturn(List.of(new PackageDto(1L, CatalogSeeder.SILVER_NAME,
+                "Manager terms", new BigDecimal("450000"), 45, 3, "inactive")));
+        seeder.run(null);
+        verify(packages, never()).update(any(), any());
+    }
 }
