@@ -41,6 +41,9 @@
 @media (max-width: 767px) {
   .chat-widget { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
   .portal-v2 .chat-widget { bottom: calc(82px + env(safe-area-inset-bottom)); }
+  /* Nút tròn chỉ có icon để che ít nội dung trang; aria-label vẫn đọc “Mở tin nhắn” */
+  .portal-v2 .chat-widget__trigger { width: 52px; min-height: 52px; padding: 0; border-radius: 50%; }
+  .portal-v2 .chat-widget__trigger span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .chat-widget__panel { bottom: 68px; height: min(680px, calc(100dvh - 110px - env(safe-area-inset-bottom))); border-radius: 20px; }
   .portal-v2 .chat-widget__panel { height: min(680px, calc(100dvh - 192px - env(safe-area-inset-bottom))); }
 }

@@ -246,7 +246,9 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 14px; background: var(--portal-surface); color: var(--portal-muted); line-height: 1; cursor: pointer; }
 .portal-mobile-menu, .portal-mobile-logout { display: none; }
 .portal-mobile-nav { display: none; }
-.portal-v2 #portal-main { flex: 1; min-width: 0; outline: none; }
+/* Chừa chỗ cuối trang cho nút Tin nhắn (và AI của hội viên) nổi ở góc phải */
+.portal-v2 #portal-main { flex: 1; min-width: 0; outline: none; padding-bottom: 88px; }
+.portal-v2:has(.member-ai-chat) #portal-main { padding-bottom: 156px; }
 .portal-v2 .portal-container { width: 100%; max-width: none; padding: 10px 24px 32px; }
 .portal-v2 .portal-header { align-items: center; margin-bottom: 30px; padding: 0; border: 0; gap: 16px; }
 .portal-v2 .portal-header::after, .portal-v2 .portal-eyebrow::before { display: none; }
@@ -427,6 +429,8 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   .portal-v2 :is(.portal-icon-button, .theme-toggle, .portal-search-trigger) { min-width: 44px; flex-shrink: 0; }
   .portal-v2 .member-notification-bell { min-width: 44px; min-height: 44px; }
   .portal-v2 .portal-table-wrapper { overflow-x: auto; overscroll-behavior-x: contain; }
+  .portal-v2 #portal-main { padding-bottom: 72px; }
+  .portal-v2:has(.member-ai-chat) #portal-main { padding-bottom: 140px; }
   .portal-v2 :is(input, select, textarea, button, a, [tabindex]) { scroll-margin-top: calc(90px + env(safe-area-inset-top, 0px)); scroll-margin-bottom: calc(20px + var(--portal-mobile-nav-height)); }
   .portal-v2 :is(button, a) { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .portal-v2 :is(.btn-primary, .btn-secondary, .btn-danger, .portal-icon-button, .portal-mobile-nav__item):active { opacity: .75; transform: none; }
