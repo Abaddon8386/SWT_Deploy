@@ -25,3 +25,11 @@ describe('centerTime', () => {
     expect(parseCenterTime('')).toBeNull();
   });
 });
+
+describe('centerNowParts', () => {
+  it('returns the center date and time, which can differ from the UTC date', async () => {
+    const { centerNowParts } = await import('./centerTime');
+    expect(centerNowParts(new Date('2026-11-02T17:05:00Z'))).toEqual({ date: '2026-11-03', time: '00:05' });
+    expect(centerNowParts(new Date('2026-11-02T03:30:00Z'))).toEqual({ date: '2026-11-02', time: '10:30' });
+  });
+});
