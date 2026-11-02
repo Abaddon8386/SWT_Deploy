@@ -994,7 +994,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 
 .coach-tab-btn.is-active {
   background: var(--portal-salmon);
-  color: #1e293b;
+  color: var(--portal-ink);
   border-color: var(--portal-salmon);
   font-weight: 700;
   box-shadow: 0 4px 14px rgba(206, 145, 128, 0.3);

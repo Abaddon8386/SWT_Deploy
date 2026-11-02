@@ -384,7 +384,7 @@ export function UserManagerPage() {
                 <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--portal-text-main, #211c18)' }}>
                   Chính sách tự động dọn dẹp tài khoản (quá 6 tháng)
                 </strong>
-                <span style={{ fontSize: '0.82rem', color: 'var(--portal-text-muted, #78716c)' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--portal-muted)' }}>
                   Tài khoản không đăng nhập quá 6 tháng sẽ tự động xóa mềm (Ngoại trừ hội viên đang bảo lưu tập).
                 </span>
               </div>
@@ -552,7 +552,7 @@ export function UserManagerPage() {
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
-                              style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.35)' }}
+                              style={{ color: 'var(--portal-danger)', borderColor: 'rgba(239, 68, 68, 0.35)' }}
                               disabled={u.role === 'CENTER_MANAGER'}
                               title={
                                 u.role === 'CENTER_MANAGER'
@@ -788,7 +788,7 @@ export function UserManagerPage() {
                     <span>Đang tạo...</span>
                   </>
                 ) : (
-                  'Tạo Tài Khoản'
+                  'Tạo tài khoản'
                 )}
               </button>
             </div>
@@ -915,7 +915,7 @@ export function UserManagerPage() {
                     <span>Đang lưu...</span>
                   </>
                 ) : (
-                  'Lưu Thay Đổi'
+                  'Lưu thay đổi'
                 )}
               </button>
             </div>

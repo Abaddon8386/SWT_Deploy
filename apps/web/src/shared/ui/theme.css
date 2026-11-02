@@ -31,7 +31,7 @@
   --portal-info-surface: #eef3fa;
   color-scheme: light;
 }
-:root[data-theme='light'] .portal-v2 :is(.btn-primary, .filter-chip.is-active, .portal-rail-link.active, .ltp-item-btn.is-active, .ltp-done-btn, .ldp-day-cell.is-selected),
+:root[data-theme='light'] .portal-v2 :is(.btn-primary, .filter-chip.is-active, .coach-tab-btn.is-active, .portal-rail-link.active, .ltp-item-btn.is-active, .ltp-done-btn, .ldp-day-cell.is-selected),
 :root[data-theme='light'] .portal-logo { background: #ce9180; border-color: #ce9180; color: #202020; }
 :root[data-theme='light'] .portal-v2 .ldp-day-cell.is-selected { color: #202020 !important; }
 :root[data-theme='light'] .portal-logo > span { color: #202020; }

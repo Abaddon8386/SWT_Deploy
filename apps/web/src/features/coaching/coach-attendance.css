@@ -97,7 +97,7 @@
 
 .session-status-badge.is-pending {
   background: rgba(245, 158, 11, 0.15);
-  color: #d97706;
+  color: var(--portal-warning, #b45309);
   border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
@@ -327,6 +327,19 @@
 }
 
 .radio-status-label.is-excused.is-active {
+  background: var(--portal-surface);
+  color: var(--portal-muted);
+  border: 1px solid var(--portal-border);
+}
+
+/* Bottom Action */
+.attendance-bottom-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 16px 20px;
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
   border-radius: 12px;
