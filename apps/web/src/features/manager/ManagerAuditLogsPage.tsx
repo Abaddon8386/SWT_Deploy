@@ -18,6 +18,8 @@ export function ManagerAuditLogsPage() {
   // Audit Logs state
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loadingLogs, setLoadingLogs] = useState<boolean>(true);
+  const [logsError, setLogsError] = useState<string>('');
+  const [logsReload, setLogsReload] = useState<number>(0);
   const [totalElements, setTotalElements] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(0);
@@ -33,12 +35,15 @@ export function ManagerAuditLogsPage() {
   // Occupancy Report state
   const [occupancyList, setOccupancyList] = useState<ClassOccupancyItem[]>([]);
   const [loadingOccupancy, setLoadingOccupancy] = useState<boolean>(true);
+  const [occupancyError, setOccupancyError] = useState<string>('');
+  const [occupancyReload, setOccupancyReload] = useState<number>(0);
 
   // Fetch Audit Logs
   useEffect(() => {
     let mounted = true;
     const fetchAudit = async () => {
       setLoadingLogs(true);
+      setLogsError('');
       try {
         const res = await auditApi.getAuditLogs({
           action: selectedAction,
@@ -49,7 +54,13 @@ export function ManagerAuditLogsPage() {
         if (mounted) {
           setLogs(res.content);
           setTotalElements(res.totalElements);
-          setTotalPages(res.totalPages);
+          setTotalPages(Math.max(1, res.totalPages));
+        }
+      } catch (err) {
+        if (mounted) {
+          setLogs([]);
+          setTotalElements(0);
+          setLogsError(err instanceof Error ? err.message : 'Không thể tải nhật ký kiểm toán.');
         }
       } finally {
         if (mounted) setLoadingLogs(false);
@@ -60,17 +71,23 @@ export function ManagerAuditLogsPage() {
     return () => {
       mounted = false;
     };
-  }, [selectedAction, selectedEntityType, currentPage]);
+  }, [selectedAction, selectedEntityType, currentPage, logsReload]);
 
   // Fetch Occupancy
   useEffect(() => {
     let mounted = true;
     const fetchOccupancy = async () => {
       setLoadingOccupancy(true);
+      setOccupancyError('');
       try {
         const data = await auditApi.getClassOccupancy();
         if (mounted) {
           setOccupancyList(data);
+        }
+      } catch (err) {
+        if (mounted) {
+          setOccupancyList([]);
+          setOccupancyError(err instanceof Error ? err.message : 'Không thể tải tỷ lệ lấp đầy lớp học.');
         }
       } finally {
         if (mounted) setLoadingOccupancy(false);
@@ -83,7 +100,7 @@ export function ManagerAuditLogsPage() {
     return () => {
       mounted = false;
     };
-  }, [activeTab]);
+  }, [activeTab, occupancyReload]);
 
   // Filter logs by actor search locally
   const filteredLogs = useMemo(() => {
@@ -268,6 +285,11 @@ export function ManagerAuditLogsPage() {
           <div className="audit-table-card">
             {loadingLogs ? (
               <LoadingSkeleton label="Đang tải nhật ký kiểm toán…" variant="table" count={8} />
+            ) : logsError ? (
+              <div className="portal-alert" role="alert">
+                <span>{logsError}</span>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => setLogsReload((n) => n + 1)}>Thử lại</button>
+              </div>
             ) : filteredLogs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
                 <p>Không tìm thấy bản ghi nhật ký kiểm toán nào phù hợp.</p>
@@ -362,7 +384,13 @@ export function ManagerAuditLogsPage() {
       ) : (
         /* Tab 2: Occupancy Chart Section */
         <section aria-label="Biểu đồ tỷ lệ lấp đầy phòng học theo bộ môn">
-          {loadingOccupancy ? <LoadingSkeleton label="Đang tải tổng quan công suất lớp học…" variant="cards" count={3} /> : <div className="occupancy-summary-cards">
+          {occupancyError && !loadingOccupancy && (
+            <div className="portal-alert" role="alert">
+              <span>{occupancyError}</span>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => setOccupancyReload((n) => n + 1)}>Thử lại</button>
+            </div>
+          )}
+          {loadingOccupancy ? <LoadingSkeleton label="Đang tải tổng quan công suất lớp học…" variant="cards" count={3} /> : occupancyError ? null : <div className="occupancy-summary-cards">
             <div className="occupancy-stat-card">
               <span className="stat-card-title">Tỷ lệ lấp đầy trung bình</span>
               <span className="stat-card-number">{occupancyMetrics.avgUtilization}%</span>
@@ -391,7 +419,7 @@ export function ManagerAuditLogsPage() {
 
             {loadingOccupancy ? (
               <LoadingSkeleton label="Đang tải biểu đồ công suất lớp học…" count={4} />
-            ) : occupancyList.length === 0 ? (
+            ) : occupancyError ? null : occupancyList.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-muted)' }}>
                 <p>Không có dữ liệu lớp học nào.</p>
               </div>

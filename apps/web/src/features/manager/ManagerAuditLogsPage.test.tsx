@@ -166,6 +166,25 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
     expect(host.textContent).toContain('active');
   });
 
+  it('shows an error with retry when logs fail to load, never sample rows', async () => {
+    vi.mocked(auditApi.getAuditLogs).mockRejectedValueOnce(new Error('Máy chủ không phản hồi'));
+
+    await act(async () => {
+      root.render(<ManagerAuditLogsPage />);
+    });
+
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Máy chủ không phản hồi');
+    expect(host.textContent).not.toContain('Vũ Hoàng Nam');
+
+    const retry = Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Thử lại') as HTMLButtonElement;
+    await act(async () => {
+      retry.click();
+    });
+
+    expect(auditApi.getAuditLogs).toHaveBeenCalledTimes(2);
+    expect(host.textContent).toContain('Vũ Hoàng Nam');
+  });
+
   it('switches to occupancy tab and renders visual occupancy chart (AC 3)', async () => {
     await act(async () => {
       root.render(<ManagerAuditLogsPage />);

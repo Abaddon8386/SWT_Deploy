@@ -168,42 +168,34 @@ const dailyRhythmItems = [
     id: 'morning' as const,
     label: 'Sáng · 06:00–09:00',
     title: 'Khởi động thể lực sáng sớm',
-    crowdLoad: '45%',
-    crowdText: 'Thông thoáng',
     highlights: ['Morning Strength', 'Bơi sáng', 'Tennis'],
   },
   {
     id: 'midday' as const,
     label: 'Trưa · 11:30–14:00',
     title: 'Tập gọn 45 phút giờ nghỉ trưa',
-    crowdLoad: '38%',
-    crowdText: 'Rất thoáng',
     highlights: ['Kèm 1:1', 'Core & Mobility', 'Thả lỏng'],
   },
   {
     id: 'evening' as const,
     label: 'Chiều · 17:00–19:30',
     title: 'Nhịp tập sôi động sau giờ làm',
-    crowdLoad: '74%',
-    crowdText: 'Đặt lịch trước trên Portal',
     highlights: ['Barbell Club', 'Lớp Bơi', 'Đánh đôi Tennis'],
   },
   {
     id: 'night' as const,
     label: 'Tối · 19:30–22:00',
     title: 'Vận động nhẹ & Giãn cơ cuối ngày',
-    crowdLoad: '52%',
-    crowdText: 'Dịu nhẹ, thông thoáng',
     highlights: ['Tập cá nhân', 'Bơi thư giãn', 'Giãn cơ'],
   },
 ] as const;
 
 const spaces = [
-  { title: 'Không gian cho những mục tiêu lớn.', image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', meta: 'Khu máy tập', load: '68%', status: 'Đang thoáng' },
-  { title: 'Tập trung vào từng chuyển động.', image: '/images/fitness/strength-session.jpg', label: 'Free weights', meta: 'Khu tạ rời & Power Rack', load: '54%', status: 'Mật độ lý tưởng' },
-  { title: 'Tìm lại nhịp điệu của chính mình.', image: '/images/about-movement-studio.jpg', label: 'Movement studio', meta: 'Core & Giãn cơ', load: '42%', status: 'Thoáng đãng' },
-  { title: 'Làn nước xanh mát bốn mùa.', image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', meta: 'Hồ bơi bốn mùa', load: '48%', status: 'Thông thoáng' },
-  { title: 'Sân đấu giàu năng lượng.', image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', meta: 'Sân Tennis CLB', load: '62%', status: 'Sẵn sàng' },
+  { title: 'Không gian cho những mục tiêu lớn.', image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', meta: 'Khu máy tập' },
+  { title: 'Tập trung vào từng chuyển động.', image: '/images/fitness/strength-session.jpg', label: 'Free weights', meta: 'Khu tạ rời & Power Rack' },
+  { title: 'Tìm lại nhịp điệu của chính mình.', image: '/images/about-movement-studio.jpg', label: 'Movement studio', meta: 'Core & Giãn cơ' },
+  { title: 'Làn nước xanh mát bốn mùa.', image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', meta: 'Hồ bơi bốn mùa' },
+  { title: 'Sân đấu giàu năng lượng.', image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', meta: 'Sân Tennis CLB' },
 ];
 
 const journeySteps = [
@@ -377,6 +369,8 @@ export function FitnessLanding() {
   const { catalog, error: catalogError, retry: retryCatalog } = usePublicCatalog();
   const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
   const joinPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/register';
+  const planPath = user ? user.role === 'MEMBER' ? '/member/progress' : homePath(user.role) : '/register';
+  const accountLabel = !user ? 'Tạo tài khoản' : user.role === 'MEMBER' ? 'Chọn gói tập' : 'Vào portal';
   const muscleDetailPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/login';
   const [activeMuscleId, setActiveMuscleId] = useState<(typeof muscleGroups)[number]['id'] | null>(null);
   const closeTimerRef = useRef<number | null>(null);
@@ -550,14 +544,7 @@ export function FitnessLanding() {
         <div key={space} className="fit-space-content fit-blur-morph">
           <span className="fit-kicker">05 PHÂN KHU TẬP LUYỆN</span>
           <h2 id="space-title">{spaces[space].title}</h2>
-          <div className="fit-space-live" style={{ '--space-load': spaces[space].load } as CSSProperties}>
-            <div className="fit-space-live-head">
-              <span>{spaces[space].meta}</span>
-              <strong>{spaces[space].load} công suất</strong>
-            </div>
-            <div className="fit-space-meter"><i /></div>
-            <span className="fit-space-status"><b />{spaces[space].status}</span>
-          </div>
+          <p className="fit-space-meta">{spaces[space].meta}</p>
           <a className="fit-pill" href="#contact">Ghé thăm SÖL<RoundArrow diagonal /></a>
         </div>
         <div className="fit-space-tabs" aria-label="Khám phá không gian">{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><LoadingImage src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span className="fit-space-tab-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></button>)}</div>
@@ -567,7 +554,7 @@ export function FitnessLanding() {
         <div className="fit-rhythm-head">
           <div>
             <span className="fit-kicker">NHỊP TẬP TRONG NGÀY</span>
-            <h3>Khung giờ hoạt động thực tế</h3>
+            <h3>Các khung giờ trong ngày</h3>
           </div>
           <div className="fit-rhythm-tabs" role="tablist" aria-label="Chọn khung giờ trong ngày">
             {dailyRhythmItems.map((item, idx) => <button
@@ -588,14 +575,6 @@ export function FitnessLanding() {
             <ul>
               {activeRhythm.highlights.map((pt) => <li key={pt}><span aria-hidden="true">✓</span>{pt}</li>)}
             </ul>
-          </div>
-          <div className="fit-space-live fit-rhythm-meter" style={{ '--space-load': activeRhythm.crowdLoad } as CSSProperties}>
-            <div className="fit-space-live-head">
-              <span>Mật độ trung bình</span>
-              <strong>{activeRhythm.crowdLoad}</strong>
-            </div>
-            <div className="fit-space-meter"><i /></div>
-            <span className="fit-space-status"><b />{activeRhythm.crowdText}</span>
           </div>
         </div>
       </div>
@@ -721,7 +700,7 @@ export function FitnessLanding() {
           </div>
           <p><strong>Gợi ý:</strong> Xem các gói đang mở tại bảng giá và trao đổi mục tiêu với huấn luyện viên.</p>
         </div>
-        <Link to={joinPath} className="fit-pill">Nhận lộ trình<RoundArrow diagonal /></Link>
+        <Link to={planPath} className="fit-pill">Nhận lộ trình<RoundArrow diagonal /></Link>
       </div>
     </section>
     <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title">
@@ -790,7 +769,7 @@ export function FitnessLanding() {
             <h3>Chưa có gói vẫn trải nghiệm được</h3>
             <p>Tạo tài khoản miễn phí để xem lịch lớp và chọn gói phù hợp. Thanh toán tại quầy lễ tân để kích hoạt gói trước khi đặt lớp và check-in.</p>
             <Link to={joinPath} className="fit-benefit-end-btn">
-              Tạo tài khoản
+              {accountLabel}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 12h14" />
                 <path d="m12 5 7 7-7 7" />

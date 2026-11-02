@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { DatePicker } from '../../shared/ui/DatePicker';
@@ -59,6 +59,7 @@ export function ManagerReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const latestRequest = useRef(0);
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
 
@@ -87,18 +88,21 @@ export function ManagerReportsPage() {
       toast('Ngày bắt đầu không được lớn hơn ngày kết thúc.', 'error');
       return;
     }
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setError(null);
     try {
       const data = await reportsApi.getSummary(start, end);
+      if (requestId !== latestRequest.current) return;
       setSummary(data);
       setAppliedRange({ startDate: start, endDate: end });
     } catch (err: unknown) {
+      if (requestId !== latestRequest.current) return;
       const msg = err instanceof Error ? err.message : 'Không thể tải báo cáo doanh thu.';
       setError(msg);
       toast(msg, 'error');
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }, []);
 
