@@ -23,6 +23,7 @@ import {
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { notify } from '../../../shared/lib/portalNotices';
+import { formatCoachName, isSessionCompleted } from '../coachBookingUtils';
 
 function localToday(): string {
   const now = new Date();
@@ -184,7 +185,7 @@ export function MemberCoachBookingView({
         setPaymentModalBooking(created);
       } else {
         notify(
-          `Đặt lịch tập 1:1 với HLV ${created.coachName} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
+          `Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
         , 'success');
       }
     } catch (err: unknown) {
@@ -214,11 +215,13 @@ export function MemberCoachBookingView({
       setMyReviews(updatedReviews);
       setLeaderboard(updatedLeaderboard);
 
-      notify(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${reviewTargetBooking.coachName} thành công.`, 'success');
+      notify(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${formatCoachName(reviewTargetBooking.coachName)} thành công.`, 'success');
       setReviewTargetBooking(null);
       setReviewComment('');
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể gửi đánh giá.'));
+      const errMsg = err instanceof Error ? err.message : 'Không thể gửi đánh giá.';
+      setError(errMsg);
+      notify(errMsg, 'error');
     } finally {
       setReviewSubmitting(false);
     }
@@ -229,7 +232,7 @@ export function MemberCoachBookingView({
     setCancelling(true);
     try {
       await cancelCoachBooking(cancelTarget.id, 'Hội viên chủ động hủy');
-      notify(`Đã hủy lịch tập 1:1 với HLV ${cancelTarget.coachName} thành công.`, 'success');
+      notify(`Đã hủy lịch tập 1:1 với HLV ${formatCoachName(cancelTarget.coachName)} thành công.`, 'success');
       setCancelTarget(null);
 
       if (selectedCoachId) {
@@ -658,7 +661,12 @@ export function MemberCoachBookingView({
       <section style={{ marginTop: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-            Lịch tập HLV 1:1 của tôi ({myBookings.filter((b) => b.status === 'confirmed').length} buổi sắp tới)
+            Lịch tập HLV 1:1 của tôi (
+            {myBookings.filter((b) => b.status === 'confirmed' && !isSessionCompleted(b)).length} buổi sắp tới
+            {myBookings.some((b) => b.status === 'confirmed' && isSessionCompleted(b))
+              ? ` • ${myBookings.filter((b) => b.status === 'confirmed' && isSessionCompleted(b)).length} buổi đã kết thúc`
+              : ''}
+            )
           </h3>
         </div>
 
@@ -671,8 +679,11 @@ export function MemberCoachBookingView({
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {myBookings.map((b) => {
-              const isConfirmed = b.status === 'confirmed';
+              const isCancelled = b.status === 'cancelled';
+              const hasEnded = isSessionCompleted(b);
+              const isConfirmed = !isCancelled;
               const existingReview = myReviews.find((r) => r.bookingId === b.id);
+              const coachDisplayName = formatCoachName(b.coachName);
 
               return (
                 <div
@@ -685,7 +696,11 @@ export function MemberCoachBookingView({
                     alignItems: 'center',
                     gap: 12,
                     padding: '14px 18px',
-                    borderColor: isConfirmed ? 'rgba(206, 145, 128, 0.35)' : 'var(--portal-border, #e4e2de)',
+                    borderColor: isConfirmed
+                      ? hasEnded
+                        ? 'rgba(59, 130, 246, 0.35)'
+                        : 'rgba(206, 145, 128, 0.35)'
+                      : 'var(--portal-border, #e4e2de)',
                   }}
                 >
                   <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
@@ -694,7 +709,7 @@ export function MemberCoachBookingView({
                         width: 44,
                         height: 44,
                         borderRadius: '50%',
-                        background: 'var(--portal-salmon, #ce9180)',
+                        background: hasEnded ? '#3b82f6' : 'var(--portal-salmon, #ce9180)',
                         color: '#fff',
                         display: 'flex',
                         alignItems: 'center',
@@ -706,16 +721,31 @@ export function MemberCoachBookingView({
                       PT
                     </div>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
-                          Tập 1:1 cùng HLV {b.coachName}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--portal-paper, #202020)' }}>
+                          Tập 1:1 cùng HLV {coachDisplayName}
                         </h4>
-                        <span
-                          className={`badge ${isConfirmed ? 'badge-success' : 'badge-danger'}`}
-                          style={{ fontSize: 11 }}
-                        >
-                          {isConfirmed ? 'Đã xác nhận' : 'Đã hủy'}
-                        </span>
+                        {isCancelled ? (
+                          <span className="badge badge-danger" style={{ fontSize: 11 }}>
+                            Đã hủy
+                          </span>
+                        ) : hasEnded ? (
+                          <span
+                            className="badge badge-info"
+                            style={{
+                              fontSize: 11,
+                              background: 'rgba(59, 130, 246, 0.12)',
+                              borderColor: 'rgba(59, 130, 246, 0.3)',
+                              color: '#2563eb',
+                            }}
+                          >
+                            ✓ Đã kết thúc buổi
+                          </span>
+                        ) : (
+                          <span className="badge badge-success" style={{ fontSize: 11 }}>
+                            Sắp diễn ra
+                          </span>
+                        )}
                         {existingReview && (
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#eab308' }}>
                             ⭐ Đã đánh giá ({existingReview.rating} sao)
@@ -735,24 +765,47 @@ export function MemberCoachBookingView({
 
                   {isConfirmed && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      {/* Button Đánh giá HLV */}
-                      {!existingReview ? (
-                        <button
-                          type="button"
-                          className="btn-secondary btn-sm"
-                          style={{ color: '#d97706', borderColor: '#fcd34d' }}
-                          onClick={() => {
-                            setReviewTargetBooking(b);
-                            setReviewRating(5);
-                            setReviewComment('');
-                            setReviewAnonymous(false);
-                          }}
-                        >
-                          ⭐ Đánh giá HLV
-                        </button>
+                      {/* Đánh giá HLV sau khi kết thúc buổi */}
+                      {hasEnded ? (
+                        !existingReview ? (
+                          <button
+                            type="button"
+                            className="btn-primary btn-sm"
+                            style={{
+                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              borderColor: '#d97706',
+                              color: '#ffffff',
+                              fontWeight: 700,
+                              boxShadow: '0 2px 6px rgba(217, 119, 6, 0.25)',
+                            }}
+                            onClick={() => {
+                              setReviewTargetBooking(b);
+                              setReviewRating(5);
+                              setReviewComment('');
+                              setReviewAnonymous(false);
+                            }}
+                          >
+                            ⭐ Đánh giá HLV
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+                            ✓ Đã gửi review
+                          </span>
+                        )
                       ) : (
-                        <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
-                          ✓ Đã gửi review
+                        <span
+                          className="badge badge-neutral"
+                          style={{
+                            fontSize: 11,
+                            color: 'var(--portal-muted, #71717a)',
+                            padding: '4px 8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                          title="Hệ thống sẽ mở đánh giá HLV sau khi buổi học kết thúc"
+                        >
+                          ⏳ Đánh giá sau khi kết thúc buổi
                         </span>
                       )}
 
@@ -766,14 +819,16 @@ export function MemberCoachBookingView({
                         </button>
                       )}
 
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        style={{ color: '#dc2626', borderColor: '#fca5a5' }}
-                        onClick={() => setCancelTarget(b)}
-                      >
-                        Hủy lịch hẹn
-                      </button>
+                      {!hasEnded && (
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                          onClick={() => setCancelTarget(b)}
+                        >
+                          Hủy lịch hẹn
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -786,7 +841,7 @@ export function MemberCoachBookingView({
       {/* Modal Đánh giá Huấn luyện viên */}
       {reviewTargetBooking && (
         <Modal
-          title={`Đánh giá Huấn luyện viên: ${reviewTargetBooking.coachName}`}
+          title={`Đánh giá Huấn luyện viên: ${formatCoachName(reviewTargetBooking.coachName)}`}
           onClose={() => setReviewTargetBooking(null)}
         >
           <div style={{ display: 'grid', gap: 16 }}>
@@ -795,14 +850,16 @@ export function MemberCoachBookingView({
                 padding: 12,
                 borderRadius: 10,
                 background: 'var(--portal-raised, #f4f4f5)',
+                color: 'var(--portal-paper, #202020)',
                 fontSize: 13,
+                border: '1px solid var(--portal-border, #e4e2de)',
               }}
             >
-              Buổi tập 1:1 ngày <strong>{reviewTargetBooking.bookingDate}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
+              Buổi tập 1:1 đã kết thúc ngày <strong>{reviewTargetBooking.bookingDate}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--portal-paper, #202020)' }}>
                 Mức độ hài lòng của bạn:
               </label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -839,20 +896,20 @@ export function MemberCoachBookingView({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--portal-paper, #202020)' }}>
                 Nhận xét chi tiết (Gửi tới Quản lý và Huấn luyện viên):
               </label>
               <textarea
                 rows={4}
                 className="portal-input"
-                style={{ width: '100%', resize: 'vertical' }}
+                style={{ width: '100%', resize: 'vertical', color: 'var(--portal-paper, #202020)' }}
                 placeholder="Chia sẻ về tác phong, chuyên môn, sự nhiệt tình hoặc điểm cần cải thiện của HLV..."
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
               />
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--portal-paper, #202020)' }}>
               <input
                 type="checkbox"
                 checked={reviewAnonymous}
@@ -1046,7 +1103,7 @@ export function MemberCoachBookingView({
                 ✓ Lịch tập 1:1 đã được ghi nhận thành công!
               </h4>
               <p style={{ margin: 0, fontSize: 13 }}>
-                HLV: <strong>{paymentModalBooking.coachName}</strong> • Thời gian:{' '}
+                HLV: <strong>{formatCoachName(paymentModalBooking.coachName)}</strong> • Thời gian:{' '}
                 <strong>{paymentModalBooking.bookingDate} ({paymentModalBooking.startTime.slice(0, 5)} - {paymentModalBooking.endTime.slice(0, 5)})</strong>
               </p>
             </div>
@@ -1103,7 +1160,7 @@ export function MemberCoachBookingView({
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <p>
-              Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV <strong>{cancelTarget.coachName}</strong> vào{' '}
+              Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV <strong>{formatCoachName(cancelTarget.coachName)}</strong> vào{' '}
               <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)} ngày {cancelTarget.bookingDate}</strong>?
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>

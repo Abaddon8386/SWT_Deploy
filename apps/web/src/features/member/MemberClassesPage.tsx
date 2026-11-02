@@ -392,133 +392,7 @@ export function MemberClassesPage() {
         subtitle="Đặt lịch tập cùng Huấn luyện viên, quản lý chỗ ngồi và danh sách chờ tự động theo thời gian thực."
       />
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <p className="row-card__meta" style={{ margin: 0 }}>
-          Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> (Thứ 2–Chủ nhật)
-        </p>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            className={`filter-chip ${weekOffset === 0 ? 'is-active' : ''}`}
-            onClick={() => {
-              clearActionFeedback();
-              setWeekOffset(0);
-            }}
-          >
-            Tuần này
-          </button>
-          <button
-            type="button"
-            className={`filter-chip ${weekOffset === 1 ? 'is-active' : ''}`}
-            onClick={() => {
-              clearActionFeedback();
-              setWeekOffset(1);
-            }}
-          >
-            Tuần kế tiếp
-          </button>
-        </div>
-      </div>
-
-          <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
-            <button
-              type="button"
-              className={`filter-chip ${showOnlyFavorites ? 'is-active' : ''}`}
-              aria-pressed={showOnlyFavorites}
-              onClick={() => {
-                clearActionFeedback();
-                setShowOnlyFavorites((prev) => !prev);
-                setDiscipline('ALL');
-              }}
-            >
-              ⭐ Bộ môn yêu thích {favoriteDisciplineIds.length > 0 ? `(${favoriteDisciplineIds.length})` : ''}
-            </button>
-            {['ALL', ...disciplines].map((value) => {
-              const discId = disciplineNameToId[value];
-              const isFav = discId ? favoriteDisciplineIds.includes(discId) : false;
-              return (
-                <div key={value} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                  <button
-                    type="button"
-                    className={`filter-chip ${discipline === value && !showOnlyFavorites ? 'is-active' : ''}`}
-                    aria-pressed={discipline === value && !showOnlyFavorites}
-                    onClick={() => {
-                      clearActionFeedback();
-                      setShowOnlyFavorites(false);
-                      setDiscipline(value);
-                    }}
-                  >
-                    {value === 'ALL' ? 'Tất cả bộ môn' : value}
-                  </button>
-                  {value !== 'ALL' && discId && (
-                    <button
-                      type="button"
-                      className="btn-favorite-star"
-                      title={isFav ? `Bỏ yêu thích ${value}` : `Yêu thích ${value}`}
-                      aria-label={`Yêu thích ${value}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleToggleFavorite(discId);
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 15,
-                        minWidth: 32,
-                        minHeight: 32,
-                        padding: '2px 4px',
-                        marginLeft: -4,
-                        color: isFav ? '#f59e0b' : 'var(--portal-muted, #9ca3af)',
-                      }}
-                    >
-                      {isFav ? '★' : '☆'}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-      <div style={{ margin: '16px 0 24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <label htmlFor="member-classes-day" className="meta-label">Thứ trong tuần</label>
-          <Select
-            id="member-classes-day"
-            className="portal-select"
-            style={{ width: 'auto', minWidth: 196 }}
-            value={day}
-            onChange={(event) => {
-              clearActionFeedback();
-              setDay(event.target.value);
-            }}
-          >
-            {days.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </Select>
-        </div>
-        {hasActivePackage === false && (
-          <p className="row-card__meta" style={{ margin: 0 }}>
-            Cần gói tập đang hoạt động để đặt chỗ. <Link className="member-classes-package-link" to="/member/packages">Xem gói tập</Link>
-          </p>
-        )}
-      </div>
-
-      {actionError && (
-        <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'rgba(180, 60, 60, 0.35)' }}>
-          <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{actionError}</strong>
-          <div style={{ marginTop: 8 }}>
-            <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
-              Kiểm tra gói tập của tôi
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {tab === 'schedule' && myScheduleError && <div className="portal-card portal-empty" role="alert">
-        <h3>Không tải được lịch học của tôi</h3><p>{myScheduleError} Chưa thể xác nhận trạng thái đặt chỗ của bạn.</p>
-        <button type="button" className="btn-secondary btn-sm" onClick={() => setMyScheduleRetry(value => value + 1)}>Thử lại lịch học của tôi</button>
-      </div>}
-      <div className="portal-tabs" role="tablist" aria-label="Lịch học">
+      <div className="portal-tabs" role="tablist" aria-label="Lịch học" style={{ marginBottom: 18 }}>
         <button
           type="button"
           role="tab"
@@ -541,13 +415,165 @@ export function MemberClassesPage() {
         >
           Lịch học của tôi {(activeEnrollments.length + activeWaitlists.length) > 0 ? `(${activeEnrollments.length + activeWaitlists.length})` : ''}
         </button>
-        <button type="button" role="tab" aria-selected={tab === 'coach_booking'}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'coach_booking'}
           className={`portal-tab ${tab === 'coach_booking' ? 'active' : ''}`}
-          onClick={() => handleSelectTab('coach_booking')}>Đặt lịch HLV 1:1 (PT)</button>
+          onClick={() => handleSelectTab('coach_booking')}
+        >
+          Đặt lịch HLV 1:1 (PT)
+        </button>
       </div>
 
-      {tab === 'coach_booking' ? <MemberCoachBookingView onBookingSuccess={() => { setRetry(v => v + 1); setMyScheduleRetry(v => v + 1); }} /> : tab === 'schedule' ? (
-        loading ? (
+      {actionError && (
+        <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'rgba(180, 60, 60, 0.35)' }}>
+          <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{actionError}</strong>
+          <div style={{ marginTop: 8 }}>
+            <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
+              Kiểm tra gói tập của tôi
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {tab === 'coach_booking' ? (
+        <MemberCoachBookingView onBookingSuccess={() => { setRetry(v => v + 1); setMyScheduleRetry(v => v + 1); }} />
+      ) : tab === 'schedule' ? (
+        <div>
+          {myScheduleError && (
+            <div className="portal-card portal-empty" role="alert" style={{ marginBottom: 16 }}>
+              <h3>Không tải được lịch học của tôi</h3>
+              <p>{myScheduleError} Chưa thể xác nhận trạng thái đặt chỗ của bạn.</p>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => setMyScheduleRetry(value => value + 1)}>
+                Thử lại lịch học của tôi
+              </button>
+            </div>
+          )}
+
+          {/* Thanh công cụ và bộ lọc bộ môn của Lịch lớp học */}
+          <div
+            className="portal-card"
+            style={{
+              padding: '16px 20px',
+              marginBottom: 20,
+              display: 'grid',
+              gap: 14,
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <p className="row-card__meta" style={{ margin: 0 }}>
+                📅 Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> (Thứ 2–Chủ nhật)
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  className={`filter-chip ${weekOffset === 0 ? 'is-active' : ''}`}
+                  onClick={() => {
+                    clearActionFeedback();
+                    setWeekOffset(0);
+                  }}
+                >
+                  Tuần này
+                </button>
+                <button
+                  type="button"
+                  className={`filter-chip ${weekOffset === 1 ? 'is-active' : ''}`}
+                  onClick={() => {
+                    clearActionFeedback();
+                    setWeekOffset(1);
+                  }}
+                >
+                  Tuần kế tiếp
+                </button>
+              </div>
+            </div>
+
+            <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
+              <button
+                type="button"
+                className={`filter-chip ${showOnlyFavorites ? 'is-active' : ''}`}
+                aria-pressed={showOnlyFavorites}
+                onClick={() => {
+                  clearActionFeedback();
+                  setShowOnlyFavorites((prev) => !prev);
+                  setDiscipline('ALL');
+                }}
+              >
+                ⭐ Bộ môn yêu thích {favoriteDisciplineIds.length > 0 ? `(${favoriteDisciplineIds.length})` : ''}
+              </button>
+              {['ALL', ...disciplines].map((value) => {
+                const discId = disciplineNameToId[value];
+                const isFav = discId ? favoriteDisciplineIds.includes(discId) : false;
+                return (
+                  <div key={value} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                    <button
+                      type="button"
+                      className={`filter-chip ${discipline === value && !showOnlyFavorites ? 'is-active' : ''}`}
+                      aria-pressed={discipline === value && !showOnlyFavorites}
+                      onClick={() => {
+                        clearActionFeedback();
+                        setShowOnlyFavorites(false);
+                        setDiscipline(value);
+                      }}
+                    >
+                      {value === 'ALL' ? 'Tất cả bộ môn' : value}
+                    </button>
+                    {value !== 'ALL' && discId && (
+                      <button
+                        type="button"
+                        className="btn-favorite-star"
+                        title={isFav ? `Bỏ yêu thích ${value}` : `Yêu thích ${value}`}
+                        aria-label={`Yêu thích ${value}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleToggleFavorite(discId);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: 15,
+                          minWidth: 32,
+                          minHeight: 32,
+                          padding: '2px 4px',
+                          marginLeft: -4,
+                          color: isFav ? '#f59e0b' : 'var(--portal-muted, #9ca3af)',
+                        }}
+                      >
+                        {isFav ? '★' : '☆'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingTop: 10, borderTop: '1px solid var(--portal-border, #e4e2de)' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <label htmlFor="member-classes-day" className="meta-label">Thứ trong tuần</label>
+                <Select
+                  id="member-classes-day"
+                  className="portal-select"
+                  style={{ width: 'auto', minWidth: 196 }}
+                  value={day}
+                  onChange={(event) => {
+                    clearActionFeedback();
+                    setDay(event.target.value);
+                  }}
+                >
+                  {days.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </Select>
+              </div>
+              {hasActivePackage === false && (
+                <p className="row-card__meta" style={{ margin: 0 }}>
+                  Cần gói tập đang hoạt động để đặt chỗ. <Link className="member-classes-package-link" to="/member/packages">Xem gói tập</Link>
+                </p>
+              )}
+            </div>
+          </div>
+
+          {loading ? (
           <div className="stack" role="status" aria-busy="true">
             <span className="sr-only">Đang tải lịch học...</span>
             {[1, 2, 3].map((idx) => (
@@ -709,8 +735,8 @@ export function MemberClassesPage() {
                 {visibleCount < visible.length && <button type="button" className="btn-secondary" aria-controls="member-class-results" onClick={() => setVisibleCount(count => count + SESSION_BATCH_SIZE)}>Xem thêm ({visible.length - visibleCount})</button>}
               </div></>
             )}
-          </div>
-        )
+          </div>)}
+        </div>
       ) : (
         <div className="stack">
           {myScheduleLoading ? (

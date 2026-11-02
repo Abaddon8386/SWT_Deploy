@@ -53,6 +53,11 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/member/MemberPackagesPage')).MemberPackagesPage }),
           },
           {
+            path: '/member/packages/checkout',
+            lazy: async () => ({ Component: (await import('../features/member/MemberCheckoutPage')).MemberCheckoutPage }),
+
+          },
+          {
             path: '/member/card',
             lazy: async () => ({ Component: (await import('../features/member/MemberCardPage')).MemberCardPage }),
           },

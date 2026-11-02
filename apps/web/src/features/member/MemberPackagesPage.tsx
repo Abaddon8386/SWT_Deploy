@@ -1,4 +1,4 @@
-﻿import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
 import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -803,6 +803,14 @@ export function MemberPackagesPage() {
           )}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
             <RefreshButton label="Tải lại trạng thái" onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }} />
+            {pendingPackage && (
+              <a
+                href={`/member/packages/checkout?packageId=${pendingPackage.id}&subscriptionId=${pending.id}`}
+                className="btn-primary btn-sm"
+              >
+                Thanh toán / Đặt lịch hẹn
+              </a>
+            )}
             <button
               type="button"
               className="btn-secondary btn-sm"
@@ -1111,6 +1119,12 @@ export function MemberPackagesPage() {
             <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán do quầy lễ tân xác nhận.</p>
             <p className="row-card__meta">{paymentInstructionsNotice}</p>
             <div className="package-result__actions">
+              <a
+                href={`/member/packages/checkout?packageId=${requestResult.membershipPackage.id}&subscriptionId=${requestResult.subscription.id}&action=${requestResult.action}`}
+                className="btn-primary"
+              >
+                Tiến hành thanh toán / Đặt lịch hẹn
+              </a>
               <button type="button" className="btn-secondary"
                 onClick={() => { setActionError(null); setPendingToCancel(requestResult.subscription); }}
                 disabled={isCancellingPending || paymentsState.status !== 'success' ||
