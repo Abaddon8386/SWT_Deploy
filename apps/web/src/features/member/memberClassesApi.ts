@@ -1,4 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
+import { matchesDiscipline } from '../../shared/lib/disciplines';
 
 export interface GymClassDto {
   id: number; name: string; disciplineId: number; disciplineName: string;
@@ -43,7 +44,10 @@ export const getSessions = (weekOffset = 0) => {
 };
 export const getMyEnrollments = () => apiFetch<EnrollmentDto[]>('/classes/enrollments/my');
 export const getMyWaitlists = () => apiFetch<WaitlistDto[]>('/classes/waitlists/my');
-export const enroll = (sessionId: number) => apiFetch<EnrollmentDto>(`/classes/sessions/${sessionId}/enroll`, { method: 'POST' });
+export const enroll = (sessionId: number, waitlistId?: number) => apiFetch<EnrollmentDto>(
+  `/classes/sessions/${sessionId}/enroll${waitlistId === undefined ? '' : `?waitlistId=${waitlistId}`}`,
+  { method: 'POST' },
+);
 export const cancelEnrollment = (enrollmentId: number) => apiFetch<EnrollmentDto>(`/classes/enrollments/${enrollmentId}`, { method: 'DELETE' });
 export const joinWaitlist = (sessionId: number) => apiFetch<WaitlistDto>(`/classes/sessions/${sessionId}/waitlist`, { method: 'POST' });
 export const leaveWaitlist = (waitlistId: number) => apiFetch<WaitlistDto>(`/classes/waitlists/${waitlistId}`, { method: 'DELETE' });
@@ -55,10 +59,8 @@ export function weekday(date: string): number {
 }
 
 export function filterSessions(sessions: ClassSessionDto[], discipline: string, day: string): ClassSessionDto[] {
-  const needle = discipline.toLocaleLowerCase();
   return sessions.filter((session) => {
-    const disc = session.disciplineName.toLocaleLowerCase();
-    const matchDisc = discipline === 'ALL' || disc === needle || disc.includes(needle);
+    const matchDisc = discipline === 'ALL' || matchesDiscipline(session.disciplineName, discipline);
     return matchDisc && (day === 'ALL' || weekday(session.sessionDate) === Number(day));
   });
 }

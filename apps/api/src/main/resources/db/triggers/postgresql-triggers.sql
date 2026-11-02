@@ -107,14 +107,16 @@ CREATE OR REPLACE FUNCTION scms_require_active_membership_for_enrollment()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
 BEGIN
     IF NEW.status = 'booked' AND NOT EXISTS (
         SELECT 1
         FROM membership_subscriptions subscription
         WHERE subscription.member_id = NEW.member_id
           AND subscription.status = 'active'
-          AND subscription.start_date <= CURRENT_DATE
-          AND subscription.end_date >= CURRENT_DATE
+          AND subscription.start_date <= business_date
+          AND subscription.end_date >= business_date
         FOR SHARE
     ) THEN
         RAISE EXCEPTION 'Học viên không có gói thành viên còn hiệu lực để đăng ký lớp.'
@@ -267,3 +269,46 @@ $$;
 DROP TRIGGER IF EXISTS trg_subscriptions_realtime ON membership_subscriptions;
 CREATE TRIGGER trg_subscriptions_realtime AFTER INSERT OR UPDATE ON membership_subscriptions
 FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
+
+-- SCRUM-128: transactional private invalidations, containing no ticket/message data.
+CREATE OR REPLACE FUNCTION scms_support_realtime_invalidation()
+RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
+DECLARE ticket_id bigint;
+BEGIN
+    IF to_regprocedure('realtime.send(jsonb,text,text,boolean)') IS NULL THEN RETURN NEW; END IF;
+    IF TG_TABLE_NAME = 'support_requests' THEN ticket_id := NEW.id;
+    ELSE ticket_id := NEW.support_request_id; END IF;
+    PERFORM realtime.send('{}'::jsonb, 'changed', 'scms:support:ticket:' || ticket_id::text, true);
+    PERFORM realtime.send('{}'::jsonb, 'changed', 'scms:support:inbox', true);
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'Support invalidation unavailable (SQLSTATE %)', SQLSTATE;
+    RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_support_request_realtime ON support_requests;
+CREATE TRIGGER trg_support_request_realtime AFTER INSERT OR UPDATE ON support_requests
+FOR EACH ROW EXECUTE FUNCTION scms_support_realtime_invalidation();
+DROP TRIGGER IF EXISTS trg_support_message_realtime ON support_request_messages;
+CREATE TRIGGER trg_support_message_realtime AFTER INSERT ON support_request_messages
+FOR EACH ROW EXECUTE FUNCTION scms_support_realtime_invalidation();
+
+DO $$
+BEGIN
+    IF current_schema() = 'public' AND to_regclass('realtime.messages') IS NOT NULL THEN
+        DROP POLICY IF EXISTS scms_support_receive ON realtime.messages;
+        CREATE POLICY scms_support_receive ON realtime.messages FOR SELECT TO authenticated
+        USING (extension = 'broadcast' AND (auth.jwt() ->> 'scms_support_scope') = 'receive'
+            AND realtime.topic() = (auth.jwt() ->> 'scms_support_topic')
+            AND realtime.topic() LIKE 'scms:support:%');
+        DROP POLICY IF EXISTS scms_support_receive_guard ON realtime.messages;
+        CREATE POLICY scms_support_receive_guard ON realtime.messages AS RESTRICTIVE FOR SELECT TO PUBLIC
+        USING (realtime.topic() NOT LIKE 'scms:support:%' OR (
+            extension = 'broadcast' AND (auth.jwt() ->> 'scms_support_scope') = 'receive'
+            AND realtime.topic() = (auth.jwt() ->> 'scms_support_topic')));
+        DROP POLICY IF EXISTS scms_support_send_guard ON realtime.messages;
+        CREATE POLICY scms_support_send_guard ON realtime.messages AS RESTRICTIVE FOR INSERT TO PUBLIC
+        WITH CHECK (realtime.topic() NOT LIKE 'scms:support:%');
+    END IF;
+END;
+$$;

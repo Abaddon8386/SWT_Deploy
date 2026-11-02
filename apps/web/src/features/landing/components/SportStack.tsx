@@ -1,30 +1,33 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { RoundArrow } from './PublicLayout';
+import { PRIMARY_DISCIPLINES, type PrimaryDisciplineId } from '../../../shared/lib/disciplines';
+import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import './sport-stack.css';
 
-const sports = [
-  {
-    id: 'swimming', name: 'Bơi lội', image: '/images/fitness/aquatics-pool.jpg',
-    summary: 'Học bơi cơ bản, sửa kỹ thuật và tập sức bền.',
-    programs: ['Thở và nổi', 'Kỹ thuật bơi', 'Bơi sức bền'],
+const content: Record<PrimaryDisciplineId, { image: string; summary: string; programs: string[] }> = {
+  gym: {
+    image: '/images/fitness/gym-floor.jpg',
+    summary: 'Xây dựng sức mạnh và thể lực với các bài tập tạ.',
+    programs: ['Kỹ thuật tập tạ', 'Sức mạnh toàn thân', 'Thể lực và sức bền'],
   },
-  {
-    id: 'tennis', name: 'Tennis', image: '/images/fitness/tennis-court.jpg',
-    summary: 'Tập đánh bóng, giao bóng và di chuyển trên sân.',
-    programs: ['Thuận tay và trái tay', 'Giao bóng và lên lưới', 'Di chuyển và đánh đôi'],
+  yoga: {
+    image: '/images/yoga-aerial-silk-studio.jpg',
+    summary: 'Kết hợp hơi thở, tư thế và chuyển động linh hoạt.',
+    programs: ['Hơi thở và tư thế', 'Thăng bằng và linh hoạt', 'Giãn cơ và thư giãn'],
   },
-  {
-    id: 'badminton', name: 'Cầu lông', image: '/images/fitness/badminton-court.webp',
-    summary: 'Từ cách cầm vợt đến phối hợp đánh đôi.',
-    programs: ['Cầm vợt và phát cầu', 'Phông cầu, bỏ nhỏ, đập cầu', 'Bộ chân và đánh đôi'],
+  pilates: {
+    image: '/images/pilates-reformer-studio.jpg',
+    summary: 'Rèn khả năng kiểm soát chuyển động và sức mạnh vùng core.',
+    programs: ['Kiểm soát vùng core', 'Tư thế và thăng bằng', 'Chuyển động trên Reformer'],
   },
-  {
-    id: 'basketball', name: 'Bóng rổ', image: '/images/fitness/basketball-court.webp',
-    summary: 'Tập kỹ năng cá nhân và phối hợp cùng đồng đội.',
-    programs: ['Dẫn bóng và chuyền bóng', 'Ném rổ và lên rổ', 'Phòng thủ và phối hợp'],
+  boxing: {
+    image: '/images/hero-options/opt5-boxing.jpg',
+    summary: 'Tập kỹ thuật đấm, phản xạ và thể lực qua từng hiệp.',
+    programs: ['Kỹ thuật đấm cơ bản', 'Bộ chân và phản xạ', 'Thể lực theo hiệp'],
   },
-];
+};
+const sports = PRIMARY_DISCIPLINES.map(sport => ({ ...sport, ...content[sport.id] }));
 // The existing import remains stable; this section now uses a scrolling story rather than a deck.
 export function SportStack({ classPath, heading }: { classPath: string; heading?: ReactNode }) {
   const story = useRef<HTMLDivElement>(null);
@@ -101,8 +104,8 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
     };
   }, []);
 
-  const illustration = (sport: typeof sports[number], preload = false) => <>
-    <img src={sport.image} alt={`Ảnh minh họa không gian ${sport.name.toLowerCase()}`} loading={preload ? 'eager' : 'lazy'} />
+  const illustration = (sport: typeof sports[number]) => <>
+    <LoadingImage src={sport.image} alt={`Ảnh minh họa không gian ${sport.name.toLowerCase()}`} loading="lazy" decoding="async" />
     <figcaption>Ảnh minh họa · {sport.name}</figcaption>
   </>;
 
@@ -129,7 +132,7 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
         <div className="fit-sport-story-panel">
           {sports.map((sport, index) => <figure key={sport.id} data-sport={sport.id}
             className={`fit-sport-story-visual${index === 0 ? ' is-active' : ''}`}>
-            {illustration(sport, true)}
+            {illustration(sport)}
           </figure>)}
           <div className="fit-sport-story-dots">{sports.map((sport, index) =>
             <i key={sport.id} className={index === 0 ? 'is-active' : ''} />)}</div>

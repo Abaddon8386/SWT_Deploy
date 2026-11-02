@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { chatRoleLabel, getContacts, type ChatContact } from './chatApi';
 
 export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatContact) => void; pending: number | null }) {
@@ -28,7 +29,7 @@ export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatCo
       <div><input id="chat-contact-query" className="portal-input" type="search" value={query} maxLength={80} onChange={e => setQuery(e.target.value)} placeholder="Nhập tên người nhận" />
         <button type="submit" className="btn-secondary" disabled={loading}>Tìm</button></div>
     </form>
-    {loading ? <p role="status">Đang tải danh bạ…</p> : error ? <div role="alert"><p>{error}</p><button className="direct-chat__link" type="button" onClick={() => void search(submitted, page)}>Thử lại</button></div>
+    {loading ? <LoadingSkeleton label="Đang tải danh bạ…" count={3} /> : error ? <div role="alert"><p>{error}</p><button className="direct-chat__link" type="button" onClick={() => void search(submitted, page)}>Thử lại</button></div>
       : contacts.length === 0 ? <p className="direct-chat__muted">Không tìm thấy lễ tân hoặc huấn luyện viên phù hợp.</p>
         : <ul className="direct-chat__list">{contacts.map(contact => <li key={contact.id}><button type="button" data-contact-id={contact.id} className="direct-chat__person" disabled={pending !== null} onClick={() => onChoose(contact)}>
           <span className="direct-chat__avatar" aria-hidden="true">{contact.name.slice(0, 1)}</span>

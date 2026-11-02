@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getMyCompletedItemIds, getMyProgressMetrics, getMyTrainingPlans, setTrainingItemCompleted, type ProgressMetric, type TrainingPlan } from './memberProgressApi';
 import { dailyExercises, weeklyMeasurements, type WeeklyPoint } from './progressPresentation';
 import './member-progress.css';
@@ -95,7 +96,7 @@ export function MemberProgressPage() {
     <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" subtitle="Số đo đã ghi nhận và bài tập từ huấn luyện viên." />
     <section className="portal-card" aria-labelledby="progress-metrics-title">
       <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">Thay đổi qua các tuần</h2></div>
-      {metrics.kind === 'loading' ? <p role="status">Đang tải số đo…</p> : metrics.kind === 'error' ? <div role="alert">Không thể tải số đo. <button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>Thử lại</button></div> : points.length === 0 ? <p className="portal-empty">Chưa có số đo cân nặng hoặc BMI.</p> : <div className="member-progress-charts">
+      {metrics.kind === 'loading' ? <LoadingSkeleton label="Đang tải số đo…" variant="cards" count={2} /> : metrics.kind === 'error' ? <div role="alert">Không thể tải số đo. <button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>Thử lại</button></div> : points.length === 0 ? <p className="portal-empty">Chưa có số đo cân nặng hoặc BMI.</p> : <div className="member-progress-charts">
         <div><h3>Cân nặng <small>kg</small></h3><WeeklyChart points={points} metric="weight" label="Cân nặng" unit="kg" /></div>
         <div><h3>Chỉ số BMI</h3><WeeklyChart points={points} metric="bmi" label="BMI" unit="BMI" /></div>
         <div className="member-progress-values">{points.map((point) => <p key={point.weekStart}><time dateTime={point.weekStart}>Tuần {point.weekStart.slice(5)}</time><span>{point.weight == null ? '—' : `${point.weight} kg`}</span><span>{point.bmi == null ? '—' : `BMI ${point.bmi}`}</span></p>)}</div>
@@ -103,8 +104,8 @@ export function MemberProgressPage() {
     </section>
     <section className="portal-card" aria-labelledby="progress-plan-title">
       <div className="portal-card-header"><h2 id="progress-plan-title" className="portal-card-title">Bài tập hôm nay</h2></div>
-      {plans.kind === 'loading' ? <p role="status">Đang tải giáo án…</p> : plans.kind === 'error' ? <div role="alert">Không thể tải giáo án. <button type="button" className="member-progress-link" onClick={() => { setPlans({ kind: 'loading' }); setPlanRetry((value) => value + 1); }}>Thử lại</button></div> : exercises.length === 0 ? <p className="portal-empty">Chưa có bài tập trong hôm nay.</p> : <>
-        {completions.kind === 'loading' && <p role="status">Đang tải trạng thái hoàn thành…</p>}
+      {plans.kind === 'loading' ? <LoadingSkeleton label="Đang tải giáo án…" count={3} /> : plans.kind === 'error' ? <div role="alert">Không thể tải giáo án. <button type="button" className="member-progress-link" onClick={() => { setPlans({ kind: 'loading' }); setPlanRetry((value) => value + 1); }}>Thử lại</button></div> : exercises.length === 0 ? <p className="portal-empty">Chưa có bài tập trong hôm nay.</p> : <>
+        {completions.kind === 'loading' && <LoadingSkeleton label="Đang tải trạng thái hoàn thành…" count={1} />}
         {completions.kind === 'error' && <div role="alert">Không thể tải trạng thái hoàn thành. <button type="button" className="member-progress-link" onClick={() => { setCompletions({ kind: 'loading' }); setCompletionRetry((value) => value + 1); }}>Thử lại</button></div>}
         {completionError && <p role="alert">{completionError}</p>}
         <ol className="member-progress-exercises">{exercises.map(({ plan, item }) => <li key={`${plan.id}-${item.id}`}>

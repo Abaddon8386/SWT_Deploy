@@ -5,6 +5,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { PortalIcon } from '../portal/PortalIcon';
 import { ApiError } from '../../shared/api/client';
+import { PRIMARY_DISCIPLINES } from '../../shared/lib/disciplines';
 import {
   cancelEnrollment,
   currentWeek,
@@ -19,6 +20,9 @@ import {
   type EnrollmentDto,
   type WaitlistDto,
 } from './memberClassesApi';
+import './member-classes.css';
+
+const SESSION_BATCH_SIZE = 6;
 
 const days = [
   ['ALL', 'Tất cả các ngày'], ['1', 'Thứ 2'], ['2', 'Thứ 3'], ['3', 'Thứ 4'],
@@ -54,12 +58,13 @@ export function MemberClassesPage() {
   const [waitlists, setWaitlists] = useState<WaitlistDto[]>([]);
   const [discipline, setDiscipline] = useState('ALL');
   const [day, setDay] = useState('ALL');
+  const [visibleCount, setVisibleCount] = useState(SESSION_BATCH_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [waitlistsLoading, setWaitlistsLoading] = useState(true);
-  const [waitlistsError, setWaitlistsError] = useState('');
-  const [waitlistsRetry, setWaitlistsRetry] = useState(0);
+  const [myScheduleLoading, setMyScheduleLoading] = useState(true);
+  const [myScheduleError, setMyScheduleError] = useState('');
+  const [myScheduleRetry, setMyScheduleRetry] = useState(0);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [actionError, setActionError] = useState('');
@@ -69,6 +74,7 @@ export function MemberClassesPage() {
   const actionGenRef = useRef(0);
 
   function clearActionFeedback() {
+    setVisibleCount(SESSION_BATCH_SIZE);
     actionGenRef.current += 1;
     setActionError('');
     setNotice('');
@@ -95,46 +101,47 @@ export function MemberClassesPage() {
   useEffect(() => {
     let active = true;
     async function loadMySchedule() {
-      setWaitlistsLoading(true);
-      setWaitlistsError('');
+      setMyScheduleLoading(true);
+      setMyScheduleError('');
       try {
         const [nextWaitlists, nextEnrollments] = await Promise.all([
           getMyWaitlists(),
-          Promise.resolve(getMyEnrollments?.() ?? []).catch(() => [] as EnrollmentDto[]),
+          getMyEnrollments(),
         ]);
         if (active) {
           setWaitlists(nextWaitlists ?? []);
           setEnrollments(nextEnrollments ?? []);
         }
       } catch (cause) {
-        if (active) setWaitlistsError(errorMessage(cause));
+        if (active) setMyScheduleError(errorMessage(cause));
       } finally {
-        if (active) setWaitlistsLoading(false);
+        if (active) setMyScheduleLoading(false);
       }
     }
     void loadMySchedule();
     return () => { active = false; };
-  }, [waitlistsRetry]);
+  }, [myScheduleRetry]);
 
-  async function handleEnroll(session: ClassSessionDto) {
+  async function handleEnroll(session: ClassSessionDto, waitlistId?: number) {
     const key = `session-${session.id}`;
-    if (busyRef.current) return;
+    if (busyRef.current || !myScheduleReady) return;
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
     setNotice('');
     setActionError('');
     try {
-      await enroll(session.id);
+      if (waitlistId === undefined) await enroll(session.id);
+      else await enroll(session.id, waitlistId);
       if (actionGenRef.current === gen) {
         setNotice(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`);
       }
       setRetry((v) => v + 1);
-      setWaitlistsRetry((v) => v + 1);
+      setMyScheduleRetry((v) => v + 1);
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
-        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -144,7 +151,7 @@ export function MemberClassesPage() {
 
   async function handleJoinWaitlist(session: ClassSessionDto) {
     const key = `session-${session.id}`;
-    if (busyRef.current) return;
+    if (busyRef.current || !myScheduleReady) return;
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
@@ -156,11 +163,11 @@ export function MemberClassesPage() {
         setNotice(`Đã tham gia hàng chờ lớp "${session.className}". Hệ thống sẽ tự động đôn chỗ khi có học viên hủy lịch.`);
       }
       setRetry((v) => v + 1);
-      setWaitlistsRetry((v) => v + 1);
+      setMyScheduleRetry((v) => v + 1);
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
-        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -170,7 +177,7 @@ export function MemberClassesPage() {
 
   async function handleCancelEnrollment(enrollmentId: number, className: string) {
     const key = `enroll-${enrollmentId}`;
-    if (busyRef.current) return;
+    if (busyRef.current || !myScheduleReady) return;
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
@@ -182,11 +189,11 @@ export function MemberClassesPage() {
         setNotice(`Đã hủy đặt chỗ lớp "${className}".`);
       }
       setRetry((v) => v + 1);
-      setWaitlistsRetry((v) => v + 1);
+      setMyScheduleRetry((v) => v + 1);
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
-        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -196,7 +203,7 @@ export function MemberClassesPage() {
 
   async function handleLeaveWaitlist(waitlistId: number, className: string) {
     const key = `waitlist-${waitlistId}`;
-    if (busyRef.current) return;
+    if (busyRef.current || !myScheduleReady) return;
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
@@ -208,11 +215,11 @@ export function MemberClassesPage() {
         setNotice(`Đã rút khỏi hàng chờ lớp "${className}".`);
       }
       setRetry((v) => v + 1);
-      setWaitlistsRetry((v) => v + 1);
+      setMyScheduleRetry((v) => v + 1);
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
-        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -221,13 +228,14 @@ export function MemberClassesPage() {
   }
 
   const weekRange = currentWeek(weekOffset);
-  const disciplines = [...new Set(['Gym', 'Yoga', 'Pilates', 'Boxing', ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
+  const disciplines = [...new Set([...PRIMARY_DISCIPLINES.map(item => item.name), ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
   const visible = filterSessions(sessions, discipline, day);
-  const activeEnrollments = enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled');
-  const activeWaitlists = waitlists.filter((item) => item.status === 'waiting' || item.status === 'notified');
+  const myScheduleReady = !myScheduleLoading && !myScheduleError;
+  const activeEnrollments = myScheduleReady ? enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled') : [];
+  const activeWaitlists = myScheduleReady ? waitlists.filter((item) => item.status === 'waiting' || item.status === 'notified') : [];
 
   return (
-    <div className="portal-container">
+    <div className="portal-container member-classes">
       <PageHeader
         eyebrow="Hội viên"
         title="Lịch học & đặt chỗ"
@@ -317,6 +325,10 @@ export function MemberClassesPage() {
         </div>
       )}
 
+      {tab === 'schedule' && myScheduleError && <div className="portal-card portal-empty" role="alert">
+        <h3>Không tải được lịch học của tôi</h3><p>{myScheduleError} Chưa thể xác nhận trạng thái đặt chỗ của bạn.</p>
+        <button type="button" className="btn-secondary btn-sm" onClick={() => setMyScheduleRetry(value => value + 1)}>Thử lại lịch học của tôi</button>
+      </div>}
       <div className="portal-tabs" role="tablist" aria-label="Lịch học">
         <button
           type="button"
@@ -371,7 +383,7 @@ export function MemberClassesPage() {
             </button>
           </div>
         ) : (
-          <div className="stack">
+          <div className="stack" id="member-class-results">
             {sessions.length === 0 ? (
               <div className="portal-card portal-empty">
                 <h3>Chưa có lịch học</h3>
@@ -395,7 +407,7 @@ export function MemberClassesPage() {
                 <p>Hãy thử bộ lọc khác.</p>
               </div>
             ) : (
-              visible.map((item) => {
+              <>{visible.slice(0, visibleCount).map((item) => {
                 const [year, month, date] = item.sessionDate.split('-');
                 const now = new Date();
                 const past =
@@ -411,7 +423,7 @@ export function MemberClassesPage() {
                   (myWaitlist ? busyKey === `waitlist-${myWaitlist.id}` : false);
 
                 return (
-                  <div key={item.id} className="portal-card portal-card--list">
+                  <div key={item.id} className="portal-card portal-card--list member-class-session">
                     <div>
                       <div className="row-card__meta row-card__meta--inline">
                         <span className="badge badge-info">{item.disciplineName}</span>
@@ -420,7 +432,7 @@ export function MemberClassesPage() {
                           <span className="badge badge-success">Đã đặt chỗ</span>
                         )}
                         {!myEnrollment && myWaitlist && (
-                          <span className="badge badge-warning">Đang chờ chỗ</span>
+                          <span className="badge badge-warning">{myWaitlist.status === 'notified' ? 'Đang giữ chỗ' : 'Đang chờ chỗ'}</span>
                         )}
                       </div>
                       <h3 className="row-card__title">{item.className}</h3>
@@ -436,8 +448,10 @@ export function MemberClassesPage() {
                     <div style={{ textAlign: 'right' }}>
                       <div className="meta-label">SĨ SỐ HIỆN TẠI</div>
                       <strong>{item.bookedCount} / {item.capacity} học viên</strong>
-                      <div style={{ marginTop: 10 }}>
-                        {myEnrollment ? (
+                      <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {!myScheduleReady ? <button type="button" className="btn-secondary btn-sm" disabled>
+                          {myScheduleLoading ? 'Đang kiểm tra đặt chỗ...' : 'Chưa thể kiểm tra đặt chỗ'}
+                        </button> : myEnrollment ? (
                           <button
                             type="button"
                             className="btn-secondary btn-sm"
@@ -447,14 +461,26 @@ export function MemberClassesPage() {
                             {isBusy ? 'Đang xử lý...' : 'Hủy đặt chỗ'}
                           </button>
                         ) : myWaitlist ? (
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            disabled={isBusy}
-                            onClick={() => void handleLeaveWaitlist(myWaitlist.id, item.className)}
-                          >
-                            {isBusy ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
-                          </button>
+                          <>
+                            {myWaitlist.status === 'notified' && (
+                              <button
+                                type="button"
+                                className="btn-primary btn-sm"
+                                disabled={isBusy || unavailable}
+                                onClick={() => void handleEnroll(item, myWaitlist.id)}
+                              >
+                                {isBusy ? 'Đang xác nhận...' : 'Xác nhận chỗ'}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              disabled={isBusy}
+                              onClick={() => void handleLeaveWaitlist(myWaitlist.id, item.className)}
+                            >
+                              {isBusy ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
+                            </button>
+                          </>
                         ) : unavailable ? (
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             Không thể đặt
@@ -462,11 +488,13 @@ export function MemberClassesPage() {
                         ) : item.bookedCount < item.capacity ? (
                           <button
                             type="button"
-                            className="btn-primary btn-sm"
+                            className="btn-primary member-class-enroll"
+                            aria-label={`${isBusy ? 'Đang đặt chỗ' : 'Đặt chỗ ngay'}: ${item.className}`}
+                            title={`Đặt chỗ ngay: ${item.className}`}
                             disabled={isBusy}
                             onClick={() => void handleEnroll(item)}
                           >
-                            {isBusy ? 'Đang đặt chỗ...' : 'Đặt chỗ ngay'}
+                            <span aria-hidden="true">+</span><span className="sr-only">{isBusy ? 'Đang đặt chỗ...' : 'Đặt chỗ ngay'}</span>
                           </button>
                         ) : (
                           <button
@@ -482,15 +510,19 @@ export function MemberClassesPage() {
                     </div>
                   </div>
                 );
-              })
+              })}
+              <div className="member-classes-more">
+                <p role="status">Hiển thị {Math.min(visibleCount, visible.length)} / {visible.length} buổi học</p>
+                {visibleCount < visible.length && <button type="button" className="btn-secondary" aria-controls="member-class-results" onClick={() => setVisibleCount(count => count + SESSION_BATCH_SIZE)}>Xem thêm ({visible.length - visibleCount})</button>}
+              </div></>
             )}
           </div>
         )
       ) : (
         <div className="stack">
-          {waitlistsLoading ? (
+          {myScheduleLoading ? (
             <div className="stack" role="status" aria-busy="true">
-              <span className="sr-only">Đang tải hàng chờ...</span>
+              <span className="sr-only">Đang tải lịch học của tôi...</span>
               {[1, 2].map((idx) => (
                 <div key={idx} className="portal-card portal-card--list" aria-hidden="true">
                   <div style={{ flex: 1 }}>
@@ -501,16 +533,16 @@ export function MemberClassesPage() {
                 </div>
               ))}
             </div>
-          ) : waitlistsError ? (
+          ) : myScheduleError ? (
             <div className="portal-card portal-empty" role="alert">
-              <h3>Không tải được hàng chờ</h3>
-              <p>{waitlistsError}</p>
+              <h3>Không tải được lịch học của tôi</h3>
+              <p>{myScheduleError}</p>
               <button
                 type="button"
                 className="btn-secondary btn-sm"
-                onClick={() => setWaitlistsRetry((value) => value + 1)}
+                onClick={() => setMyScheduleRetry((value) => value + 1)}
               >
-                Thử lại hàng chờ
+                Thử lại lịch học của tôi
               </button>
             </div>
           ) : activeEnrollments.length === 0 && activeWaitlists.length === 0 ? (

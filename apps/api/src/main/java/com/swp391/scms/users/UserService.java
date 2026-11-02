@@ -192,6 +192,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", id));
     }
 
+    @Transactional
     @Audited(action = "RECEPTIONIST_PROFILE_UPDATE", entity = "receptionists")
     public void updateReceptionistShift(Long userId, com.swp391.scms.users.dto.ReceptionistProfileUpdateDto request) {
         User user = findActiveUser(userId);
@@ -246,6 +247,8 @@ public class UserService {
     /**
      * Tác vụ tự động quét dọn dẹp chạy định kỳ hàng ngày vào 02:00 sáng.
      */
+    @Transactional
+    @Audited(action = "USER_CLEANUP_INACTIVE", entity = "users")
     @org.springframework.scheduling.annotation.Scheduled(cron = "${app.users.cleanup.cron:0 0 2 * * ?}")
     public void scheduleInactiveUsersCleanup() {
         cleanupInactiveUsers();

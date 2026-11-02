@@ -3,6 +3,9 @@ import { apiFetch } from '../../shared/api/client';
 export interface SupportTicket {
   id: number;
   memberId: number;
+  memberName?: string | null;
+  assignedTo?: number | null;
+  resolvedAt?: string | null;
   subject: string;
   description: string | null;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -32,7 +35,15 @@ export const createSupportTicket = (subject: string, description: string) =>
 export const getSupportMessages = (id: number) =>
   apiFetch<SupportMessage[]>(`/support/requests/${id}/messages`);
 
-export const sendSupportMessage = (id: number, message: string) =>
+export const sendSupportMessage = (id: number, message: string, clientMessageId?: string) =>
   apiFetch<SupportMessage>(`/support/requests/${id}/messages`, {
-    method: 'POST', body: JSON.stringify({ message }),
+    method: 'POST', body: JSON.stringify({ message, clientMessageId }),
   });
+
+export const getSupportTicket = (id: number) => apiFetch<SupportTicket>(`/support/requests/${id}`);
+
+export const getSupportInbox = (page = 0, status = '') =>
+  apiFetch<TicketPage>(`/support/requests?page=${page}&size=20${status ? `&status=${encodeURIComponent(status)}` : ''}`);
+
+export const updateSupportStatus = (id: number, status: SupportTicket['status'], assignedTo?: number) =>
+  apiFetch<SupportTicket>(`/support/requests/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, assignedTo }) });

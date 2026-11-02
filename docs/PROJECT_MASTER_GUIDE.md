@@ -201,7 +201,7 @@ SQL examples below describe PostgreSQL constraints installed by `PostgreSqlTrigg
   ON class_waitlists (class_id, member_id)
   WHERE status = 'waiting';
   ```
-  *Ý nghĩa:* Ngăn 1 người xếp hàng chờ 2 lần cùng lúc trong 1 lớp. Khi trạng thái chuyển sang `notified` hoặc `expired`, hội viên có thể vào lại waitlist.
+  *Ý nghĩa:* Index ngăn trùng trạng thái `waiting`. SCRUM-74 bổ sung kiểm tra service dưới khóa class: `waiting` hoặc `notified` còn hạn đều chặn đăng ký lại. Offer đã hết hạn/đã rút có thể vào lại cuối hàng khi lớp vẫn đầy. Legacy vẫn chỉ có `waiting/notified/expired`; không có trạng thái `claimed/withdrawn` riêng. Index hiện tại chưa bảo vệ `notified` khỏi các đường ghi ngoài protocol service.
 
 #### 2. Trigger kiểm tra sĩ số lớp học ([P2 — Class Capacity])
 - **`trg_enrollments_check_capacity`** kích hoạt `AFTER INSERT, UPDATE` trên `class_enrollments`:

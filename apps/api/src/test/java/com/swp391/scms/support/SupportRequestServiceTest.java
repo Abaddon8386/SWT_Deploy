@@ -71,6 +71,8 @@ class SupportRequestServiceTest {
     void setUp() {
         sampleUser = new User();
         sampleUser.setId(10L);
+        sampleUser.setStatus("active");
+        var memberRole = new com.swp391.scms.users.entity.Role(); memberRole.setCode("MEMBER"); sampleUser.setRole(memberRole);
         sampleUser.setFullName("Nguyễn Văn A");
 
         sampleMember = new Member();
@@ -161,7 +163,7 @@ class SupportRequestServiceTest {
     @DisplayName("Chuyển trạng thái hợp lệ: open -> in_progress và gửi thông báo cho member")
     void updateStatus_OpenToInProgress_Success() {
         sampleRequest.setStatus("open");
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
                 new SupportRequestDto(1L, 10L, "Nguyễn Văn A", null, null, "Lỗi", "Desc", "in_progress", LocalDateTime.now(), null)
@@ -179,7 +181,7 @@ class SupportRequestServiceTest {
     @DisplayName("Chuyển trạng thái hợp lệ: in_progress -> resolved và ghi nhận resolvedAt")
     void updateStatus_InProgressToResolved_Success() {
         sampleRequest.setStatus("in_progress");
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
                 new SupportRequestDto(1L, 10L, "Nguyễn Văn A", null, null, "Lỗi", "Desc", "resolved", LocalDateTime.now(), LocalDateTime.now())
@@ -197,7 +199,7 @@ class SupportRequestServiceTest {
     void updateStatus_ResolvedToClosed_Success() {
         sampleRequest.setStatus("resolved");
         sampleRequest.setResolvedAt(LocalDateTime.now().minusHours(24));
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
                 new SupportRequestDto(1L, 10L, "Nguyễn Văn A", null, null, "Lỗi", "Desc", "closed", LocalDateTime.now(), sampleRequest.getResolvedAt())
@@ -213,7 +215,7 @@ class SupportRequestServiceTest {
     @DisplayName("Chuyển trạng thái hợp lệ: in_progress -> open (yêu cầu thêm thông tin)")
     void updateStatus_InProgressToOpen_Success() {
         sampleRequest.setStatus("in_progress");
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
                 new SupportRequestDto(1L, 10L, "Nguyễn Văn A", null, null, "Lỗi", "Desc", "open", LocalDateTime.now(), null)
@@ -230,7 +232,7 @@ class SupportRequestServiceTest {
     @DisplayName("Không được phép mở lại hoặc thay đổi ticket đã đóng (closed)")
     void updateStatus_ClosedTicketCannotBeChanged() {
         sampleRequest.setStatus("closed");
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
 
@@ -243,7 +245,7 @@ class SupportRequestServiceTest {
     @DisplayName("Ném AppException khi chuyển trạng thái sai state machine: open -> closed")
     void updateStatus_InvalidTransition_OpenToClosed() {
         sampleRequest.setStatus("open");
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("closed", null);
 
@@ -258,13 +260,14 @@ class SupportRequestServiceTest {
         sampleRequest.setStatus("open");
         User staff = new User();
         staff.setId(20L);
+        staff.setStatus("active");
         staff.setFullName("Lễ tân Lan");
         staff.setStatus("active");
         com.swp391.scms.users.entity.Role role = new com.swp391.scms.users.entity.Role();
         role.setCode("RECEPTIONIST");
         staff.setRole(role);
 
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staff));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
@@ -283,6 +286,8 @@ class SupportRequestServiceTest {
     void sendMessage_asMember_Success() {
         User staff = new User();
         staff.setId(20L);
+        staff.setStatus("active");
+        var staffRole = new com.swp391.scms.users.entity.Role(); staffRole.setCode("RECEPTIONIST"); staff.setRole(staffRole);
         staff.setFullName("Lễ tân Lan");
         sampleRequest.setAssignedTo(staff);
 
@@ -291,7 +296,7 @@ class SupportRequestServiceTest {
                 100L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tôi vẫn chưa mở được tủ", LocalDateTime.now()
         );
 
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
         when(supportRequestMessageRepository.save(any(SupportRequestMessage.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -309,6 +314,8 @@ class SupportRequestServiceTest {
     void sendMessage_asStaff_Success() {
         User staff = new User();
         staff.setId(20L);
+        staff.setStatus("active");
+        var staffRole = new com.swp391.scms.users.entity.Role(); staffRole.setCode("RECEPTIONIST"); staff.setRole(staffRole);
         staff.setFullName("Lễ tân Lan");
 
         CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Nhân viên đang tới hỗ trợ bạn");
@@ -316,7 +323,7 @@ class SupportRequestServiceTest {
                 101L, 1L, 20L, "Lễ tân Lan", "RECEPTIONIST", "Nhân viên đang tới hỗ trợ bạn", LocalDateTime.now()
         );
 
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staff));
         when(supportRequestMessageRepository.save(any(SupportRequestMessage.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -333,10 +340,11 @@ class SupportRequestServiceTest {
     @DisplayName("Gửi tin nhắn thất bại khi phiếu hỗ trợ đã đóng (closed)")
     void sendMessage_whenTicketClosed_throwsBadRequestException() {
         sampleRequest.setStatus("closed");
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
 
         CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Tin nhắn mới");
 
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
         assertThatThrownBy(() -> supportRequestService.sendMessage(1L, 10L, "MEMBER", messageDto))
                 .isInstanceOf(BadRequestException.class);
     }
@@ -344,7 +352,7 @@ class SupportRequestServiceTest {
     @Test
     @DisplayName("Gửi tin nhắn thất bại khi Member không phải chủ phiếu hỗ trợ")
     void sendMessage_whenMemberNotOwner_throwsForbiddenException() {
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
 
         CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Tin nhắn từ người khác");
 
@@ -356,7 +364,7 @@ class SupportRequestServiceTest {
     @DisplayName("Không tiết lộ trạng thái phiếu đóng cho Member không sở hữu")
     void sendMessage_whenClosedAndMemberNotOwner_checksOwnershipFirst() {
         sampleRequest.setStatus("closed");
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
 
         assertThatThrownBy(() -> supportRequestService.sendMessage(
                 1L, 999L, "MEMBER", new CreateSupportMessageDto("Xin chào")))
@@ -381,6 +389,7 @@ class SupportRequestServiceTest {
         when(supportRequestMapper.toMessageDto(msg1)).thenReturn(dto1);
         when(supportRequestMapper.toMessageDto(msg2)).thenReturn(dto2);
 
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
         List<SupportRequestMessageDto> result = supportRequestService.getMessages(1L, 10L, "MEMBER");
 
         assertThat(result).hasSize(2);
@@ -404,6 +413,9 @@ class SupportRequestServiceTest {
         when(supportRequestMessageRepository.findBySupportRequestIdOrderByCreatedAtAsc(1L))
                 .thenReturn(List.of());
 
+        var actor = new User(); actor.setId(50L); actor.setStatus("active");
+        var role = new com.swp391.scms.users.entity.Role(); role.setCode("CENTER_MANAGER"); actor.setRole(role);
+        when(userRepository.findByIdAndDeletedAtIsNull(50L)).thenReturn(Optional.of(actor));
         List<SupportRequestMessageDto> result = supportRequestService.getMessages(1L, 50L, "CENTER_MANAGER");
 
         assertThat(result).isEmpty();
@@ -427,7 +439,7 @@ class SupportRequestServiceTest {
                 102L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tôi cần hỗ trợ gấp", LocalDateTime.now()
         );
 
-        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
         when(userRepository.findActiveStaffUsers()).thenReturn(List.of(manager, receptionist));
         when(supportRequestMessageRepository.save(any(SupportRequestMessage.class)))

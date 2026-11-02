@@ -55,6 +55,121 @@ describe('MemberClassesPage', () => {
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
   async function render() { await act(async () => root.render(<MemoryRouter><MemberClassesPage /></MemoryRouter>)); }
+  const manySessions = () => Array.from({ length: 14 }, (_, index) => ({ ...session, id: 100 + index, classId: 100 + index,
+    className: `Buổi ${index + 1}`, disciplineName: index < 7 ? 'Yoga' : 'Boxing', bookedCount: 1 }));
+  async function clickText(text: string) {
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.includes(text))!.click());
+  }
+
+  it('offers an accessible circular plus that books the actual session', async () => {
+    mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 1 }]);
+    mocks.enroll.mockResolvedValue({});
+    await render();
+    const plus = host.querySelector<HTMLButtonElement>('.member-class-enroll')!;
+    expect(plus).not.toBeNull();
+    expect(plus.getAttribute('aria-label')).toContain('Yoga Flow');
+    expect(plus.querySelector('[aria-hidden="true"]')?.textContent).toBe('+');
+    await act(async () => plus.click());
+    expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(8);
+  });
+
+  it('loads more locally after filtering and resets visible count on discipline/day changes', async () => {
+    mocks.sessions.mockResolvedValue(manySessions());
+    await render();
+    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
+    await clickText('Xem thêm');
+    expect(host.querySelectorAll('.member-class-session')).toHaveLength(12);
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Boxing')!.click());
+    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
+    expect(host.textContent).toContain('Buổi 8');
+    expect(host.querySelector('.member-class-session h3')?.textContent).toBe('Buổi 8');
+    await clickText('Xem thêm');
+    expect(host.querySelectorAll('.member-class-session')).toHaveLength(7);
+    const day = host.querySelector('select')!;
+    await act(async () => { day.value = String(new Date(2099, 9, 19).getDay()); day.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
+    expect(mocks.sessions).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets load-more on week changes and ignores a late response from the old week', async () => {
+    mocks.sessions.mockResolvedValueOnce(manySessions());
+    await render(); await clickText('Xem thêm');
+    let finishNext!: (value: typeof session[]) => void;
+    mocks.sessions.mockReturnValueOnce(new Promise(done => { finishNext = done; }));
+    await clickText('Tuần kế tiếp');
+    expect(host.textContent).toContain('Đang tải lịch học');
+    mocks.sessions.mockResolvedValueOnce(manySessions());
+    await clickText('Tuần này');
+    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
+    await act(async () => finishNext([{ ...session, className: 'STALE WEEK' }]));
+    expect(host.textContent).not.toContain('STALE WEEK');
+    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
+  });
+
+  it('does not treat failed enrollments as empty or offer booking and recovers the booked badge on retry', async () => {
+    mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 1 }]);
+    mocks.enrollments.mockRejectedValueOnce(new ApiError('Không tải được đăng ký', 500)).mockResolvedValueOnce([
+      { id: 41, classId: 3, sessionId: 8, className: 'Yoga Flow', status: 'booked', enrolledAt: '2099-10-01T08:00:00' },
+    ]);
+    await render();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không tải được');
+    expect(host.querySelector('.member-class-enroll')).toBeNull();
+    await clickText('Lịch học của tôi');
+    expect(host.textContent).not.toContain('Chưa có lịch học đã đặt');
+    await clickText('Thử lại lịch học của tôi');
+    expect(host.textContent).toContain('Đã xác nhận chỗ');
+    await clickText('Lịch lớp học');
+    expect(host.textContent).toContain('Đã đặt chỗ');
+    expect(mocks.enroll).not.toHaveBeenCalled();
+    expect(mocks.sessions).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for personal booking data before offering any booking or waitlist action', async () => {
+    mocks.sessions.mockResolvedValue([session, { ...session, id: 9, classId: 4, bookedCount: 1 }]);
+    let finish!: (value: unknown[]) => void;
+    mocks.enrollments.mockReturnValue(new Promise(done => { finish = done; }));
+    await render();
+    expect(host.querySelector('.member-class-enroll')).toBeNull();
+    expect([...host.querySelectorAll('button')].some(button => button.textContent?.includes('Tham gia hàng chờ'))).toBe(false);
+    await act(async () => finish([]));
+    expect(host.querySelector('.member-class-enroll')).not.toBeNull();
+    expect(host.textContent).toContain('Tham gia hàng chờ');
+  });
+
+  it('claims a notified offer by ID without duplicate submit and keeps errors as errors', async () => {
+    mocks.sessions.mockResolvedValue([session]);
+    mocks.waitlists.mockResolvedValue([{ id: 31, classId: 3, className: 'Yoga Flow', memberId: 9,
+      status: 'notified', requestedAt: '2099-10-01T08:00:00' }]);
+    let reject!: (reason: unknown) => void;
+    mocks.enroll.mockReturnValue(new Promise((_, fail) => { reject = fail; }));
+    await render();
+    const claim = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Xác nhận chỗ')!;
+    expect(claim).toBeDefined();
+    await act(async () => { claim.click(); claim.click(); });
+    expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(8, 31);
+    expect(claim.disabled).toBe(true);
+    await act(async () => reject(new ApiError('Suất giữ chỗ đã hết hạn', 409)));
+    expect(host.textContent).toContain('Suất giữ chỗ đã hết hạn');
+    expect(host.textContent).not.toContain('thành công!');
+    expect(mocks.enroll).toHaveBeenCalledTimes(1);
+    expect(mocks.waitlists).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirms a notified offer and reloads enrollment and waitlist state', async () => {
+    const booking = { id: 41, classId: 3, className: 'Yoga Flow', memberId: 9, sessionId: 8,
+      sessionDate: '2099-10-19', startTime: '08:00:00', endTime: '09:00:00', status: 'booked',
+      enrolledAt: '2099-10-01T08:00:00', cancelledAt: null, cancelReason: null };
+    mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 11 }]);
+    mocks.waitlists.mockResolvedValueOnce([{ id: 31, classId: 3, className: 'Yoga Flow', memberId: 9,
+      status: 'notified', requestedAt: '2099-10-01T08:00:00' }]).mockResolvedValueOnce([]);
+    mocks.enrollments.mockResolvedValueOnce([]).mockResolvedValueOnce([booking]);
+    mocks.enroll.mockResolvedValue(booking);
+    await render();
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Xác nhận chỗ')!.click());
+    expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(8, 31);
+    expect(host.textContent).toContain('Đã đặt chỗ');
+    expect(host.textContent).not.toContain('Đang giữ chỗ');
+  });
 
   it('shows loading, then real sessions and waitlist action when class is full', async () => {
     let resolve!: (value: typeof session[]) => void;
@@ -102,13 +217,13 @@ describe('MemberClassesPage', () => {
     mocks.waitlists.mockRejectedValueOnce(new Error('waitlist offline')).mockResolvedValueOnce([]);
     await render();
     expect(host.textContent).toContain('Yoga Flow');
-    expect(host.textContent).not.toContain('Không tải được lịch học');
+    expect([...host.querySelectorAll('h3')].some(heading => heading.textContent === 'Không tải được lịch học')).toBe(false);
     const tab = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Lịch học của tôi'))!;
     await act(async () => tab.click());
-    expect(host.textContent).toContain('Không tải được hàng chờ');
-    const retry = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Thử lại hàng chờ')!;
+    expect(host.textContent).toContain('Không tải được lịch học của tôi');
+    const retry = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Thử lại lịch học của tôi')!;
     await act(async () => retry.click());
-    expect(host.textContent).not.toContain('Không tải được hàng chờ');
+    expect(host.textContent).not.toContain('Không tải được lịch học của tôi');
     expect(mocks.sessions).toHaveBeenCalledTimes(1);
     expect(mocks.waitlists).toHaveBeenCalledTimes(2);
   });
@@ -200,7 +315,7 @@ describe('MemberClassesPage', () => {
     mocks.enroll.mockReturnValue(new Promise((done) => { finishBooking = done; }));
     mocks.cancelEnrollment.mockResolvedValue({ ...booked, status: 'cancelled' });
     await render();
-    const book = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Đặt chỗ ngay')!;
+    const book = [...host.querySelectorAll('button')].find((item) => item.getAttribute('aria-label') === 'Đặt chỗ ngay: Yoga Flow')!;
     await act(async () => { book.click(); book.click(); });
     expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(8);
     expect(book.disabled).toBe(true);

@@ -12,6 +12,7 @@ import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.ClassWaitlist;
 import com.swp391.scms.scheduling.entity.GymClass;
+import com.swp391.scms.scheduling.event.WaitlistPromotedEvent;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.scheduling.repository.ClassWaitlistRepository;
@@ -22,12 +23,16 @@ import com.swp391.scms.users.entity.Member;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * SCRUM-73: member class booking and cancellation.
@@ -60,6 +65,20 @@ public class EnrollmentService {
     private final NotificationService notifications;
     private final MessageService messageService;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
+
+    public EnrollmentService(ClassEnrollmentRepository enrollments,
+                             ClassSessionRepository sessions,
+                             ClassWaitlistRepository waitlists,
+                             GymClassRepository gymClasses,
+                             MembershipSubscriptionRepository subscriptions,
+                             MemberRepository members,
+                             NotificationService notifications,
+                             MessageService messageService,
+                             Clock clock) {
+        this(enrollments, sessions, waitlists, gymClasses, subscriptions, members, notifications,
+                messageService, clock, null);
+    }
 
     @Autowired
     public EnrollmentService(ClassEnrollmentRepository enrollments,
@@ -70,7 +89,8 @@ public class EnrollmentService {
                              MemberRepository members,
                              NotificationService notifications,
                              MessageService messageService,
-                             Clock clock) {
+                             Clock clock,
+                             ApplicationEventPublisher events) {
         this.enrollments = enrollments;
         this.sessions = sessions;
         this.waitlists = waitlists;
@@ -80,6 +100,7 @@ public class EnrollmentService {
         this.notifications = notifications;
         this.messageService = messageService;
         this.clock = clock;
+        this.events = events;
     }
 
     private String msg(String key, Object... args) {
@@ -91,7 +112,16 @@ public class EnrollmentService {
      */
     @Transactional
     public EnrollmentDto enroll(AuthenticatedPrincipal principal, Long sessionId) {
-        Member member = findMember(principal.id());
+        return enroll(principal, sessionId, null);
+    }
+
+    @Transactional
+    public EnrollmentDto enroll(AuthenticatedPrincipal principal, Long sessionId, Long waitlistId) {
+        if (waitlistId != null && waitlistId <= 0) {
+            throw new BadRequestException("SCHEDULING_WAITLIST_ID_INVALID",
+                    "error.scheduling.waitlist_id_invalid", null, null);
+        }
+        Member member = lockMember(principal.id());
         ClassSession session = findSession(sessionId);
         Long classId = session.getGymClass().getId();
         GymClass gymClass = gymClasses.findByIdForUpdate(classId)
@@ -104,7 +134,7 @@ public class EnrollmentService {
                     "Class is currently inactive");
         }
         SessionEligibility.ensureBookable(session, clock);
-        ensureActiveMembership(member.getUserId());
+        SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), session.getSessionDate(), clock);
 
         if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED)
                 .isPresent()) {
@@ -116,18 +146,32 @@ public class EnrollmentService {
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
-        processExpiredWaitlistReservations(gymClass.getId(), now);
-
-        boolean isHoldingReservation = waitlists.findByGymClassIdAndMemberUserIdAndStatus(
-                classId, member.getUserId(), "notified"
-        ).isPresent();
+        var offer = waitlistId == null
+                ? waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), "notified")
+                : waitlists.findClaimOfferForUpdate(waitlistId, classId, member.getUserId());
+        if (waitlistId != null) {
+            var claimed = offer.orElseThrow(() -> new ResourceNotFoundException("resource.class_waitlist", waitlistId));
+            if (!"notified".equals(claimed.getStatus())) {
+                throw new ConflictException("SCHEDULING_WAITLIST_OFFER_NOT_ACTIVE",
+                        "error.scheduling.waitlist_offer_not_active", null, null);
+            }
+        }
+        if (offer.isPresent() && isExpired(offer.get(), now)) {
+            throw new ConflictException("SCHEDULING_WAITLIST_OFFER_EXPIRED",
+                    "error.scheduling.waitlist_offer_expired", null, null);
+        }
+        processExpiredReservationsLocked(gymClass, now);
+        // Cleanup may have promoted this caller while the class lock is held.
+        if (waitlistId == null) {
+            offer = waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), "notified");
+        }
+        boolean isHoldingReservation = offer.isPresent();
 
         long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
-        long activeReservations = waitlists
-                .countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(gymClass.getId(), "notified", now);
+        long activeReservations = waitlists.countLiveOffers(classId, now, now.minusHours(WAITLIST_RESERVATION_HOURS));
 
         // Khóa chống cướp chỗ, tính cả các suất đang được giữ cho hàng chờ.
-        if (!isHoldingReservation && (booked + activeReservations >= gymClass.getCapacity())) {
+        if (booked + Math.max(0, activeReservations - (isHoldingReservation ? 1 : 0)) >= gymClass.getCapacity()) {
             throw new ConflictException(
                     "SCHEDULING_CLASS_FULL",
                     "error.scheduling.class_full",
@@ -143,13 +187,15 @@ public class EnrollmentService {
 
         ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
 
-        for (String wlStatus : List.of(WAITING, "notified")) {
-            waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), wlStatus)
-                    .ifPresent(waiting -> {
-                        waiting.setStatus("expired");
-                        waitlists.save(waiting);
-                    });
-        }
+        waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), WAITING)
+                .ifPresent(waiting -> {
+                    waiting.setStatus("expired");
+                    waitlists.save(waiting);
+                });
+        offer.ifPresent(claimed -> {
+            claimed.setStatus("expired");
+            waitlists.save(claimed);
+        });
 
         notifications.send(member.getUserId(),
                 msg("notifications.booking.enrolled.title"),
@@ -167,7 +213,10 @@ public class EnrollmentService {
      */
     @Transactional
     public EnrollmentDto cancel(AuthenticatedPrincipal principal, Long enrollmentId) {
-        ClassEnrollment enrollment = enrollments.findById(enrollmentId)
+        Long classId = enrollments.findClassIdById(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", enrollmentId));
+        lockClass(classId);
+        ClassEnrollment enrollment = enrollments.findByIdForUpdate(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", enrollmentId));
 
         boolean isStaff = isStaffRole(principal.role());
@@ -220,60 +269,45 @@ public class EnrollmentService {
         if (memberId == null || enrollments == null) {
             return 0;
         }
-        LocalDate today = LocalDate.now(clock);
-        LocalDateTime now = LocalDateTime.now(clock);
-        LocalTime nowTime = now.toLocalTime();
         String resolvedReason = (cancelReason != null && !cancelReason.isBlank())
                 ? cancelReason
                 : msg("scheduling.enrollment.cancelled_by_hold");
 
-        if (waitlists != null) {
-            List<ClassWaitlist> memberWaitlists =
-                    waitlists.findByMemberUserIdOrderByRequestedAtAsc(memberId);
-            if (memberWaitlists != null) {
-                for (ClassWaitlist wl : memberWaitlists) {
-                    if (wl == null) continue;
-                    boolean wasNotified = "notified".equalsIgnoreCase(wl.getStatus());
-                    if (WAITING.equalsIgnoreCase(wl.getStatus()) || wasNotified) {
-                        wl.setStatus("expired");
-                        waitlists.save(wl);
-                        if (wasNotified && wl.getGymClass() != null && wl.getGymClass().getId() != null) {
-                            promoteNextWaitlistEntry(wl.getGymClass().getId(), now);
-                        }
-                    }
+        // Membership hold/cancellation already owns this lock; standalone callers use it too.
+        lockMember(memberId);
+        List<Long> classIds = Stream.concat(enrollments.findBookedClassIdsByMemberId(memberId).stream(),
+                        waitlists.findActiveClassIdsByMemberId(memberId).stream())
+                .distinct().sorted().toList();
+        // Lock classes in ascending order before loading mutable enrollment/waitlist state.
+        List<GymClass> lockedClasses = classIds.stream().map(this::lockClass).toList();
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDate today = now.toLocalDate();
+        LocalTime nowTime = now.toLocalTime();
+        int cancelledCount = 0;
+        for (GymClass gymClass : lockedClasses) {
+            int released = 0;
+            for (String state : List.of(WAITING, "notified")) {
+                var item = waitlists.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), memberId, state);
+                if (item.isPresent()) {
+                    ClassWaitlist waiting = item.get();
+                    if ("notified".equals(waiting.getStatus())) released++;
+                    waiting.setStatus("expired");
+                    waitlists.saveAndFlush(waiting);
                 }
             }
-        }
-
-        int cancelledCount = 0;
-        List<ClassEnrollment> memberEnrollments = enrollments.findByMemberUserId(memberId);
-        if (memberEnrollments != null) {
-            for (ClassEnrollment enrollment : memberEnrollments) {
-                if (enrollment == null || !BOOKED.equalsIgnoreCase(enrollment.getStatus())) {
-                    continue;
-                }
-                if (!hasUpcomingOrActiveSession(enrollment.getGymClass(), today, nowTime)) {
-                    continue;
-                }
+            var booking = enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), memberId, BOOKED);
+            if (booking.isPresent() && hasUpcomingOrActiveSession(gymClass, today, nowTime)) {
+                ClassEnrollment enrollment = booking.get();
                 enrollment.setStatus(CANCELLED);
                 enrollment.setCancelledAt(now);
                 enrollment.setCancelReason(resolvedReason);
                 ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
                 cancelledCount++;
-
-                if (notifications != null) {
-                    notifications.send(memberId,
-                            msg("notifications.booking.cancelled.title"),
-                            msg("notifications.booking.cancelled.body"),
-                            "system",
-                            "class_enrollment",
-                            saved != null ? saved.getId() : enrollment.getId());
-                }
-
-                if (enrollment.getGymClass() != null && enrollment.getGymClass().getId() != null) {
-                    promoteNextWaitlistEntry(enrollment.getGymClass().getId(), now);
-                }
+                released++;
+                notifications.send(memberId, msg("notifications.booking.cancelled.title"),
+                        msg("notifications.booking.cancelled.body"), "system", "class_enrollment", saved.getId());
             }
+            for (int seat = 0; seat < released; seat++) promoteNextWaitlistEntryLocked(gymClass, now);
         }
 
         return cancelledCount;
@@ -300,55 +334,85 @@ public class EnrollmentService {
      * Đôn người đầu tiên trong waitlist lên trạng thái 'notified' và giữ chỗ 24 giờ.
      */
     @Transactional
-    public void promoteNextWaitlistEntry(Long classId, LocalDateTime now) {
-        if (classId == null) return;
-        List<ClassWaitlist> waitingList =
-                waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(classId, WAITING);
-        if (waitingList != null && !waitingList.isEmpty()) {
-            ClassWaitlist nextWaiting = waitingList.get(0);
-            nextWaiting.setStatus("notified");
-            nextWaiting.setNotifiedAt(now);
-            nextWaiting.setReservationExpiresAt(now.plusHours(WAITLIST_RESERVATION_HOURS));
-            waitlists.save(nextWaiting);
-            if (nextWaiting.getMember() != null && nextWaiting.getMember().getUserId() != null) {
-                notifications.send(nextWaiting.getMember().getUserId(),
-                        msg("notifications.waitlist.notified.title"),
-                        msg("notifications.waitlist.notified.body_window",
-                                nextWaiting.getGymClass() != null ? nextWaiting.getGymClass().getName() : "",
-                                WAITLIST_RESERVATION_HOURS),
-                        "schedule_change",
-                        "class_session",
-                        nextWaiting.getId());
+    public int promoteNextWaitlistEntry(Long classId, LocalDateTime ignoredCallerTime) {
+        if (classId == null) return 0;
+        GymClass gymClass = lockClass(classId);
+        return promoteNextWaitlistEntryLocked(gymClass, LocalDateTime.now(clock));
+    }
+
+    private int promoteNextWaitlistEntryLocked(GymClass gymClass, LocalDateTime now) {
+        long occupied = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED)
+                + waitlists.countLiveOffers(gymClass.getId(), now, now.minusHours(WAITLIST_RESERVATION_HOURS));
+        if (occupied >= gymClass.getCapacity()) return 0;
+        var candidate = waitlists.findFirstByGymClassIdAndStatusOrderByRequestedAtAscIdAsc(gymClass.getId(), WAITING);
+        if (candidate.isEmpty()) return 0;
+        ClassWaitlist next = candidate.get();
+        next.setStatus("notified");
+        next.setNotifiedAt(now);
+        next.setReservationExpiresAt(now.plusHours(WAITLIST_RESERVATION_HOURS));
+        waitlists.saveAndFlush(next);
+        Long memberId = next.getMember() != null ? next.getMember().getUserId() : null;
+        if (memberId != null) {
+            notifications.send(memberId, msg("notifications.waitlist.notified.title"),
+                    msg("notifications.waitlist.notified.body_window", gymClass.getName(), WAITLIST_RESERVATION_HOURS),
+                    "schedule_change", "class_session", next.getId());
+        }
+        if (events != null) {
+            var event = new WaitlistPromotedEvent(next.getId(), gymClass.getId(), gymClass.getName(),
+                    memberId, now, next.getReservationExpiresAt());
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override public void afterCommit() { events.publishEvent(event); }
+                });
+            } else {
+                events.publishEvent(event);
             }
         }
+        return 1;
     }
 
-    /**
-     * Kiểm tra các lượt giữ chỗ đã hết hạn trước khi xử lý đặt chỗ.
-     */
+    /** Each scheduler class is processed in its own transaction, reading state after its lock. */
     @Transactional
-    public void processExpiredWaitlistReservations(Long classId, LocalDateTime now) {
-        if (classId == null) return;
-        List<ClassWaitlist> expiredList = waitlists
-                .findByGymClassIdAndStatusAndReservationExpiresAtLessThan(classId, "notified", now);
-        for (ClassWaitlist expired : expiredList) {
-            expireReservationAndNotify(expired);
-            promoteNextWaitlistEntry(classId, now);
-        }
+    public int processExpiredWaitlistReservations(Long classId, LocalDateTime ignoredCallerTime) {
+        if (classId == null) return 0;
+        GymClass gymClass = lockClass(classId);
+        return processExpiredReservationsLocked(gymClass, LocalDateTime.now(clock));
     }
 
-    public void expireReservationAndNotify(ClassWaitlist expired) {
-        expired.setStatus("expired");
-        waitlists.save(expired);
-        if (expired.getMember() != null && expired.getMember().getUserId() != null) {
-            notifications.send(expired.getMember().getUserId(),
-                    msg("notifications.waitlist.expired.title"),
-                    msg("notifications.waitlist.expired.body",
-                            expired.getGymClass() != null ? expired.getGymClass().getName() : ""),
-                    "schedule_change",
-                    "class_session",
-                    expired.getId());
+    private int processExpiredReservationsLocked(GymClass gymClass, LocalDateTime now) {
+        List<ClassWaitlist> expired = waitlists.findExpiredOffers(gymClass.getId(), now,
+                now.minusHours(WAITLIST_RESERVATION_HOURS));
+        int changed = 0;
+        for (ClassWaitlist item : expired) {
+            if (!"notified".equals(item.getStatus()) || !isExpired(item, now)) continue;
+            item.setStatus("expired");
+            waitlists.saveAndFlush(item);
+            changed++;
+            if (item.getMember() != null && item.getMember().getUserId() != null) {
+                notifications.send(item.getMember().getUserId(), msg("notifications.waitlist.expired.title"),
+                        msg("notifications.waitlist.expired.body", gymClass.getName()),
+                        "schedule_change", "class_session", item.getId());
+            }
         }
+        for (int seat = 0; seat < changed; seat++) promoteNextWaitlistEntryLocked(gymClass, now);
+        return changed;
+    }
+
+    static boolean isExpired(ClassWaitlist offer, LocalDateTime now) {
+        return (offer.getReservationExpiresAt() == null && offer.getNotifiedAt() == null)
+                || (offer.getReservationExpiresAt() != null && !offer.getReservationExpiresAt().isAfter(now))
+                || (offer.getNotifiedAt() != null
+                    && !offer.getNotifiedAt().plusHours(WAITLIST_RESERVATION_HOURS).isAfter(now));
+    }
+
+    private GymClass lockClass(Long classId) {
+        return gymClasses.findByIdForUpdate(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+    }
+
+    private Member lockMember(Long memberId) {
+        return members.findByUserIdForUpdate(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
     }
 
     @Transactional(readOnly = true)
@@ -381,20 +445,6 @@ public class EnrollmentService {
                         && !"cancelled".equalsIgnoreCase(s.getStatus()))
                 .findFirst()
                 .orElse(classSessions.get(0));
-    }
-
-    /**
-     * SCRUM-73 BR-01: Trigger P4 pre-check, the database trigger remains the source of truth.
-     */
-    private void ensureActiveMembership(Long memberId) {
-        boolean hasActive = subscriptions.hasActiveMembership(memberId, LocalDate.now(clock));
-        if (!hasActive) {
-            throw new ForbiddenException(
-                    "SCHEDULING_MEMBERSHIP_INVALID",
-                    "error.scheduling.membership_expired_or_inactive",
-                    null,
-                    "Member has no active or unexpired subscription");
-        }
     }
 
     private boolean isStaffRole(String role) {

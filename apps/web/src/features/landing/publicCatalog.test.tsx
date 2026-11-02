@@ -78,6 +78,8 @@ it('ignores older responses and hides stale prices on a failed refresh, then ret
   expect(host.textContent).toContain('error');
   expect(host.textContent).not.toContain('990000');
   await act(async () => host.querySelector('button')!.click());
+  expect(host.textContent).toContain('loading');
+  expect(host.textContent).not.toContain('error');
   await act(async () => responses[3](reply(1100000)));
   expect(host.textContent).toContain('1100000');
 });

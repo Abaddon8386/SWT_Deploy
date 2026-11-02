@@ -22,6 +22,37 @@ afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi
 const button = (text: string) => [...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))!;
 const render = () => act(async () => root.render(<ChatPage />));
 
+it('keeps a skeleton in each pending chat region and renders responses immediately', async () => {
+  let finishInbox!: (value: api.ChatPageData<api.ChatConversation>) => void;
+  let finishContacts!: (value: api.ChatPageData<api.ChatContact>) => void;
+  let finishHistory!: (value: api.ChatHistory) => void;
+  vi.mocked(api.getConversations).mockReturnValueOnce(new Promise(resolve => { finishInbox = resolve; }));
+  vi.mocked(api.getContacts).mockReturnValueOnce(new Promise(resolve => { finishContacts = resolve; }));
+  vi.mocked(api.getHistory).mockReturnValueOnce(new Promise(resolve => { finishHistory = resolve; }));
+  await render();
+  expect(host.querySelector('.direct-chat__inbox [role="status"] [aria-hidden="true"]')).not.toBeNull();
+  expect(host.textContent).not.toContain('Chưa có hội thoại');
+  await act(async () => finishInbox({ content: [conversation], totalPages: 1, number: 0 }));
+  expect(host.querySelector('.direct-chat__inbox [aria-busy="true"]')).toBeNull();
+  expect(button('Coach Linh')).toBeDefined();
+
+  await act(async () => button('Cuộc trò chuyện mới').click());
+  expect(host.querySelector('.direct-chat__contacts [role="status"] [aria-hidden="true"]')).not.toBeNull();
+  expect(host.textContent).not.toContain('Không tìm thấy lễ tân');
+  await act(async () => finishContacts({ content: [conversation.peer], totalPages: 1, number: 0 }));
+  expect(host.querySelector('[data-contact-id="20"]')).not.toBeNull();
+  await act(async () => button('Đóng danh bạ').click());
+
+  await act(async () => button('Coach Linh').click());
+  expect(host.querySelector('.direct-chat__transcript [role="status"] [aria-hidden="true"]')).not.toBeNull();
+  expect(host.textContent).not.toContain('Chưa có tin nhắn');
+  expect(host.querySelector('textarea')?.disabled).toBe(true);
+  await act(async () => finishHistory({ items: [], hasMore: false }));
+  expect(host.querySelector('.direct-chat__transcript [role="status"]')).toBeNull();
+  expect(host.textContent).toContain('Chưa có tin nhắn');
+  expect(host.querySelector('textarea')?.disabled).toBe(false);
+});
+
 it('member starts a conversation from the contact directory', async () => {
   vi.mocked(api.openConversation).mockResolvedValue(conversation);
   await render();

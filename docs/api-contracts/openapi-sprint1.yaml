@@ -51,6 +51,23 @@ components:
         fullName: { type: string }
         email: { type: string }
         phone: { type: string }
+    UserCreate:
+      type: object
+      required: [fullName, email, password, roleId, gender]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 150 }
+        email: { type: string, format: email, maxLength: 150 }
+        phone: { type: string, maxLength: 20, nullable: true }
+        password: { type: string, minLength: 6, maxLength: 50 }
+        roleId: { type: integer, format: int64 }
+        gender: { type: string, enum: [male, female, other] }
+    UserUpdate:
+      type: object
+      properties:
+        fullName: { type: string, maxLength: 150, nullable: true }
+        phone: { type: string, maxLength: 20, nullable: true }
+        roleId: { type: integer, format: int64, nullable: true }
+        gender: { type: string, enum: [male, female, other], nullable: true }
 security:
   - bearerAuth: []
 paths:
@@ -232,11 +249,55 @@ paths:
       responses: { '200': { description: OK }, '401': { description: INVALID_GOOGLE_TOKEN / GOOGLE_EMAIL_NOT_VERIFIED / GOOGLE_LOGIN_NOT_CONFIGURED / GOOGLE_ACCOUNT_LINK_REQUIRED }, '403': { description: STAFF_GOOGLE_NOT_ALLOWED / ACCOUNT_INACTIVE } }
   /users:
     get: { summary: List users (non deleted), responses: { '200': { description: OK } } }
-    post: { summary: Create user, responses: { '201': { description: Created }, '409': { description: EMAIL_EXISTS / PHONE_EXISTS } } }
+    post:
+      summary: Create user (CENTER_MANAGER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserCreate' }
+      responses:
+        '201': { description: Created }
+        '400': { description: Validation failed, including missing or invalid gender }
+        '403': { description: CENTER_MANAGER role required }
+        '409': { description: EMAIL_EXISTS / PHONE_EXISTS }
+  /users/cleanup-inactive:
+    post:
+      summary: Soft-delete users inactive for more than six calendar months (CENTER_MANAGER)
+      description: >-
+        Uses lastLoginAt, or createdAt if the user has never logged in.
+        Excludes CENTER_MANAGER accounts and users with a frozen subscription.
+        The same policy runs daily at 02:00 in the scheduler's configured time zone.
+        User list/detail responses include subscriptionFrozen for members (boolean; omitted or null for other roles).
+      responses:
+        '200':
+          description: Cleanup completed; ApiResponse.data.deletedCount is the number of soft-deleted accounts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [deletedCount]
+                    properties:
+                      deletedCount: { type: integer, minimum: 0 }
+        '401': { description: Authentication required }
+        '403': { description: CENTER_MANAGER role required }
   /users/{id}:
     parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
     get: { summary: User detail, responses: { '200': { description: OK }, '404': { description: NOT_FOUND } } }
-    put: { summary: Update user, responses: { '200': { description: OK } } }
+    put:
+      summary: Update user (CENTER_MANAGER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserUpdate' }
+      responses:
+        '200': { description: OK }
+        '400': { description: Validation failed, including invalid gender }
+        '403': { description: CENTER_MANAGER role required }
     delete: { summary: Soft delete user, responses: { '200': { description: OK } } }
   /users/{id}/lock:
     patch: { summary: Lock account, parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }

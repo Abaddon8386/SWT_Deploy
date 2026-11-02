@@ -78,6 +78,31 @@ it('sells an active package at the counter for a member without a pending order'
   expect(host.textContent).toContain('Hóa đơn thực');
 });
 
+it('blocks payment for the previous member while another member lookup is pending', async () => {
+  await selectMember();
+  const packageSelect = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
+  await act(async () => { packageSelect.value = 'buy:2'; packageSelect.dispatchEvent(new Event('change', { bubbles: true })); });
+  const paymentForm = packageSelect.closest('form')!;
+  let finishSearch!: (members: (typeof member)[]) => void;
+  api.lookupMembers.mockReturnValueOnce(new Promise(resolve => { finishSearch = resolve; }));
+  const search = host.querySelector('input[placeholder^="Nhập Số điện thoại"]') as HTMLInputElement;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, '5678');
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => search.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+
+  await act(async () => paymentForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.processPayment).not.toHaveBeenCalled();
+  expect(api.createRenewal).not.toHaveBeenCalled();
+  expect(paymentForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+
+  await act(async () => finishSearch([{ ...member, userId: 20, fullName: 'Bình', phone: '5678' }]));
+  await chooseAndPay('buy:2');
+  expect(api.processPayment).toHaveBeenCalledTimes(1);
+  expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ memberId: 20 }));
+});
+
 it('creates a linked renewal before collecting payment', async () => {
   const previous = { id: 5, memberId: 10, packageId: 2, packageName: 'Gold', startDate: '2026-09-01', endDate: '2026-09-30', status: 'expired', createdAt: '2026-09-01' };
   api.getRenewalCandidates.mockResolvedValue([previous]);

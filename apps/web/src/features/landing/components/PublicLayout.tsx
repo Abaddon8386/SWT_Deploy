@@ -1,3 +1,4 @@
+import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { purchaseAuthPath } from '../../../shared/lib/purchaseIntent';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -145,7 +146,7 @@ export function AuthLayout({ children, mode }: { children: ReactNode; mode: 'log
       <div className="fit-auth-story" data-reveal="soft">
         <h1>{mode === 'login' ? <>Trở lại<br /><em>lịch tập của bạn.</em></> : <>Bắt đầu<br /><em>cùng SÖL.</em></>}</h1>
         <p>{mode === 'login' ? 'Đăng nhập để xem gói tập, đặt lịch lớp và theo dõi lịch tập của bạn.' : 'Tạo tài khoản và xác thực email để bắt đầu chọn gói tập.'}</p>
-        <div className="fit-auth-photo"><img src="/images/fitness/strength-session.jpg" alt="Vận động viên tập luyện sức mạnh với tạ tại phòng gym" /><span>SHOW UP FOR YOURSELF.<RoundArrow diagonal /></span></div>
+        <div className="fit-auth-photo"><LoadingImage src="/images/fitness/strength-session.jpg" alt="Vận động viên tập luyện sức mạnh với tạ tại phòng gym" /><span>SHOW UP FOR YOURSELF.<RoundArrow diagonal /></span></div>
       </div>
       <div className="fit-auth-form" data-reveal="lift">{children}</div>
     </main>

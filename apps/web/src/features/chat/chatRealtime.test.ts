@@ -33,6 +33,13 @@ it('authenticates before joining a private channel and catches up on subscribe a
   expect(changed).toHaveBeenCalledTimes(2);
 });
 
+it('uses the caller authorized support session instead of a Direct Message session', async () => {
+  vi.mocked(apiFetch).mockResolvedValue({ ...session, topic: 'scms:support:ticket:17' });
+  dispose = subscribeChat(vi.fn(), vi.fn(), '/support/requests/17/realtime-session'); await settle();
+  expect(apiFetch).toHaveBeenCalledWith('/support/requests/17/realtime-session', { method: 'POST' });
+  expect(fake.channel).toHaveBeenCalledWith('scms:support:ticket:17', { config: { private: true } });
+});
+
 it('renews the token before expiry without recreating the existing channel', async () => {
   dispose = subscribeChat(vi.fn(), vi.fn()); await settle();
   vi.mocked(apiFetch).mockResolvedValue({ ...session, token: 'new-token', expiresAt: '2026-10-29T01:09:00Z' });

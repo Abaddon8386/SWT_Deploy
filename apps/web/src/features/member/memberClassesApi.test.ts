@@ -9,6 +9,12 @@ const session: ClassSessionDto = {
 };
 
 describe('memberClassesApi', () => {
+  it('identifies an explicit claim while leaving ordinary enrollment unchanged', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 201, json: async () => ({ data: {} }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await enroll(8, 31);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/classes/sessions/8/enroll?waitlistId=31');
+  });
   beforeEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -40,6 +46,12 @@ describe('memberClassesApi', () => {
     expect(filterSessions([session, boxing], 'Yoga', '1')).toEqual([session]);
     expect(filterSessions([session, boxing], 'ALL', '2')).toEqual([boxing]);
     expect(filterSessions([session, boxing], 'ALL', 'ALL')).toHaveLength(2);
+  });
+
+  it('includes the portal strength disciplines when selecting the main Gym group', () => {
+    const strength = { ...session, disciplineName: 'Olympic Strength' };
+    expect(filterSessions([session, strength], 'Gym', 'ALL')).toEqual([strength]);
+    expect(filterSessions([session, strength], 'Yoga', 'ALL')).toEqual([session]);
   });
 
   it('requests only the current Monday–Sunday week', async () => {

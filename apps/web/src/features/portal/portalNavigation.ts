@@ -6,6 +6,7 @@ export const ROLE_LABELS: Record<UserSession['role'], string> = {
 };
 
 export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; roles: UserSession['role'][] }[] = [
+  { to: '/staff/support', label: 'Hộp thư hỗ trợ', icon: 'support', roles: ['STAFF', 'MANAGER'] },
   { to: '/member/dashboard', label: 'Bảng điều khiển', icon: 'board', roles: ['MEMBER'] },
   { to: '/member/packages', label: 'Gói tập', icon: 'package', roles: ['MEMBER'] },
   { to: '/member/classes', label: 'Lịch học & Đặt chỗ', icon: 'calendar', roles: ['MEMBER'] },

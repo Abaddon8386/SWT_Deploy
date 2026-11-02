@@ -5,11 +5,17 @@ import { sessionDate } from '../publicCatalog';
 import { formatPrice, getPackageDetails } from '../../../shared/lib/membershipPresentation';
 import { RoundArrow } from './PublicLayout';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
+import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
+import { LoadingImage } from '../../../shared/ui/LoadingImage';
 
-export function CatalogStatus({ loading, retry }: { loading: boolean; retry: () => void }) {
-  return <div className="fit-catalog-state" role={loading ? 'status' : 'alert'}>
-    <p>{loading ? 'Đang tải thông tin…' : 'Chưa tải được thông tin mới nhất. Vui lòng thử lại.'}</p>
-    {!loading && <button type="button" className="fit-pill" onClick={retry}>Thử lại</button>}
+export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
+  loading: boolean; retry: () => void; kind?: 'packages' | 'trainers' | 'schedule';
+}) {
+  if (loading) return <LoadingSkeleton label="Đang tải thông tin…" variant="cards"
+    count={kind === 'trainers' ? 2 : 3} className={`fit-catalog-skeleton fit-catalog-skeleton--${kind}`} />;
+  return <div className="fit-catalog-state" role="alert">
+    <p>Chưa tải được thông tin mới nhất. Vui lòng thử lại.</p>
+    <button type="button" className="fit-pill" onClick={retry}>Thử lại</button>
   </div>;
 }
 
@@ -75,7 +81,7 @@ export function CatalogTrainers({ catalog }: { catalog: PublicCatalog }) {
     <div className="fit-trainer-grid" key={currentPage}>
       {catalog.coaches.slice(currentPage * 2, currentPage * 2 + 2).map(coach => <article className="fit-trainer-card" data-reveal="lift" key={coach.id}>
         <Link to={`/trainers/${coach.id}`} className="fit-trainer-card-link" aria-label={`Xem hồ sơ của ${coach.name}`}>
-          <img src={coach.avatarUrl || coachIllustration(coach.specialization)} alt={coach.avatarUrl ? coach.name : 'Ảnh minh họa huấn luyện viên theo bộ môn'} loading="lazy" />
+          <LoadingImage src={coach.avatarUrl || coachIllustration(coach.specialization)} alt={coach.avatarUrl ? coach.name : 'Ảnh minh họa huấn luyện viên theo bộ môn'} loading="lazy" />
           {!coach.avatarUrl && <span className="fit-image-caption">Ảnh minh họa</span>}
           <div className="fit-trainer-card-info"><span className="fit-trainer-vn-name">Huấn luyện viên</span><h3>{coach.name}</h3><p>{coach.specialization || 'Huấn luyện thể thao'}</p><span className="fit-trainer-story-cta">Xem hồ sơ & lịch lớp →</span></div>
           <RoundArrow diagonal />

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { DatePicker } from '../../shared/ui/DatePicker';
@@ -68,6 +69,8 @@ export function StaffClassesPage() {
   const [coaches, setCoaches] = useState<CoachUser[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [catalogsLoading, setCatalogsLoading] = useState(true);
+  const [catalogsError, setCatalogsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [showModal, setShowModal] = useState(false);
@@ -87,17 +90,21 @@ export function StaffClassesPage() {
 
   // Tải dữ liệu các danh mục phụ trợ (Phòng available, HLV active, Bộ môn)
   const loadCatalogs = useCallback(async () => {
+    setCatalogsLoading(true);
+    setCatalogsError(null);
     try {
       const [discList, roomList, coachList] = await Promise.all([
-        classesApi.getDisciplines().catch(() => []),
-        classesApi.getAvailableRooms().catch(() => []),
-        classesApi.getActiveCoaches().catch(() => []),
+        classesApi.getDisciplines(),
+        classesApi.getAvailableRooms(),
+        classesApi.getActiveCoaches(),
       ]);
       setDisciplines(discList);
       setRooms(roomList);
       setCoaches(coachList);
-    } catch {
-      // Bỏ qua lỗi phụ trợ, màn hình chính vẫn xử lý được
+    } catch (cause) {
+      setCatalogsError(cause instanceof Error ? cause.message : 'Không thể tải danh mục tạo lớp học.');
+    } finally {
+      setCatalogsLoading(false);
     }
   }, []);
 
@@ -537,7 +544,9 @@ export function StaffClassesPage() {
       {/* Modal: Tạo lớp học và xếp lịch */}
       {showModal && (
         <Modal title="Tạo lớp học & xếp lịch" onClose={handleCloseModal}>
-          <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
+          {catalogsLoading ? <LoadingSkeleton label="Đang tải bộ môn, phòng tập và huấn luyện viên…" count={4} />
+            : catalogsError ? <div role="alert"><p>{catalogsError}</p><button type="button" className="btn-secondary" onClick={() => void loadCatalogs()}>Thử lại</button></div>
+            : <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-name">
                 Tên lớp học *
@@ -806,7 +815,7 @@ export function StaffClassesPage() {
                 )}
               </button>
             </div>
-          </form>
+          </form>}
         </Modal>
       )}
     </div>

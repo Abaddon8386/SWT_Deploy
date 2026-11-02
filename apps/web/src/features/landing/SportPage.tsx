@@ -1,3 +1,4 @@
+import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { usePublicCatalog } from './publicCatalog';
 import { CatalogSchedule, CatalogStatus } from './components/CatalogSections';
 import { Link, useLocation, useParams } from 'react-router-dom';
@@ -94,7 +95,7 @@ export function SportPage({ forcedSport }: { forcedSport?: 'swimming' | 'tennis'
 
           <div key={sport.id} className="fit-trainer-hero-grid fit-blur-morph">
             <div className="fit-trainer-portrait-card" data-reveal="image">
-              <img src={sport.image} alt={sport.title} />
+              <LoadingImage src={sport.image} alt={sport.title} />
               <div className="fit-trainer-portrait-badge">
                 <span className="fit-kicker">{sport.kicker}</span>
                 <strong>{sport.title}</strong>

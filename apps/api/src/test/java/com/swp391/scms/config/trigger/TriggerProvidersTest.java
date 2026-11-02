@@ -25,6 +25,25 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class TriggerProvidersTest {
 
     @Test
+    void enrollmentMembershipUsesVietnamBusinessDateRegardlessOfDatabaseTimezone() throws Exception {
+        List<String> sql = new ArrayList<>();
+        JdbcTemplate jdbc = legacyCheckins(sql, true, DatabaseMetaData.columnNullable);
+
+        new PostgreSqlTriggerProvider().applyTriggers(jdbc);
+
+        String script = sql.stream()
+                .filter(statement -> statement.contains("FUNCTION scms_require_active_membership_for_enrollment()")
+                        && statement.contains("RETURNS trigger"))
+                .findFirst().orElseThrow();
+        int functionStart = script.indexOf("CREATE OR REPLACE FUNCTION scms_require_active_membership_for_enrollment()");
+        String function = script.substring(functionStart, script.indexOf("\n$$;", functionStart));
+        assertTrue(function.contains("statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh'"));
+        assertTrue(function.contains("subscription.start_date <= business_date"));
+        assertTrue(function.contains("subscription.end_date >= business_date"));
+        assertFalse(function.contains("CURRENT_DATE"));
+    }
+
+    @Test
     void upgradesLegacyCheckinNullabilityBeforeInstallingTriggersAndOnlyOnce() throws Exception {
         List<String> sql = new ArrayList<>();
         JdbcTemplate jdbc = legacyCheckins(sql, true, DatabaseMetaData.columnNoNulls,

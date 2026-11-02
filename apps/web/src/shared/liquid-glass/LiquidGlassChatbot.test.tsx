@@ -32,6 +32,26 @@ async function type(value: string) {
 }
 async function send() { await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))); }
 
+it('shows a skeleton until the session list and history arrive and reveals history immediately', async () => {
+  let finishSessions!: (value: api.AiChatSession[]) => void;
+  let finishHistory!: (value: api.AiChatMessage[]) => void;
+  vi.mocked(api.listAiChatSessions).mockReturnValueOnce(new Promise(resolve => { finishSessions = resolve; }));
+  vi.mocked(api.getAiChatHistory).mockReturnValueOnce(new Promise(resolve => { finishHistory = resolve; }));
+  await open();
+  expect(host.querySelector('.liquid-glass-chat-body [role="status"][aria-busy="true"]')).not.toBeNull();
+  expect(host.querySelectorAll('.typing-dot')).toHaveLength(0);
+  expect(host.querySelector('textarea')?.disabled).toBe(true);
+  expect(host.querySelector('.ai-chat-empty')).toBeNull();
+
+  await act(async () => finishSessions([session]));
+  expect(host.querySelector('.liquid-glass-chat-body .loading-skeleton')).not.toBeNull();
+  expect(host.querySelector('textarea')?.disabled).toBe(true);
+  await act(async () => finishHistory([reply.memberMessage, reply.aiMessage]));
+  expect(host.querySelector('.liquid-glass-chat-body .loading-skeleton')).toBeNull();
+  expect(host.textContent).toContain('Phản hồi thật từ API');
+  expect(host.querySelector('textarea')?.disabled).toBe(false);
+});
+
 it('opens the latest persisted session and history', async () => {
   vi.mocked(api.getAiChatHistory).mockResolvedValue([reply.memberMessage, reply.aiMessage]);
   await open();

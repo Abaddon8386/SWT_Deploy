@@ -1,3 +1,5 @@
+import { AUTH_STORAGE_KEY } from '../../shared/api/client';
+import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -59,6 +61,10 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
     vi.stubGlobal('confirm', vi.fn(() => true));
     localStorage.clear();
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'coach-a', name: 'Coach A', role: 'COACH' }));
+    const record = { ...mockSessions[0], id: 'saved-101', sessionId: 101, savedAt: '27/10/2026', presentCount: 1, absentCount: 1, totalStudents: 2, averageScore: 78, students: mockStudents };
+    localStorage.setItem(coachHistoryStorageKey('attendance'), JSON.stringify([record]));
+    localStorage.setItem(coachHistoryStorageKey('evaluation'), JSON.stringify([record]));
 
     host = document.createElement('div');
     document.body.append(host);
@@ -80,6 +86,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       root.unmount();
     });
     host.remove();
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -133,9 +140,12 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     const saveEvalBtn = host.querySelector('.btn-batch-save') as HTMLButtonElement;
     expect(saveEvalBtn.textContent).toContain('Lưu tất cả đánh giá');
 
+    vi.useFakeTimers();
     await act(async () => {
       saveEvalBtn.click();
-      await new Promise((r) => setTimeout(r, 60));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
     });
 
     expect(host.querySelector('.center-toast-card')).not.toBeNull();
@@ -175,15 +185,19 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     const modalSaveBtn = host.querySelector('.modal-footer-actions .btn-modal-save') as HTMLButtonElement;
     expect(modalSaveBtn).not.toBeNull();
 
+    vi.useFakeTimers();
     await act(async () => {
       modalSaveBtn.click();
-      await new Promise((r) => setTimeout(r, 60));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
     });
 
     // Không hiện toast dưới góc
     expect(toast.success).not.toHaveBeenCalled();
     // Thông báo chính giữa màn hình chỉ hiển thị "Cập nhật thành công"
     expect(host.querySelector('.center-toast-title')?.textContent).toBe('Cập nhật thành công');
+    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101 })]));
     // Modal is closed
     expect(host.querySelector('.modal-edit-container')).toBeNull();
   });
@@ -215,14 +229,99 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
     // Save modal
     const modalSaveBtn = host.querySelector('.modal-footer-actions .btn-modal-save') as HTMLButtonElement;
+    vi.useFakeTimers();
     await act(async () => {
       modalSaveBtn.click();
-      await new Promise((r) => setTimeout(r, 60));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
     });
 
     // Không hiện toast dưới góc
     expect(toast.success).not.toHaveBeenCalled();
     // Thông báo chính giữa màn hình chỉ hiển thị "Cập nhật thành công"
     expect(host.querySelector('.center-toast-title')?.textContent).toBe('Cập nhật thành công');
+    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ progressScore: 85 })]));
   });
+  it('keeps a failed history edit open and does not overwrite its stored record', async () => {
+    vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new Error('Rejected'));
+    const original = localStorage.getItem(coachHistoryStorageKey('attendance'));
+    await act(async () => { root.render(<CoachAttendancePage />); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
+    expect(host.querySelector('.modal-edit-container')).not.toBeNull();
+    expect(localStorage.getItem(coachHistoryStorageKey('attendance'))).toBe(original);
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('does not fabricate history for a fresh browser', async () => {
+    localStorage.clear();
+    await act(async () => { root.render(<CoachAttendancePage />); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
+    expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
+    expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
+  });
+
+  it('keeps a failed evaluation edit open without changing stored history', async () => {
+    vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new Error('Rejected'));
+    const original = localStorage.getItem(coachHistoryStorageKey('evaluation'));
+    await act(async () => { root.render(<CoachAttendancePage />); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
+    expect(host.querySelector('.modal-edit-container')).not.toBeNull();
+    expect(localStorage.getItem(coachHistoryStorageKey('evaluation'))).toBe(original);
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('preserves the latest attendance when updating an older evaluation snapshot', async () => {
+    await act(async () => { root.render(<CoachAttendancePage />); });
+    vi.mocked(attendanceApi.getSessionStudents).mockResolvedValueOnce(mockStudents.map(student => ({ ...student, status: 'absent' })));
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
+    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101, status: 'absent', progressScore: 85 })]));
+  });
+
+  it('isolates cached histories between coaches sharing a browser', async () => {
+    const coachAHistory = localStorage.getItem(coachHistoryStorageKey('attendance'));
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'coach-b', name: 'Coach B', role: 'COACH' }));
+    localStorage.setItem('sol_coach_attendance_history', coachAHistory!);
+    await act(async () => { root.render(<CoachAttendancePage />); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
+    expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
+    expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
+  });
+
+  it('clears the previous roster and blocks both saves when another session fails to load', async () => {
+    vi.mocked(attendanceApi.getCoachSessions).mockResolvedValueOnce([mockSessions[0], { ...mockSessions[0], id: 202, className: 'Session B' }]);
+    await act(async () => { root.render(<CoachAttendancePage />); });
+    vi.mocked(attendanceApi.getSessionStudents).mockRejectedValueOnce(new Error('Session B unavailable'));
+    await act(async () => {
+      const select = host.querySelector('.attendance-session-selector select') as HTMLSelectElement;
+      select.value = '202';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(host.textContent).not.toContain(mockStudents[0].fullName);
+    expect(host.querySelector('[role="alert"]')).not.toBeNull();
+    expect((host.querySelector('.btn-batch-save') as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[1] as HTMLButtonElement).click(); });
+    expect((host.querySelector('.btn-batch-save') as HTMLButtonElement).disabled).toBe(true);
+    expect(attendanceApi.saveBatchAttendance).not.toHaveBeenCalled();
+  });
+
+  it('prevents switching sessions while an attendance write is pending', async () => {
+    let complete!: (value: { success: boolean; updatedCount: number; message: string }) => void;
+    vi.mocked(attendanceApi.saveBatchAttendance).mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
+    await act(async () => { root.render(<CoachAttendancePage />); });
+    await act(async () => { (host.querySelector('.btn-batch-save') as HTMLButtonElement).click(); });
+    expect((host.querySelector('.attendance-session-selector select') as HTMLSelectElement).disabled).toBe(true);
+    await act(async () => { complete({ success: true, updatedCount: 2, message: 'Saved' }); });
+    expect((host.querySelector('.attendance-session-selector select') as HTMLSelectElement).disabled).toBe(false);
+    expect(JSON.parse(localStorage.getItem(coachHistoryStorageKey('attendance'))!)[0].sessionId).toBe(101);
+  });
+
 });

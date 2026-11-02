@@ -1,0 +1,92 @@
+openapi: 3.0.3
+info:
+  title: SCMS Support Ticket Realtime - SCRUM-128 stage 2
+  version: 1.0.0
+  description: >-
+    Extends openapi-sprint2.yaml. REST remains authoritative. Private Broadcast
+    event changed has payload {} and prompts a REST refresh after commit.
+    Realtime is optional; missing signer configuration returns enabled=false.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /support/requests/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ticketId'
+    get:
+      summary: Read one ticket as its active owner or Receptionist/Center Manager
+      responses:
+        '200':
+          description: Standard ApiResponse containing SupportRequestDto from openapi-sprint2.yaml
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: './openapi-sprint2.yaml#/components/schemas/SupportRequestDto'
+        '403':
+          description: Non-owner or inactive/deleted/mismatched actor
+        '404':
+          description: Ticket does not exist
+  /support/requests/{id}/realtime-session:
+    parameters:
+      - $ref: '#/components/parameters/ticketId'
+    post:
+      summary: Issue a five-minute receive capability for exactly scms:support:ticket:{id}
+      description: Owner or Receptionist/Center Manager; closed tickets remain readable.
+      responses:
+        '200':
+          $ref: '#/components/responses/session'
+        '403':
+          description: Forbidden
+        '404':
+          description: Ticket does not exist
+  /support/requests/realtime-session:
+    post:
+      summary: Issue a five-minute receive capability for scms:support:inbox
+      description: Active Receptionist/Center Manager only. Members cannot subscribe.
+      responses:
+        '200':
+          $ref: '#/components/responses/session'
+        '403':
+          description: Forbidden
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ticketId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  responses:
+    session:
+      description: ApiResponse containing a ChatRealtimeSession-compatible data object
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                required: [enabled, userId]
+                properties:
+                  enabled: {type: boolean}
+                  userId: {type: integer, format: int64}
+                  url: {type: string, nullable: true}
+                  publishableKey: {type: string, nullable: true}
+                  topic: {type: string, nullable: true}
+                  token: {type: string, nullable: true}
+                  expiresAt: {type: string, format: date-time, nullable: true}

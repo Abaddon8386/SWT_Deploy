@@ -6,7 +6,7 @@ const { chromium } = require('playwright-core');
 
 (async () => {
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
-  const output = path.resolve(__dirname, '../docs/ui-review/sport-story');
+  const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI_OUTPUT) : path.resolve(__dirname, '../docs/ui-review/sport-story');
   fs.mkdirSync(output, { recursive: true });
   const page = await browser.newPage({ reducedMotion: 'no-preference' });
   const errors = [];
@@ -97,7 +97,7 @@ const { chromium } = require('playwright-core');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await center(0);
     await page.locator('.fit-sport-story-step a').nth(3).focus();
-    await page.waitForFunction(() => document.querySelector('.fit-sport-story-step.is-active')?.getAttribute('data-sport') === 'basketball');
+    await page.waitForFunction(() => document.querySelector('.fit-sport-story-step.is-active')?.getAttribute('data-sport') === 'boxing');
     assert.equal(await page.locator('.fit-sport-story-step').nth(3).evaluate(el => getComputedStyle(el).opacity), '1');
     const beforeWheel = await page.evaluate(() => scrollY);
     await page.mouse.wheel(0, 160);

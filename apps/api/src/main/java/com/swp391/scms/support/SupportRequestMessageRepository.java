@@ -10,6 +10,8 @@ import java.util.List;
 @Repository
 public interface SupportRequestMessageRepository extends JpaRepository<SupportRequestMessage, Long> {
 
+    java.util.Optional<SupportRequestMessage> findBySupportRequestIdAndSenderIdAndClientMessageId(Long requestId, Long senderId, java.util.UUID clientMessageId);
+
     @EntityGraph(attributePaths = {"sender", "sender.role"})
     List<SupportRequestMessage> findBySupportRequestIdOrderByCreatedAtAsc(Long supportRequestId);
 }

@@ -180,7 +180,16 @@ components:
       type: object
       required:
         - message
+      description: >-
+        clientMessageId is an optional UUID idempotency key scoped to ticket and sender.
+        Retry the same key and trimmed content to return the original message without
+        duplicate notification or event, including after closure. Changed content with
+        the same key returns 409 SUPPORT_MESSAGE_KEY_REUSED. New messages to closed
+        tickets return 400 TICKET_CLOSED. Send and status writes share the ticket lock.
       properties:
+        clientMessageId:
+          type: string
+          format: uuid
         message:
           type: string
           maxLength: 2000
@@ -1403,6 +1412,21 @@ paths:
   /classes/sessions/{id}/enroll:
     post:
       summary: Đăng ký tham gia buổi học (MEMBER)
+      description: |
+        Chỉ nhận buổi scheduled có thời điểm bắt đầu trong tương lai, theo Asia/Ho_Chi_Minh.
+        Một subscription active phải bao phủ cả ngày đặt hiện tại và ngày diễn ra buổi học;
+        startDate/endDate được tính inclusive. Không ghép quyền với kỳ gia hạn tương lai.
+        Claim chỗ notified gửi thêm waitlistId để định danh offer, dùng cùng endpoint và được kiểm tra lại các điều kiện này;
+        thời hạn giữ chỗ 24 giờ không thay đổi.
+        Offer hết hạn tại thời điểm deadline (deadline <= now); offer đang notified nhưng quá hạn
+        trả 409 SCHEDULING_WAITLIST_OFFER_EXPIRED. Enroll/join khóa member rồi class;
+        cancel/withdraw/promotion/expiry cùng tuần tự hóa bằng khóa class trước khi ghi trạng thái.
+        Khi có waitlistId, offer phải thuộc Member hiện tại và cùng class của session (sai/mất trả 404),
+        phải đang notified (khác trả 409 SCHEDULING_WAITLIST_OFFER_NOT_ACTIVE) và còn hạn.
+        Không chuyển claim thất bại thành đặt mới. Bỏ waitlistId giữ hành vi enroll legacy.
+        Legacy persistence vẫn gắn enrollment với classId, không phải sessionId;
+        kiểm tra ngày chỉ áp dụng cho session được yêu cầu, không cam kết mọi session của lớp.
+        Trigger kiểm tra membership theo ngày Việt Nam hiện tại; ngày session do service kiểm tra.
       tags: [Enrollments]
       parameters:
         - name: id
@@ -1411,6 +1435,14 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: waitlistId
+          in: query
+          required: false
+          description: ID offer khi xác nhận suất giữ chỗ. ID phải dương; bỏ qua tham số để dùng luồng đặt chỗ legacy.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
       responses:
         '201':
           description: Đăng ký thành công
@@ -1423,11 +1455,13 @@ paths:
                       data:
                         $ref: '#/components/schemas/ClassEnrollmentDto'
         '400':
-          description: Buổi học không hợp lệ hoặc đã qua
+          description: Buổi học không hợp lệ/đã qua, hoặc waitlistId không dương (SCHEDULING_WAITLIST_ID_INVALID).
         '403':
-          description: Gói tập chưa kích hoạt hoặc đã hết hạn (Trigger P4)
+          description: Gói không active/không có hiệu lực hiện tại (SCHEDULING_MEMBERSHIP_INVALID), hoặc gói active hiện tại không bao phủ ngày học (SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION).
         '409':
-          description: Lớp đã đầy chỗ (Trigger P2) hoặc đã đăng ký trước đó
+          description: Lớp đầy, đã đăng ký, offer hết hạn (SCHEDULING_WAITLIST_OFFER_EXPIRED), hoặc offer không còn notified (SCHEDULING_WAITLIST_OFFER_NOT_ACTIVE).
+        '404':
+          description: Không tìm thấy session hoặc offer thuộc Member hiện tại và cùng class của session.
 
   /classes/enrollments/{id}:
     delete:
@@ -1452,7 +1486,7 @@ paths:
                       data:
                         $ref: '#/components/schemas/ClassEnrollmentDto'
         '400':
-          description: Không ở trạng thái booked
+          description: Không ở trạng thái booked (SCHEDULING_ENROLLMENT_NOT_BOOKED), bao gồm request hủy lặp sau khi request đầu đã commit. Không giải phóng chỗ hoặc gửi notification lần hai.
         '403':
           description: Không có quyền hủy đăng ký của người khác
 
@@ -1478,7 +1512,7 @@ paths:
   /classes/sessions/{id}/waitlist:
     post:
       summary: Tham gia danh sách chờ khi lớp đã đầy chỗ (MEMBER)
-      description: Chỉ nhận buổi scheduled chưa bắt đầu và hội viên có gói active đang trong thời hạn. Đăng ký thành công sẽ đóng mục waiting của hội viên trong cùng lớp.
+      description: Chỉ nhận buổi scheduled chưa bắt đầu theo Asia/Ho_Chi_Minh. Một subscription active phải bao phủ cả ngày hiện tại và ngày session (startDate/endDate inclusive), không ghép kỳ gia hạn tương lai. Không nhận trùng waiting hoặc notified còn hạn. Offer hết hạn có thể tham gia lại cuối hàng khi lớp vẫn đầy. FIFO theo requestedAt rồi id khi trùng thời điểm; suất giữ chỗ vẫn 24 giờ. Legacy chỉ có waiting/notified/expired; claim và withdraw được biểu diễn bằng expired, không có status claimed/withdrawn riêng.
       tags: [Waitlist]
       parameters:
         - name: id
@@ -1501,7 +1535,7 @@ paths:
         '400':
           description: Lớp còn chỗ hoặc đã đăng ký/chờ trước đó
         '403':
-          description: Gói tập không hợp lệ (Trigger P4)
+          description: Gói không active/không có hiệu lực hiện tại (SCHEDULING_MEMBERSHIP_INVALID), hoặc không bao phủ ngày học (SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION).
 
   /classes/waitlists/{id}:
     delete:

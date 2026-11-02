@@ -1,7 +1,9 @@
+import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from '../portal/PortalIcon';
 import './member-board.css';
 import {
@@ -171,7 +173,7 @@ export function MemberDashboardPage() {
                   className="portal-card member-membership-card"
                   aria-labelledby="membership-title"
                 >
-                  <Link className="member-card-cover-link" to="/member/packages" aria-label="Xem gói tập của tôi"><img className="member-card-cover" src="/images/about-movement-studio.jpg" alt="" /></Link>
+                  <Link className="member-card-cover-link" to="/member/packages" aria-label="Xem gói tập của tôi"><LoadingImage className="member-card-cover" src="/images/about-movement-studio.jpg" alt="" /></Link>
                   <div className="member-card-body">
                     <Link className="member-card-details-link" to="/member/packages" aria-label="Xem chi tiết gói tập của tôi">
                     <span className="badge badge-success">Đang hoạt động</span>
@@ -273,9 +275,7 @@ export function MemberDashboardPage() {
 
             {classesState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label="Xem lịch lớp học của tôi" />}
             {classesState.status === 'loading' && (
-              <p className="row-card__meta" role="status">
-                Đang tải lịch học…
-              </p>
+              <LoadingSkeleton label="Đang tải lịch học…" count={3} />
             )}
 
             {classesState.status === 'error' && (
@@ -325,7 +325,7 @@ export function MemberDashboardPage() {
                 </div>
               )}
           </section>
-          <Link className="member-discover-card" to="/member/classes"><img src="/images/pilates-reformer-studio.jpg" alt="Không gian tập Pilates tại SÖL" /><span><strong>Lịch lớp học</strong><small>Xem buổi học và đặt chỗ</small></span><PortalIcon name="arrow" size={16} /></Link>
+          <Link className="member-discover-card" to="/member/classes"><LoadingImage src="/images/pilates-reformer-studio.jpg" alt="Không gian tập Pilates tại SÖL" /><span><strong>Lịch lớp học</strong><small>Xem buổi học và đặt chỗ</small></span><PortalIcon name="arrow" size={16} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--blue" aria-labelledby="board-card">
@@ -343,7 +343,7 @@ export function MemberDashboardPage() {
         <section className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
           <div className="member-column-heading"><h2 id="board-wellness"><i />Sức khỏe & cân bằng</h2><Link to="/member/profile" aria-label="Xem hồ sơ và sức khỏe"><PortalIcon name="arrow" size={16} /></Link></div>
           <Link className="member-profile-card" to="/member/profile"><span className="member-info-icon"><PortalIcon name="profile" size={20} /></span><h3>Hồ sơ sức khỏe</h3><p>Cập nhật thông tin cá nhân và chỉ số cơ thể.</p><span className="member-text-link">Hồ sơ & sức khỏe<PortalIcon name="arrow" size={14} /></span></Link>
-          <Link className="member-sanctuary-card" to="/"><img src="/images/about-thermal-recovery.jpg" alt="Không gian thư giãn tại SÖL" /><span><small>SÖL FITNESS</small><strong>Thông tin<br />câu lạc bộ.</strong><span>Về trang chủ<PortalIcon name="arrow" size={14} /></span></span></Link>
+          <Link className="member-sanctuary-card" to="/"><LoadingImage src="/images/about-thermal-recovery.jpg" alt="Không gian thư giãn tại SÖL" /><span><small>SÖL FITNESS</small><strong>Thông tin<br />câu lạc bộ.</strong><span>Về trang chủ<PortalIcon name="arrow" size={14} /></span></span></Link>
         </section>
       </div>
     </div>

@@ -22,8 +22,32 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      body { margin: 0; }
+      .boot-loading { box-sizing: border-box; min-height: 100dvh; padding: 88px clamp(20px, 5vw, 80px) 40px; background: #f5f5f3; }
+      .boot-loading__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      .boot-loading__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+      .boot-loading__card { display: grid; align-content: start; gap: 16px; padding: 20px; border: 1px solid #e4e2de; border-radius: 12px; background: #fff; }
+      .boot-loading__card span { display: block; height: 12px; border-radius: 5px; background: #eeefec; }
+      .boot-loading__card span:first-child { height: clamp(160px, 24vw, 300px); border-radius: 8px; }
+      .boot-loading__card span:last-child { width: 70%; }
+      :root[data-theme='dark'] .boot-loading { background: #202020; }
+      :root[data-theme='dark'] .boot-loading__card { background: #292929; border-color: #ffffff14; }
+      :root[data-theme='dark'] .boot-loading__card span { background: #303030; }
+      @media (max-width: 767px) { .boot-loading__grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="boot-loading" role="status" aria-live="polite" aria-busy="true">
+        <span class="boot-loading__label">Đang tải trang…</span>
+        <div class="boot-loading__grid" aria-hidden="true">
+          <div class="boot-loading__card"><span></span><span></span><span></span></div>
+          <div class="boot-loading__card"><span></span><span></span><span></span></div>
+          <div class="boot-loading__card"><span></span><span></span><span></span></div>
+        </div>
+      </main>
+    </div>
     <!-- Google Identity Services for Google Sign-In (SCRUM-89) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="module" src="/src/main.tsx"></script>

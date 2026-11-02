@@ -1,7 +1,9 @@
+import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import {
@@ -80,6 +82,7 @@ export function CoachClassesPage() {
 
   // Tab Học viên phụ trách
   const [allStudents, setAllStudents] = useState<EnrolledStudent[]>([]);
+  const [allStudentsError, setAllStudentsError] = useState<string | null>(null);
   const [allStudentsLoading, setAllStudentsLoading] = useState<boolean>(false);
   const [allStudentsSearch, setAllStudentsSearch] = useState<string>('');
   const [allStudentsLevelFilter, setAllStudentsLevelFilter] = useState<string>('all');
@@ -93,45 +96,28 @@ export function CoachClassesPage() {
   const [selectedFitnessFilter, setSelectedFitnessFilter] = useState<string>('all');
   const [modalViewMode, setModalViewMode] = useState<'students' | 'attendance' | 'evaluation'>('students');
 
-  // Lấy dữ liệu điểm danh của buổi học (từ localStorage lịch sử điểm danh hoặc sinh mặc định)
+  // Lấy dữ liệu điểm danh của buổi học (từ localStorage của tài khoản hiện tại)
   const sessionAttendanceData = useMemo(() => {
     if (!activeSession) return null;
     try {
-      const stored = localStorage.getItem('sol_coach_attendance_history');
+      const stored = localStorage.getItem(coachHistoryStorageKey('attendance'));
       if (stored) {
         const historyList = JSON.parse(stored);
         const found = historyList.find((h: StoredAttendanceSession) => h.sessionId === activeSession.id);
-        if (found) return found;
+        if (found) return { ...found, rate: found.totalStudents > 0 ? Math.round(found.presentCount / found.totalStudents * 100) : 0 };
       }
     } catch {
       // ignore
     }
 
-    const presentCount = Math.max(1, Math.round(students.length * 0.8));
-    const absentCount = Math.max(0, students.length - presentCount);
-    return {
-      sessionId: activeSession.id,
-      savedAt: `${activeSession.sessionDate || 'Hôm nay'} ${activeSession.endTime || '18:30'}`,
-      presentCount,
-      absentCount,
-      totalStudents: students.length,
-      rate: students.length > 0 ? Math.round((presentCount / students.length) * 100) : 100,
-      students: students.map((st, idx) => ({
-        id: st.id,
-        memberId: st.memberId,
-        fullName: st.fullName,
-        membershipCode: st.membershipCode,
-        status: idx < presentCount ? ('present' as const) : ('absent' as const),
-        notes: idx < presentCount ? 'Tham gia buổi học đầy đủ, đúng giờ.' : 'Vắng không phép.',
-      })),
-    };
-  }, [activeSession, students]);
+    return null;
+  }, [activeSession]);
 
-  // Lấy dữ liệu đánh giá của buổi học (từ localStorage lịch sử đánh giá hoặc sinh mặc định)
+  // Lấy dữ liệu đánh giá của buổi học (từ localStorage của tài khoản hiện tại)
   const sessionEvaluationData = useMemo(() => {
     if (!activeSession) return null;
     try {
-      const stored = localStorage.getItem('sol_coach_evaluation_history');
+      const stored = localStorage.getItem(coachHistoryStorageKey('evaluation'));
       if (stored) {
         const historyList = JSON.parse(stored);
         const found = historyList.find((h: StoredEvaluationSession) => h.sessionId === activeSession.id);
@@ -141,38 +127,8 @@ export function CoachClassesPage() {
       // ignore
     }
 
-    const sampleScores = [85, 80, 90, 75, 88, 82, 78, 92];
-    const sampleNotes = [
-      'Kiểm soát cơ lõi tốt, động tác thăng bằng ổn định.',
-      'Thực hiện đúng kỹ thuật, cải thiện biên độ kéo cáp.',
-      'Thể lực và sức bền rất tốt, hoàn thành 100% giáo án.',
-      'Cần chú ý khởi động kỹ cổ tay và hạ vai khi tập.',
-      'Động tác chuẩn xác, duy trì nhịp thở nhịp nhàng.',
-      'Tiến bộ rõ rệt so với buổi học trước.',
-      'Cần tập trung vào nhịp kiểm soát giai đoạn eccentric.',
-      'Xuất sắc, tư thế đúng chuẩn và tự tin.',
-    ];
-
-    const evalStudents = students.map((st, idx) => ({
-      id: st.id,
-      memberId: st.memberId,
-      fullName: st.fullName,
-      membershipCode: st.membershipCode,
-      progressScore: sampleScores[idx % sampleScores.length],
-      notes: sampleNotes[idx % sampleNotes.length],
-    }));
-
-    const totalScore = evalStudents.reduce((acc, s) => acc + s.progressScore, 0);
-    const averageScore = evalStudents.length > 0 ? Math.round(totalScore / evalStudents.length) : 82;
-
-    return {
-      sessionId: activeSession.id,
-      savedAt: `${activeSession.sessionDate || 'Hôm nay'} ${activeSession.endTime || '18:40'}`,
-      averageScore,
-      totalStudents: students.length,
-      students: evalStudents,
-    };
-  }, [activeSession, students]);
+    return null;
+  }, [activeSession]);
 
   const filteredAttendanceStudents = useMemo(() => {
     if (!sessionAttendanceData) return [];
@@ -205,11 +161,12 @@ export function CoachClassesPage() {
     let mounted = true;
     const fetchAllStudents = async () => {
       setAllStudentsLoading(true);
+      setAllStudentsError(null);
       try {
-        const res = await coachingApi.getAllAssignedStudents(currentUser?.id);
+        const res = await coachingApi.getAllAssignedStudents();
         if (mounted) setAllStudents(res);
       } catch {
-        // Fallback
+        if (mounted) setAllStudentsError('Không thể tải danh sách học viên phụ trách.');
       } finally {
         if (mounted) setAllStudentsLoading(false);
       }
@@ -430,10 +387,7 @@ export function CoachClassesPage() {
           </div>
 
           {loading && (
-            <div className="coach-loading-box">
-              <div className="portal-spinner" />
-              <p>Đang tải lịch dạy của huấn luyện viên...</p>
-            </div>
+            <LoadingSkeleton label="Đang tải lịch dạy của huấn luyện viên…" variant="cards" count={3} />
           )}
 
           {error && !loading && (
@@ -559,10 +513,9 @@ export function CoachClassesPage() {
           </div>
 
           {allStudentsLoading ? (
-            <div className="coach-loading-box">
-              <div className="portal-spinner" />
-              <p>Đang tải danh sách học viên phụ trách...</p>
-            </div>
+            <LoadingSkeleton label="Đang tải danh sách học viên phụ trách…" variant="cards" count={4} />
+          ) : allStudentsError ? (
+            <div className="coach-error-box" role="alert"><p>{allStudentsError}</p></div>
           ) : filteredAllStudents.length === 0 ? (
             <div className="coach-empty-box">
               <p>Không tìm thấy học viên nào phù hợp.</p>
@@ -660,16 +613,13 @@ export function CoachClassesPage() {
                 aria-label="Chọn chế độ xem"
               >
                 <option value="students">Xem học viên</option>
-                <option value="attendance">Lịch sử điểm danh</option>
-                <option value="evaluation">Đánh giá học viên</option>
+                <option value="attendance">Lịch sử điểm danh (trình duyệt này)</option>
+                <option value="evaluation">Đánh giá học viên (trình duyệt này)</option>
               </Select>
             </div>
 
             {studentsLoading ? (
-              <div className="students-loading-state">
-                <div className="portal-spinner" />
-                <p>Đang tải dữ liệu của buổi học...</p>
-              </div>
+              <LoadingSkeleton label="Đang tải dữ liệu của buổi học…" count={4} />
             ) : modalViewMode === 'attendance' ? (
               /* CHẾ ĐỘ 2: LỊCH SỬ ĐIỂM DANH */
               <div className="students-list-wrap">

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { PaymentInvoice } from './PaymentInvoice';
 import { GateQrPanel } from './GateQrPanel';
@@ -251,6 +252,7 @@ export function StaffReceptionPage() {
   // BR-03 & BR-04: Xác nhận thanh toán cho yêu cầu gói tập đang chờ của hội viên
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSearching) return;
 
     if (!selectedMember || (!selectedPending && !selectedPackage)) {
       toast('Vui lòng chọn hội viên và gói tập cần thanh toán.', 'error');
@@ -642,7 +644,7 @@ export function StaffReceptionPage() {
             )}
           </div>
 
-          {selectedMember ? (
+          {isSearching ? <LoadingSkeleton label="Đang tra cứu thông tin hội viên…" count={4} /> : selectedMember ? (
             <div>
               <div className="kv-list">
                 <div className="kv-row">
@@ -725,11 +727,11 @@ export function StaffReceptionPage() {
                 <input id="pos-package" type="text" className="portal-input"
                   value={`${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`}
                   disabled readOnly />
-              ) : (
+              ) : loadingOffers ? <LoadingSkeleton label="Đang tải gói tập và lựa chọn gia hạn…" count={1} /> : (
                 <Select id="pos-package" className="portal-select" value={selectedOffer}
                   onChange={(event) => setSelectedOffer(event.target.value)}
                   disabled={!selectedMember || loadingPending || loadingOffers || !!offersError || isSubmittingPayment}>
-                  <option value="">{loadingOffers ? 'Đang tải gói tập...' : 'Chọn gói tập'}</option>
+                  <option value="">Chọn gói tập</option>
                   {renewalCandidates.length === 0
                     ? packages.map((pkg) => <option key={pkg.id} value={`buy:${pkg.id}`}>
                         Mua mới: {pkg.name} — {vnd(pkg.price)}
@@ -808,7 +810,7 @@ export function StaffReceptionPage() {
               type="submit"
               className="btn-primary"
               style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}
-              disabled={isSubmittingPayment || !selectedMember || loadingPending || loadingOffers || (!selectedPending && !selectedPackage)}
+              disabled={isSearching || isSubmittingPayment || !selectedMember || loadingPending || loadingOffers || (!selectedPending && !selectedPackage)}
             >
               {isSubmittingPayment ? (
                 <>

@@ -9,6 +9,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface SupportRequestRepository extends JpaRepository<SupportRequest, Long> {
     
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from SupportRequest r where r.id = :id")
+    java.util.Optional<SupportRequest> findByIdForUpdate(@Param("id") Long id);
+
     Page<SupportRequest> findByMemberUserIdOrderByCreatedAtDesc(Long memberId, Pageable pageable);
 
     Page<SupportRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);

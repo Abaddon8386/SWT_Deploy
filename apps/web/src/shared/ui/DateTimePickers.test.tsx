@@ -7,6 +7,12 @@ let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); host = document.createElement('div'); document.body.append(host); root = createRoot(host); });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+it('associates a date label with the visible trigger and preserves the submitted value', async () => {
+  await act(async () => root.render(<form><label htmlFor="session-date">Ngày học</label><DatePicker id="session-date" value="2026-10-31" onChange={() => {}} /></form>));
+  const trigger = host.querySelector('button')!;
+  expect(host.querySelector('label')!.control).toBe(trigger);
+  expect(new FormData(host.querySelector('form')!).get('session-date')).toBe('2026-10-31');
+});
 it.each(['date', 'time'])('consumes Escape inside an open %s picker and restores trigger focus', async (kind) => {
   const Picker = kind === 'date' ? DatePicker : TimePicker;
   await act(async () => root.render(<Picker value={kind === 'date' ? '2026-10-21' : '08:00'} onChange={() => {}} />));
