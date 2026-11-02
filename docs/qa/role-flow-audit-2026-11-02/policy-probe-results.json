@@ -1,0 +1,17 @@
+{
+  "tests": 3,
+  "failures": 0,
+  "errors": 0,
+  "observations": {
+    "staff_renewal_get": {
+      "CENTER_MANAGER": 403,
+      "RECEPTIONIST": 403
+    },
+    "staff_renewal_post": {
+      "CENTER_MANAGER": 403,
+      "RECEPTIONIST": 403
+    },
+    "receptionist_pending_queue": 200,
+    "manager_plan_without_coach_id": "ResourceNotFoundException; CoachRepository queried using manager user ID"
+  }
+}

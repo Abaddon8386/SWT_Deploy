@@ -1,0 +1,1102 @@
+{
+  "scope": "Browser fixtures, not live API/database E2E",
+  "navigation": [
+    {
+      "role": "ADMIN",
+      "requested": "/admin/users",
+      "actual": "/admin/users",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/users",
+          "role": "ADMIN"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/roles",
+          "role": "ADMIN"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/roles/permissions",
+          "role": "ADMIN"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/roles/5/permissions",
+          "role": "ADMIN"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/roles/1/permissions",
+          "role": "ADMIN"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/roles/2/permissions",
+          "role": "ADMIN"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/roles/3/permissions",
+          "role": "ADMIN"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/roles/4/permissions",
+          "role": "ADMIN"
+        }
+      ]
+    },
+    {
+      "role": "ADMIN",
+      "requested": "/member/profile",
+      "actual": "/member/profile",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "ADMIN"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/staff/support",
+      "actual": "/staff/support",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/support/requests",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/support/requests/realtime-session",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/coach/classes",
+      "actual": "/coach/classes",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/coach-bookings/coach-schedule",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/sessions",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/sessions",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/coach/training-plans",
+      "actual": "/coach/training-plans",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/classes",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/coach/support",
+      "actual": "/coach/support",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/support/requests",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/staff/classes",
+      "actual": "/staff/classes",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/disciplines",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/rooms",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/coaches",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/sessions",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/staff/reception",
+      "actual": "/staff/reception",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/check-in/gate-qr",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/pending",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/holds/pending",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/staff/check-in",
+      "actual": "/staff/check-in",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/check-in/gate-qr",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/check-in/history",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/manager/users",
+      "actual": "/manager/users",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/staff-accounts",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/manager/catalogs",
+      "actual": "/manager/catalogs",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/disciplines",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/rooms",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/manager/cancellations",
+      "actual": "/manager/cancellations",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/manager/reports",
+      "actual": "/manager/reports",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/reports/revenue/daily",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/reports/revenue/by-package",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/reports/transactions/recent",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/reports/renewal-rate",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/manager/audit-logs",
+      "actual": "/manager/audit-logs",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/admin/audit-logs",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/manager/coach-reviews",
+      "actual": "/manager/coach-reviews",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/coaching/monthly-reviews",
+          "role": "CENTER_MANAGER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/coach-bookings/coaches",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/manager/requests",
+      "actual": "/manager/requests",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/operations/requests",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "requested": "/member/profile",
+      "actual": "/member/profile",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "role": "COACH",
+      "requested": "/coach/classes",
+      "actual": "/coach/classes",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/coach-bookings/coach-schedule",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/sessions",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/sessions",
+          "role": "COACH"
+        }
+      ]
+    },
+    {
+      "role": "COACH",
+      "requested": "/coach/training-plans",
+      "actual": "/coach/training-plans",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/classes",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "COACH"
+        }
+      ]
+    },
+    {
+      "role": "COACH",
+      "requested": "/staff/attendance",
+      "actual": "/staff/attendance",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/sessions",
+          "role": "COACH"
+        }
+      ]
+    },
+    {
+      "role": "COACH",
+      "requested": "/coach/support",
+      "actual": "/coach/support",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/support/requests",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "COACH"
+        }
+      ]
+    },
+    {
+      "role": "COACH",
+      "requested": "/staff/requests",
+      "actual": "/staff/requests",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/operations/requests/my",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "COACH"
+        }
+      ]
+    },
+    {
+      "role": "COACH",
+      "requested": "/member/profile",
+      "actual": "/member/profile",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "COACH"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "COACH"
+        }
+      ]
+    },
+    {
+      "role": "RECEPTIONIST",
+      "requested": "/staff/support",
+      "actual": "/staff/support",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/support/requests",
+          "role": "RECEPTIONIST"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/support/requests/realtime-session",
+          "role": "RECEPTIONIST"
+        }
+      ]
+    },
+    {
+      "role": "RECEPTIONIST",
+      "requested": "/staff/requests",
+      "actual": "/staff/requests",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/operations/requests/my",
+          "role": "RECEPTIONIST"
+        }
+      ]
+    },
+    {
+      "role": "RECEPTIONIST",
+      "requested": "/staff/classes",
+      "actual": "/staff/classes",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/disciplines",
+          "role": "RECEPTIONIST"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/rooms",
+          "role": "RECEPTIONIST"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/coaches",
+          "role": "RECEPTIONIST"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes",
+          "role": "RECEPTIONIST"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/sessions",
+          "role": "RECEPTIONIST"
+        }
+      ]
+    },
+    {
+      "role": "RECEPTIONIST",
+      "requested": "/staff/reception",
+      "actual": "/staff/reception",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/check-in/gate-qr",
+          "role": "RECEPTIONIST"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/pending",
+          "role": "RECEPTIONIST"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/holds/pending",
+          "role": "RECEPTIONIST"
+        }
+      ]
+    },
+    {
+      "role": "RECEPTIONIST",
+      "requested": "/staff/check-in",
+      "actual": "/staff/check-in",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/check-in/gate-qr",
+          "role": "RECEPTIONIST"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/check-in/history",
+          "role": "RECEPTIONIST"
+        }
+      ]
+    },
+    {
+      "role": "RECEPTIONIST",
+      "requested": "/member/profile",
+      "actual": "/member/profile",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "RECEPTIONIST"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/dashboard",
+      "actual": "/member/dashboard",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/enrollments/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/packages",
+      "actual": "/member/packages",
+      "exception": null,
+      "errors": [],
+      "alerts": [
+        "Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.Thử đồng bộ lại"
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions/realtime-session",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/classes",
+      "actual": "/member/classes",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/members/me/favorite-disciplines",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/sessions",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/waitlists/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/classes/enrollments/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/card",
+      "actual": "/member/card",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history",
+          "role": "MEMBER"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/check-in",
+      "actual": "/member/check-in",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/check-in/history",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/invoices",
+      "actual": "/member/invoices",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/payments/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/progress",
+      "actual": "/member/progress",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/health/metrics/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/coaching/training-plans/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/coaching/training-completions/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/support",
+      "actual": "/member/support",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/support/requests/my",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        }
+      ]
+    },
+    {
+      "role": "MEMBER",
+      "requested": "/member/profile",
+      "actual": "/member/profile",
+      "exception": null,
+      "errors": [],
+      "alerts": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/profile",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count",
+          "role": "MEMBER"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/members/1/health-metrics",
+          "role": "MEMBER"
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "role": "ADMIN",
+      "action": "password login",
+      "path": "/admin/users",
+      "expected": "/admin/users",
+      "ok": true
+    },
+    {
+      "role": "ADMIN",
+      "action": "logout",
+      "tokenCleared": true,
+      "sessionCleared": true
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "action": "password login",
+      "path": "/manager/users",
+      "expected": "/manager/users",
+      "ok": true
+    },
+    {
+      "role": "CENTER_MANAGER",
+      "action": "logout",
+      "tokenCleared": true,
+      "sessionCleared": true
+    },
+    {
+      "role": "COACH",
+      "action": "password login",
+      "path": "/staff/attendance",
+      "expected": "/staff/attendance",
+      "ok": true
+    },
+    {
+      "role": "COACH",
+      "action": "logout",
+      "tokenCleared": true,
+      "sessionCleared": true
+    },
+    {
+      "role": "RECEPTIONIST",
+      "action": "password login",
+      "path": "/staff/reception",
+      "expected": "/staff/reception",
+      "ok": true
+    },
+    {
+      "role": "RECEPTIONIST",
+      "action": "logout",
+      "tokenCleared": true,
+      "sessionCleared": true
+    },
+    {
+      "role": "MEMBER",
+      "action": "password login",
+      "path": "/member/dashboard",
+      "expected": "/member/dashboard",
+      "ok": true
+    },
+    {
+      "role": "MEMBER",
+      "action": "logout",
+      "tokenCleared": true,
+      "sessionCleared": true
+    }
+  ],
+  "targeted": [
+    {
+      "name": "empty-real-classes-training-members",
+      "role": "CENTER_MANAGER",
+      "suppliedClasses": [],
+      "options": [
+        "Lê Hoàng Long (MB-2026-001)",
+        "Trần Thị Thu Thảo (MB-2026-014)",
+        "Nguyễn Văn Minh (MB-2026-027)",
+        "Đỗ Quỳnh Anh (MB-2026-039)"
+      ],
+      "alerts": []
+    },
+    {
+      "name": "manager-save-plan-without-coach",
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/coaching/training-plans",
+          "role": "CENTER_MANAGER",
+          "body": {
+            "member_id": 1,
+            "title": "Giáo án Cá nhân hóa 4 Tuần",
+            "goal": "Tăng khối lượng cơ nạc (Hypertrophy), giảm mỡ bụng dưới.",
+            "start_date": "2026-11-02",
+            "end_date": "2026-11-30",
+            "status": "active",
+            "activate": true,
+            "is_ai_generated": false,
+            "items": [
+              {
+                "day_of_week": 1,
+                "exercise_name": "Kéo xà trợ lực (Assisted Pull-up)",
+                "description": "Hạ thấp vai, siết chặt cơ xô ở điểm co, kiểm soát nhịp thở.",
+                "sets": 4,
+                "reps": 10,
+                "duration_minutes": 12,
+                "order_index": 1
+              },
+              {
+                "day_of_week": 1,
+                "exercise_name": "Incline Dumbbell Press",
+                "description": "Góc nghiêng ghế 30 độ, siết ngực trên, hạ tạ trong 3 giây.",
+                "sets": 4,
+                "reps": 12,
+                "duration_minutes": 15,
+                "order_index": 2
+              }
+            ]
+          }
+        }
+      ],
+      "notification": "ch bài tập Thứ 2\n2 động tác đã lập\n1\nKéo xà trợ lực (Assisted Pull-up)\nHạ thấp vai, siết chặt cơ xô ở điểm co, kiểm soát nhịp thở.\nHiệp: 4\nLần: 10 reps\nNghỉ: 60s\nThời gian: 12p\n✕\n2\nIncline Dumbbell Press\nGóc nghiêng ghế 30 độ, siết ngực trên, hạ tạ trong 3 giây.\nHiệp: 4\nLần: 12 reps\nNghỉ: 60s\nThời gian: 15p\n✕\nLưu thất bại\n\nĐã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại.\n\n✕\nSÖL · Không gian của bạn\nChuyển động mỗi ngày. Cân bằng mỗi khoảnh khắc.\n!\nĐã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại."
+    },
+    {
+      "name": "staff-pos-offer-loading",
+      "role": "CENTER_MANAGER",
+      "text": "Lễ tân & Thu ngân\n\nQuầy lễ tân\nHội viên quét QR cổng\n\nMở mục Quét QR trên điện thoại và hướng camera vào mã bên dưới.\n\nMã còn hiệu lực 60s · Tự làm mới\n\nTra cứu hội viên\nGói tập chờ thanh toán (0)\n\nXác nhận thu tiền cho gói tập hội viên đã chọn.\n\nLàm mới danh sách\nHiện không có yêu cầu đăng ký gói tập nào đang ở trạng thái chờ thanh toán.\nYêu cầu bảo lưu (0)\n\nDuyệt bảo lưu sẽ hủy các lịch học tương lai của hội viên.\n\nLàm mới bảo lưu\nHiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.\nThông tin hội viên\nACTIVE\nHọ và tên\nAudit member\nMã hội viên\nMEM-1\nSố điện thoại\nChưa cập nhật\nEmail\nmember@example.test\nSố CCCD (Bảo mật)\nChưa cập nhật\nGói tập yêu cầu\nChưa có yêu cầu gói tập chờ thanh toán\nThời hạn gói\nChưa kích hoạt\nXác nhận thanh toán\nChọn gói tập mua mới hoặc gia hạn\nChọn gói tập\nChọn gói tập\n\nKhông tải được gói tập hoặc lịch sử gia hạn. Vui lòng thử lại. Thử lại\n\nSố tiền Thu (Không sửa tay)\nHình thức Thanh Toán *\nPOS Quẹt thẻ ngân hàng\nPOS Quẹt thẻ ngân hàng\nTiền mặt tại quầy\nChuyển khoản VietQR tức thì\nVí điện tử MoMo / ZaloPay\nGhi Chú Giao Dịch\nXác Nhận Thu Tiền & Xuất Hóa Đơn",
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/members/1/renewal-candidates",
+          "role": "CENTER_MANAGER"
+        }
+      ]
+    },
+    {
+      "name": "empty-real-classes-training-members",
+      "role": "COACH",
+      "suppliedClasses": [],
+      "options": [
+        "Lê Hoàng Long (MB-2026-001)",
+        "Trần Thị Thu Thảo (MB-2026-014)",
+        "Nguyễn Văn Minh (MB-2026-027)",
+        "Đỗ Quỳnh Anh (MB-2026-039)"
+      ],
+      "alerts": []
+    },
+    {
+      "name": "staff-pos-offer-loading",
+      "role": "RECEPTIONIST",
+      "text": "Lễ tân & Thu ngân\n\nQuầy lễ tân\nHội viên quét QR cổng\n\nMở mục Quét QR trên điện thoại và hướng camera vào mã bên dưới.\n\nMã còn hiệu lực 59s · Tự làm mới\n\nTra cứu hội viên\nGói tập chờ thanh toán (0)\n\nXác nhận thu tiền cho gói tập hội viên đã chọn.\n\nLàm mới danh sách\nHiện không có yêu cầu đăng ký gói tập nào đang ở trạng thái chờ thanh toán.\nYêu cầu bảo lưu (0)\n\nDuyệt bảo lưu sẽ hủy các lịch học tương lai của hội viên.\n\nLàm mới bảo lưu\nHiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.\nThông tin hội viên\nACTIVE\nHọ và tên\nAudit member\nMã hội viên\nMEM-1\nSố điện thoại\nChưa cập nhật\nEmail\nmember@example.test\nSố CCCD (Bảo mật)\nChưa cập nhật\nGói tập yêu cầu\nChưa có yêu cầu gói tập chờ thanh toán\nThời hạn gói\nChưa kích hoạt\nXác nhận thanh toán\nChọn gói tập mua mới hoặc gia hạn\nChọn gói tập\nChọn gói tập\n\nKhông tải được gói tập hoặc lịch sử gia hạn. Vui lòng thử lại. Thử lại\n\nSố tiền Thu (Không sửa tay)\nHình thức Thanh Toán *\nPOS Quẹt thẻ ngân hàng\nPOS Quẹt thẻ ngân hàng\nTiền mặt tại quầy\nChuyển khoản VietQR tức thì\nVí điện tử MoMo / ZaloPay\nGhi Chú Giao Dịch\nXác Nhận Thu Tiền & Xuất Hóa Đơn",
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/members/1/renewal-candidates",
+          "role": "RECEPTIONIST"
+        }
+      ]
+    },
+    {
+      "name": "member-disabled-realtime-manual-sync",
+      "remainingAlerts": []
+    },
+    {
+      "name": "cross-tab-account-change",
+      "firstTabPath": "/member/dashboard",
+      "firstTabHeading": "Xin chào, Member account",
+      "firstTabMenu": [
+        "/",
+        "/member/dashboard",
+        "/member/packages",
+        "/member/classes",
+        "/member/card",
+        "/member/check-in",
+        "/member/invoices",
+        "/member/progress",
+        "/member/support",
+        "/member/profile",
+        "/"
+      ],
+      "storedRole": "ADMIN"
+    },
+    {
+      "name": "late-old-session-401",
+      "newlySavedRole": "COACH",
+      "currentToken": null,
+      "currentSession": null,
+      "redirected": "/login?expired=1"
+    }
+  ],
+  "unknownEndpoints": [],
+  "pageErrors": []
+}
