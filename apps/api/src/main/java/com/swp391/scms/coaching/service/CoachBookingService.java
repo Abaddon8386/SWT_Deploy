@@ -5,6 +5,7 @@ import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
+import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.entity.Discipline;
@@ -12,7 +13,6 @@ import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
-import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
@@ -113,7 +113,7 @@ public class CoachBookingService {
         List<ClassSession> coachClasses = classSessionRepository.findActiveByCoachAndDate(coachId, date);
         List<CoachBooking> coachBookings = coachBookingRepository.findActiveByCoachAndDate(coachId, date);
 
-        List<ClassEnrollment> memberEnrollments = currentMemberId != null ? classEnrollmentRepository.findByMemberUserId(currentMemberId) : List.of();
+        List<ClassSession> memberClasses = currentMemberId != null ? classSessionRepository.findActiveByMemberAndDate(currentMemberId, date) : List.of();
         List<CoachBooking> memberBookings = currentMemberId != null ? coachBookingRepository.findActiveByMemberAndDate(currentMemberId, date) : List.of();
 
         LocalDateTime now = LocalDateTime.now(clock);
@@ -132,7 +132,9 @@ public class CoachBookingService {
                     || coachBookings.stream().anyMatch(cb ->
                     start.isBefore(cb.getEndTime()) && end.isAfter(cb.getStartTime()));
 
-            boolean memberBusy = memberBookings.stream().anyMatch(mb ->
+            boolean memberBusy = memberClasses.stream().anyMatch(cs ->
+                    start.isBefore(cs.getEndTime()) && end.isAfter(cs.getStartTime()))
+                    || memberBookings.stream().anyMatch(mb ->
                     start.isBefore(mb.getEndTime()) && end.isAfter(mb.getStartTime()));
 
             boolean available = !isTooSoon && !coachBusy && !memberBusy;
@@ -155,7 +157,11 @@ public class CoachBookingService {
 
     @Transactional(readOnly = true)
     public CoachQuotaStatusDto getMemberQuotaStatus(Long memberUserId) {
-        List<MembershipSubscription> activeSubs = subscriptionRepository.findByMemberUserIdAndStatus(memberUserId, "active");
+        List<MembershipSubscription> activeSubs = subscriptionRepository.findByMemberUserIdAndStatus(memberUserId, "active").stream()
+                .filter(sub -> sub.getStartDate() != null && sub.getEndDate() != null
+                        && !sub.getStartDate().isAfter(LocalDate.now(clock))
+                        && !sub.getEndDate().isBefore(LocalDate.now(clock)))
+                .toList();
         if (activeSubs.isEmpty()) {
             return new CoachQuotaStatusDto(null, 0, 0, 0);
         }
@@ -193,6 +199,14 @@ public class CoachBookingService {
 
         if (request.endTime().isBefore(request.startTime()) || request.endTime().equals(request.startTime())) {
             throw new BadRequestException("INVALID_TIME_RANGE", "error.scheduling.invalid_time_range", "Giờ kết thúc phải sau giờ bắt đầu.");
+        }
+
+        if (!request.endTime().equals(request.startTime().plusHours(1))
+                || request.startTime().getMinute() != 0 || request.startTime().getSecond() != 0
+                || request.endTime().getSecond() != 0
+                || request.startTime().isBefore(LocalTime.of(6, 0)) || request.endTime().isAfter(LocalTime.of(21, 0))) {
+            throw new BadRequestException("INVALID_COACH_BOOKING_SLOT", "error.coach_booking.invalid_slot",
+                    "Choose a one-hour slot from 06:00 to 21:00.");
         }
 
         // Rule 1: Advance booking requirement (at least 2 hours)
@@ -245,12 +259,31 @@ public class CoachBookingService {
             }
         }
 
+        if (classSessionRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate()).stream()
+                .anyMatch(cs -> request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime()))) {
+            throw new ConflictException("MEMBER_SCHEDULE_CONFLICT", "error.coach_booking.member_busy", null,
+                    "You already have a group class in this time slot.");
+        }
+
+        List<MembershipSubscription> validSubscriptions = subscriptionRepository
+                .findByMemberUserIdAndStatus(member.getUserId(), "active").stream()
+                .filter(sub -> sub.getStartDate() != null && sub.getEndDate() != null
+                        && !sub.getStartDate().isAfter(LocalDate.now(clock))
+                        && !sub.getEndDate().isBefore(LocalDate.now(clock))
+                        && !sub.getStartDate().isAfter(request.bookingDate())
+                        && !sub.getEndDate().isBefore(request.bookingDate()))
+                .toList();
+        if (validSubscriptions.isEmpty()) {
+            throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription",
+                    "An active membership covering the booking date is required.");
+        }
+
         // Rule 4: Payment / PT Quota verification
         String paymentMethod = request.paymentMethod() != null ? request.paymentMethod() : "package_quota";
         String paymentStatus = "used_quota";
 
         if ("package_quota".equalsIgnoreCase(paymentMethod)) {
-            List<MembershipSubscription> activeSubs = subscriptionRepository.findByMemberUserIdAndStatus(member.getUserId(), "active");
+            List<MembershipSubscription> activeSubs = validSubscriptions;
             if (activeSubs.isEmpty()) {
                 throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription", "Bạn cần có gói tập đang hoạt động để đặt lịch HLV.");
             }
@@ -287,7 +320,7 @@ public class CoachBookingService {
                 );
             }
         } else {
-            paymentStatus = "paid";
+            paymentStatus = "pending";
         }
 
         Discipline discipline = null;
@@ -313,19 +346,19 @@ public class CoachBookingService {
         // Notify the coach about the new 1:1 private booking
         if (coach.getUser() != null && notificationService != null) {
             String memberName = member.getUser() != null ? member.getUser().getFullName() : "Hội viên";
-            String title = "Lịch dạy PT 1:1 mới";
-            String message = String.format("Hội viên %s đã đặt lịch tập 1:1 vào ngày %s (%s - %s).",
+            String title = msg("notifications.coaching.booking.coach.title");
+            String message = msg("notifications.coaching.booking.coach.body",
                     memberName, saved.getBookingDate(), saved.getStartTime().toString().substring(0, 5), saved.getEndTime().toString().substring(0, 5));
-            notificationService.send(coach.getUserId(), title, message, "COACH_BOOKING", "COACH_BOOKING", saved.getId());
+            notificationService.send(coach.getUserId(), title, message, "system", null, saved.getId());
         }
 
         // Notify the member about successful booking
         if (member.getUser() != null && notificationService != null) {
             String coachName = coach.getUser() != null ? coach.getUser().getFullName() : "Huấn luyện viên";
-            String title = "Đặt lịch HLV 1:1 thành công";
-            String message = String.format("Bạn đã đặt lịch tập 1:1 với HLV %s vào ngày %s (%s - %s).",
+            String title = msg("notifications.coaching.booking.member.title");
+            String message = msg("notifications.coaching.booking.member.body",
                     coachName, saved.getBookingDate(), saved.getStartTime().toString().substring(0, 5), saved.getEndTime().toString().substring(0, 5));
-            notificationService.send(member.getUserId(), title, message, "COACH_BOOKING", "COACH_BOOKING", saved.getId());
+            notificationService.send(member.getUserId(), title, message, "system", null, saved.getId());
         }
 
         return mapToDto(saved);
@@ -350,8 +383,8 @@ public class CoachBookingService {
         CoachBooking booking = coachBookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("CoachBooking", bookingId));
 
-        if (!booking.getMember().getUserId().equals(principal.id()) && !"CENTER_MANAGER".equalsIgnoreCase(principal.role()) && !"COACH".equalsIgnoreCase(principal.role())) {
-            throw new BadRequestException("FORBIDDEN", "error.coach_booking.forbidden_cancel", "Bạn không có quyền hủy lịch này.");
+        if (!booking.getMember().getUserId().equals(principal.id()) && !"CENTER_MANAGER".equalsIgnoreCase(principal.role()) && !("COACH".equalsIgnoreCase(principal.role()) && booking.getCoach().getUserId().equals(principal.id()))) {
+            throw new ForbiddenException("FORBIDDEN", "error.coach_booking.forbidden_cancel", null, "You cannot cancel this booking.");
         }
 
         if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
@@ -365,10 +398,10 @@ public class CoachBookingService {
         // Notify the coach about cancellation
         if (booking.getCoach() != null && booking.getCoach().getUser() != null && notificationService != null) {
             String memberName = booking.getMember().getUser() != null ? booking.getMember().getUser().getFullName() : "Hội viên";
-            String title = "Hủy lịch dạy PT 1:1";
-            String message = String.format("Hội viên %s đã hủy lịch tập 1:1 ngày %s (%s - %s).",
+            String title = msg("notifications.coaching.booking.cancelled.title");
+            String message = msg("notifications.coaching.booking.cancelled.body",
                     memberName, booking.getBookingDate(), booking.getStartTime().toString().substring(0, 5), booking.getEndTime().toString().substring(0, 5));
-            notificationService.send(booking.getCoach().getUserId(), title, message, "COACH_BOOKING_CANCELLED", "COACH_BOOKING", booking.getId());
+            notificationService.send(booking.getCoach().getUserId(), title, message, "system", null, booking.getId());
         }
 
         return mapToDto(booking);
@@ -397,5 +430,8 @@ public class CoachBookingService {
                 b.getCancelledAt(),
                 b.getCancelReason()
         );
+    }
+    private String msg(String key, Object... args) {
+        return messageService != null ? messageService.getMessage(key, args) : key;
     }
 }

@@ -108,11 +108,9 @@ export function MemberCoachBookingView({
         if (quota) setQuotaStatus(quota);
         setLeaderboard(board);
         setMyReviews(reviews);
-        if (coachList.length > 0 && selectedCoachId === null) {
-          setSelectedCoachId(coachList[0].id);
-        }
-      } catch (err: any) {
-        if (active) setError(err.message || 'Không thể tải danh sách huấn luyện viên.');
+        setSelectedCoachId((current) => current ?? coachList[0]?.id ?? null);
+      } catch (err: unknown) {
+        if (active) setError((err instanceof Error ? err.message : 'Không thể tải danh sách huấn luyện viên.'));
       } finally {
         if (active) setLoadingCoaches(false);
       }
@@ -127,11 +125,12 @@ export function MemberCoachBookingView({
     let active = true;
     async function loadSlots() {
       setLoadingSlots(true);
+      setSlots([]);
       try {
         const availableSlots = await getAvailableSlots(selectedCoachId!, selectedDate);
         if (active) setSlots(availableSlots);
-      } catch (err: any) {
-        if (active) setError(err.message || 'Không thể tải khung giờ trống.');
+      } catch (err: unknown) {
+        if (active) setError((err instanceof Error ? err.message : 'Không thể tải khung giờ trống.'));
       } finally {
         if (active) setLoadingSlots(false);
       }
@@ -188,8 +187,8 @@ export function MemberCoachBookingView({
           `Đặt lịch tập 1:1 với HLV ${created.coachName} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
         );
       }
-    } catch (err: any) {
-      setError(err.message || 'Không thể đặt lịch. Vui lòng thử lại.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể đặt lịch. Vui lòng thử lại.'));
     } finally {
       setSubmitting(false);
     }
@@ -218,8 +217,8 @@ export function MemberCoachBookingView({
       setNotice(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${reviewTargetBooking.coachName} thành công.`);
       setReviewTargetBooking(null);
       setReviewComment('');
-    } catch (err: any) {
-      setError(err.message || 'Không thể gửi đánh giá.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể gửi đánh giá.'));
     } finally {
       setReviewSubmitting(false);
     }
@@ -243,8 +242,8 @@ export function MemberCoachBookingView({
         setMyBookings(updatedBookings);
         if (updatedQuota) setQuotaStatus(updatedQuota);
       }
-    } catch (err: any) {
-      setError(err.message || 'Không thể hủy lịch.');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể hủy lịch.'));
     } finally {
       setCancelling(false);
     }
@@ -1009,7 +1008,7 @@ export function MemberCoachBookingView({
                       )}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--portal-muted, #71717a)' }}>
-                      Thanh toán chuyển khoản ngân hàng (VietQR) hoặc thanh toán trực tiếp tại quầy lễ tân.
+                      Thanh toán tại quầy lễ tân hoặc chuyển khoản theo thông tin do lễ tân cung cấp.
                     </div>
                   </div>
                 </label>
@@ -1087,31 +1086,9 @@ export function MemberCoachBookingView({
                 background: 'var(--portal-raised, #f4f4f5)',
               }}
             >
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700 }}>
-                  Quét mã VietQR chuyển khoản nhanh:
-                </p>
-                <img
-                  src={`https://img.vietqr.io/image/970422-090123456789-compact2.png?amount=200000&addInfo=PT${paymentModalBooking.id}%20SOL&accountName=SOL%20FITNESS`}
-                  alt="Mã QR chuyển khoản"
-                  style={{
-                    width: 220,
-                    height: 220,
-                    margin: '0 auto',
-                    display: 'block',
-                    borderRadius: 10,
-                    border: '1px solid #ddd',
-                    background: '#fff',
-                    padding: 6,
-                  }}
-                />
-              </div>
-
               <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
-                <div>Ngân hàng: <strong>Quân Đội (MB Bank)</strong></div>
-                <div>Số tài khoản: <strong style={{ letterSpacing: 1 }}>090123456789</strong></div>
-                <div>Chủ tài khoản: <strong>SÖL WELLNESS SANCTUARY</strong></div>
-                <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--portal-salmon, #ce9180)', fontSize: 16 }}>{formatPrice(200000)}</strong></div>
+                <div>Vui lòng liên hệ quầy Lễ tân để xác nhận thông tin và hoàn tất thanh toán.</div>
+                <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--portal-salmon, #ce9180)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                 <div>Nội dung chuyển khoản: <strong style={{ color: 'var(--portal-salmon, #ce9180)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
                 <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
                   * Bạn cũng có thể thanh toán trực tiếp bằng tiền mặt hoặc thẻ tại quầy Lễ tân trước giờ tập.

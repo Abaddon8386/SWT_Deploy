@@ -12,10 +12,17 @@ import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.swp391.scms.common.i18n.MessageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
+import com.swp391.scms.coaching.repository.CoachBookingRepository;
+import com.swp391.scms.scheduling.repository.ClassSessionRepository;
+import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
+import com.swp391.scms.common.exception.ForbiddenException;
+import com.swp391.scms.common.exception.ConflictException;
 import java.util.List;
 
 @Service
@@ -25,6 +32,11 @@ public class CoachReviewService {
     private final CoachRepository coachRepository;
     private final MemberRepository memberRepository;
     private final NotificationService notificationService;
+    private final MessageService messageService;
+    private final CoachBookingRepository bookingRepository;
+    private final ClassSessionRepository sessionRepository;
+    private final ClassEnrollmentRepository enrollmentRepository;
+    private final Clock clock;
 
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
@@ -32,15 +44,36 @@ public class CoachReviewService {
         this(reviewRepository, coachRepository, memberRepository, null);
     }
 
+    public CoachReviewService(CoachReviewRepository reviewRepository,
+                              CoachRepository coachRepository,
+                              MemberRepository memberRepository,
+                              NotificationService notificationService) {
+        this(reviewRepository, coachRepository, memberRepository, notificationService, null);
+    }
+
+    public CoachReviewService(CoachReviewRepository reviewRepository,
+                              CoachRepository coachRepository,
+                              MemberRepository memberRepository,
+                              NotificationService notificationService, MessageService messageService) {
+        this(reviewRepository, coachRepository, memberRepository, notificationService, messageService, null, null, null, Clock.systemDefaultZone());
+    }
+
     @Autowired
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
                               MemberRepository memberRepository,
-                              @Autowired(required = false) NotificationService notificationService) {
+                              @Autowired(required = false) NotificationService notificationService, MessageService messageService,
+                              CoachBookingRepository bookingRepository, ClassSessionRepository sessionRepository,
+                              ClassEnrollmentRepository enrollmentRepository, Clock clock) {
         this.reviewRepository = reviewRepository;
         this.coachRepository = coachRepository;
         this.memberRepository = memberRepository;
         this.notificationService = notificationService;
+        this.messageService = messageService;
+        this.bookingRepository = bookingRepository;
+        this.sessionRepository = sessionRepository;
+        this.enrollmentRepository = enrollmentRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -54,6 +87,8 @@ public class CoachReviewService {
 
         Coach coach = coachRepository.findById(request.coachId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
+
+        validateReviewSource(memberUserId, request);
 
         CoachReview review = new CoachReview();
         review.setCoach(coach);
@@ -70,31 +105,31 @@ public class CoachReviewService {
 
         // Send in-app notification to the Coach
         if (notificationService != null) {
-            String authorName = review.getIsAnonymous() ? "Một học viên ẩn danh"
-                    : (member.getUser() != null ? member.getUser().getFullName() : "Học viên");
-            String title = "Đánh giá mới từ học viên";
-            String msg = String.format("%s đã gửi đánh giá %d sao kèm nhận xét cho bạn.", authorName, saved.getRating());
-            notificationService.send(coach.getUserId(), title, msg, "COACH_REVIEW", "COACH_REVIEW", saved.getId());
+            String authorName = review.getIsAnonymous() ? msg("coaching.review.anonymous")
+                    : (member.getUser() != null ? member.getUser().getFullName() : msg("coaching.review.member"));
+            String title = msg("notifications.coaching.review.title");
+            String msg = msg("notifications.coaching.review.body", authorName, saved.getRating());
+            notificationService.send(coach.getUserId(), title, msg, "system", null, saved.getId());
         }
 
-        return mapToDto(saved);
+        return mapToDto(saved, true);
     }
 
     @Transactional(readOnly = true)
     public List<CoachReviewDto> getApprovedReviewsForCoach(Long coachId) {
         return reviewRepository.findApprovedByCoachId(coachId).stream()
-                .map(this::mapToDto)
+                .map(r -> mapToDto(r, false))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<CoachReviewDto> getMyReviews(Long memberUserId) {
         return reviewRepository.findByMemberId(memberUserId).stream()
-                .map(this::mapToDto)
+                .map(r -> mapToDto(r, true))
                 .toList();
     }
 
-    private CoachReviewDto mapToDto(CoachReview r) {
+    private CoachReviewDto mapToDto(CoachReview r, boolean ownerView) {
         String coachName = r.getCoach().getUser() != null ? r.getCoach().getUser().getFullName() : "Huấn luyện viên";
         String coachAvatar = r.getCoach().getUser() != null ? r.getCoach().getUser().getAvatarUrl() : null;
         String memberName = Boolean.TRUE.equals(r.getIsAnonymous())
@@ -107,16 +142,56 @@ public class CoachReviewService {
                 coachName,
                 r.getCoach().getSpecialization(),
                 coachAvatar,
-                r.getMember().getUserId(),
+                !ownerView && Boolean.TRUE.equals(r.getIsAnonymous()) ? null : r.getMember().getUserId(),
                 memberName,
-                r.getBookingId(),
-                r.getClassSessionId(),
+                !ownerView && Boolean.TRUE.equals(r.getIsAnonymous()) ? null : r.getBookingId(),
+                !ownerView && Boolean.TRUE.equals(r.getIsAnonymous()) ? null : r.getClassSessionId(),
                 r.getRating(),
                 r.getComment(),
                 r.getIsAnonymous(),
                 r.getStatus(),
                 r.getCreatedAt()
         );
+    }
+    private void validateReviewSource(Long memberId, CoachReviewCreateDto request) {
+        if ((request.bookingId() == null) == (request.classSessionId() == null)) {
+            throw new BadRequestException("INVALID_REVIEW_SOURCE", "error.review.invalid_source", "Choose exactly one completed session.");
+        }
+        if (request.bookingId() != null) {
+            var booking = bookingRepository.findById(request.bookingId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.coach_booking", request.bookingId()));
+            if (!booking.getMember().getUserId().equals(memberId)
+                    || !booking.getCoach().getUserId().equals(request.coachId())) {
+                throw new ForbiddenException("FORBIDDEN", "error.review.forbidden_source", null, "You cannot review this booking.");
+            }
+            if ("cancelled".equals(booking.getStatus())
+                    || !LocalDateTime.of(booking.getBookingDate(), booking.getEndTime()).isBefore(LocalDateTime.now(clock))) {
+                throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", "The session has not finished.");
+            }
+            if (reviewRepository.existsByMemberUserIdAndBookingId(memberId, request.bookingId())) {
+                throw new ConflictException("DUPLICATE_REVIEW", "error.review.duplicate", null, "This session was already reviewed.");
+            }
+        } else {
+            var session = sessionRepository.findById(request.classSessionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", request.classSessionId()));
+            var gymClass = session.getGymClass();
+            if (!gymClass.getCoach().getUserId().equals(request.coachId())
+                    || enrollmentRepository.findByGymClassIdAndMemberUserId(gymClass.getId(), memberId)
+                        .filter(e -> !"cancelled".equals(e.getStatus())).isEmpty()) {
+                throw new ForbiddenException("FORBIDDEN", "error.review.forbidden_source", null, "You cannot review this session.");
+            }
+            if ("cancelled".equals(session.getStatus())
+                    || !LocalDateTime.of(session.getSessionDate(), session.getEndTime()).isBefore(LocalDateTime.now(clock))) {
+                throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", "The session has not finished.");
+            }
+            if (reviewRepository.existsByMemberUserIdAndClassSessionId(memberId, request.classSessionId())) {
+                throw new ConflictException("DUPLICATE_REVIEW", "error.review.duplicate", null, "This session was already reviewed.");
+            }
+        }
+    }
+
+    private String msg(String key, Object... args) {
+        return messageService != null ? messageService.getMessage(key, args) : key;
     }
 }
 

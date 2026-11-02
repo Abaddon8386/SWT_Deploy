@@ -145,7 +145,24 @@ class CoachLeaderboardServiceTest {
         assertThat(updated.bonusAmount()).isEqualByComparingTo("2500000.00");
         assertThat(updated.status()).isEqualTo("published");
 
-        verify(notificationService).send(eq(21L), anyString(), anyString(), eq("COACH_MONTHLY_REVIEW"), eq("COACH_MONTHLY_REVIEW"), eq(5L));
+        verify(notificationService).send(eq(21L), anyString(), anyString(), eq("system"), isNull(), eq(5L));
+    }
+    @Test
+    void emptyLeaderboardDoesNotGenerateOrPublishReviews() {
+        when(monthlyReviewRepository.findLeaderboardByPeriod(2026, 10)).thenReturn(List.of());
+        assertThat(leaderboardService.getLeaderboard(2026, 10)).isEmpty();
+        verifyNoInteractions(coachRepository, coachBookingRepository, reviewRepository);
+        verify(monthlyReviewRepository, never()).save(any());
+    }
+    @Test
+    void monthlyUpdateRejectsNegativeRankBonusAndInvalidStatusAtBoundary() {
+        try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            var invalid = new CoachMonthlyReviewUpdateDto(0, "A".repeat(101),
+                    new BigDecimal("-1"), null, "other");
+            assertThat(factory.getValidator().validate(invalid)).hasSize(4);
+            var valid = new CoachMonthlyReviewUpdateDto(1, "Top coach", BigDecimal.ZERO, null, "published");
+            assertThat(factory.getValidator().validate(valid)).isEmpty();
+        }
     }
 }
 

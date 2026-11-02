@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
  * Entity mapping member feedback and rating for a Coach (SCRUM-134).
  */
 @Entity
-@Table(name = "coach_reviews", indexes = {
+@Table(name = "coach_reviews", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_review_member_booking", columnNames = {"member_id", "booking_id"}),
+        @UniqueConstraint(name = "uq_review_member_session", columnNames = {"member_id", "class_session_id"})
+}, indexes = {
         @Index(name = "ix_coach_reviews_coach", columnList = "coach_id"),
         @Index(name = "ix_coach_reviews_member", columnList = "member_id")
 })

@@ -17,6 +17,7 @@ import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.swp391.scms.common.i18n.MessageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class CoachLeaderboardService {
     private final ClassSessionRepository classSessionRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final MessageService messageService;
 
     public CoachLeaderboardService(CoachMonthlyReviewRepository monthlyReviewRepository,
                                   CoachReviewRepository reviewRepository,
@@ -49,6 +51,16 @@ public class CoachLeaderboardService {
         this(monthlyReviewRepository, reviewRepository, coachRepository, coachBookingRepository, classSessionRepository, userRepository, null);
     }
 
+    public CoachLeaderboardService(CoachMonthlyReviewRepository monthlyReviewRepository,
+                                  CoachReviewRepository reviewRepository,
+                                  CoachRepository coachRepository,
+                                  CoachBookingRepository coachBookingRepository,
+                                  ClassSessionRepository classSessionRepository,
+                                  UserRepository userRepository,
+                                  NotificationService notificationService) {
+        this(monthlyReviewRepository, reviewRepository, coachRepository, coachBookingRepository, classSessionRepository, userRepository, notificationService, null);
+    }
+
     @Autowired
     public CoachLeaderboardService(CoachMonthlyReviewRepository monthlyReviewRepository,
                                   CoachReviewRepository reviewRepository,
@@ -56,7 +68,7 @@ public class CoachLeaderboardService {
                                   CoachBookingRepository coachBookingRepository,
                                   ClassSessionRepository classSessionRepository,
                                   UserRepository userRepository,
-                                  @Autowired(required = false) NotificationService notificationService) {
+                                  @Autowired(required = false) NotificationService notificationService, MessageService messageService) {
         this.monthlyReviewRepository = monthlyReviewRepository;
         this.reviewRepository = reviewRepository;
         this.coachRepository = coachRepository;
@@ -64,19 +76,16 @@ public class CoachLeaderboardService {
         this.classSessionRepository = classSessionRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.messageService = messageService;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<CoachLeaderboardItemDto> getLeaderboard(Integer year, Integer month) {
         LocalDate now = LocalDate.now();
         int targetYear = (year != null && year > 2000) ? year : now.getYear();
         int targetMonth = (month != null && month >= 1 && month <= 12) ? month : now.getMonthValue();
 
         List<CoachMonthlyReview> reviews = monthlyReviewRepository.findLeaderboardByPeriod(targetYear, targetMonth);
-        if (reviews.isEmpty()) {
-            // Auto-generate initial draft reviews for this period if none exist
-            reviews = generateMonthlyReviews(targetYear, targetMonth, null);
-        }
 
         return reviews.stream()
                 .map(this::mapToLeaderboardDto)
@@ -188,10 +197,10 @@ public class CoachLeaderboardService {
 
         // Notify Coach if published
         if ("published".equalsIgnoreCase(saved.getStatus()) && notificationService != null) {
-            String title = String.format("Bản đánh giá & Thưởng tháng %d/%d", saved.getMonth(), saved.getYear());
-            String message = String.format("Quản lý đã công bố đánh giá tháng %d/%d: Hạng #%d - Danh hiệu: %s - Thưởng: %,.0f đ.",
+            String title = msg("notifications.coaching.monthly.title", saved.getMonth(), saved.getYear());
+            String message = msg("notifications.coaching.monthly.body",
                     saved.getMonth(), saved.getYear(), saved.getRankPosition(), saved.getBadge(), saved.getBonusAmount());
-            notificationService.send(saved.getCoach().getUserId(), title, message, "COACH_MONTHLY_REVIEW", "COACH_MONTHLY_REVIEW", saved.getId());
+            notificationService.send(saved.getCoach().getUserId(), title, message, "system", null, saved.getId());
         }
 
         return mapToDto(saved);
@@ -257,6 +266,9 @@ public class CoachLeaderboardService {
                 r.getCreatedAt(),
                 r.getUpdatedAt()
         );
+    }
+    private String msg(String key, Object... args) {
+        return messageService != null ? messageService.getMessage(key, args) : key;
     }
 }
 

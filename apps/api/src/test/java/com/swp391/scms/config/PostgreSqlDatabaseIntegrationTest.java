@@ -194,6 +194,55 @@ class PostgreSqlDatabaseIntegrationTest {
                 """, gymClass, start, end, status);
     }
 
+    private void ptBooking(long member, long coach, String start, String end) {
+        jdbc.update("""
+                insert into coach_bookings (member_id, coach_id, booking_date, start_time, end_time,
+                    hourly_rate, payment_method, payment_status, status, created_at)
+                values (?, ?, current_date, cast(? as time), cast(? as time), 200000, 'cash', 'pending', 'confirmed', now())
+                """, member, coach, start, end);
+    }
+
+    @Test
+    void ptTriggerRejectsConflictsInBothBookingDirectionsAndRequiresMembership() {
+        long coach = coach(), member = activeMember();
+        ptBooking(member, coach, "14:00", "15:00");
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(activeMember(), coach, "14:30", "15:30"));
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member, coach(), "14:30", "15:30"));
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member(), coach(), "16:00", "17:00"));
+        long group = gymClass(10, coach(), room());
+        session(group, "14:00", "15:00", "scheduled");
+        assertThrows(DataIntegrityViolationException.class, () -> enroll(group, member, "booked"));
+        long other = activeMember();
+        enroll(group, other, "booked");
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(other, coach(), "14:30", "15:30"));
+        long coachedGroup = gymClass(10, coach, room());
+        assertThrows(DataIntegrityViolationException.class, () -> session(coachedGroup, "14:30", "15:30", "scheduled"));
+        ptBooking(member, coach, "15:00", "16:00");
+    }
+
+    @Test
+    void concurrentPtBookingsCannotDoubleBookCoach() throws Exception {
+        long coach = coach(), first = activeMember(), second = activeMember();
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var one = executor.submit(() -> ptAfterLatch(start, first, coach));
+            var two = executor.submit(() -> ptAfterLatch(start, second, coach));
+            start.countDown();
+            assertEquals(1, (one.get(15, TimeUnit.SECONDS) ? 1 : 0) + (two.get(15, TimeUnit.SECONDS) ? 1 : 0));
+        }
+    }
+
+    private boolean ptAfterLatch(CountDownLatch start, long member, long coach) throws Exception {
+        start.await();
+        try {
+            ptBooking(member, coach, "18:00", "19:00");
+            return true;
+        } catch (DataIntegrityViolationException expected) {
+            assertTrue(expected.getMostSpecificCause().getMessage().contains("trg_sessions_check_conflict"));
+            return false;
+        }
+    }
+
     @Test
     void hibernateBootstrapsAllReferenceTablesAndMandatoryTriggers() {
         assertTrue(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ?",
