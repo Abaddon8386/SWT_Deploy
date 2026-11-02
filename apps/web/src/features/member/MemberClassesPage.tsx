@@ -9,7 +9,7 @@ import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { getFavoriteDisciplines, toggleFavoriteDiscipline } from './favoriteDisciplinesApi';
 import { getMySubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
-import { PRIMARY_DISCIPLINES } from '../../shared/lib/disciplines';
+import { DISCIPLINES } from '../../shared/lib/disciplines';
 import {
   cancelEnrollment,
   currentWeek,
@@ -366,7 +366,7 @@ export function MemberClassesPage() {
   }
 
   const weekRange = currentWeek(weekOffset);
-  const disciplines = [...new Set([...PRIMARY_DISCIPLINES.map(item => item.name), ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
+  const disciplines = [...new Set([...DISCIPLINES.map(item => item.name), ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
   const disciplineNameToId: Record<string, number> = {};
   for (const item of sessions) {
     if (item.disciplineName && item.disciplineId) disciplineNameToId[item.disciplineName] = item.disciplineId;

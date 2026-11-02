@@ -164,7 +164,7 @@ export function ManagerCatalogsPage() {
                 type="text"
                 required
                 autoFocus
-                placeholder="Vd: Reformer Core Pilates..."
+                placeholder="Vd: Gym, Bơi lội, Tennis..."
                 value={editing.form.name ?? ''}
                 onChange={(e) => set('name', e.target.value)}
               />

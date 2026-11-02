@@ -1454,7 +1454,7 @@ export function StaffClassesPage() {
                 type="text"
                 required
                 autoFocus
-                placeholder="Ví dụ: Reformer Pilates Level 2..."
+                placeholder="Ví dụ: Gym cơ bản, Bơi sải nâng cao..."
                 className="portal-input"
                 style={
                   isDuplicateClassName

@@ -1,0 +1,24 @@
+import { describe, expect, it } from 'vitest';
+import { DISCIPLINES, MAIN_DISCIPLINE, SECONDARY_DISCIPLINES, matchesDiscipline } from './disciplines';
+
+describe('disciplines', () => {
+  it('has Gym as the only main discipline followed by the four secondary ones', () => {
+    expect(MAIN_DISCIPLINE.name).toBe('Gym');
+    expect(DISCIPLINES.filter((discipline) => discipline.tier === 'main')).toHaveLength(1);
+    expect(SECONDARY_DISCIPLINES.map((discipline) => discipline.name)).toEqual(['Bơi lội', 'Boxing', 'Tennis', 'Cầu lông']);
+  });
+
+  it.each([
+    ['Olympic Strength', 'Gym', true],
+    ['Thermal Aquatics', 'Bơi lội', true],
+    ['Bơi sải nâng cao', 'Bơi lội', true],
+    ['Boxing & Kickfit', 'Boxing', true],
+    ['Cầu lông', 'Cầu lông', true],
+    ['Badminton', 'Cầu lông', true],
+    ['Tennis', 'Tennis', true],
+    ['Tennis', 'Gym', false],
+    ['Bơi lội', 'Boxing', false],
+  ])('matches catalog name "%s" against filter "%s" -> %s', (name, filter, expected) => {
+    expect(matchesDiscipline(name, filter)).toBe(expected);
+  });
+});

@@ -1,33 +1,38 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { RoundArrow } from './PublicLayout';
-import { PRIMARY_DISCIPLINES, type PrimaryDisciplineId } from '../../../shared/lib/disciplines';
+import { DISCIPLINES, type DisciplineId } from '../../../shared/lib/disciplines';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import './sport-stack.css';
 
-const content: Record<PrimaryDisciplineId, { image: string; summary: string; programs: string[] }> = {
+const content: Record<DisciplineId, { image: string; summary: string; programs: string[] }> = {
   gym: {
     image: '/images/fitness/gym-floor.jpg',
     summary: 'Xây dựng sức mạnh và thể lực với các bài tập tạ.',
     programs: ['Kỹ thuật tập tạ', 'Sức mạnh toàn thân', 'Thể lực và sức bền'],
   },
-  yoga: {
-    image: '/images/yoga-aerial-silk-studio.jpg',
-    summary: 'Kết hợp hơi thở, tư thế và chuyển động linh hoạt.',
-    programs: ['Hơi thở và tư thế', 'Thăng bằng và linh hoạt', 'Giãn cơ và thư giãn'],
-  },
-  pilates: {
-    image: '/images/pilates-reformer-studio.jpg',
-    summary: 'Rèn khả năng kiểm soát chuyển động và sức mạnh vùng core.',
-    programs: ['Kiểm soát vùng core', 'Tư thế và thăng bằng', 'Chuyển động trên Reformer'],
+  swimming: {
+    image: '/images/fitness/aquatics-pool.jpg',
+    summary: 'Rèn sức bền và kỹ thuật bơi trong hồ bơi của trung tâm.',
+    programs: ['Kỹ thuật bơi sải', 'Sức bền dưới nước', 'Thả lỏng và phục hồi'],
   },
   boxing: {
     image: '/images/hero-options/opt5-boxing.jpg',
     summary: 'Tập kỹ thuật đấm, phản xạ và thể lực qua từng hiệp.',
     programs: ['Kỹ thuật đấm cơ bản', 'Bộ chân và phản xạ', 'Thể lực theo hiệp'],
   },
+  tennis: {
+    image: '/images/fitness/tennis-court.jpg',
+    summary: 'Luyện kỹ thuật đánh bóng và di chuyển trên sân.',
+    programs: ['Kỹ thuật đánh bóng', 'Di chuyển và phản xạ', 'Đánh đôi'],
+  },
+  badminton: {
+    image: '/images/fitness/badminton-court.webp',
+    summary: 'Rèn bộ chân, phản xạ và kỹ thuật đánh cầu.',
+    programs: ['Kỹ thuật đánh cầu', 'Bộ chân và phản xạ', 'Thi đấu đôi'],
+  },
 };
-const sports = PRIMARY_DISCIPLINES.map(sport => ({ ...sport, ...content[sport.id] }));
+const sports = DISCIPLINES.map(sport => ({ ...sport, ...content[sport.id] }));
 // The existing import remains stable; this section now uses a scrolling story rather than a deck.
 export function SportStack({ classPath, heading }: { classPath: string; heading?: ReactNode }) {
   const story = useRef<HTMLDivElement>(null);
@@ -109,7 +114,7 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
     <figcaption>Ảnh minh họa · {sport.name}</figcaption>
   </>;
 
-  return <div className="fit-sport-story" ref={story} role="region" aria-label="Khám phá bốn bộ môn">
+  return <div className="fit-sport-story" ref={story} role="region" aria-label="Khám phá các bộ môn">
     {heading}
     <p className="fit-sport-story-hint">Cuộn xem các bộ môn <span aria-hidden="true">↓</span></p>
     <div className="fit-sport-story-layout">
@@ -119,6 +124,7 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
           className={`fit-sport-story-step${index === 0 ? ' is-active' : ''}`}
           data-sport={sport.id} aria-labelledby={`sport-story-${sport.id}`}>
           <span className="fit-sport-story-number" aria-hidden="true">0{index + 1}</span>
+          <span className="fit-sport-story-tier">{sport.tier === 'main' ? 'Bộ môn chính' : 'Bộ môn phụ'}</span>
           <h3 id={`sport-story-${sport.id}`}>{sport.name}</h3>
           <p className="fit-sport-story-summary">{sport.summary}</p>
           <ul className="fit-sport-story-programs">{sport.programs.map(program => <li key={program}>{program}</li>)}</ul>

@@ -1,5 +1,5 @@
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
-import { PRIMARY_DISCIPLINES } from '../../../shared/lib/disciplines';
+import { DISCIPLINES } from '../../../shared/lib/disciplines';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
@@ -9,7 +9,7 @@ import { RoundArrow } from './PublicLayout';
 import { SportStack } from './SportStack';
 
 const tickerItems = [
-  ...PRIMARY_DISCIPLINES.map(discipline => discipline.name.toUpperCase()),
+  ...DISCIPLINES.map(discipline => discipline.name.toUpperCase()),
   'STRENGTH FLOOR',
   'MOVEMENT STUDIO',
   'FREE WEIGHTS',
@@ -218,7 +218,7 @@ const memberBenefits = [
     title: 'Đặt lịch tập trên Portal',
     description: 'Xem lịch lớp theo bộ môn trong Portal. Bạn có thể đặt lớp khi gói tập đang hoạt động, còn hạn và còn lượt đặt theo quy định của gói.',
     perks: [
-      'Gym · Yoga · Pilates · Boxing',
+      'Gym · Bơi lội · Boxing · Tennis · Cầu lông',
       'Khu Strength Floor, Free Weights & Movement Studio',
       'Thấy ngay khung giờ nào đang thoáng',
       'Vào cửa bằng mã QR, không cần giấy tờ',

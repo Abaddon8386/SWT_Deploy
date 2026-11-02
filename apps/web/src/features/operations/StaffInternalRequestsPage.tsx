@@ -510,7 +510,7 @@ export function StaffInternalRequestsPage() {
                 <input
                   type="text"
                   className="portal-input"
-                  placeholder="Ví dụ: Ca sáng (06:00 - 14:00) đổi sang Ca tối, hoặc Lớp Yoga 18:00..."
+                  placeholder="Ví dụ: Ca sáng (06:00 - 14:00) đổi sang Ca tối, hoặc Lớp Boxing 18:00..."
                   value={createTargetShift}
                   onChange={(e) => setCreateTargetShift(e.target.value)}
                   style={{ width: '100%', padding: '10px 14px', borderRadius: 10 }}
