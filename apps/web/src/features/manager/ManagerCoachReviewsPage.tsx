@@ -311,7 +311,7 @@ export function ManagerCoachReviewsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>Mức thưởng tháng</span>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--portal-salmon, #ce9180)' }}>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums' }}>
                         {formatPrice(r.bonusAmount)}
                       </div>
                     </div>

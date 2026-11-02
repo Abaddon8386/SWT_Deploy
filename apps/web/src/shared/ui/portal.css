@@ -1555,11 +1555,9 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .metric-value {
-  font-weight: 500;
-  background: linear-gradient(135deg, #1A1614 30%, #8A6F4D 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  color: var(--portal-paper, #1A1614);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Bảng: tiêu đề đậm hơn, hover có vạch vàng */

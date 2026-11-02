@@ -734,8 +734,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 .student-detail-box.health-box,
 .roster-health-box {
   background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-left: 3px solid #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.34);
 }
 
 .health-box .box-title,

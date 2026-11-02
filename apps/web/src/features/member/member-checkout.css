@@ -59,7 +59,7 @@
   border: 1px solid var(--portal-border, #e4e2de);
   border-radius: var(--portal-radius, 12px);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   user-select: none;
 }
 
@@ -84,7 +84,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .payment-method-card.is-selected .payment-method-radio {
@@ -98,7 +98,7 @@
   background: var(--portal-salmon, #a35b49);
   opacity: 0;
   transform: scale(0.5);
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .payment-method-card.is-selected .payment-method-radio-dot {
@@ -165,7 +165,7 @@
   background: var(--portal-raised, #f0ede8);
   color: var(--portal-paper, var(--color-text-main, #202020));
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   text-align: center;
 }
 

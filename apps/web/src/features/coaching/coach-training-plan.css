@@ -223,9 +223,8 @@
 
 .ai-caution-box {
   background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-left: 3px solid #ef4444;
-  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.34);
+  border-radius: 10px;
   padding: 10px 14px;
   color: light-dark(#a33030, #fca5a5);
   font-size: 0.82rem;

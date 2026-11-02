@@ -160,22 +160,23 @@ export function StaffInternalRequestsPage() {
               type="button"
               onClick={() => setStatusFilter(tab.key)}
               style={{
+                minHeight: 38,
                 padding: '8px 16px',
                 borderRadius: 99,
-                border: 'none',
+                border: statusFilter === tab.key ? 'none' : '1px solid var(--portal-border)',
                 fontWeight: 700,
                 fontSize: 13,
                 cursor: 'pointer',
                 background:
                   statusFilter === tab.key
                     ? 'var(--portal-salmon, #ce9180)'
-                    : 'var(--portal-card-bg, #ffffff)',
-                color: statusFilter === tab.key ? '#fff' : 'var(--portal-text-secondary, #666)',
+                    : 'var(--portal-surface)',
+                color: statusFilter === tab.key ? 'var(--portal-ink, #202020)' : 'var(--portal-muted)',
                 boxShadow:
                   statusFilter === tab.key
                     ? '0 2px 8px rgba(206, 145, 128, 0.25)'
                     : '0 1px 3px rgba(0,0,0,0.05)',
-                transition: 'all 0.2s ease',
+                transition: 'background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
               }}
             >
               {tab.label}
@@ -191,6 +192,7 @@ export function StaffInternalRequestsPage() {
             setShowCreateModal(true);
           }}
           style={{
+            minHeight: 42,
             padding: '10px 22px',
             borderRadius: 99,
             border: 'none',
@@ -198,7 +200,7 @@ export function StaffInternalRequestsPage() {
             fontSize: 14,
             cursor: 'pointer',
             background: 'var(--portal-salmon, #ce9180)',
-            color: '#fff',
+            color: 'var(--portal-ink, #202020)',
             boxShadow: '0 4px 12px rgba(206, 145, 128, 0.3)',
             display: 'flex',
             alignItems: 'center',
@@ -238,9 +240,12 @@ export function StaffInternalRequestsPage() {
       )}
 
       {loading ? (
-        <div className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
-          <div className="portal-spinner" />
-          <p style={{ marginTop: 12, color: '#666' }}>Đang tải danh sách đơn từ...</p>
+        <div className="portal-card" role="status" aria-busy="true" style={{ padding: 32, textAlign: 'center' }}>
+          <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
+            <div className="portal-skeleton" style={{ height: 56, borderRadius: 12 }} />
+            <div className="portal-skeleton" style={{ height: 56, borderRadius: 12 }} />
+          </div>
+          <p style={{ margin: 0, color: 'var(--portal-muted)' }}>Đang tải danh sách đơn từ...</p>
         </div>
       ) : filteredRequests.length === 0 ? (
         <div
@@ -248,15 +253,15 @@ export function StaffInternalRequestsPage() {
           style={{
             padding: '48px 32px',
             textAlign: 'center',
-            background: 'var(--portal-card-bg, #ffffff)',
+            background: 'var(--portal-surface)',
             borderRadius: 16,
-            border: '1px dashed var(--portal-border, rgba(0,0,0,0.15))',
+            border: '1px dashed var(--portal-border-strong, var(--portal-border))',
           }}
         >
-          <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: '#333' }}>
+          <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
             Không có đơn từ nào trong danh sách
           </p>
-          <span style={{ fontSize: 13, color: '#777' }}>
+          <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
             Bạn chưa gửi đơn từ nào hoặc không có đơn phù hợp với bộ lọc hiện tại.
           </span>
         </div>
@@ -274,9 +279,9 @@ export function StaffInternalRequestsPage() {
                 style={{
                   padding: 24,
                   borderRadius: 16,
-                  border: '1px solid var(--portal-border, rgba(0,0,0,0.08))',
-                  background: 'var(--portal-card-bg, #ffffff)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                  border: '1px solid var(--portal-border)',
+                  background: 'var(--portal-surface)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
                   display: 'grid',
                   gap: 14,
                 }}
@@ -304,7 +309,7 @@ export function StaffInternalRequestsPage() {
                     >
                       {typeInfo.label}
                     </span>
-                    <span style={{ fontSize: 12, color: '#888' }}>
+                    <span style={{ fontSize: 12, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
                       Mã đơn #{req.id} • Ngày tạo:{' '}
                       {new Date(req.createdAt).toLocaleDateString('vi-VN', {
                         hour: '2-digit',
@@ -332,10 +337,10 @@ export function StaffInternalRequestsPage() {
 
                 {/* Title & Reason */}
                 <div>
-                  <h3 style={{ margin: '0 0 6px 0', fontSize: 17, fontWeight: 800 }}>
+                  <h3 style={{ margin: '0 0 6px 0', fontSize: 17, fontWeight: 800, color: 'var(--portal-paper)' }}>
                     {req.title}
                   </h3>
-                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: '#444' }}>
+                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--portal-muted)' }}>
                     {req.reason}
                   </p>
                 </div>
@@ -346,15 +351,16 @@ export function StaffInternalRequestsPage() {
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: 18,
-                    background: 'var(--portal-bg, #fcfbfa)',
+                    background: 'var(--portal-raised)',
                     padding: '10px 16px',
                     borderRadius: 10,
                     fontSize: 13,
+                    color: 'var(--portal-paper)',
                   }}
                 >
                   {req.startDate && (
                     <div>
-                      <strong style={{ color: '#555' }}>Thời gian:</strong>{' '}
+                      <strong style={{ color: 'var(--portal-muted)' }}>Thời gian:</strong>{' '}
                       {req.startDate}
                       {req.endDate && req.endDate !== req.startDate ? ` đến ${req.endDate}` : ''}
                     </div>
@@ -362,7 +368,7 @@ export function StaffInternalRequestsPage() {
 
                   {req.targetShift && (
                     <div>
-                      <strong style={{ color: '#555' }}>Ca / Buổi liên quan:</strong>{' '}
+                      <strong style={{ color: 'var(--portal-muted)' }}>Ca / Buổi liên quan:</strong>{' '}
                       {req.targetShift}
                     </div>
                   )}
@@ -376,19 +382,19 @@ export function StaffInternalRequestsPage() {
                       borderRadius: 10,
                       background:
                         req.status === 'APPROVED'
-                          ? 'rgba(34, 100, 66, 0.06)'
-                          : 'rgba(220, 38, 38, 0.06)',
-                      borderLeft: `4px solid ${req.status === 'APPROVED' ? '#226442' : '#dc2626'}`,
+                          ? 'rgba(34, 197, 94, 0.08)'
+                          : 'rgba(220, 38, 38, 0.08)',
+                      border: `1px solid ${req.status === 'APPROVED' ? 'rgba(34, 197, 94, 0.34)' : 'rgba(220, 38, 38, 0.34)'}`,
                       fontSize: 13,
                     }}
                   >
-                    <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? '#226442' : '#dc2626' }}>
+                    <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : '#ef4444' }}>
                       {req.status === 'APPROVED' ? '✓ Quản lý chấp thuận' : '✕ Quản lý từ chối'} •{' '}
                       Người duyệt: {req.reviewedByName || 'Ban Quản Lý'} (
                       {new Date(req.reviewedAt).toLocaleDateString('vi-VN')})
                     </div>
                     {req.managerNotes && (
-                      <div style={{ marginTop: 4, color: '#333', fontStyle: 'italic' }}>
+                      <div style={{ marginTop: 4, color: 'var(--portal-paper)', fontStyle: 'italic' }}>
                         Lời phê: "{req.managerNotes}"
                       </div>
                     )}
@@ -403,15 +409,16 @@ export function StaffInternalRequestsPage() {
                       disabled={cancellingId === req.id}
                       onClick={() => handleCancelRequest(req.id)}
                       style={{
+                        minHeight: 38,
                         padding: '6px 14px',
-                        borderRadius: 8,
-                        border: '1px solid #d1d5db',
-                        background: '#ffffff',
+                        borderRadius: 10,
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        background: 'var(--portal-raised)',
                         fontSize: 12,
                         fontWeight: 650,
-                        color: '#dc2626',
+                        color: '#ef4444',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease',
+                        transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
                       }}
                     >
                       {cancellingId === req.id ? 'Đang hủy...' : 'Hủy đơn từ này'}

@@ -44,6 +44,23 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+  text-underline-offset: 0.22em;
+}
+
+::selection {
+  background-color: rgba(206, 145, 128, 0.28);
+  color: inherit;
+}
+
+input,
+textarea {
+  caret-color: var(--portal-salmon, #CE9180);
+}
+
+.metric-value,
+.portal-table td,
+.badge {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Ẩn thanh cuộn chỉ trên landing toàn màn hình; portal giữ thanh cuộn mảnh để người dùng biết còn nội dung */

@@ -779,14 +779,14 @@ export function CoachClassesPage() {
               justifyContent: 'space-between',
               alignItems: 'center',
               gap: 16,
-              background: 'var(--portal-card-bg, #ffffff)',
+              background: 'var(--portal-surface)',
               padding: '16px 24px',
               borderRadius: 16,
-              border: '1px solid var(--portal-border, rgba(0,0,0,0.08))',
+              border: '1px solid var(--portal-border)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>Kỳ đánh giá:</span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--portal-paper)' }}>Kỳ đánh giá:</span>
               <Select
                 value={String(reviewMonth)}
                 onChange={(e) => setReviewMonth(Number(e.target.value))}
@@ -809,14 +809,17 @@ export function CoachClassesPage() {
               </Select>
             </div>
 
-            <span style={{ fontSize: 13, color: 'var(--portal-text-secondary, #666)' }}>
+            <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
               📌 Bảng xếp hạng và mức thưởng được Ban Quản Lý phê duyệt và công bố định kỳ.
             </span>
           </div>
 
           {rankingLoading && (
-            <div className="coach-loading-box">
-              <div className="portal-spinner" />
+            <div className="coach-loading-box" role="status" aria-busy="true">
+              <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 520, margin: '0 auto 12px' }}>
+                <div className="portal-skeleton" style={{ height: 48, borderRadius: 12 }} />
+                <div className="portal-skeleton" style={{ height: 48, borderRadius: 12 }} />
+              </div>
               <p>Đang tải dữ liệu xếp hạng và đánh giá...</p>
             </div>
           )}
@@ -837,7 +840,7 @@ export function CoachClassesPage() {
                 <div
                   style={{
                     background:
-                      'linear-gradient(135deg, rgba(206, 145, 128, 0.12) 0%, rgba(206, 145, 128, 0.03) 100%)',
+                      'linear-gradient(135deg, rgba(206, 145, 128, 0.14) 0%, rgba(206, 145, 128, 0.04) 100%)',
                     borderRadius: 20,
                     border: '1.5px solid var(--portal-salmon, #ce9180)',
                     padding: 28,
@@ -867,11 +870,11 @@ export function CoachClassesPage() {
                             : '🏅'}
                         </span>
                         <div>
-                          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
+                          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--portal-paper)' }}>
                             Hạng #{currentMonthReview.rankPosition} •{' '}
                             {currentMonthReview.badge || 'Huấn luyện viên tiêu biểu'}
                           </h3>
-                          <span style={{ fontSize: 13, color: 'var(--portal-text-secondary, #666)' }}>
+                          <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
                             Kỳ đánh giá tháng {currentMonthReview.month}/{currentMonthReview.year}
                           </span>
                         </div>
@@ -886,10 +889,10 @@ export function CoachClassesPage() {
                         fontWeight: 750,
                         background:
                           currentMonthReview.status === 'published'
-                            ? 'rgba(34, 100, 66, 0.12)'
-                            : 'rgba(217, 119, 6, 0.12)',
+                            ? 'rgba(34, 197, 94, 0.14)'
+                            : 'rgba(217, 119, 6, 0.14)',
                         color:
-                          currentMonthReview.status === 'published' ? '#226442' : '#d97706',
+                          currentMonthReview.status === 'published' ? 'var(--portal-success, #22c55e)' : '#d97706',
                       }}
                     >
                       {currentMonthReview.status === 'published'
@@ -909,13 +912,13 @@ export function CoachClassesPage() {
                   >
                     <div
                       style={{
-                        background: '#ffffff',
+                        background: 'var(--portal-surface)',
                         padding: '16px 20px',
                         borderRadius: 14,
-                        border: '1px solid rgba(0,0,0,0.06)',
+                        border: '1px solid var(--portal-border)',
                       }}
                     >
-                      <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 4 }}>
                         Điểm đánh giá trung bình
                       </div>
                       <div
@@ -926,45 +929,46 @@ export function CoachClassesPage() {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 6,
+                          fontVariantNumeric: 'tabular-nums',
                         }}
                       >
                         ⭐ {currentMonthReview.averageRating.toFixed(1)}
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#666' }}>/ 5.0</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--portal-muted)' }}>/ 5.0</span>
                       </div>
-                      <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                         từ {currentMonthReview.totalReviews} lượt đánh giá
                       </div>
                     </div>
 
                     <div
                       style={{
-                        background: '#ffffff',
+                        background: 'var(--portal-surface)',
                         padding: '16px 20px',
                         borderRadius: 14,
-                        border: '1px solid rgba(0,0,0,0.06)',
+                        border: '1px solid var(--portal-border)',
                       }}
                     >
-                      <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 4 }}>
                         Tổng số buổi dạy
                       </div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: '#2d3748' }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--portal-paper)', fontVariantNumeric: 'tabular-nums' }}>
                         {currentMonthReview.totalSessions}
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#666' }}> buổi</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--portal-muted)' }}> buổi</span>
                       </div>
-                      <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2 }}>
                         Lớp nhóm & kèm riêng 1:1
                       </div>
                     </div>
 
                     <div
                       style={{
-                        background: '#ffffff',
+                        background: 'var(--portal-surface)',
                         padding: '16px 20px',
                         borderRadius: 14,
-                        border: '1px solid rgba(0,0,0,0.06)',
+                        border: '1px solid var(--portal-border)',
                       }}
                     >
-                      <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 4 }}>
                         Mức thưởng tháng (Bonus)
                       </div>
                       <div
@@ -972,11 +976,12 @@ export function CoachClassesPage() {
                           fontSize: 22,
                           fontWeight: 800,
                           color: 'var(--portal-salmon, #ce9180)',
+                          fontVariantNumeric: 'tabular-nums',
                         }}
                       >
                         {formatPrice(currentMonthReview.bonusAmount)}
                       </div>
-                      <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2 }}>
                         Được duyệt bởi Ban Quản Lý
                       </div>
                     </div>
@@ -986,10 +991,10 @@ export function CoachClassesPage() {
                   {currentMonthReview.managerFeedback && (
                     <div
                       style={{
-                        background: '#ffffff',
+                        background: 'var(--portal-surface)',
                         padding: '18px 22px',
                         borderRadius: 14,
-                        borderLeft: '4px solid var(--portal-salmon, #ce9180)',
+                        border: '1px solid rgba(206, 145, 128, 0.36)',
                       }}
                     >
                       <span
@@ -1008,7 +1013,7 @@ export function CoachClassesPage() {
                           margin: 0,
                           fontSize: 14,
                           lineHeight: 1.6,
-                          color: '#333',
+                          color: 'var(--portal-paper)',
                           fontStyle: 'italic',
                         }}
                       >
@@ -1020,14 +1025,14 @@ export function CoachClassesPage() {
               ) : (
                 <div
                   style={{
-                    background: '#ffffff',
+                    background: 'var(--portal-surface)',
                     padding: '24px 32px',
                     borderRadius: 16,
-                    border: '1px dashed var(--portal-border, rgba(0,0,0,0.15))',
+                    border: '1px dashed var(--portal-border-strong, var(--portal-border))',
                     textAlign: 'center',
                   }}
                 >
-                  <p style={{ margin: 0, color: '#666' }}>
+                  <p style={{ margin: 0, color: 'var(--portal-muted)' }}>
                     Chưa có bản tổng kết hiệu suất riêng cho tháng {reviewMonth}/{reviewYear}.
                     Quản lý sẽ tổng hợp và công bố vào cuối kỳ!
                   </p>
@@ -1037,23 +1042,23 @@ export function CoachClassesPage() {
               {/* Leaderboard Section */}
               <div
                 style={{
-                  background: 'var(--portal-card-bg, #ffffff)',
+                  background: 'var(--portal-surface)',
                   borderRadius: 20,
-                  border: '1px solid var(--portal-border, rgba(0,0,0,0.08))',
+                  border: '1px solid var(--portal-border)',
                   padding: 24,
                 }}
               >
                 <div style={{ marginBottom: 18 }}>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--portal-paper)' }}>
                     🏆 Bảng vinh danh top huấn luyện viên tháng {reviewMonth}/{reviewYear}
                   </h3>
-                  <span style={{ fontSize: 13, color: '#666' }}>
+                  <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
                     Danh sách các HLV có điểm đánh giá xuất sắc nhất toàn hệ thống
                   </span>
                 </div>
 
                 {leaderboard.length === 0 ? (
-                  <p style={{ margin: 0, color: '#666', fontStyle: 'italic' }}>
+                  <p style={{ margin: 0, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
                     Chưa có bảng xếp hạng chính thức cho tháng này.
                   </p>
                 ) : (
@@ -1070,11 +1075,11 @@ export function CoachClassesPage() {
                             padding: '14px 20px',
                             borderRadius: 14,
                             background: isMe
-                              ? 'linear-gradient(135deg, rgba(206, 145, 128, 0.15) 0%, rgba(206, 145, 128, 0.05) 100%)'
-                              : 'var(--portal-bg, #fcfbfa)',
+                              ? 'linear-gradient(135deg, rgba(206, 145, 128, 0.16) 0%, rgba(206, 145, 128, 0.05) 100%)'
+                              : 'var(--portal-raised)',
                             border: isMe
                               ? '1.5px solid var(--portal-salmon, #ce9180)'
-                              : '1px solid rgba(0,0,0,0.05)',
+                              : '1px solid var(--portal-border)',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -1089,15 +1094,16 @@ export function CoachClassesPage() {
                                 justifyContent: 'center',
                                 fontWeight: 800,
                                 fontSize: 14,
+                                fontVariantNumeric: 'tabular-nums',
                                 background:
                                   item.rankPosition === 1
-                                    ? '#fef08a'
+                                    ? 'rgba(234, 179, 8, 0.2)'
                                     : item.rankPosition === 2
-                                    ? '#e2e8f0'
+                                    ? 'rgba(148, 163, 184, 0.2)'
                                     : item.rankPosition === 3
-                                    ? '#fed7aa'
-                                    : '#f1f5f9',
-                                color: '#1e293b',
+                                    ? 'rgba(217, 119, 6, 0.2)'
+                                    : 'var(--portal-surface)',
+                                color: 'var(--portal-paper)',
                               }}
                             >
                               {item.rankPosition === 1
@@ -1110,7 +1116,7 @@ export function CoachClassesPage() {
                             </span>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontWeight: 750, fontSize: 15 }}>
+                                <span style={{ fontWeight: 750, fontSize: 15, color: 'var(--portal-paper)' }}>
                                   {item.coachName}
                                 </span>
                                 {isMe && (
@@ -1121,14 +1127,14 @@ export function CoachClassesPage() {
                                       padding: '2px 8px',
                                       borderRadius: 99,
                                       background: 'var(--portal-salmon, #ce9180)',
-                                      color: '#fff',
+                                      color: 'var(--portal-ink, #202020)',
                                     }}
                                   >
                                     Bạn
                                   </span>
                                 )}
                               </div>
-                              <span style={{ fontSize: 12, color: '#666' }}>
+                              <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
                                 {item.coachSpecialization || 'Huấn luyện viên cá nhân'}
                                 {item.badge && ` • 🎖️ ${item.badge}`}
                               </span>
@@ -1144,10 +1150,10 @@ export function CoachClassesPage() {
                             }}
                           >
                             <div>
-                              <div style={{ fontWeight: 800, color: '#eab308', fontSize: 15 }}>
+                              <div style={{ fontWeight: 800, color: '#eab308', fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>
                                 ⭐ {item.averageRating.toFixed(1)}
                               </div>
-                              <div style={{ fontSize: 11, color: '#888' }}>
+                              <div style={{ fontSize: 11, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
                                 {item.totalReviews} đánh giá
                               </div>
                             </div>
@@ -1157,11 +1163,12 @@ export function CoachClassesPage() {
                                   fontWeight: 750,
                                   color: 'var(--portal-salmon, #ce9180)',
                                   fontSize: 14,
+                                  fontVariantNumeric: 'tabular-nums',
                                 }}
                               >
                                 {formatPrice(item.bonusAmount)}
                               </div>
-                              <div style={{ fontSize: 11, color: '#888' }}>Thưởng tháng</div>
+                              <div style={{ fontSize: 11, color: 'var(--portal-muted)' }}>Thưởng tháng</div>
                             </div>
                           </div>
                         </div>
@@ -1174,17 +1181,17 @@ export function CoachClassesPage() {
               {/* Student Reviews Section */}
               <div
                 style={{
-                  background: 'var(--portal-card-bg, #ffffff)',
+                  background: 'var(--portal-surface)',
                   borderRadius: 20,
-                  border: '1px solid var(--portal-border, rgba(0,0,0,0.08))',
+                  border: '1px solid var(--portal-border)',
                   padding: 24,
                 }}
               >
                 <div style={{ marginBottom: 18 }}>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--portal-paper)' }}>
                     💬 Đánh giá & nhận xét trực tiếp từ học viên
                   </h3>
-                  <span style={{ fontSize: 13, color: '#666' }}>
+                  <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
                     Phản hồi thực tế từ hội viên sau các buổi học và buổi kèm riêng PT 1:1
                   </span>
                 </div>
@@ -1201,8 +1208,8 @@ export function CoachClassesPage() {
                         style={{
                           padding: '16px 20px',
                           borderRadius: 14,
-                          background: 'var(--portal-bg, #fcfbfa)',
-                          border: '1px solid rgba(0,0,0,0.05)',
+                          background: 'var(--portal-raised)',
+                          border: '1px solid var(--portal-border)',
                         }}
                       >
                         <div
@@ -1214,7 +1221,7 @@ export function CoachClassesPage() {
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontWeight: 750, fontSize: 14 }}>
+                            <span style={{ fontWeight: 750, fontSize: 14, color: 'var(--portal-paper)' }}>
                               {rev.isAnonymous ? '👤 Hội viên ẩn danh' : rev.memberName}
                             </span>
                             <span
@@ -1224,8 +1231,8 @@ export function CoachClassesPage() {
                                 borderRadius: 99,
                                 background: rev.bookingId
                                   ? 'rgba(206, 145, 128, 0.15)'
-                                  : 'rgba(34, 100, 66, 0.12)',
-                                color: rev.bookingId ? 'var(--portal-salmon, #ce9180)' : '#226442',
+                                  : 'rgba(34, 197, 94, 0.14)',
+                                color: rev.bookingId ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-success, #22c55e)',
                                 fontWeight: 700,
                               }}
                             >
@@ -1238,18 +1245,18 @@ export function CoachClassesPage() {
                               {'★'.repeat(rev.rating)}
                               {'☆'.repeat(5 - rev.rating)}
                             </span>
-                            <span style={{ fontSize: 12, color: '#888' }}>
+                            <span style={{ fontSize: 12, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
                               {new Date(rev.createdAt).toLocaleDateString('vi-VN')}
                             </span>
                           </div>
                         </div>
 
                         {rev.comment ? (
-                          <p style={{ margin: 0, fontSize: 14, color: '#333', lineHeight: 1.5 }}>
+                          <p style={{ margin: 0, fontSize: 14, color: 'var(--portal-paper)', lineHeight: 1.5 }}>
                             "{rev.comment}"
                           </p>
                         ) : (
-                          <span style={{ fontSize: 13, color: '#999', fontStyle: 'italic' }}>
+                          <span style={{ fontSize: 13, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
                             (Học viên không để lại lời bình luận)
                           </span>
                         )}

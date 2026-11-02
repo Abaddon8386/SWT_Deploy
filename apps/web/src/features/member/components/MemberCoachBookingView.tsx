@@ -495,7 +495,7 @@ export function MemberCoachBookingView({
                   borderColor: isSelected ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-border, #e4e2de)',
                   background: isSelected ? 'rgba(206, 145, 128, 0.12)' : 'var(--portal-surface, #ffffff)',
                   boxShadow: isSelected ? '0 0 0 2px var(--portal-salmon, #ce9180)' : undefined,
-                  transition: 'all 180ms ease',
+                  transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
                 }}
               >
                 <img
@@ -1076,7 +1076,7 @@ export function MemberCoachBookingView({
               </label>
               <textarea
                 rows={3}
-                className="input"
+                className="portal-input"
                 placeholder="Ví dụ: Muốn tập trung cơ bụng và lưng, từng đau khớp gối nhẹ..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
