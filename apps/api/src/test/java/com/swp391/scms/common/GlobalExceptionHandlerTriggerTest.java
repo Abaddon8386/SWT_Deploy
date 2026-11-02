@@ -39,6 +39,14 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String MEMBERSHIP_VI = "Gói tập của hội viên chưa được kích hoạt hoặc đã hết hạn";
     private static final String MEMBERSHIP_EN = "Member has no active or unexpired subscription";
 
+    @Test
+    void scheduleContentionReturnsRetryableConflict() {
+        var response = new GlobalExceptionHandler().handleDataIntegrity(
+                new DataIntegrityViolationException("trg_pt_schedule_busy"));
+        org.junit.jupiter.api.Assertions.assertEquals(409, response.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("SCHEDULE_UPDATE_IN_PROGRESS", response.getBody().getCode());
+    }
+
     @ParameterizedTest
     @MethodSource("triggerFailures")
     void preservesPostgresTriggerResponses(TriggerFailure trigger, String databaseMessage, String language) throws Exception {

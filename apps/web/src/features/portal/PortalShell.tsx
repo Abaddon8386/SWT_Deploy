@@ -38,8 +38,14 @@ export function PortalShell() {
   const mainRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   const isMember = user?.role === 'MEMBER';
+  const isCoach = user?.role === 'COACH';
+  const canReceiveNotifications = isMember || isCoach;
   const profileLabel = isMember ? 'Hồ sơ & Sức khỏe' : 'Hồ sơ cá nhân';
-  const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => item.to === '/member/profile' ? { ...item, label: profileLabel } : item);
+  const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => {
+    if (item.to === '/member/profile') return { ...item, label: profileLabel };
+    if (item.to === '/staff/classes' && user?.role === 'STAFF') return { ...item, label: 'Xem lịch học trung tâm' };
+    return item;
+  });
   const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? 'Không gian của bạn';
   const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
   const mobileItems = user ? MOBILE_PRIMARY_NAV[user.role].flatMap(item => {
@@ -49,7 +55,7 @@ export function PortalShell() {
   const secondaryScreen = !mobileItems.some(item => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
 
   useEffect(() => {
-    if (!isMember) return;
+    if (!canReceiveNotifications) return;
     let active = true;
     const refresh = () => {
       void getUnreadCount().then((count) => {
@@ -66,7 +72,7 @@ export function PortalShell() {
       window.removeEventListener('member-notifications-changed', refresh);
       window.removeEventListener('focus', refresh);
     };
-  }, [isMember]);
+  }, [canReceiveNotifications]);
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -83,11 +89,11 @@ export function PortalShell() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (isMember && location.state?.openNotifications) {
+    if (canReceiveNotifications && location.state?.openNotifications) {
       setDialog('notifications');
       navigate(location.pathname, { replace: true, state: null });
     }
-  }, [isMember, location.state, location.pathname, navigate]);
+  }, [canReceiveNotifications, location.state, location.pathname, navigate]);
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -132,7 +138,7 @@ export function PortalShell() {
           </div>
           <div className="portal-topbar-actions">
             <ThemeToggle />
-            {isMember && <button type="button" onClick={openNotifications} aria-haspopup="dialog" aria-expanded={dialog === 'notifications'} aria-controls="portal-notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${unreadCount ?? 0} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
+            {canReceiveNotifications && <button type="button" onClick={openNotifications} aria-haspopup="dialog" aria-expanded={dialog === 'notifications'} aria-controls="portal-notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${unreadCount ?? 0} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
               <PortalIcon name="bell" size={19} />
               {unreadCount !== null && unreadCount > 0 && <span className="member-notification-badge" aria-hidden="true">{unreadCount > 99 ? '99+' : unreadCount}</span>}
             </button>}
@@ -163,7 +169,7 @@ export function PortalShell() {
       </nav>
 
       {location.pathname !== '/member/check-in' && location.pathname !== '/messages' && <ChatWidget />}
-      {isMember && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
+      {canReceiveNotifications && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
       {dialog === 'logout' && <Modal title="Đăng xuất khỏi SÖL?" onClose={() => setDialog(null)}>
         <p className="portal-subtitle">Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.</p>
         <div className="form-actions" style={{ marginTop: 24 }}>

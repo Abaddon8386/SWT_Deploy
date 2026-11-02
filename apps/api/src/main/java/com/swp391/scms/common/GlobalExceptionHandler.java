@@ -193,6 +193,12 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
+            if (normalizedRootMsg.contains("trg_pt_schedule_busy")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULE_UPDATE_IN_PROGRESS",
+                                resolveMessage("error.scheduling.update_in_progress", "error.scheduling.update_in_progress"))
+                );
+            }
             if (normalizedRootMsg.contains("trg_enrollments_check_capacity")
                     || normalizedRootMsg.contains("lớp học đã đầy chỗ (vượt quá capacity cho phép).")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(

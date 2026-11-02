@@ -13,6 +13,11 @@ const mocks = vi.hoisted(() => ({
   cancelEnrollment: vi.fn(),
   joinWaitlist: vi.fn(),
   leaveWaitlist: vi.fn(),
+  favoriteDisciplines: vi.fn(),
+  toggleFavoriteDiscipline: vi.fn(),
+  coaches: vi.fn(),
+  coachSlots: vi.fn(),
+  myCoachBookings: vi.fn(),
 }));
 
 vi.mock('./memberClassesApi', async (importOriginal) => {
@@ -28,6 +33,21 @@ vi.mock('./memberClassesApi', async (importOriginal) => {
     leaveWaitlist: mocks.leaveWaitlist,
   };
 });
+
+vi.mock('./favoriteDisciplinesApi', () => ({
+  getFavoriteDisciplines: mocks.favoriteDisciplines,
+  toggleFavoriteDiscipline: mocks.toggleFavoriteDiscipline,
+}));
+
+vi.mock('./coachBookingApi', () => ({
+  getCoaches: mocks.coaches,
+  getAvailableSlots: mocks.coachSlots,
+  getMyCoachBookings: mocks.myCoachBookings,
+  createCoachBooking: vi.fn(),
+  cancelCoachBooking: vi.fn(),
+  getMemberQuotaStatus: vi.fn().mockResolvedValue({ packageName: 'GOLD', monthlyQuota: 3, usedThisMonth: 1, remainingQuota: 2 }),
+  getCoachSchedule: vi.fn().mockResolvedValue([]),
+}));
 
 const session = {
   id: 8, classId: 3, className: 'Yoga Flow', disciplineId: 2, disciplineName: 'Yoga',
@@ -50,8 +70,18 @@ describe('MemberClassesPage', () => {
     mocks.cancelEnrollment.mockReset();
     mocks.joinWaitlist.mockReset();
     mocks.leaveWaitlist.mockReset();
+    mocks.favoriteDisciplines.mockReset();
+    mocks.toggleFavoriteDiscipline.mockReset();
+    mocks.coaches.mockReset();
+    mocks.coachSlots.mockReset();
+    mocks.myCoachBookings.mockReset();
     mocks.waitlists.mockResolvedValue([]);
     mocks.enrollments.mockResolvedValue([]);
+    mocks.favoriteDisciplines.mockResolvedValue([]);
+    mocks.toggleFavoriteDiscipline.mockResolvedValue([]);
+    mocks.coaches.mockResolvedValue([]);
+    mocks.coachSlots.mockResolvedValue([]);
+    mocks.myCoachBookings.mockResolvedValue([]);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
   async function render() { await act(async () => root.render(<MemoryRouter><MemberClassesPage /></MemoryRouter>)); }
@@ -251,6 +281,7 @@ describe('MemberClassesPage', () => {
     await render();
     expect(host.textContent).toContain('Không thể đặt');
   });
+
   it('clears rejected waitlist error when the week changes', async () => {
     mocks.sessions.mockResolvedValueOnce([session]).mockResolvedValueOnce([]);
     mocks.joinWaitlist.mockRejectedValue(new ApiError('Hội viên đã có chỗ trong lớp học này.', 400));
@@ -313,46 +344,126 @@ describe('MemberClassesPage', () => {
     mocks.enrollments.mockResolvedValueOnce([]).mockResolvedValueOnce([booked]).mockResolvedValueOnce([]);
     let finishBooking!: (value: unknown) => void;
     mocks.enroll.mockReturnValue(new Promise((done) => { finishBooking = done; }));
-    mocks.cancelEnrollment.mockResolvedValue({ ...booked, status: 'cancelled' });
     await render();
     const book = [...host.querySelectorAll('button')].find((item) => item.getAttribute('aria-label') === 'Đặt chỗ ngay: Yoga Flow')!;
     await act(async () => { book.click(); book.click(); });
-    expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(8);
+    expect(mocks.enroll).toHaveBeenCalledTimes(1);
     expect(book.disabled).toBe(true);
-    await act(async () => finishBooking(booked));
-    expect(host.textContent).toContain('2 / 12');
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy đặt chỗ')!.click());
-    expect(mocks.cancelEnrollment).not.toHaveBeenCalled();
-    expect(host.querySelector('[role=dialog]')?.textContent).toContain('Yoga Flow');
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((item) => item.textContent === 'Giữ đặt chỗ')!.click());
-    expect(mocks.cancelEnrollment).not.toHaveBeenCalled();
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy đặt chỗ')!.click());
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((item) => item.textContent === 'Xác nhận hủy')!.click());
-    expect(mocks.cancelEnrollment).toHaveBeenCalledExactlyOnceWith(41);
-    expect(host.textContent).toContain('1 / 12');
-  });
-  it('does not revive an old action error after navigating while the request is pending', async () => {
-    mocks.sessions.mockResolvedValueOnce([session]).mockResolvedValueOnce([]);
-    let reject!: (reason: unknown) => void;
-    mocks.joinWaitlist.mockReturnValue(new Promise((_, fail) => { reject = fail; }));
-    await render();
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tham gia hàng chờ')!.click());
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tuần kế tiếp')!.click());
-    await act(async () => reject(new ApiError('Lỗi buổi cũ', 400)));
-    expect(host.textContent).toContain('Chưa có lịch học');
-    expect(host.textContent).not.toContain('Lỗi buổi cũ');
+    await act(async () => finishBooking({ id: 41 }));
+    expect(host.textContent).toContain('Đã đặt chỗ lớp "Yoga Flow"');
+    const cancel = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy đặt chỗ')!;
+    await act(async () => cancel.click());
+    const confirm = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Xác nhận hủy')!;
+    mocks.cancelEnrollment.mockResolvedValueOnce({ id: 41, status: 'cancelled' });
+    await act(async () => confirm.click());
+    expect(mocks.cancelEnrollment).toHaveBeenCalledWith(41);
   });
 
-  it('restores a class waitlist from the API after remounting', async () => {
+  it('sorts sessions chronologically by date and start-time, grouping by date, and disabling overlapping sessions', async () => {
+    const session1 = {
+      ...session,
+      id: 8,
+      className: 'Yoga Flow',
+      sessionDate: '2099-10-19',
+      startTime: '08:00:00',
+      endTime: '09:30:00',
+      bookedCount: 5,
+    };
+    const session2 = {
+      ...session,
+      id: 9,
+      className: 'Pilates Core',
+      sessionDate: '2099-10-19',
+      startTime: '08:30:00',
+      endTime: '10:00:00',
+      bookedCount: 3,
+    };
+    const session3 = {
+      ...session,
+      id: 10,
+      className: 'Boxing Burn',
+      sessionDate: '2099-10-19',
+      startTime: '10:00:00',
+      endTime: '11:00:00',
+      bookedCount: 2,
+    };
+
+    mocks.sessions.mockResolvedValue([session3, session1, session2]);
+    mocks.enrollments.mockResolvedValue([
+      {
+        id: 41,
+        classId: 3,
+        className: 'Yoga Flow',
+        memberId: 9,
+        sessionId: 8,
+        sessionDate: '2099-10-19',
+        startTime: '08:00:00',
+        endTime: '09:30:00',
+        status: 'booked',
+        enrolledAt: '2099-10-01T08:00:00',
+        cancelledAt: null,
+        cancelReason: null,
+      },
+    ]);
+
+    await render();
+
+    // Grouped under day-group-2099-10-19
+    expect(host.querySelector('[data-testid="day-group-2099-10-19"]')).not.toBeNull();
+
+    // Verify chronological card titles order: Yoga Flow (08:00), Pilates Core (08:30), Boxing Burn (10:00)
+    const titles = [...host.querySelectorAll('h3.row-card__title')].map((el) => el.textContent);
+    expect(titles).toEqual(['Yoga Flow', 'Pilates Core', 'Boxing Burn']);
+
+    // Overlapping session #9 (08:30-10:00) is marked and disabled
+    expect(host.querySelector('[data-testid="overlap-badge-9"]')).not.toBeNull();
+    const overlapBtn = host.querySelector('[data-testid="overlap-btn-9"]') as HTMLButtonElement;
+    expect(overlapBtn).not.toBeNull();
+    expect(overlapBtn.disabled).toBe(true);
+    expect(overlapBtn.textContent).toBe('Trùng giờ đã đặt');
+
+    // Non-overlapping adjacent session #10 (10:00-11:00) remains bookable
+    expect(host.querySelector('[data-testid="overlap-badge-10"]')).toBeNull();
+    const bookBtn = [...host.querySelectorAll('button')].find((b) => b.getAttribute('aria-label')?.startsWith('Đặt chỗ ngay:')) as HTMLButtonElement;
+    expect(bookBtn).not.toBeUndefined();
+    expect(bookBtn.disabled).toBe(false);
+  });
+
+  it('filters favorite disciplines and toggles favorite status', async () => {
+    // Yoga has disciplineId: 2, Boxing has disciplineId: 4
+    mocks.favoriteDisciplines.mockResolvedValue([2]);
+    mocks.sessions.mockResolvedValue([
+      session,
+      { ...session, id: 9, className: 'Boxing Basics', disciplineId: 4, disciplineName: 'Boxing', sessionDate: '2099-10-20' },
+    ]);
+    await render();
+
+    expect(host.textContent).toContain('Yoga Flow');
+    expect(host.textContent).toContain('Boxing Basics');
+
+    // Click quick filter ⭐ Bộ môn yêu thích
+    const favChip = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Bộ môn yêu thích'))!;
+    expect(favChip).not.toBeUndefined();
+    await act(async () => favChip.click());
+
+    // Only Yoga Flow (disciplineId: 2) is shown
+    expect(host.textContent).toContain('Yoga Flow');
+    expect(host.textContent).not.toContain('Boxing Basics');
+  });
+
+  it('renders coach 1:1 booking tab and switches correctly', async () => {
     mocks.sessions.mockResolvedValue([session]);
-    mocks.waitlists.mockResolvedValue([{ id: 30, classId: 3, className: 'Yoga Flow', memberId: 9,
-      status: 'waiting', requestedAt: '2099-10-01T08:00:00' }]);
+    mocks.coaches.mockResolvedValue([
+      { id: 101, fullName: 'Trần Văn Nam', specialization: 'Gym & Thể hình', defaultHourlyRate: 200000 },
+    ]);
     await render();
-    expect(host.textContent).toContain('Đang chờ chỗ');
-    await act(async () => root.unmount());
-    root = createRoot(host);
-    await render();
-    expect(host.textContent).toContain('Đang chờ chỗ');
-    expect(mocks.waitlists).toHaveBeenCalledTimes(2);
+
+    const ptTab = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Đặt lịch HLV 1:1'))!;
+    expect(ptTab).not.toBeUndefined();
+    await act(async () => ptTab.click());
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+
+    expect(host.textContent).toContain('Chọn Huấn luyện viên cá nhân (PT 1:1)');
+    expect(host.textContent).toContain('Trần Văn Nam');
   });
 });

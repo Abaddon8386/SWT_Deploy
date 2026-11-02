@@ -25,6 +25,17 @@ export const router = createBrowserRouter([
         children: [{ path: '/messages', lazy: async () => ({ Component: (await import('../features/chat/ChatPage')).ChatPage }) }],
       },
 
+      // Notifications (Shared between Member & Coach)
+      {
+        element: <RoleGuard allowedRoles={['MEMBER', 'COACH']} />,
+        children: [
+          {
+            path: '/member/notifications',
+            lazy: async () => ({ Component: (await import('../features/member/MemberNotificationsPage')).MemberNotificationsPage }),
+          },
+        ],
+      },
+
       // Member-only Routes
       {
         element: <RoleGuard allowedRoles={['MEMBER']} />,
@@ -180,6 +191,10 @@ export const router = createBrowserRouter([
           {
             path: '/manager/audit-logs',
             lazy: async () => ({ Component: (await import('../features/manager/ManagerAuditLogsPage')).ManagerAuditLogsPage }),
+          },
+          {
+            path: '/manager/coach-reviews',
+            lazy: async () => ({ Component: (await import('../features/manager/ManagerCoachReviewsPage')).ManagerCoachReviewsPage }),
           },
         ],
       },

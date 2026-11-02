@@ -23,10 +23,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * SCRUM-74: smart waitlist for full classes.
- *
- * <p>Only the underlying API is in scope here. The automatic promotion/handover and the
- * 24h expiry window belong to Sprint 3 (SCRUM-112).
+ * SCRUM-74 & SCRUM-132: smart waitlist for full classes with schedule-overlap check.
  */
 @Service
 public class WaitlistService {
@@ -62,7 +59,8 @@ public class WaitlistService {
     }
 
     /**
-     * SCRUM-74 BR-01..BR-03: join the waitlist only when the class is full.
+     * SCRUM-74 BR-01..BR-03 & SCRUM-132: join the waitlist only when the class is full
+     * and the member does not have an overlapping booking or waitlist in another class.
      */
     @Transactional
     public WaitlistDto join(AuthenticatedPrincipal principal, Long sessionId) {
@@ -93,6 +91,11 @@ public class WaitlistService {
                     "error.scheduling.waitlist_already_booked",
                     null,
                     "Member already holds a booking for this class");
+        }
+
+        // SCRUM-132: Chặn Hội viên đăng ký chờ lớp trùng giờ với lớp đã đặt / đang chờ khác
+        if (enrollmentService != null) {
+            enrollmentService.ensureNoMemberScheduleOverlap(member.getUserId(), session, gymClass.getId());
         }
 
         // BR-01: only allowed when there is no free seat (taking active reservations into account).

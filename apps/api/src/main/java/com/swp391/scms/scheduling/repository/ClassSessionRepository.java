@@ -72,4 +72,24 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findScheduledSessionsBetweenDates(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    @Query("""
+            select s from ClassSession s
+            where s.gymClass.coach.userId = :coachId
+              and s.sessionDate = :date
+              and s.status = 'scheduled'
+            """)
+    List<ClassSession> findActiveByCoachAndDate(@Param("coachId") Long coachId, @Param("date") LocalDate date);
+
+    @Query("""
+            select s from ClassSession s
+            where s.gymClass.coach.userId = :coachId
+            """)
+    List<ClassSession> findByCoachId(@Param("coachId") Long coachId);
+
+    void deleteByGymClassId(Long classId);
+    @Query("select s from ClassSession s where s.status = 'scheduled' and s.sessionDate = :date " +
+            "and exists (select e.id from ClassEnrollment e where e.gymClass = s.gymClass " +
+            "and e.member.userId = :memberId and e.status = 'booked')")
+    List<ClassSession> findActiveByMemberAndDate(@Param("memberId") Long memberId, @Param("date") LocalDate date);
 }

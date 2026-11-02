@@ -352,4 +352,58 @@ class SchedulingServiceTest {
         assertEquals("booked", result.status());
         assertEquals("expired", holdingReservation.getStatus());
     }
+
+    @Test
+    void enrollRejectsWhenMemberAlreadyBookedOverlappingSession() {
+        GymClass otherClass = new GymClass();
+        ReflectionTestUtils.setField(otherClass, "id", 88L);
+        otherClass.setName("Boxing Burn");
+
+        ClassSession otherSession = new ClassSession();
+        ReflectionTestUtils.setField(otherSession, "id", 99L);
+        otherSession.setGymClass(otherClass);
+        otherSession.setSessionDate(TODAY.plusDays(1));
+        otherSession.setStartTime(LocalTime.of(13, 30));
+        otherSession.setEndTime(LocalTime.of(14, 30));
+        otherSession.setStatus("scheduled");
+
+        ClassEnrollment existingBooked = new ClassEnrollment();
+        existingBooked.setGymClass(otherClass);
+        existingBooked.setStatus("booked");
+
+        when(enrollments.findByMemberUserId(MEMBER.id()))
+                .thenReturn(List.of(existingBooked));
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(88L))
+                .thenReturn(List.of(otherSession));
+
+        ConflictException ex = assertThrows(ConflictException.class, () -> enrollmentService.enroll(MEMBER, 9L));
+        assertEquals("SCHEDULING_MEMBER_TIME_OVERLAP", ex.getErrorCode());
+    }
+
+    @Test
+    void waitlistJoinRejectsWhenMemberAlreadyBookedOverlappingSession() {
+        GymClass otherClass = new GymClass();
+        ReflectionTestUtils.setField(otherClass, "id", 88L);
+        otherClass.setName("Pilates Core");
+
+        ClassSession otherSession = new ClassSession();
+        ReflectionTestUtils.setField(otherSession, "id", 99L);
+        otherSession.setGymClass(otherClass);
+        otherSession.setSessionDate(TODAY.plusDays(1));
+        otherSession.setStartTime(LocalTime.of(12, 30));
+        otherSession.setEndTime(LocalTime.of(13, 30));
+        otherSession.setStatus("scheduled");
+
+        ClassEnrollment existingBooked = new ClassEnrollment();
+        existingBooked.setGymClass(otherClass);
+        existingBooked.setStatus("booked");
+
+        when(enrollments.findByMemberUserId(MEMBER.id()))
+                .thenReturn(List.of(existingBooked));
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(88L))
+                .thenReturn(List.of(otherSession));
+
+        ConflictException ex = assertThrows(ConflictException.class, () -> waitlistService.join(MEMBER, 9L));
+        assertEquals("SCHEDULING_MEMBER_TIME_OVERLAP", ex.getErrorCode());
+    }
 }

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { PortalIcon } from '../portal/PortalIcon';
 import { ApiError } from '../../shared/api/client';
+import { MemberCoachBookingView } from './components/MemberCoachBookingView';
+import { getFavoriteDisciplines, toggleFavoriteDiscipline } from './favoriteDisciplinesApi';
 import { PRIMARY_DISCIPLINES } from '../../shared/lib/disciplines';
 import {
   cancelEnrollment,
@@ -50,14 +52,79 @@ function formatShortDate(iso: string): string {
   return d && m && y ? `${d}/${m}/${y}` : iso;
 }
 
+const DAY_NAMES_VI: Record<number, string> = {
+  0: 'Chủ nhật',
+  1: 'Thứ Hai',
+  2: 'Thứ Ba',
+  3: 'Thứ Tư',
+  4: 'Thứ Năm',
+  5: 'Thứ Sáu',
+  6: 'Thứ Bảy',
+};
+
+function formatDayGroupLabel(iso: string): string {
+  const parsed = new Date(`${iso}T00:00:00`);
+  const dayLabel = Number.isNaN(parsed.getTime()) ? '' : DAY_NAMES_VI[parsed.getDay()] ?? '';
+  return dayLabel ? `${dayLabel} • ${formatShortDate(iso)}` : formatShortDate(iso);
+}
+
+function findOverlappingEnrollment(
+  targetSession: ClassSessionDto,
+  activeEnrollments: EnrollmentDto[],
+  allSessions: ClassSessionDto[],
+): { className: string; startTime: string; endTime: string } | null {
+  const targetStart = targetSession.startTime.slice(0, 5);
+  const targetEnd = targetSession.endTime.slice(0, 5);
+  for (const enrollment of activeEnrollments) {
+    if (enrollment.sessionId ? enrollment.sessionId === targetSession.id : enrollment.classId === targetSession.classId) {
+      continue;
+    }
+    const matchedSession =
+      enrollment.sessionDate && enrollment.startTime && enrollment.endTime
+        ? {
+            sessionDate: enrollment.sessionDate,
+            startTime: enrollment.startTime,
+            endTime: enrollment.endTime,
+          }
+        : allSessions.find(
+            (s) =>
+              s.id === enrollment.sessionId ||
+              (enrollment.sessionId === null && s.classId === enrollment.classId && s.sessionDate === targetSession.sessionDate),
+          );
+    if (!matchedSession || matchedSession.sessionDate !== targetSession.sessionDate) {
+      continue;
+    }
+    const otherStart = matchedSession.startTime.slice(0, 5);
+    const otherEnd = matchedSession.endTime.slice(0, 5);
+    if (targetStart < otherEnd && targetEnd > otherStart) {
+      return {
+        className: enrollment.className,
+        startTime: otherStart,
+        endTime: otherEnd,
+      };
+    }
+  }
+  return null;
+}
+
 export function MemberClassesPage() {
-  const [tab, setTab] = useState<'schedule' | 'my'>('schedule');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const [tab, setTab] = useState<'schedule' | 'coach_booking' | 'my'>(
+    initialTab === 'coach' || initialTab === 'pt' || initialTab === 'coach_booking'
+      ? 'coach_booking'
+      : initialTab === 'my'
+      ? 'my'
+      : 'schedule',
+  );
   const [weekOffset, setWeekOffset] = useState<0 | 1>(0);
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
   const [waitlists, setWaitlists] = useState<WaitlistDto[]>([]);
   const [discipline, setDiscipline] = useState('ALL');
   const [day, setDay] = useState('ALL');
+  const [favoriteDisciplineIds, setFavoriteDisciplineIds] = useState<number[]>([]);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [visibleCount, setVisibleCount] = useState(SESSION_BATCH_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,6 +145,39 @@ export function MemberClassesPage() {
     actionGenRef.current += 1;
     setActionError('');
     setNotice('');
+  }
+
+  function handleSelectTab(nextTab: 'schedule' | 'coach_booking' | 'my') {
+    clearActionFeedback();
+    setTab(nextTab);
+    const params = new URLSearchParams(searchParams);
+    if (nextTab === 'coach_booking') {
+      params.set('tab', 'pt');
+    } else if (nextTab === 'my') {
+      params.set('tab', 'my');
+    } else {
+      params.delete('tab');
+    }
+    setSearchParams(params, { replace: true });
+  }
+
+  useEffect(() => {
+    let active = true;
+    void getFavoriteDisciplines()
+      .then((ids) => {
+        if (active) setFavoriteDisciplineIds(ids);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  async function handleToggleFavorite(disciplineId: number) {
+    try {
+      const updated = await toggleFavoriteDiscipline(disciplineId);
+      setFavoriteDisciplineIds(updated);
+    } catch {
+      // Handled gracefully in favoriteDisciplinesApi
+    }
   }
 
   useEffect(() => {
@@ -125,6 +225,18 @@ export function MemberClassesPage() {
   async function handleEnroll(session: ClassSessionDto, waitlistId?: number) {
     const key = `session-${session.id}`;
     if (busyRef.current || !myScheduleReady) return;
+    const overlap = findOverlappingEnrollment(
+      session,
+      enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled'),
+      sessions,
+    );
+    if (overlap) {
+      setNotice('');
+      setActionError(
+        `Trùng giờ học: Bạn đã đặt chỗ lớp "${overlap.className}" (${overlap.startTime}–${overlap.endTime}) ngày ${formatShortDate(session.sessionDate)}. Không thể đặt hai lớp học chồng chéo thời gian.`,
+      );
+      return;
+    }
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
@@ -152,6 +264,18 @@ export function MemberClassesPage() {
   async function handleJoinWaitlist(session: ClassSessionDto) {
     const key = `session-${session.id}`;
     if (busyRef.current || !myScheduleReady) return;
+    const overlap = findOverlappingEnrollment(
+      session,
+      enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled'),
+      sessions,
+    );
+    if (overlap) {
+      setNotice('');
+      setActionError(
+        `Trùng giờ học: Bạn đã đặt chỗ lớp "${overlap.className}" (${overlap.startTime}–${overlap.endTime}) ngày ${formatShortDate(session.sessionDate)}. Không thể tham gia hàng chờ lớp trùng giờ.`,
+      );
+      return;
+    }
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
@@ -229,7 +353,13 @@ export function MemberClassesPage() {
 
   const weekRange = currentWeek(weekOffset);
   const disciplines = [...new Set([...PRIMARY_DISCIPLINES.map(item => item.name), ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
-  const visible = filterSessions(sessions, discipline, day);
+  const disciplineNameToId: Record<string, number> = {};
+  for (const item of sessions) {
+    if (item.disciplineName && item.disciplineId) disciplineNameToId[item.disciplineName] = item.disciplineId;
+  }
+  const visible = filterSessions(sessions, discipline, day)
+    .filter((item) => !showOnlyFavorites || favoriteDisciplineIds.includes(item.disciplineId))
+    .sort((a, b) => a.sessionDate.localeCompare(b.sessionDate) || a.startTime.localeCompare(b.startTime));
   const myScheduleReady = !myScheduleLoading && !myScheduleError;
   const activeEnrollments = myScheduleReady ? enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled') : [];
   const activeWaitlists = myScheduleReady ? waitlists.filter((item) => item.status === 'waiting' || item.status === 'notified') : [];
@@ -270,22 +400,63 @@ export function MemberClassesPage() {
         </div>
       </div>
 
-      <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
-        {['ALL', ...disciplines].map((value) => (
-          <button
-            key={value}
-            type="button"
-            className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
-            aria-pressed={discipline === value}
-            onClick={() => {
-              clearActionFeedback();
-              setDiscipline(value);
-            }}
-          >
-            {value === 'ALL' ? 'Tất cả bộ môn' : value}
-          </button>
-        ))}
-      </div>
+          <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
+            <button
+              type="button"
+              className={`filter-chip ${showOnlyFavorites ? 'is-active' : ''}`}
+              aria-pressed={showOnlyFavorites}
+              onClick={() => {
+                clearActionFeedback();
+                setShowOnlyFavorites((prev) => !prev);
+                setDiscipline('ALL');
+              }}
+            >
+              ⭐ Bộ môn yêu thích {favoriteDisciplineIds.length > 0 ? `(${favoriteDisciplineIds.length})` : ''}
+            </button>
+            {['ALL', ...disciplines].map((value) => {
+              const discId = disciplineNameToId[value];
+              const isFav = discId ? favoriteDisciplineIds.includes(discId) : false;
+              return (
+                <div key={value} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                  <button
+                    type="button"
+                    className={`filter-chip ${discipline === value && !showOnlyFavorites ? 'is-active' : ''}`}
+                    aria-pressed={discipline === value && !showOnlyFavorites}
+                    onClick={() => {
+                      clearActionFeedback();
+                      setShowOnlyFavorites(false);
+                      setDiscipline(value);
+                    }}
+                  >
+                    {value === 'ALL' ? 'Tất cả bộ môn' : value}
+                  </button>
+                  {value !== 'ALL' && discId && (
+                    <button
+                      type="button"
+                      className="btn-favorite-star"
+                      title={isFav ? `Bỏ yêu thích ${value}` : `Yêu thích ${value}`}
+                      aria-label={`Yêu thích ${value}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleToggleFavorite(discId);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 15,
+                        padding: '2px 4px',
+                        marginLeft: -4,
+                        color: isFav ? '#f59e0b' : 'var(--portal-muted, #9ca3af)',
+                      }}
+                    >
+                      {isFav ? '★' : '☆'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
       <div style={{ margin: '16px 0 24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -336,8 +507,7 @@ export function MemberClassesPage() {
           aria-selected={tab === 'schedule'}
           className={`portal-tab ${tab === 'schedule' ? 'active' : ''}`}
           onClick={() => {
-            clearActionFeedback();
-            setTab('schedule');
+            handleSelectTab('schedule');
           }}
         >
           Lịch lớp học
@@ -348,15 +518,17 @@ export function MemberClassesPage() {
           aria-selected={tab === 'my'}
           className={`portal-tab ${tab === 'my' ? 'active' : ''}`}
           onClick={() => {
-            clearActionFeedback();
-            setTab('my');
+            handleSelectTab('my');
           }}
         >
           Lịch học của tôi {(activeEnrollments.length + activeWaitlists.length) > 0 ? `(${activeEnrollments.length + activeWaitlists.length})` : ''}
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'coach_booking'}
+          className={`portal-tab ${tab === 'coach_booking' ? 'active' : ''}`}
+          onClick={() => handleSelectTab('coach_booking')}>Đặt lịch HLV 1:1 (PT)</button>
       </div>
 
-      {tab === 'schedule' ? (
+      {tab === 'coach_booking' ? <MemberCoachBookingView onBookingSuccess={() => { setRetry(v => v + 1); setMyScheduleRetry(v => v + 1); }} /> : tab === 'schedule' ? (
         loading ? (
           <div className="stack" role="status" aria-busy="true">
             <span className="sr-only">Đang tải lịch học...</span>
@@ -407,13 +579,14 @@ export function MemberClassesPage() {
                 <p>Hãy thử bộ lọc khác.</p>
               </div>
             ) : (
-              <>{visible.slice(0, visibleCount).map((item) => {
+              <>{visible.slice(0, visibleCount).map((item, index) => {
                 const [year, month, date] = item.sessionDate.split('-');
                 const now = new Date();
                 const past =
                   item.sessionDate < localToday() ||
                   (item.sessionDate === localToday() && item.startTime.slice(0, 5) <= now.toTimeString().slice(0, 5));
                 const unavailable = past || item.status !== 'scheduled';
+                const overlap = findOverlappingEnrollment(item, activeEnrollments, sessions);
                 const myEnrollment = activeEnrollments.find(
                   (e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId),
                 );
@@ -425,8 +598,10 @@ export function MemberClassesPage() {
                 return (
                   <div key={item.id} className="portal-card portal-card--list member-class-session">
                     <div>
+                      {(index === 0 || visible[index - 1].sessionDate !== item.sessionDate) && <h4 data-testid={`day-group-${item.sessionDate}`}>{formatDayGroupLabel(item.sessionDate)}</h4>}
                       <div className="row-card__meta row-card__meta--inline">
                         <span className="badge badge-info">{item.disciplineName}</span>
+                        {overlap && <span className="badge badge-warning" data-testid={`overlap-badge-${item.id}`}>Trùng giờ đã đặt</span>}
                         <span><PortalIcon name="calendar" size={14} />{date}/{month}/{year}</span>
                         {myEnrollment && (
                           <span className="badge badge-success">Đã đặt chỗ</span>
@@ -481,7 +656,7 @@ export function MemberClassesPage() {
                               {isBusy ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
                             </button>
                           </>
-                        ) : unavailable ? (
+                        ) : overlap ? <button type="button" className="btn-secondary btn-sm" data-testid={`overlap-btn-${item.id}`} disabled>Trùng giờ đã đặt</button> : unavailable ? (
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             Không thể đặt
                           </button>

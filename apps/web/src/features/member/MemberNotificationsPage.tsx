@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, type MemberNotification, type NotificationPage } from './notificationsApi';
 import './notifications.css';
+import { getCurrentUser } from '../../shared/api/client';
 
 const category: Record<string, { icon: string; label: string }> = {
   schedule_change: { icon: '◷', label: 'Lịch học' },
@@ -20,7 +21,7 @@ function errorMessage(error: unknown): string {
 }
 
 export function MemberNotificationsPage() {
-  return <Navigate to="/member/dashboard" replace state={{ openNotifications: true }} />;
+  return <Navigate to={getCurrentUser()?.role === 'COACH' ? '/coach/classes' : '/member/dashboard'} replace state={{ openNotifications: true }} />;
 }
 
 export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => void }) {

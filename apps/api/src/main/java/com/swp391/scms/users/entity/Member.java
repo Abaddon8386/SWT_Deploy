@@ -72,4 +72,16 @@ public class Member {
 
     public String getEmergencyContactPhone() { return emergencyContactPhone; }
     public void setEmergencyContactPhone(String emergencyContactPhone) { this.emergencyContactPhone = emergencyContactPhone; }
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "member_favorite_disciplines",
+        joinColumns = @JoinColumn(name = "member_id"),
+        inverseJoinColumns = @JoinColumn(name = "discipline_id")
+    )
+    private java.util.Set<com.swp391.scms.facilities.entity.Discipline> favoriteDisciplines = new java.util.HashSet<>();
+
+    public java.util.Set<com.swp391.scms.facilities.entity.Discipline> getFavoriteDisciplines() { return favoriteDisciplines; }
+    public void setFavoriteDisciplines(java.util.Set<com.swp391.scms.facilities.entity.Discipline> favoriteDisciplines) { this.favoriteDisciplines = favoriteDisciplines; }
+
 }

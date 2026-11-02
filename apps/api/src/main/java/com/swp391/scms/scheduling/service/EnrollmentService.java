@@ -33,9 +33,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Stream;
+import java.util.Objects;
 
 /**
- * SCRUM-73: member class booking and cancellation.
+ * SCRUM-73 & SCRUM-132: member class booking, time-overlap guard, and cancellation.
  *
  * <p>Invariant triggers are owned by the database and are never bypassed:
  * Trigger P2 ({@code trg_enrollments_check_capacity}) rejects a full class and
@@ -108,7 +109,8 @@ public class EnrollmentService {
     }
 
     /**
-     * SCRUM-73 AC: a member books a seat in a class session.
+     * SCRUM-73 & SCRUM-132 AC: a member books a seat in a class session.
+     * Rejects overlapping bookings across different classes in the same time slot.
      */
     @Transactional
     public EnrollmentDto enroll(AuthenticatedPrincipal principal, Long sessionId) {
@@ -144,6 +146,9 @@ public class EnrollmentService {
                     null,
                     "Member already has an active booking for this class");
         }
+
+        // SCRUM-132: Chặn Hội viên đặt các lịch học đè/chồng chéo giờ lên nhau
+        ensureNoMemberScheduleOverlap(member.getUserId(), session, gymClass.getId());
 
         LocalDateTime now = LocalDateTime.now(clock);
         var offer = waitlistId == null
@@ -205,6 +210,105 @@ public class EnrollmentService {
                 saved.getId());
 
         return toDto(saved, session);
+    }
+
+    /**
+     * SCRUM-132: Rejects booking or waitlist registration if the member already holds an active
+     * booking or active waitlist entry in another class whose scheduled session overlaps in time.
+     */
+    public void ensureNoMemberScheduleOverlap(Long memberId, ClassSession targetSession, Long excludeClassId) {
+        if (memberId == null || targetSession == null
+                || targetSession.getSessionDate() == null
+                || targetSession.getStartTime() == null
+                || targetSession.getEndTime() == null) {
+            return;
+        }
+        LocalDate targetDate = targetSession.getSessionDate();
+        LocalTime targetStart = targetSession.getStartTime();
+        LocalTime targetEnd = targetSession.getEndTime();
+
+        List<ClassEnrollment> memberEnrollments = enrollments.findByMemberUserId(memberId);
+        if (memberEnrollments != null) {
+            for (ClassEnrollment existing : memberEnrollments) {
+                if (existing == null || !BOOKED.equalsIgnoreCase(existing.getStatus())) {
+                    continue;
+                }
+                GymClass bookedClass = existing.getGymClass();
+                if (bookedClass == null || bookedClass.getId() == null
+                        || Objects.equals(bookedClass.getId(), excludeClassId)) {
+                    continue;
+                }
+                List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(bookedClass.getId());
+                if (classSessions == null) {
+                    continue;
+                }
+                for (ClassSession s : classSessions) {
+                    if (s == null || "cancelled".equalsIgnoreCase(s.getStatus())) {
+                        continue;
+                    }
+                    if (targetDate.equals(s.getSessionDate())
+                            && s.getStartTime() != null
+                            && s.getEndTime() != null
+                            && targetStart.isBefore(s.getEndTime())
+                            && targetEnd.isAfter(s.getStartTime())) {
+                        String rangeStart = formatTime(s.getStartTime());
+                        String rangeEnd = formatTime(s.getEndTime());
+                        throw new ConflictException(
+                                "SCHEDULING_MEMBER_TIME_OVERLAP",
+                                "error.scheduling.member_time_overlap",
+                                new Object[]{bookedClass.getName(), targetDate.toString(), rangeStart, rangeEnd},
+                                "Member already has an overlapping booking for class " + bookedClass.getName()
+                                        + " on " + targetDate + " (" + rangeStart + " - " + rangeEnd + ")");
+                    }
+                }
+            }
+        }
+
+        if (waitlists != null) {
+            List<ClassWaitlist> memberWaitlists = waitlists.findByMemberUserIdOrderByRequestedAtAsc(memberId);
+            if (memberWaitlists != null) {
+                for (ClassWaitlist wl : memberWaitlists) {
+                    if (wl == null || (!WAITING.equalsIgnoreCase(wl.getStatus())
+                            && !"notified".equalsIgnoreCase(wl.getStatus()))) {
+                        continue;
+                    }
+                    GymClass waitlistedClass = wl.getGymClass();
+                    if (waitlistedClass == null || waitlistedClass.getId() == null
+                            || Objects.equals(waitlistedClass.getId(), excludeClassId)) {
+                        continue;
+                    }
+                    List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(waitlistedClass.getId());
+                    if (classSessions == null) {
+                        continue;
+                    }
+                    for (ClassSession s : classSessions) {
+                        if (s == null || "cancelled".equalsIgnoreCase(s.getStatus())) {
+                            continue;
+                        }
+                        if (targetDate.equals(s.getSessionDate())
+                                && s.getStartTime() != null
+                                && s.getEndTime() != null
+                                && targetStart.isBefore(s.getEndTime())
+                                && targetEnd.isAfter(s.getStartTime())) {
+                            String rangeStart = formatTime(s.getStartTime());
+                            String rangeEnd = formatTime(s.getEndTime());
+                            throw new ConflictException(
+                                    "SCHEDULING_MEMBER_TIME_OVERLAP",
+                                    "error.scheduling.member_waitlist_time_overlap",
+                                    new Object[]{waitlistedClass.getName(), targetDate.toString(), rangeStart, rangeEnd},
+                                    "Member already has an overlapping waitlist entry for class " + waitlistedClass.getName()
+                                            + " on " + targetDate + " (" + rangeStart + " - " + rangeEnd + ")");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static String formatTime(LocalTime time) {
+        if (time == null) return "";
+        String raw = time.toString();
+        return raw.length() >= 5 ? raw.substring(0, 5) : raw;
     }
 
     /**

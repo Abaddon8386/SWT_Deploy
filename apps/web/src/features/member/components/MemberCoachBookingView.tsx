@@ -1,0 +1,1156 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Modal } from '../../../shared/ui/Modal';
+import {
+  getCoaches,
+  getAvailableSlots,
+  createCoachBooking,
+  getMyCoachBookings,
+  cancelCoachBooking,
+  getMemberQuotaStatus,
+  type CoachPublicDto,
+  type CoachAvailableSlotDto,
+  type CoachBookingDto,
+  type CoachQuotaStatusDto,
+} from '../coachBookingApi';
+import {
+  createCoachReview,
+  getMyCoachReviews,
+  getCoachLeaderboard,
+  type CoachReviewDto,
+  type CoachLeaderboardItemDto,
+} from '../../coaching/coachReviewApi';
+import { coachIllustration } from '../../../shared/lib/coachIllustration';
+import { formatPrice } from '../../../shared/lib/membershipPresentation';
+
+function localToday(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function nextDays(count = 7): Array<{ iso: string; label: string; isToday: boolean }> {
+  const days: Array<{ iso: string; label: string; isToday: boolean }> = [];
+  const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  for (let i = 0; i < count; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const name = i === 0 ? 'Hôm nay' : dayNames[d.getDay()];
+    days.push({
+      iso,
+      label: `${name} (${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')})`,
+      isToday: i === 0,
+    });
+  }
+  return days;
+}
+
+export function MemberCoachBookingView({
+  onBookingSuccess,
+}: {
+  onBookingSuccess?: () => void;
+}) {
+  const navigate = useNavigate();
+  const [coaches, setCoaches] = useState<CoachPublicDto[]>([]);
+  const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(localToday());
+  const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
+  const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
+  const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
+  const [leaderboard, setLeaderboard] = useState<CoachLeaderboardItemDto[]>([]);
+  const [myReviews, setMyReviews] = useState<CoachReviewDto[]>([]);
+
+  const [loadingCoaches, setLoadingCoaches] = useState(true);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+
+  // Booking Modal State
+  const [modalSlot, setModalSlot] = useState<CoachAvailableSlotDto | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'package_quota' | 'hourly_pay'>('package_quota');
+  const [notes, setNotes] = useState('');
+
+  // Payment Checkout Modal State
+  const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
+
+  // Review Modal State
+  const [reviewTargetBooking, setReviewTargetBooking] = useState<CoachBookingDto | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState<string>('');
+  const [reviewAnonymous, setReviewAnonymous] = useState<boolean>(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
+
+  // Cancel Modal State
+  const [cancelTarget, setCancelTarget] = useState<CoachBookingDto | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const daysList = nextDays(10);
+
+  // Load coaches, member bookings, reviews and leaderboard
+  useEffect(() => {
+    let active = true;
+    async function init() {
+      setLoadingCoaches(true);
+      setError('');
+      try {
+        const [coachList, bookingsList, quota, board, reviews] = await Promise.all([
+          getCoaches(),
+          getMyCoachBookings(),
+          getMemberQuotaStatus().catch(() => null),
+          getCoachLeaderboard().catch(() => []),
+          getMyCoachReviews().catch(() => []),
+        ]);
+        if (!active) return;
+        setCoaches(coachList);
+        setMyBookings(bookingsList);
+        if (quota) setQuotaStatus(quota);
+        setLeaderboard(board);
+        setMyReviews(reviews);
+        setSelectedCoachId((current) => current ?? coachList[0]?.id ?? null);
+      } catch (err: unknown) {
+        if (active) setError((err instanceof Error ? err.message : 'Không thể tải danh sách huấn luyện viên.'));
+      } finally {
+        if (active) setLoadingCoaches(false);
+      }
+    }
+    void init();
+    return () => { active = false; };
+  }, []);
+
+  // Load slots when coach or date changes
+  useEffect(() => {
+    if (!selectedCoachId || !selectedDate) return;
+    let active = true;
+    async function loadSlots() {
+      setLoadingSlots(true);
+      setSlots([]);
+      try {
+        const availableSlots = await getAvailableSlots(selectedCoachId!, selectedDate);
+        if (active) setSlots(availableSlots);
+      } catch (err: unknown) {
+        if (active) setError((err instanceof Error ? err.message : 'Không thể tải khung giờ trống.'));
+      } finally {
+        if (active) setLoadingSlots(false);
+      }
+    }
+    void loadSlots();
+    return () => { active = false; };
+  }, [selectedCoachId, selectedDate]);
+
+  const selectedCoach = coaches.find((c) => c.id === selectedCoachId);
+  const hasRemainingQuota = (quotaStatus?.remainingQuota ?? 0) > 0;
+
+  function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
+    setModalSlot(slot);
+    setError('');
+    if (hasRemainingQuota) {
+      setPaymentMethod('package_quota');
+    } else {
+      setPaymentMethod('hourly_pay');
+    }
+  }
+
+  async function handleConfirmBooking() {
+    if (!selectedCoach || !modalSlot) return;
+    setSubmitting(true);
+    setError('');
+    setNotice('');
+    try {
+      const created = await createCoachBooking({
+        coachId: selectedCoach.id,
+        bookingDate: selectedDate,
+        startTime: modalSlot.startTime,
+        endTime: modalSlot.endTime,
+        paymentMethod: paymentMethod === 'package_quota' ? 'package_quota' : 'bank_transfer',
+        notes: notes.trim() || undefined,
+      });
+
+      setModalSlot(null);
+      setNotes('');
+
+      const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
+        getAvailableSlots(selectedCoach.id, selectedDate),
+        getMyCoachBookings(),
+        getMemberQuotaStatus().catch(() => null),
+      ]);
+      setSlots(updatedSlots);
+      setMyBookings(updatedBookings);
+      if (updatedQuota) setQuotaStatus(updatedQuota);
+      onBookingSuccess?.();
+
+      if (paymentMethod === 'hourly_pay') {
+        setPaymentModalBooking(created);
+      } else {
+        setNotice(
+          `Đặt lịch tập 1:1 với HLV ${created.coachName} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
+        );
+      }
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể đặt lịch. Vui lòng thử lại.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleConfirmReview() {
+    if (!reviewTargetBooking) return;
+    setReviewSubmitting(true);
+    setError('');
+    try {
+      await createCoachReview({
+        coachId: reviewTargetBooking.coachId,
+        bookingId: reviewTargetBooking.id,
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined,
+        isAnonymous: reviewAnonymous,
+      });
+
+      const [updatedReviews, updatedLeaderboard] = await Promise.all([
+        getMyCoachReviews().catch(() => []),
+        getCoachLeaderboard().catch(() => []),
+      ]);
+      setMyReviews(updatedReviews);
+      setLeaderboard(updatedLeaderboard);
+
+      setNotice(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${reviewTargetBooking.coachName} thành công.`);
+      setReviewTargetBooking(null);
+      setReviewComment('');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể gửi đánh giá.'));
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+
+  async function handleConfirmCancel() {
+    if (!cancelTarget) return;
+    setCancelling(true);
+    try {
+      await cancelCoachBooking(cancelTarget.id, 'Hội viên chủ động hủy');
+      setNotice(`Đã hủy lịch tập 1:1 với HLV ${cancelTarget.coachName} thành công.`);
+      setCancelTarget(null);
+
+      if (selectedCoachId) {
+        const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
+          getAvailableSlots(selectedCoachId, selectedDate),
+          getMyCoachBookings(),
+          getMemberQuotaStatus().catch(() => null),
+        ]);
+        setSlots(updatedSlots);
+        setMyBookings(updatedBookings);
+        if (updatedQuota) setQuotaStatus(updatedQuota);
+      }
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Không thể hủy lịch.'));
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  if (loadingCoaches) {
+    return (
+      <div className="portal-card" style={{ padding: 32, textAlign: 'center' }}>
+        <p className="row-card__meta">Đang tải thông tin Huấn luyện viên và khung giờ trống...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'grid', gap: 24 }}>
+      {notice && (
+        <div
+          className="portal-card"
+          role="status"
+          style={{
+            borderColor: 'rgba(46, 107, 79, 0.45)',
+            background: 'rgba(46, 107, 79, 0.08)',
+            padding: 14,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <strong style={{ color: 'var(--portal-success, #86efac)' }}>{notice}</strong>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => setNotice('')}
+            style={{ padding: '2px 8px', fontSize: 12 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div
+          className="portal-card"
+          role="alert"
+          style={{
+            borderColor: 'rgba(180, 60, 60, 0.45)',
+            background: 'rgba(180, 60, 60, 0.08)',
+            padding: 14,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{error}</strong>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => setError('')}
+            style={{ padding: '2px 8px', fontSize: 12 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Top Coach Honor Ribbon */}
+      {leaderboard.length > 0 && (
+        <div
+          className="portal-card"
+          style={{
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(206, 145, 128, 0.04) 100%)',
+            borderColor: 'rgba(234, 179, 8, 0.35)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #202020)' }}>
+              🏆 Bảng Vinh Danh Top Huấn Luyện Viên Xuất Sắc Tháng Này
+            </h4>
+            <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+              Dựa trên đánh giá và mức độ hài lòng của hội viên
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 12,
+            }}
+          >
+            {leaderboard.slice(0, 3).map((item) => (
+              <div
+                key={item.coachId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'var(--portal-surface, #ffffff)',
+                  border: '1px solid rgba(234, 179, 8, 0.25)',
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    background: item.rankPosition === 1 ? '#eab308' : item.rankPosition === 2 ? '#94a3b8' : '#d97706',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    flexShrink: 0,
+                  }}
+                >
+                  #{item.rankPosition}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 750, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {item.coachName}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#eab308', fontWeight: 700 }}>
+                    ⭐ {item.averageRating?.toFixed(1) || '5.0'} / 5.0 • {item.badge || 'Top Coach'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Quota Info Banner */}
+      <div
+        className="portal-card"
+        style={{
+          padding: '16px 20px',
+          background: 'linear-gradient(135deg, rgba(206, 145, 128, 0.12) 0%, rgba(206, 145, 128, 0.03) 100%)',
+          borderColor: 'rgba(206, 145, 128, 0.35)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 750,
+                textTransform: 'uppercase',
+                padding: '3px 10px',
+                borderRadius: 99,
+                background: 'var(--portal-salmon, #ce9180)',
+                color: '#fff',
+              }}
+            >
+              Gói: {quotaStatus?.packageName || 'Chưa có gói'}
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>
+              Chính sách Huấn luyện viên cá nhân (PT 1:1)
+            </span>
+          </div>
+
+          <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--portal-muted, #71717a)' }}>
+            {quotaStatus?.monthlyQuota && quotaStatus.monthlyQuota > 0 ? (
+              <>
+                Gói {quotaStatus.packageName} được tặng <strong>{quotaStatus.monthlyQuota} lượt PT miễn phí/tháng</strong>.
+                Tháng này bạn đã dùng <strong>{quotaStatus.usedThisMonth} lượt</strong> (còn lại:{' '}
+                <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon, #ce9180)' : '#dc2626' }}>
+                  {quotaStatus.remainingQuota} lượt
+                </strong>
+                ).
+                {quotaStatus.remainingQuota <= 0 && ' Khi hết lượt miễn phí, phí đăng ký thêm là 200.000 đ / giờ.'}
+              </>
+            ) : (
+              <>
+                Gói {quotaStatus?.packageName || 'Silver'} không bao gồm lượt tập PT 1:1 miễn phí. Phí đặt lịch HLV kèm riêng là{' '}
+                <strong style={{ color: 'var(--portal-salmon, #ce9180)' }}>200.000 đ / giờ</strong>. (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).
+              </>
+            )}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => navigate('/member/packages')}
+            style={{ fontSize: 12 }}
+          >
+            Nâng cấp gói tập
+          </button>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => navigate('/member/invoices')}
+            style={{ fontSize: 12 }}
+          >
+            Lịch sử hóa đơn
+          </button>
+        </div>
+      </div>
+
+      {/* Bước 1: Chọn Huấn Luyện Viên */}
+      <section>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+            1. Chọn Huấn luyện viên cá nhân (PT 1:1)
+          </h3>
+          <span className="row-card__meta" style={{ fontSize: 13 }}>
+            Phí tập tiêu chuẩn: <strong>{formatPrice(200000)} / giờ</strong> (Miễn phí với gói Gold/Platinum)
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: 14,
+          }}
+        >
+          {coaches.map((c) => {
+            const isSelected = c.id === selectedCoachId;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setSelectedCoachId(c.id);
+                  setError('');
+                }}
+                className="portal-card"
+                style={{
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  padding: 16,
+                  display: 'flex',
+                  gap: 14,
+                  alignItems: 'center',
+                  borderColor: isSelected ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-border, #e4e2de)',
+                  background: isSelected ? 'rgba(206, 145, 128, 0.12)' : 'var(--portal-surface, #ffffff)',
+                  boxShadow: isSelected ? '0 0 0 2px var(--portal-salmon, #ce9180)' : undefined,
+                  transition: 'all 180ms ease',
+                }}
+              >
+                <img
+                  src={c.avatarUrl || coachIllustration(c.specialization)}
+                  alt={c.fullName}
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                    border: '2px solid rgba(255,255,255,0.2)',
+                  }}
+                />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {c.fullName}
+                    </h4>
+                    {isSelected && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon, #ce9180)' }}>
+                        ✓ Đang chọn
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-salmon, #ce9180)', fontWeight: 600 }}>
+                    {c.specialization || 'Huấn luyện cá nhân'}
+                  </p>
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--portal-muted, #71717a)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {c.bio || 'Chuyên gia huấn luyện thể hình và phục hồi thể lực.'}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Bước 2: Chọn Ngày tập */}
+      <section>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+            2. Chọn ngày tập luyện
+          </h3>
+          <span className="row-card__meta" style={{ fontSize: 13, color: '#f59e0b' }}>
+            ⚠️ Quy tắc: Buổi tập 1:1 phải được đặt trước ít nhất <strong>2 tiếng</strong>
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6 }}>
+          {daysList.map((d) => {
+            const isSelected = d.iso === selectedDate;
+            return (
+              <button
+                key={d.iso}
+                type="button"
+                className={`filter-chip ${isSelected ? 'is-active' : ''}`}
+                style={{
+                  minWidth: 105,
+                  padding: '9px 12px',
+                  fontWeight: isSelected ? 700 : 500,
+                  fontSize: 12,
+                  whiteSpace: 'nowrap',
+                }}
+                onClick={() => {
+                  setSelectedDate(d.iso);
+                  setError('');
+                }}
+              >
+                {d.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Bước 3: Xem và Chọn Khung Giờ (Hourly Slots) */}
+      <section>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+            3. Chọn khung giờ (Theo giờ)
+          </h3>
+          <span className="row-card__meta">
+            HLV: <strong>{selectedCoach?.fullName}</strong> • Ngày: <strong>{selectedDate}</strong>
+          </span>
+        </div>
+
+        {loadingSlots ? (
+          <div className="portal-card" style={{ padding: 24, textAlign: 'center' }}>
+            <p className="row-card__meta">Đang kiểm tra lịch trống của huấn luyện viên...</p>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+              gap: 10,
+            }}
+          >
+            {slots.map((slot) => {
+              const startFmt = slot.startTime.slice(0, 5);
+              const endFmt = slot.endTime.slice(0, 5);
+
+              if (slot.available) {
+                return (
+                  <button
+                    key={slot.startTime}
+                    type="button"
+                    onClick={() => handleOpenBookingModal(slot)}
+                    className="portal-card"
+                    style={{
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      borderColor: 'rgba(46, 107, 79, 0.45)',
+                      background: 'rgba(46, 107, 79, 0.05)',
+                      transition: 'transform 160ms ease, background 160ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.background = 'rgba(46, 107, 79, 0.14)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.background = 'rgba(46, 107, 79, 0.05)';
+                    }}
+                  >
+                    <span style={{ fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #202020)' }}>
+                      {startFmt} – {endFmt}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--portal-success, #226442)' }}>
+                      ✓ Còn trống • Đặt lịch
+                    </span>
+                  </button>
+                );
+              }
+
+              let badgeText = 'Đã kín lịch';
+              let badgeColor = 'var(--portal-muted, #71717a)';
+              if (slot.reason === 'too_soon') {
+                badgeText = 'Cần đặt trước 2 tiếng';
+                badgeColor = '#d97706';
+              } else if (slot.reason === 'coach_busy') {
+                badgeText = 'HLV đã có lịch';
+                badgeColor = '#dc2626';
+              } else if (slot.reason === 'member_busy') {
+                badgeText = 'Bạn đã có lịch trùng';
+                badgeColor = '#dc2626';
+              }
+
+              return (
+                <div
+                  key={slot.startTime}
+                  className="portal-card"
+                  style={{
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    opacity: 0.5,
+                    background: 'var(--portal-raised, #f4f4f5)',
+                    cursor: 'not-allowed',
+                  }}
+                  title={badgeText}
+                >
+                  <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--portal-muted, #a1a1aa)' }}>
+                    {startFmt} – {endFmt}
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: badgeColor }}>
+                    ⛔ {badgeText}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Danh sách Lịch 1:1 đã đặt của Hội viên */}
+      <section style={{ marginTop: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+            Lịch tập HLV 1:1 của tôi ({myBookings.filter((b) => b.status === 'confirmed').length} buổi sắp tới)
+          </h3>
+        </div>
+
+        {myBookings.length === 0 ? (
+          <div className="portal-card" style={{ padding: 24, textAlign: 'center' }}>
+            <p className="row-card__meta" style={{ margin: 0 }}>
+              Bạn chưa có lịch hẹn 1:1 nào với Huấn luyện viên. Hãy chọn HLV và khung giờ ở trên để bắt đầu!
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {myBookings.map((b) => {
+              const isConfirmed = b.status === 'confirmed';
+              const existingReview = myReviews.find((r) => r.bookingId === b.id);
+
+              return (
+                <div
+                  key={b.id}
+                  className="portal-card"
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '14px 18px',
+                    borderColor: isConfirmed ? 'rgba(206, 145, 128, 0.35)' : 'var(--portal-border, #e4e2de)',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        background: 'var(--portal-salmon, #ce9180)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 750,
+                        fontSize: 16,
+                      }}
+                    >
+                      PT
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
+                          Tập 1:1 cùng HLV {b.coachName}
+                        </h4>
+                        <span
+                          className={`badge ${isConfirmed ? 'badge-success' : 'badge-danger'}`}
+                          style={{ fontSize: 11 }}
+                        >
+                          {isConfirmed ? 'Đã xác nhận' : 'Đã hủy'}
+                        </span>
+                        {existingReview && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#eab308' }}>
+                            ⭐ Đã đánh giá ({existingReview.rating} sao)
+                          </span>
+                        )}
+                      </div>
+                      <p className="row-card__meta" style={{ margin: '3px 0 0' }}>
+                        📅 Ngày <strong>{b.bookingDate}</strong> • ⏰ <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? '🎁 Quyền lợi gói tập' : `💳 Trả phí: ${formatPrice(b.hourlyRate)}`}
+                      </p>
+                      {b.notes && (
+                        <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-muted, #71717a)', fontStyle: 'italic' }}>
+                          Ghi chú: {b.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {isConfirmed && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                      {/* Button Đánh giá HLV */}
+                      {!existingReview ? (
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          style={{ color: '#d97706', borderColor: '#fcd34d' }}
+                          onClick={() => {
+                            setReviewTargetBooking(b);
+                            setReviewRating(5);
+                            setReviewComment('');
+                            setReviewAnonymous(false);
+                          }}
+                        >
+                          ⭐ Đánh giá HLV
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+                          ✓ Đã gửi review
+                        </span>
+                      )}
+
+                      {b.paymentMethod !== 'package_quota' && (
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          onClick={() => setPaymentModalBooking(b)}
+                        >
+                          Xem thông tin thanh toán
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                        onClick={() => setCancelTarget(b)}
+                      >
+                        Hủy lịch hẹn
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Modal Đánh giá Huấn luyện viên */}
+      {reviewTargetBooking && (
+        <Modal
+          title={`Đánh giá Huấn luyện viên: ${reviewTargetBooking.coachName}`}
+          onClose={() => setReviewTargetBooking(null)}
+        >
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div
+              style={{
+                padding: 12,
+                borderRadius: 10,
+                background: 'var(--portal-raised, #f4f4f5)',
+                fontSize: 13,
+              }}
+            >
+              Buổi tập 1:1 ngày <strong>{reviewTargetBooking.bookingDate}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+                Mức độ hài lòng của bạn:
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    style={{
+                      border: '1px solid',
+                      borderColor: star <= reviewRating ? '#eab308' : 'var(--portal-border, #e4e2de)',
+                      background: star <= reviewRating ? 'rgba(234, 179, 8, 0.15)' : 'transparent',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: 18,
+                    }}
+                  >
+                    {star <= reviewRating ? '⭐' : '☆'}
+                  </button>
+                ))}
+                <span style={{ alignSelf: 'center', fontWeight: 700, fontSize: 14, color: '#eab308', marginLeft: 8 }}>
+                  {reviewRating === 5
+                    ? 'Xuất sắc (5 sao)'
+                    : reviewRating === 4
+                    ? 'Rất tốt (4 sao)'
+                    : reviewRating === 3
+                    ? 'Bình thường (3 sao)'
+                    : reviewRating === 2
+                    ? 'Chưa hài lòng (2 sao)'
+                    : 'Rất thất vọng (1 sao)'}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                Nhận xét chi tiết (Gửi tới Quản lý và Huấn luyện viên):
+              </label>
+              <textarea
+                rows={4}
+                className="portal-input"
+                style={{ width: '100%', resize: 'vertical' }}
+                placeholder="Chia sẻ về tác phong, chuyên môn, sự nhiệt tình hoặc điểm cần cải thiện của HLV..."
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+              />
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={reviewAnonymous}
+                onChange={(e) => setReviewAnonymous(e.target.checked)}
+              />
+              <span>Đánh giá ẩn danh (Không hiển thị họ tên của tôi với Huấn luyện viên)</span>
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={reviewSubmitting}
+                onClick={() => setReviewTargetBooking(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={reviewSubmitting}
+                onClick={() => void handleConfirmReview()}
+              >
+                {reviewSubmitting ? 'Đang gửi…' : 'Gửi đánh giá'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Xác nhận Đặt lịch */}
+      {modalSlot && selectedCoach && (
+        <Modal
+          title="Xác nhận Đặt lịch HLV 1:1 (PT riêng)"
+          onClose={() => setModalSlot(null)}
+        >
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                background: 'var(--portal-raised, #f4f4f5)',
+                display: 'grid',
+                gap: 6,
+              }}
+            >
+              <div>
+                Huấn luyện viên: <strong>{selectedCoach.fullName}</strong> ({selectedCoach.specialization})
+              </div>
+              <div>
+                Thời gian: <strong>{selectedDate}</strong> từ <strong>{modalSlot.startTime.slice(0, 5)} đến {modalSlot.endTime.slice(0, 5)}</strong>
+              </div>
+              <div>
+                Chi phí buổi tập: <strong>{formatPrice(200000)} / buổi</strong>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+                Phương thức thanh toán / Sử dụng quyền lợi:
+              </label>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    border: '1px solid var(--portal-border, #e4e2de)',
+                    cursor: hasRemainingQuota ? 'pointer' : 'not-allowed',
+                    opacity: hasRemainingQuota ? 1 : 0.6,
+                    background: paymentMethod === 'package_quota' ? 'rgba(206, 145, 128, 0.1)' : 'transparent',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    disabled={!hasRemainingQuota}
+                    checked={paymentMethod === 'package_quota'}
+                    onChange={() => setPaymentMethod('package_quota')}
+                  />
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <strong>Sử dụng quyền lợi PT trong gói tập (Gold / Platinum)</strong>
+                      {hasRemainingQuota ? (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-success, #226442)' }}>
+                          (Còn {quotaStatus?.remainingQuota} lượt miễn phí)
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626' }}>
+                          (Hết lượt hoặc không áp dụng)
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--portal-muted, #71717a)' }}>
+                      {hasRemainingQuota
+                        ? 'Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn (0 đ).'
+                        : 'Gói hiện tại không có lượt PT miễn phí hoặc bạn đã dùng hết quota tháng. Vui lòng chọn đóng phí 200.000 đ.'}
+                    </div>
+                  </div>
+                </label>
+
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    border: '1px solid var(--portal-border, #e4e2de)',
+                    cursor: 'pointer',
+                    background: paymentMethod === 'hourly_pay' ? 'rgba(206, 145, 128, 0.1)' : 'transparent',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    checked={paymentMethod === 'hourly_pay'}
+                    onChange={() => setPaymentMethod('hourly_pay')}
+                  />
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <strong>Đăng ký trả phí theo giờ (200.000 đ / giờ)</strong>
+                      {!hasRemainingQuota && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon, #ce9180)' }}>
+                          (Khuyến nghị cho gói của bạn)
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--portal-muted, #71717a)' }}>
+                      Thanh toán tại quầy lễ tân hoặc chuyển khoản theo thông tin do lễ tân cung cấp.
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                Ghi chú cho HLV (Mục tiêu, tình trạng sức khỏe...):
+              </label>
+              <textarea
+                rows={3}
+                className="input"
+                placeholder="Ví dụ: Muốn tập trung cơ bụng và lưng, từng đau khớp gối nhẹ..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                style={{ width: '100%', resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={submitting}
+                onClick={() => setModalSlot(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={submitting}
+                onClick={() => void handleConfirmBooking()}
+              >
+                {submitting ? 'Đang xử lý…' : paymentMethod === 'hourly_pay' ? 'Xác nhận & Đến thanh toán' : 'Xác nhận Đặt lịch (0 đ)'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Hướng dẫn Thanh toán / VietQR */}
+      {paymentModalBooking && (
+        <Modal
+          title="Thanh toán Buổi tập PT 1:1"
+          onClose={() => setPaymentModalBooking(null)}
+        >
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                background: 'rgba(46, 107, 79, 0.08)',
+                border: '1px solid rgba(46, 107, 79, 0.35)',
+              }}
+            >
+              <h4 style={{ margin: '0 0 6px', color: 'var(--portal-success, #226442)', fontSize: 15, fontWeight: 750 }}>
+                ✓ Lịch tập 1:1 đã được ghi nhận thành công!
+              </h4>
+              <p style={{ margin: 0, fontSize: 13 }}>
+                HLV: <strong>{paymentModalBooking.coachName}</strong> • Thời gian:{' '}
+                <strong>{paymentModalBooking.bookingDate} ({paymentModalBooking.startTime.slice(0, 5)} - {paymentModalBooking.endTime.slice(0, 5)})</strong>
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr',
+                gap: 16,
+                alignItems: 'center',
+                padding: 16,
+                borderRadius: 12,
+                background: 'var(--portal-raised, #f4f4f5)',
+              }}
+            >
+              <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
+                <div>Vui lòng liên hệ quầy Lễ tân để xác nhận thông tin và hoàn tất thanh toán.</div>
+                <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--portal-salmon, #ce9180)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
+                <div>Nội dung chuyển khoản: <strong style={{ color: 'var(--portal-salmon, #ce9180)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+                  * Bạn cũng có thể thanh toán trực tiếp bằng tiền mặt hoặc thẻ tại quầy Lễ tân trước giờ tập.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setPaymentModalBooking(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  setPaymentModalBooking(null);
+                  navigate('/member/invoices');
+                }}
+              >
+                Xem Hóa đơn & Lịch sử thanh toán →
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Hủy lịch */}
+      {cancelTarget && (
+        <Modal
+          title="Hủy lịch tập 1:1"
+          onClose={() => setCancelTarget(null)}
+        >
+          <div style={{ display: 'grid', gap: 14 }}>
+            <p>
+              Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV <strong>{cancelTarget.coachName}</strong> vào{' '}
+              <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)} ngày {cancelTarget.bookingDate}</strong>?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={cancelling}
+                onClick={() => setCancelTarget(null)}
+              >
+                Giữ lịch
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                disabled={cancelling}
+                onClick={() => void handleConfirmCancel()}
+              >
+                {cancelling ? 'Đang hủy…' : 'Xác nhận Hủy'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

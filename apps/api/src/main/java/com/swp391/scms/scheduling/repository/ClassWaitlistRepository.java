@@ -83,4 +83,6 @@ public interface ClassWaitlistRepository extends JpaRepository<ClassWaitlist, Lo
             String status, java.time.LocalDateTime cutoff, org.springframework.data.domain.Pageable pageable);
 
     java.util.Optional<ClassWaitlist> findFirstByGymClassIdAndStatusOrderByRequestedAtAsc(Long classId, String status);
+
+    void deleteByGymClassId(Long classId);
 }

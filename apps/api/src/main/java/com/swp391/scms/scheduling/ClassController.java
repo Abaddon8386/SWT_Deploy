@@ -4,6 +4,8 @@ import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.RescheduleSessionRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.UpdateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.CoachOptionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.EnrolledStudentDto;
@@ -21,10 +23,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * SCRUM-72: class and schedule endpoints.
+ * SCRUM-72 & SCRUM-131: class and schedule endpoints.
  * Writes are restricted to CENTER_MANAGER; schedule reads are open to every authenticated role.
  */
-@Tag(name = "Classes & Sessions", description = "Class management and class schedule (SCRUM-72)")
+@Tag(name = "Classes & Sessions", description = "Class management and class schedule (SCRUM-72, SCRUM-131)")
 @RestController
 @RequestMapping("/api/v1/classes")
 public class ClassController {
@@ -54,6 +56,22 @@ public class ClassController {
                 .body(ApiResponse.created(msg("scheduling.class.created"), service.createClass(request)));
     }
 
+    @Operation(summary = "Update a class (CENTER_MANAGER only)")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    public ApiResponse<GymClassDto> updateClass(@PathVariable Long id,
+                                                @Valid @RequestBody UpdateClassRequest request) {
+        return ApiResponse.ok(msg("scheduling.class.updated"), service.updateClass(id, request));
+    }
+
+    @Operation(summary = "Delete a class (CENTER_MANAGER only)")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    public ApiResponse<Void> deleteClass(@PathVariable Long id) {
+        service.deleteClass(id);
+        return ApiResponse.ok(msg("scheduling.class.deleted"), null);
+    }
+
     @Operation(summary = "List classes")
     @GetMapping
     public ApiResponse<List<GymClassDto>> listClasses() {
@@ -73,6 +91,15 @@ public class ClassController {
                                                                      @Valid @RequestBody CreateSessionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("scheduling.session.created"), service.createSession(id, request)));
+    }
+
+    @Operation(summary = "Reschedule an existing class session (CENTER_MANAGER only)")
+    @PutMapping("/{id}/sessions/{sessionId}")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    public ApiResponse<ClassSessionDto> rescheduleSession(@PathVariable Long id,
+                                                          @PathVariable Long sessionId,
+                                                          @Valid @RequestBody RescheduleSessionRequest request) {
+        return ApiResponse.ok(msg("scheduling.session.rescheduled"), service.rescheduleSession(id, sessionId, request));
     }
 
     @Operation(summary = "List class sessions with optional filters (date range, discipline, coach, classId)")

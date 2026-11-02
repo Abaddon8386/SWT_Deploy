@@ -6,6 +6,8 @@ import { CoachClassesPage } from './CoachClassesPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { coachingApi } from './coachingApi';
 
+vi.mock('../member/coachBookingApi', () => ({ getCoachSchedule: vi.fn().mockResolvedValue([]) }));
+
 function getWeekMonday(d: Date): Date {
   const date = new Date(d);
   const day = date.getDay();

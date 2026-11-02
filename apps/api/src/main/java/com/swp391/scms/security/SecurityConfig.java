@@ -97,6 +97,14 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/evaluations/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/health/metrics/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
 
+                    // Coach Reviews & Monthly Leaderboard (SCRUM-134)
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coaching/reviews").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/reviews/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/reviews/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/leaderboard").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/monthly-reviews/my").hasRole("COACH")
+                    .requestMatchers("/api/v1/coaching/monthly-reviews/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
+
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending",
@@ -112,7 +120,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/memberships/subscriptions/**", "/api/v1/memberships/subscriptions",
                             "/api/v1/subscriptions/**", "/api/v1/subscriptions").hasRole("MEMBER")
 
-                    // Scheduling, Enrollments & Waitlists (SCRUM-72, 73, 74)
+                    // Scheduling, Enrollments & Waitlists (SCRUM-72, 73, 74, 131)
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/enroll").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/enrollments/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
@@ -121,7 +129,19 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/waitlists/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/cancel").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST", "STAFF")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/classes/*/sessions/*", "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
+
+                    // 1:1 Coach Bookings & Favorite Disciplines (SCRUM-133)
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coaches").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/available-slots").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/quota-status").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coach-schedule").hasAnyRole("COACH", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/coach-bookings/*").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/members/me/favorite-disciplines/**", "/api/v1/members/me/favorite-disciplines").hasRole("MEMBER")
 
                     // Users, Roles, Member Lookup & Facilities Catalog
                     .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").hasRole("CENTER_MANAGER")

@@ -42,4 +42,6 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"member", "member.user"})
     List<ClassEnrollment> findByGymClassIdAndStatus(Long classId, String status);
+
+    void deleteByGymClassId(Long classId);
 }

@@ -326,6 +326,7 @@ export function MemberDashboardPage() {
               )}
           </section>
           <Link className="member-discover-card" to="/member/classes"><LoadingImage src="/images/pilates-reformer-studio.jpg" alt="Không gian tập Pilates tại SÖL" /><span><strong>Lịch lớp học</strong><small>Xem buổi học và đặt chỗ</small></span><PortalIcon name="arrow" size={16} /></Link>
+          <Link className="member-board-note" to="/member/classes?tab=pt"><PortalIcon name="profile" size={18} /><span>Đặt lịch HLV 1:1<small>PT kèm riêng theo giờ · Đặt trước 2 tiếng</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--blue" aria-labelledby="board-card">

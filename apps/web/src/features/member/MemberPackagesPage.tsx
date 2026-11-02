@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+﻿import { useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
 import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -81,6 +81,7 @@ export function MemberPackagesPage() {
   const watchedPending = useRef(new Set<number>());
   const announcedPayments = useRef(new Set<number>());
   const [syncError, setSyncError] = useState(false);
+  const [durationTab, setDurationTab] = useState<'all' | '1m' | '6m' | '12m'>('all');
   const [paymentResult, setPaymentResult] = useState<MemberSubscription | null>(null);
 
   const [actionError, setActionError] = useState<string | null>(null);
@@ -932,8 +933,22 @@ export function MemberPackagesPage() {
           <p>Vui lòng quay lại sau.</p>
         </div>
       ) : (
-        <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label="Danh mục gói tập">
-          {activePackages.map((membershipPackage) => {
+        <>
+          {activePackages.some((p) => p.durationDays >= 90) && (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }} role="tablist" aria-label="Bộ lọc thời hạn gói tập">
+              <button type="button" className={`btn-secondary ${durationTab === 'all' ? 'active' : ''}`} style={durationTab === 'all' ? { background: 'var(--color-text-main, #202020)', color: '#fff' } : undefined} onClick={() => setDurationTab('all')}>Tất cả ({activePackages.length})</button>
+              <button type="button" className={`btn-secondary ${durationTab === '1m' ? 'active' : ''}`} style={durationTab === '1m' ? { background: 'var(--color-text-main, #202020)', color: '#fff' } : undefined} onClick={() => setDurationTab('1m')}>Gói 1 tháng (30 ngày)</button>
+              <button type="button" className={`btn-secondary ${durationTab === '6m' ? 'active' : ''}`} style={durationTab === '6m' ? { background: 'var(--color-text-main, #202020)', color: '#fff' } : undefined} onClick={() => setDurationTab('6m')}>Đồng hành 6 tháng (-17%)</button>
+              <button type="button" className={`btn-secondary ${durationTab === '12m' ? 'active' : ''}`} style={durationTab === '12m' ? { background: 'var(--color-text-main, #202020)', color: '#fff' } : undefined} onClick={() => setDurationTab('12m')}>Đồng hành 12 tháng (Tặng 3 tháng)</button>
+            </div>
+          )}
+          <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label="Danh mục gói tập">
+            {activePackages.filter((pkg) => {
+              if (durationTab === '1m') return pkg.durationDays <= 35;
+              if (durationTab === '6m') return pkg.durationDays >= 90 && pkg.durationDays <= 200;
+              if (durationTab === '12m') return pkg.durationDays > 200;
+              return true;
+            }).map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage);
             const isCurrent =
               current?.packageId ===
@@ -1112,6 +1127,7 @@ export function MemberPackagesPage() {
             );
           })}
         </section>
+        </>
       ))}
 
       {paymentResult && !blockedMessage && !pendingToCancel && !isHoldModalOpen && !isCancellationModalOpen && (

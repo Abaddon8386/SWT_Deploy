@@ -21,22 +21,59 @@ export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
 
 export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog; joinPath: string }) {
   const [longTerm, setLongTerm] = useState(false);
-  const packages = catalog.packages.filter(pkg => pkg.status === 'active' && (!longTerm || pkg.durationDays >= 90));
+  const [termFilter, setTermFilter] = useState<'6m' | '12m'>('6m');
+
+  const packages = catalog.packages.filter(pkg => {
+    if (pkg.status !== 'active') return false;
+    // Trang đầu: chỉ hiển thị 3 gói 1 tháng (Bạc, Vàng, Platinum)
+    if (!longTerm) return pkg.durationDays < 90;
+    // Phần đồng hành dài hạn: mục 6 tháng có 3 gói, mục 12 tháng có 3 gói
+    if (termFilter === '6m') return pkg.durationDays >= 90 && pkg.durationDays <= 200;
+    if (termFilter === '12m') return pkg.durationDays > 200;
+    return false;
+  });
+
   return <>
     <div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập">
-      <button type="button" aria-pressed={!longTerm} onClick={() => setLongTerm(false)}>Tất cả gói tập</button>
-      <button type="button" aria-pressed={longTerm} onClick={() => setLongTerm(true)}>Đồng hành dài hạn</button>
+      <button type="button" aria-pressed={!longTerm} onClick={() => setLongTerm(false)}>Gói 1 tháng</button>
+      <button type="button" aria-pressed={longTerm} onClick={() => { setLongTerm(true); setTermFilter('6m'); }}>Đồng hành dài hạn</button>
     </div>
+    {longTerm && (
+      <div className="fit-pricing-switch fit-schedule-switch" style={{ margin: '0 auto 28px', maxWidth: '440px' }} aria-label="Lọc thời hạn dài hạn">
+        <button type="button" aria-pressed={termFilter === '6m'} onClick={() => setTermFilter('6m')}>Gói 6 tháng (Tiết kiệm ~17%)</button>
+        <button type="button" aria-pressed={termFilter === '12m'} onClick={() => setTermFilter('12m')}>Gói 12 tháng (Tiết kiệm 25%)</button>
+      </div>
+    )}
     {packages.length === 0 && <p className="fit-catalog-state" role="status">Chưa có gói tập phù hợp.</p>}
-    <div className="fit-pricing-grid" key={String(longTerm)}>
+    <div className="fit-pricing-grid" key={`${String(longTerm)}-${termFilter}`}>
       {packages.map((pkg, index) => {
         const details = getPackageDetails(pkg);
-        return <article key={pkg.id} className={`fit-plan ${index === 1 ? 'fit-plan-featured' : ''}`} data-reveal="lift">
-          <span className="fit-plan-period">{pkg.durationDays} ngày</span><h3>{pkg.name}</h3>
+        const isFeatured = index === 1;
+        return <article key={pkg.id} className={`fit-plan ${isFeatured ? 'fit-plan-featured' : ''}`} data-reveal="lift">
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
+            <span className="fit-plan-period">{pkg.durationDays} ngày</span>
+            {pkg.durationDays >= 360 && (
+              <span className="fit-plan-period fit-plan-period--highlight">
+                Tặng 3 tháng (Tiết kiệm 25%)
+              </span>
+            )}
+            {pkg.durationDays >= 170 && pkg.durationDays < 360 && (
+              <span className="fit-plan-period fit-plan-period--highlight">
+                Tiết kiệm ~17%
+              </span>
+            )}
+          </div>
+          <h3>{pkg.name}</h3>
           <div className="fit-plan-price">{formatPrice(pkg.price)}<span>/ {pkg.durationDays} ngày</span></div>
           <p className="fit-plan-summary">{details.summary}</p>
           <ul>{details.benefits.map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
-          <Link className="fit-pill" to={joinPath === '/register' || joinPath === '/login' ? `${joinPath}?returnTo=${encodeURIComponent(`/member/packages?packageId=${pkg.id}`)}` : joinPath === '/member/packages' ? `${joinPath}?packageId=${pkg.id}` : joinPath}>Chọn gói tập<RoundArrow diagonal /></Link>
+          <Link
+            className="fit-pill"
+            to={joinPath === '/register' || joinPath === '/login' ? `${joinPath}?returnTo=${encodeURIComponent(`/member/packages?packageId=${pkg.id}`)}` : joinPath === '/member/packages' ? `${joinPath}?packageId=${pkg.id}` : joinPath}
+          >
+            <span>Chọn gói tập</span>
+            <RoundArrow diagonal />
+          </Link>
         </article>;
       })}
     </div>

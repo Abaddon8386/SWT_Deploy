@@ -51,6 +51,9 @@ public class AuditAspect {
     public Object around(ProceedingJoinPoint joinPoint, Audited audited) throws Throwable {
         Object[] args = joinPoint.getArgs();
         Long id = args.length > 0 && args[0] instanceof Long value ? value : null;
+        if ("class_sessions".equals(audited.entity()) && args.length > 1 && args[1] instanceof Long sessionId) {
+            id = sessionId;
+        }
         JsonNode oldValue = snapshot(audited.entity(), id, args);
         Object result = joinPoint.proceed();
         JsonNode newValue = snapshot(audited.entity(), id, args);
@@ -70,7 +73,7 @@ public class AuditAspect {
             entry.setUserId(currentUserId());
             entry.setAction(audited.action());
             entry.setEntityType(audited.entity());
-            entry.setEntityId(resolveEntityId(joinPoint.getArgs(), newValue));
+            entry.setEntityId(resolveEntityId(audited.entity(), joinPoint.getArgs(), newValue));
             entry.setOldValue(oldValue == null ? null : oldValue.toString());
             entry.setNewValue(newValue == null ? null : newValue.toString());
             entry.setIpAddress(currentIp());
@@ -125,6 +128,24 @@ public class AuditAspect {
                     node.put("id", id).put("amount", payment.getAmount()).put("method", payment.getMethod())
                             .put("status", payment.getStatus()).put("note", payment.getNote());
                 }
+                case "classes" -> {
+                    var gymClass = entityManager.find(com.swp391.scms.scheduling.entity.GymClass.class, id);
+                    if (gymClass == null) return null;
+                    node.put("id", id).put("name", gymClass.getName()).put("capacity", gymClass.getCapacity())
+                            .put("level", gymClass.getLevel()).put("status", gymClass.getStatus());
+                    if (gymClass.getDiscipline() != null) node.put("disciplineId", gymClass.getDiscipline().getId());
+                    if (gymClass.getCoach() != null) node.put("coachId", gymClass.getCoach().getUserId());
+                    if (gymClass.getRoom() != null) node.put("roomId", gymClass.getRoom().getId());
+                }
+                case "class_sessions" -> {
+                    var session = entityManager.find(com.swp391.scms.scheduling.entity.ClassSession.class, id);
+                    if (session == null) return null;
+                    node.put("id", id).put("status", session.getStatus());
+                    if (session.getGymClass() != null) node.put("classId", session.getGymClass().getId());
+                    if (session.getSessionDate() != null) node.put("sessionDate", session.getSessionDate().toString());
+                    if (session.getStartTime() != null) node.put("startTime", session.getStartTime().toString());
+                    if (session.getEndTime() != null) node.put("endTime", session.getEndTime().toString());
+                }
                 case "role_permissions" -> {
                     if (args.length < 2 || !(args[1] instanceof Long permissionId)) return null;
                     var role = entityManager.find(com.swp391.scms.users.entity.Role.class, id, LockModeType.PESSIMISTIC_WRITE);
@@ -142,7 +163,10 @@ public class AuditAspect {
         }
     }
 
-    private Long resolveEntityId(Object[] args, JsonNode newValue) {
+    private Long resolveEntityId(String entity, Object[] args, JsonNode newValue) {
+        if ("class_sessions".equals(entity) && args.length > 1 && args[1] instanceof Long sessionId) {
+            return sessionId;
+        }
         if (args.length > 0 && args[0] instanceof Long id) {
             return id;
         }

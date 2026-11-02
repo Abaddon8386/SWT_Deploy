@@ -1,0 +1,90 @@
+openapi: 3.0.3
+info:
+  title: SCMS coaching review corrections (SCRUM-133 / SCRUM-134)
+  version: 1.0.0
+  description: Corrections from review of PR 79, inherited by PR 78. All responses use the existing ApiResponse envelope and Accept-Language localization.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /coach-bookings:
+    post:
+      summary: Member books a one-hour PT session
+      description: Requires an active, unexpired membership covering today and the booking date for every payment method. Slots start on the hour between 06:00 and 20:00 and must be at least two hours ahead. Rejects overlapping PT or booked group sessions. Paid methods remain pending until payment is verified; package quota uses used_quota. Database triggers enforce concurrent schedule and membership checks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [coachId, bookingDate, startTime, endTime]
+              properties:
+                coachId: {type: integer, format: int64}
+                disciplineId: {type: integer, format: int64, nullable: true}
+                bookingDate: {type: string, format: date}
+                startTime: {type: string, example: '14:00:00'}
+                endTime: {type: string, example: '15:00:00'}
+                paymentMethod: {type: string, default: package_quota}
+                notes: {type: string, nullable: true}
+      responses:
+        '201': {description: ApiResponse containing CoachBookingDto; paymentStatus is pending or used_quota}
+        '400': {description: Invalid slot, unavailable membership or exhausted quota}
+        '403': {description: Role denied or trigger rejects inactive membership}
+        '409': {description: Schedule conflict or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
+  /coach-bookings/{id}:
+    delete:
+      summary: Cancel a PT booking
+      description: Allowed for its member, its assigned coach or a center manager. An unrelated coach receives HTTP 403.
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: integer, format: int64}}
+        - {in: query, name: reason, schema: {type: string}}
+      responses:
+        '200': {description: ApiResponse containing cancelled CoachBookingDto}
+        '400': {description: Already cancelled}
+        '403': {description: Not authorized for this booking}
+        '404': {description: Booking not found}
+  /coaching/reviews:
+    post:
+      summary: Member reviews their completed session
+      description: Supply exactly one of bookingId or classSessionId. The session must belong to the member, use the requested coach, have ended and not be cancelled. Each member may review a session once. The owner's response retains source IDs even when anonymous.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [coachId, rating]
+              properties:
+                coachId: {type: integer, format: int64}
+                bookingId: {type: integer, format: int64, nullable: true}
+                classSessionId: {type: integer, format: int64, nullable: true}
+                rating: {type: integer, minimum: 1, maximum: 5}
+                comment: {type: string, maxLength: 2000, nullable: true}
+                isAnonymous: {type: boolean, default: false}
+      responses:
+        '201': {description: ApiResponse containing CoachReviewDto for the owner}
+        '400': {description: INVALID_REVIEW_SOURCE or REVIEW_SESSION_NOT_FINISHED}
+        '403': {description: Member does not own the booking/enrollment or coach does not match}
+        '404': {description: Session not found}
+        '409': {description: DUPLICATE_REVIEW; unique constraints also guard concurrent submissions}
+  /coaching/reviews/coach/{coachId}:
+    get:
+      summary: Read approved reviews for a coach
+      description: Anonymous reviews redact memberId, bookingId and classSessionId. These properties are nullable. The owner's /coaching/reviews/my response retains source IDs to identify sessions already reviewed.
+      parameters:
+        - {in: path, name: coachId, required: true, schema: {type: integer, format: int64}}
+      responses:
+        '200': {description: ApiResponse containing an array of CoachReviewDto}
+  /coaching/leaderboard:
+    get:
+      summary: Read published monthly coach rankings
+      description: Read-only. Returns an empty list if no published ranking exists. Never generates, overwrites or publishes monthly reviews; generation remains an explicit manager POST to /coaching/monthly-reviews/generate.
+      parameters:
+        - {in: query, name: year, schema: {type: integer}}
+        - {in: query, name: month, schema: {type: integer}}
+      responses:
+        '200': {description: ApiResponse containing an array of CoachLeaderboardItemDto}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
