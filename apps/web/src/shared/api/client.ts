@@ -218,7 +218,7 @@ export const homePath = (role: UserSession['role']): string => {
     case 'ADMIN':
       return '/admin/users';
     case 'MANAGER':
-      return '/manager/users';
+      return '/manager/reports';
     case 'STAFF':
       return '/staff/reception';
     case 'COACH':

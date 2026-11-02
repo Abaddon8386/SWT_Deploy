@@ -146,7 +146,7 @@ describe('client.ts (API client & Auth session)', () => {
   });
 
   it('homePath routes correctly for each role', () => {
-    expect(homePath('MANAGER')).toBe('/manager/users');
+    expect(homePath('MANAGER')).toBe('/manager/reports');
     expect(homePath('STAFF')).toBe('/staff/reception');
     expect(homePath('COACH')).toBe('/staff/attendance');
     expect(homePath('MEMBER')).toBe('/member/dashboard');

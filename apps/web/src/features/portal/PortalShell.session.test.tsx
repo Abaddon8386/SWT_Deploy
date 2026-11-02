@@ -109,11 +109,11 @@ it('adopts the role reported by the server when it differs from the stored one',
   vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ success: true, data: { username: 'user01', role: 'CENTER_MANAGER' } })))));
   const router = createMemoryRouter([
     { element: <RoleGuard allowedRoles={['MEMBER']} />, children: [{ element: <PortalShell />, children: [{ path: '/member/dashboard', element: <h1>Bảng điều khiển hội viên</h1> }] }] },
-    { path: '/manager/users', element: <h1>Tài khoản nhân sự</h1> },
+    { path: '/manager/reports', element: <h1>Báo cáo & Doanh thu</h1> },
   ], { initialEntries: ['/member/dashboard'] });
   try {
     await act(async () => root.render(<RouterProvider router={router} />));
-    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/manager/users'));
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/manager/reports'));
     expect(JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY)!).role).toBe('MANAGER');
   } finally {
     router.dispose();

@@ -85,7 +85,7 @@ describe('mobile portal navigation', () => {
     ['MEMBER', '/member/dashboard', ['/member/dashboard', '/member/classes', '/member/check-in']],
     ['STAFF', '/staff/reception', ['/staff/reception', '/staff/classes', '/staff/check-in']],
     ['COACH', '/coach/classes', ['/coach/classes', '/staff/attendance', '/coach/training-plans']],
-    ['MANAGER', '/manager/reports', ['/staff/reception', '/manager/reports', '/manager/users']],
+    ['MANAGER', '/manager/reports', ['/manager/reports', '/manager/catalogs', '/staff/classes']],
   ] as const)('shows only the three primary actions for %s and marks the current screen', async (role, path, expected) => {
     await renderPortal(role, path);
     const nav = host.querySelector('nav[aria-label="Điều hướng nhanh"]');

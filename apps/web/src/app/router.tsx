@@ -69,21 +69,17 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/member/MemberProgressPage')).MemberProgressPage }),
           },
           {
-            path: '/member/notifications',
-            lazy: async () => ({ Component: (await import('../features/member/MemberNotificationsPage')).MemberNotificationsPage }),
-          },
-          {
             path: '/member/support',
             lazy: async () => ({ Component: (await import('../features/member/MemberSupportPage')).MemberSupportPage }),
           },
         ],
       },
 
-      // Shared Member Feature Routes
+      // Member Classes Route
       {
         element: (
           <RoleGuard
-            allowedRoles={['MEMBER', 'MANAGER', 'CENTER_MANAGER']}
+            allowedRoles={['MEMBER']}
           />
         ),
         children: [
@@ -117,27 +113,9 @@ export const router = createBrowserRouter([
         ],
       },
 
+      // Receptionist (STAFF) Dedicated Routes
       {
-        element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
-        children: [
-          { path: '/staff/support', lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }) },
-          { path: '/staff/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).StaffCourtsPage }) },
-        ],
-      },
-
-      // Staff / Coach Routes
-      {
-        element: (
-          <RoleGuard
-            allowedRoles={[
-              'STAFF',
-              'COACH',
-              'RECEPTIONIST',
-              'MANAGER',
-              'CENTER_MANAGER',
-            ]}
-          />
-        ),
+        element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST']} />,
         children: [
           {
             path: '/staff/reception',
@@ -147,17 +125,18 @@ export const router = createBrowserRouter([
             path: '/staff/check-in',
             lazy: async () => ({ Component: (await import('../features/reception/StaffCheckInPage')).StaffCheckInPage }),
           },
-          {
-            path: '/staff/classes',
-            lazy: async () => ({ Component: (await import('../features/classes/StaffClassesPage')).StaffClassesPage }),
-          },
+          { path: '/staff/support', lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }) },
+          { path: '/staff/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).StaffCourtsPage }) },
+        ],
+      },
+
+      // Coach Dedicated Routes
+      {
+        element: <RoleGuard allowedRoles={['COACH']} />,
+        children: [
           {
             path: '/staff/attendance',
             lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
-          },
-          {
-            path: '/staff/requests',
-            lazy: async () => ({ Component: (await import('../features/operations/StaffInternalRequestsPage')).StaffInternalRequestsPage }),
           },
           {
             path: '/coach/classes',
@@ -178,13 +157,36 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Manager Routes
+      // Staff & Coach Shared Internal Requests Route
+      {
+        element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'COACH']} />,
+        children: [
+          {
+            path: '/staff/requests',
+            lazy: async () => ({ Component: (await import('../features/operations/StaffInternalRequestsPage')).StaffInternalRequestsPage }),
+          },
+        ],
+      },
+
+      // Class Schedule Management (Manager) & Schedule View (Receptionist)
+      {
+        element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
+        children: [
+          {
+            path: '/staff/classes',
+            lazy: async () => ({ Component: (await import('../features/classes/StaffClassesPage')).StaffClassesPage }),
+          },
+        ],
+      },
+
+      // Admin Dedicated Route
       {
         element: <RoleGuard allowedRoles={['ADMIN']} />,
         children: [
           { path: '/admin/users', lazy: async () => ({ Component: (await import('../features/manager/UserManagerPage')).UserManagerPage }) },
         ],
       },
+      // Center Manager Dedicated Routes
       {
         element: (
           <RoleGuard allowedRoles={['MANAGER', 'CENTER_MANAGER']} />
@@ -196,7 +198,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/manager/users',
-            lazy: async () => ({ Component: (await import('../features/manager/StaffAccountsPage')).StaffAccountsPage }),
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: '/manager/reports',

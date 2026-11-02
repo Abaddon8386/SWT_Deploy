@@ -7,7 +7,7 @@ it('keeps the selected package through register and login for members only', () 
   const search = '?returnTo=' + encodeURIComponent('/member/packages?packageId=2');
   expect(purchaseAuthPath('/login', search)).toBe('/login' + search);
   expect(authDestination('MEMBER', search)).toBe('/member/packages?packageId=2');
-  expect(authDestination('MANAGER', search)).toBe('/manager/users');
+  expect(authDestination('MANAGER', search)).toBe('/manager/reports');
   expect(selectedPackageId('?packageId=2')).toBe(2);
 });
 

@@ -56,7 +56,7 @@ async function renderForm() {
 
 it.each([
   ['MEMBER', '/member/dashboard'], ['RECEPTIONIST', '/staff/reception'],
-  ['COACH', '/staff/attendance'], ['CENTER_MANAGER', '/manager/users'],
+  ['COACH', '/staff/attendance'], ['CENTER_MANAGER', '/manager/reports'],
 ])('navigates %s immediately after password authentication without advancing timers', async (role, destination) => {
   vi.useFakeTimers();
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true,
