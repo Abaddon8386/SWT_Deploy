@@ -25,6 +25,7 @@ import {
   type WaitlistDto,
 } from './memberClassesApi';
 import './member-classes.css';
+import { notify } from '../../shared/lib/portalNotices';
 
 const SESSION_BATCH_SIZE = 6;
 
@@ -137,7 +138,6 @@ export function MemberClassesPage() {
   const [myScheduleError, setMyScheduleError] = useState('');
   const [myScheduleRetry, setMyScheduleRetry] = useState(0);
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [notice, setNotice] = useState('');
   const [actionError, setActionError] = useState('');
   const [cancelTarget, setCancelTarget] = useState<{ id: number; className: string } | null>(null);
   const cancelFocusRef = useRef<HTMLButtonElement | null>(null);
@@ -148,7 +148,7 @@ export function MemberClassesPage() {
     setVisibleCount(SESSION_BATCH_SIZE);
     actionGenRef.current += 1;
     setActionError('');
-    setNotice('');
+    
   }
 
   function handleSelectTab(nextTab: 'schedule' | 'coach_booking' | 'my') {
@@ -245,7 +245,7 @@ export function MemberClassesPage() {
       sessions,
     );
     if (overlap) {
-      setNotice('');
+      
       setActionError(
         `Trùng giờ học: Bạn đã đặt chỗ lớp "${overlap.className}" (${overlap.startTime}–${overlap.endTime}) ngày ${formatShortDate(session.sessionDate)}. Không thể đặt hai lớp học chồng chéo thời gian.`,
       );
@@ -254,13 +254,13 @@ export function MemberClassesPage() {
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
-    setNotice('');
+    
     setActionError('');
     try {
       if (waitlistId === undefined) await enroll(session.id);
       else await enroll(session.id, waitlistId);
       if (actionGenRef.current === gen) {
-        setNotice(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`);
+        notify(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`, 'success');
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -284,7 +284,7 @@ export function MemberClassesPage() {
       sessions,
     );
     if (overlap) {
-      setNotice('');
+      
       setActionError(
         `Trùng giờ học: Bạn đã đặt chỗ lớp "${overlap.className}" (${overlap.startTime}–${overlap.endTime}) ngày ${formatShortDate(session.sessionDate)}. Không thể tham gia hàng chờ lớp trùng giờ.`,
       );
@@ -293,12 +293,12 @@ export function MemberClassesPage() {
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
-    setNotice('');
+    
     setActionError('');
     try {
       await joinWaitlist(session.id);
       if (actionGenRef.current === gen) {
-        setNotice(`Đã tham gia hàng chờ lớp "${session.className}". Hệ thống sẽ tự động đôn chỗ khi có học viên hủy lịch.`);
+        notify(`Đã tham gia hàng chờ lớp "${session.className}". Hệ thống sẽ tự động đôn chỗ khi có học viên hủy lịch.`, 'success');
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -319,12 +319,12 @@ export function MemberClassesPage() {
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
-    setNotice('');
+    
     setActionError('');
     try {
       await cancelEnrollment(enrollmentId);
       if (actionGenRef.current === gen) {
-        setNotice(`Đã hủy đặt chỗ lớp "${className}".`);
+        notify(`Đã hủy đặt chỗ lớp "${className}".`, 'success');
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -345,12 +345,12 @@ export function MemberClassesPage() {
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
-    setNotice('');
+    
     setActionError('');
     try {
       await leaveWaitlist(waitlistId);
       if (actionGenRef.current === gen) {
-        setNotice(`Đã rút khỏi hàng chờ lớp "${className}".`);
+        notify(`Đã rút khỏi hàng chờ lớp "${className}".`, 'success');
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -496,12 +496,6 @@ export function MemberClassesPage() {
           </p>
         )}
       </div>
-
-      {notice && (
-        <div className="portal-card" role="status" style={{ marginBottom: 16, borderColor: 'rgba(46, 107, 79, 0.35)', background: 'rgba(46, 107, 79, 0.06)' }}>
-          <strong style={{ color: 'var(--portal-success, #86efac)' }}>{notice}</strong>
-        </div>
-      )}
 
       {actionError && (
         <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'rgba(180, 60, 60, 0.35)' }}>

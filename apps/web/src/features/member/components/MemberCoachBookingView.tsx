@@ -22,6 +22,7 @@ import {
 } from '../../coaching/coachReviewApi';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
+import { notify } from '../../../shared/lib/portalNotices';
 
 function localToday(): string {
   const now = new Date();
@@ -64,7 +65,6 @@ export function MemberCoachBookingView({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
   // Booking Modal State
@@ -156,7 +156,7 @@ export function MemberCoachBookingView({
     if (!selectedCoach || !modalSlot) return;
     setSubmitting(true);
     setError('');
-    setNotice('');
+    
     try {
       const created = await createCoachBooking({
         coachId: selectedCoach.id,
@@ -183,9 +183,9 @@ export function MemberCoachBookingView({
       if (paymentMethod === 'hourly_pay') {
         setPaymentModalBooking(created);
       } else {
-        setNotice(
+        notify(
           `Đặt lịch tập 1:1 với HLV ${created.coachName} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
-        );
+        , 'success');
       }
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : 'Không thể đặt lịch. Vui lòng thử lại.'));
@@ -214,7 +214,7 @@ export function MemberCoachBookingView({
       setMyReviews(updatedReviews);
       setLeaderboard(updatedLeaderboard);
 
-      setNotice(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${reviewTargetBooking.coachName} thành công.`);
+      notify(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${reviewTargetBooking.coachName} thành công.`, 'success');
       setReviewTargetBooking(null);
       setReviewComment('');
     } catch (err: unknown) {
@@ -229,7 +229,7 @@ export function MemberCoachBookingView({
     setCancelling(true);
     try {
       await cancelCoachBooking(cancelTarget.id, 'Hội viên chủ động hủy');
-      setNotice(`Đã hủy lịch tập 1:1 với HLV ${cancelTarget.coachName} thành công.`);
+      notify(`Đã hủy lịch tập 1:1 với HLV ${cancelTarget.coachName} thành công.`, 'success');
       setCancelTarget(null);
 
       if (selectedCoachId) {
@@ -259,30 +259,6 @@ export function MemberCoachBookingView({
 
   return (
     <div style={{ display: 'grid', gap: 24 }}>
-      {notice && (
-        <div
-          className="portal-card"
-          role="status"
-          style={{
-            borderColor: 'rgba(46, 107, 79, 0.45)',
-            background: 'rgba(46, 107, 79, 0.08)',
-            padding: 14,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <strong style={{ color: 'var(--portal-success, #86efac)' }}>{notice}</strong>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => setNotice('')}
-            style={{ padding: '2px 8px', fontSize: 12 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {error && (
         <div

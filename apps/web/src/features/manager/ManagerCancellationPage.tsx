@@ -3,6 +3,7 @@ import { apiFetch } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import type { MembershipCancellationRequest } from '../member/membershipApi';
+import { notify } from '../../shared/lib/portalNotices';
 
 const loadRequests = () => apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations');
 const decideRequest = (id: number, action: 'approve' | 'reject', note: string) =>
@@ -18,7 +19,6 @@ export function ManagerCancellationPage() {
   const [items, setItems] = useState<MembershipCancellationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [decision, setDecision] = useState<{ item: MembershipCancellationRequest; action: 'approve' | 'reject' } | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -40,7 +40,7 @@ export function ManagerCancellationPage() {
     setError(null);
     try {
       await decideRequest(decision.item.id, decision.action, note.trim());
-      setMessage(decision.action === 'approve' ? 'Đã duyệt hủy gói tập.' : 'Đã từ chối yêu cầu hủy.');
+      notify(decision.action === 'approve' ? 'Đã duyệt hủy gói tập.' : 'Đã từ chối yêu cầu hủy.', 'success');
       setDecision(null);
       setNote('');
       await refresh();
@@ -55,7 +55,6 @@ export function ManagerCancellationPage() {
     <PageHeader eyebrow="Quản lý trung tâm" title="Yêu cầu hủy gói tập"
       subtitle="Xem xét lý do và quyền lợi liên quan trước khi quyết định." />
     {error && <div className="portal-alert" role="alert">{error} <button type="button" className="btn-secondary btn-sm" onClick={() => void refresh()}>Thử lại</button></div>}
-    {message && <div className="portal-alert portal-alert--info" role="status">{message}</div>}
     {loading ? <LoadingSkeleton label="Đang tải yêu cầu hủy gói tập…" count={3} /> : items.length === 0 ?
       <div className="portal-card portal-empty">Chưa có yêu cầu hủy gói tập.</div> :
       <div className="stack" style={{ gap: 16 }}>

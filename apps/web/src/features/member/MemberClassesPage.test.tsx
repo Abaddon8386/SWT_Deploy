@@ -4,6 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassesPage } from './MemberClassesPage';
 import { ApiError } from '../../shared/api/client';
+import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
+
+const noticeText = () => getNotices().map((notice) => notice.message).join(' ');
 
 const mocks = vi.hoisted(() => ({
   sessions: vi.fn(),
@@ -68,6 +71,7 @@ describe('MemberClassesPage', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div'); document.body.append(host);
     root = createRoot(host);
+    clearNotices();
     mocks.sessions.mockReset();
     mocks.mySubscription.mockReset().mockResolvedValue(null);
     mocks.waitlists.mockReset();
@@ -365,7 +369,7 @@ describe('MemberClassesPage', () => {
     expect(mocks.enroll).toHaveBeenCalledTimes(1);
     expect(book.disabled).toBe(true);
     await act(async () => finishBooking({ id: 41 }));
-    expect(host.textContent).toContain('Đã đặt chỗ lớp "Yoga Flow"');
+    expect(noticeText()).toContain('Đã đặt chỗ lớp "Yoga Flow"');
     const cancel = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy đặt chỗ')!;
     await act(async () => cancel.click());
     const confirm = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Xác nhận hủy')!;

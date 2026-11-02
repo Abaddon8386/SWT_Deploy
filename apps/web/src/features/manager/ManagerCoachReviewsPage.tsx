@@ -11,6 +11,7 @@ import {
   type CoachReviewDto,
 } from '../coaching/coachReviewApi';
 import { getCoaches } from '../member/coachBookingApi';
+import { notify } from '../../shared/lib/portalNotices';
 
 export function ManagerCoachReviewsPage() {
   const now = new Date();
@@ -25,7 +26,6 @@ export function ManagerCoachReviewsPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
 
   const [activeTab, setActiveTab] = useState<'leaderboard' | 'member_reviews'>('leaderboard');
-  const [notice, setNotice] = useState<string>('');
   const [error, setError] = useState<string>('');
 
   // Edit Modal State for a Coach's Monthly Review
@@ -66,11 +66,11 @@ export function ManagerCoachReviewsPage() {
   async function handleAutoGenerate() {
     setGenerating(true);
     setError('');
-    setNotice('');
+    
     try {
       const generated = await generateMonthlyReviews(selectedYear, selectedMonth);
       setReviews(generated);
-      setNotice(`Đã tự động tổng hợp đánh giá và tạo Bảng xếp hạng tháng ${selectedMonth}/${selectedYear} thành công!`);
+      notify(`Đã tự động tổng hợp đánh giá và tạo Bảng xếp hạng tháng ${selectedMonth}/${selectedYear} thành công!`, 'success');
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : 'Không thể tổng hợp đánh giá.'));
     } finally {
@@ -99,7 +99,7 @@ export function ManagerCoachReviewsPage() {
         status: 'published',
       });
       setReviews((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setNotice(`Đã cập nhật và gửi thông báo vinh danh cho HLV ${updated.coachName}!`);
+      notify(`Đã cập nhật và gửi thông báo vinh danh cho HLV ${updated.coachName}!`, 'success');
       setEditingReview(null);
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : 'Không thể lưu bản đánh giá.'));
@@ -168,31 +168,6 @@ export function ManagerCoachReviewsPage() {
           </button>
         </div>
       </div>
-
-      {notice && (
-        <div
-          className="portal-card"
-          role="status"
-          style={{
-            borderColor: 'rgba(46, 107, 79, 0.45)',
-            background: 'rgba(46, 107, 79, 0.08)',
-            padding: 14,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <strong style={{ color: 'var(--portal-success, #86efac)' }}>{notice}</strong>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => setNotice('')}
-            style={{ padding: '2px 8px', fontSize: 12 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {error && (
         <div

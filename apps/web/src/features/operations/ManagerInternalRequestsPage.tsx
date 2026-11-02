@@ -8,6 +8,7 @@ import {
   type StaffInternalRequestDto,
   type RequestType,
 } from './staffRequestApi';
+import { notify } from '../../shared/lib/portalNotices';
 
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
   LEAVE: { label: 'Xin nghỉ phép', bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
@@ -33,7 +34,6 @@ export function ManagerInternalRequestsPage() {
   const [requests, setRequests] = useState<StaffInternalRequestDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [notice, setNotice] = useState<string>('');
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
@@ -106,11 +106,11 @@ export function ManagerInternalRequestsPage() {
         managerNotes: managerNotes.trim() || undefined,
       });
 
-      setNotice(
+      notify(
         reviewAction === 'APPROVED'
           ? `Đã phê duyệt đơn của ${reviewTarget.userFullName} thành công!`
           : `Đã từ chối đơn của ${reviewTarget.userFullName}.`
-      );
+      , 'success');
       setReviewTarget(null);
       await loadData();
     } catch (err: unknown) {
@@ -208,34 +208,6 @@ export function ManagerInternalRequestsPage() {
           </Select>
         </div>
       </div>
-
-      {notice && (
-        <div
-          role="status"
-          style={{
-            background: 'rgba(46, 107, 79, 0.08)',
-            border: '1px solid rgba(46, 107, 79, 0.3)',
-            color: '#226442',
-            padding: '12px 18px',
-            borderRadius: 12,
-            marginBottom: 20,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
-          <span>✓ {notice}</span>
-          <button
-            type="button"
-            onClick={() => setNotice('')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#226442' }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {error && (
         <div

@@ -9,6 +9,7 @@ import {
   type StaffInternalRequestDto,
   type RequestType,
 } from './staffRequestApi';
+import { notify } from '../../shared/lib/portalNotices';
 
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
   LEAVE: { label: 'Xin nghỉ phép', bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
@@ -28,7 +29,6 @@ export function StaffInternalRequestsPage() {
   const [requests, setRequests] = useState<StaffInternalRequestDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [notice, setNotice] = useState<string>('');
 
   // Filter
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -92,7 +92,7 @@ export function StaffInternalRequestsPage() {
         targetShift: createTargetShift.trim() || null,
       });
 
-      setNotice('Gửi đơn từ nội bộ thành công! Ban Quản Lý sẽ sớm xem xét và phản hồi.');
+      notify('Gửi đơn từ nội bộ thành công! Ban Quản Lý sẽ sớm xem xét và phản hồi.', 'success');
       setShowCreateModal(false);
       resetForm();
       await loadData();
@@ -118,7 +118,7 @@ export function StaffInternalRequestsPage() {
     setCancellingId(id);
     try {
       await cancelStaffRequest(id);
-      setNotice('Đã hủy đơn thành công.');
+      notify('Đã hủy đơn thành công.', 'success');
       await loadData();
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : 'Không thể hủy đơn từ.'));
@@ -208,34 +208,6 @@ export function StaffInternalRequestsPage() {
           <span>＋</span> Tạo đơn từ mới
         </button>
       </div>
-
-      {notice && (
-        <div
-          role="status"
-          style={{
-            background: 'rgba(46, 107, 79, 0.08)',
-            border: '1px solid rgba(46, 107, 79, 0.3)',
-            color: '#226442',
-            padding: '12px 18px',
-            borderRadius: 12,
-            marginBottom: 20,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
-          <span>✓ {notice}</span>
-          <button
-            type="button"
-            onClick={() => setNotice('')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#226442' }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {error && (
         <div

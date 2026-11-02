@@ -3,6 +3,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { createStaffAccount, listStaffAccounts, type StaffAccount, type StaffAccountInput } from './staffAccountsApi';
+import { notify } from '../../shared/lib/portalNotices';
 
 const initialForm: StaffAccountInput = {
   fullName: '', email: '', phone: '', password: '', gender: 'other', roleCode: 'COACH',
@@ -15,7 +16,6 @@ export function StaffAccountsPage() {
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
@@ -32,13 +32,12 @@ export function StaffAccountsPage() {
     event.preventDefault();
     if (saving) return;
     setError('');
-    setSuccess('');
     setSaving(true);
     try {
       const created = await createStaffAccount({ ...form, fullName: form.fullName.trim(), email: form.email.trim(), phone: form.phone?.trim() || undefined });
       setAccounts(current => [...current, created]);
       setForm(initialForm);
-      setSuccess(`Đã tạo tài khoản ${created.email}. Nhân sự có thể đăng nhập bằng email hoặc Google với đúng email đã được cấp.`);
+      notify(`Đã tạo tài khoản ${created.email}. Nhân sự có thể đăng nhập bằng email hoặc Google với đúng email đã được cấp.`, 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tạo tài khoản. Vui lòng thử lại.');
     } finally {
@@ -83,7 +82,6 @@ export function StaffAccountsPage() {
           <button className="btn-primary" type="submit" disabled={loading || Boolean(loadError)} aria-busy={saving}>{saving ? 'Đang tạo…' : 'Tạo tài khoản nhân sự'}</button>
         </fieldset>
         {error && <p role="alert" className="portal-alert">{error}</p>}
-        {success && <p role="status">{success}</p>}
       </form>
     </section>
     <section className="portal-card" aria-labelledby="staff-list-heading">

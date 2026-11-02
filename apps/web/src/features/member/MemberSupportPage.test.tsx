@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 import { MemberSupportPage } from './MemberSupportPage';
 import * as supportApi from './memberSupportApi';
 import { ApiError } from '../../shared/api/client';
@@ -13,6 +14,7 @@ let host: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  clearNotices();
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
   vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (this: HTMLDialogElement) { this.removeAttribute('open'); });
@@ -131,7 +133,7 @@ it('creates a categorized ticket and refreshes the list', async () => {
   await act(async () => { (host.querySelector('.member-support-form') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
   expect(supportApi.createSupportTicket).toHaveBeenCalledWith('[Gói tập] Gia hạn gói', '');
   expect(supportApi.getMySupportTickets).toHaveBeenCalledTimes(2);
-  expect(host.textContent).toContain('Đã tạo phiếu #7');
+  expect(getNotices().map((notice) => notice.message).join(' ')).toContain('Đã tạo phiếu #7');
   expect(host.querySelector('dialog')?.textContent).toContain('Phiếu #7');
   expect(supportApi.getSupportMessages).toHaveBeenCalledWith(7);
 });

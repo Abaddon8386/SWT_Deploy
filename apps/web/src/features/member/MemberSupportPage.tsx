@@ -9,6 +9,7 @@ import { createSupportTicket, getMySupportTickets, getSupportTicket, getSupportM
 import { subscribeSupport } from './supportRealtime';
 import type { ChatConnection } from '../chat/chatRealtime';
 import './member-support.css';
+import { notify } from '../../shared/lib/portalNotices';
 
 const categories = ['Gói tập', 'Thiết bị', 'Lịch học', 'Khác'] as const;
 type Category = typeof categories[number];
@@ -40,7 +41,6 @@ export function MemberSupportPage() {
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const creatingRef = useRef(false);
-  const [notice, setNotice] = useState('');
   const [formError, setFormError] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [openedTicket, setOpenedTicket] = useState<SupportTicket | null>(null);
@@ -178,11 +178,11 @@ export function MemberSupportPage() {
     if (!title) { setFormError('Vui lòng nhập tiêu đề yêu cầu.'); return; }
     const fullSubject = `[${category}] ${title}`;
     if (fullSubject.length > 150) { setFormError('Tiêu đề quá dài (tối đa 150 ký tự gồm phân loại).'); return; }
-    creatingRef.current = true; setCreating(true); setFormError(''); setNotice('');
+    creatingRef.current = true; setCreating(true); setFormError(''); 
     try {
       const created = await createSupportTicket(fullSubject, description.trim());
       if (!alive.current) return;
-      setSubject(''); setDescription(''); setNotice(`Đã tạo phiếu #${created.id}.`);
+      setSubject(''); setDescription(''); notify(`Đã tạo phiếu #${created.id}.`, 'success');
       setTickets(previous => [created, ...previous.filter(ticket => ticket.id !== created.id)]);
       openChat(created);
       await loadTickets(0);
@@ -233,7 +233,6 @@ export function MemberSupportPage() {
           <label className="portal-label" htmlFor="support-description">Nội dung</label>
           <textarea id="support-description" className="portal-textarea" value={description} onChange={(event) => setDescription(event.target.value)} disabled={creating} rows={4} placeholder="Mô tả để chúng tôi hỗ trợ nhanh hơn" />
           {formError && <p role="alert" className="member-support-error">{formError}</p>}
-          {notice && <p role="status" className="member-support-notice">{notice}</p>}
           <button className="btn-primary" type="submit" disabled={creating}>{creating ? 'Đang gửi…' : 'Gửi yêu cầu'}</button>
         </form>
       </section>

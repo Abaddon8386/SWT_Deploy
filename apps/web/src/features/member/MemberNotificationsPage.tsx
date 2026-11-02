@@ -39,15 +39,20 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
   // Mở bảng là đã xem các thông báo thao tác
   useEffect(() => { markNoticesRead(); }, [notices.length]);
 
+  const role = getCurrentUser()?.role;
+  // Vai trò quản lý/nhân viên chưa có thông báo từ server: bảng chỉ liệt kê thông báo thao tác tại client
+  const serverEnabled = role !== 'STAFF' && role !== 'MANAGER' && role !== 'ADMIN';
+
   const load = useCallback(async () => {
     const version = ++request.current.version;
+    if (!serverEnabled) { setData(null); setCount(0); setLoading(false); return; }
     setLoading(true); setError(null);
     try {
       const [list, unread] = await Promise.all([getNotifications(page), getUnreadCount()]);
       if (version === request.current.version) { setData(list); setCount(unread); }
     } catch (reason) { if (version === request.current.version) { setData(null); setError(errorMessage(reason)); } }
     finally { if (version === request.current.version) setLoading(false); }
-  }, [page]);
+  }, [page, serverEnabled]);
 
   useEffect(() => {
     const sequence = request.current;
@@ -88,7 +93,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
   const hasUnread = count > 0 || Boolean(data?.content.some((item) => !item.isRead));
 
   return <div className="notification-panel">
-    <div className="notification-panel__actions"><span>{loading ? 'Đang tải…' : data ? `${count} chưa đọc` : 'Chưa cập nhật'}</span><button className="notification-action" type="button" disabled={loading || busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button></div>
+    {serverEnabled && <div className="notification-panel__actions"><span>{loading ? 'Đang tải…' : data ? `${count} chưa đọc` : 'Chưa cập nhật'}</span><button className="notification-action" type="button" disabled={loading || busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button></div>}
     <div className="notification-panel__scroll" aria-busy={loading || busy}>
     {notices.length > 0 && <ul className="notification-activity" aria-label="Thông báo vừa phát sinh">
       {notices.map((notice) => <li key={notice.id} className={`notification-activity__item notification-activity__item--${notice.type}`}>

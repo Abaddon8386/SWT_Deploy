@@ -53,7 +53,9 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const moreRef = useRef<HTMLButtonElement>(null);
   const isMember = user.role === 'MEMBER';
   const isCoach = user.role === 'COACH';
-  const canReceiveNotifications = isMember || isCoach;
+  // Chỉ Hội viên/HLV có thông báo từ server; mọi vai trò đều có chuông cho thông báo thao tác tại client.
+  const hasServerNotifications = isMember || isCoach;
+  const canReceiveNotifications = true;
   const profileLabel = isMember ? 'Hồ sơ & Sức khỏe' : 'Hồ sơ cá nhân';
   const navItems = PORTAL_NAV.filter((item) => item.roles.includes(user.role)).map((item) => {
     if (item.to === '/member/profile') return { ...item, label: profileLabel };
@@ -69,7 +71,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const secondaryScreen = !mobileItems.some(item => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
 
   useEffect(() => {
-    if (!canReceiveNotifications) return;
+    if (!hasServerNotifications) return;
     let active = true;
     const refresh = () => {
       void getUnreadCount().then((count) => {
@@ -86,7 +88,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
       window.removeEventListener('member-notifications-changed', refresh);
       window.removeEventListener('focus', refresh);
     };
-  }, [canReceiveNotifications]);
+  }, [hasServerNotifications]);
 
   useEffect(() => {
     // Role có thể bị Admin đổi sau khi đăng nhập: đối chiếu với server khi vào portal và khi quay lại tab.
