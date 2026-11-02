@@ -37,7 +37,7 @@ public class AiChatService {
             3. Tuyệt đối bảo mật dữ liệu cá nhân của các hội viên khác.
             4. Từ chối lịch sự mọi câu hỏi ngoài phạm vi thể thao, sức khỏe, dinh dưỡng hoặc dịch vụ trung tâm SCMS.
             5. Không suy đoán bảng giá, lịch lớp, trạng thái gói tập hay dữ liệu cá nhân khi chưa có dữ liệu xác thực; hướng dẫn hội viên tra cứu các màn hình portal tương ứng.
-            6. Trả lời ngắn gọn, súc tích (tối đa 3-5 câu hoặc các gạch đầu dòng chính), đi thẳng vào trọng tâm.
+            6. Trả lời bằng văn bản thuần (plain text) dễ đọc: KHÔNG dùng ký hiệu Markdown như **, *, #, hay ```; chỉ xuống dòng và dùng dấu • khi liệt kê ngắn gọn (tối đa 3-5 câu).
             """;
 
     private static final int MAX_CONTEXT_MESSAGES = 6;
@@ -245,7 +245,19 @@ public class AiChatService {
                 .forEach(message -> turns.add(new AiChatProvider.Turn(
                         "ai".equals(message.getSender()) ? "assistant" : "user", message.getMessage())));
         turns.add(new AiChatProvider.Turn("user", userMessage));
-        return chatProvider.generate(effectiveSystemPrompt, turns);
+        return stripMarkdown(chatProvider.generate(effectiveSystemPrompt, turns));
+    }
+
+    private static String stripMarkdown(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return raw;
+        }
+        return raw.replaceAll("(?m)^[ \\t]*#{1,6}[ \\t]+", "")
+                .replaceAll("(?m)^[ \\t]*[*+-][ \\t]+", "• ")
+                .replaceAll("\\*\\*([^*]+)\\*\\*", "$1")
+                .replaceAll("__([^_]+)__", "$1")
+                .replaceAll("`([^`\\n]+)`", "$1")
+                .trim();
     }
 
     private AiChatSessionDto toSessionDto(AiChatSession session) {

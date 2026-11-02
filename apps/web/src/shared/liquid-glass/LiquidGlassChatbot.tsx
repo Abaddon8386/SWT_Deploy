@@ -16,6 +16,19 @@ function errorText(error: unknown): string {
   return 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.';
 }
 
+function formatChatText(raw: string): string {
+  return raw
+    .replace(/```[\s\S]*?```/g, (block) => block.replace(/```\w*\r?\n?/g, '').trim())
+    .replace(/^[ \t]*#{1,6}[ \t]+/gm, '')
+    .replace(/^[ \t]*[*+-][ \t]+/gm, '• ')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/\*([^*\n]+)\*/g, '$1')
+    .replace(/`([^`\n]+)`/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function LiquidGlassChatbot() {
   const [open, setOpen] = useState(false);
   const [sessions, setSessions] = useState<AiChatSession[]>([]);
@@ -39,7 +52,7 @@ export function LiquidGlassChatbot() {
 
   useEffect(() => {
     if (phase !== 'typing') return;
-    const text = messages[messages.length - 1]?.message ?? '';
+    const text = formatChatText(messages[messages.length - 1]?.message ?? '');
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       const done = window.setTimeout(() => { setTyped(text.length); setPhase('idle'); busy.current = false; }, 0);
       return () => window.clearTimeout(done);
@@ -150,7 +163,7 @@ export function LiquidGlassChatbot() {
         {sessions.length > 0 && <label className="ai-chat-session-label">Phiên chat<select aria-label="Phiên chat" value={sessionId ?? ''} disabled={disabled} onChange={(event) => void selectSession(Number(event.target.value))}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.topic} · #{session.id}</option>)}</select></label>}
         <div className="liquid-glass-chat-body" aria-label="Hội thoại">
           {initialized && messages.length === 0 && !pending && phase === 'idle' && <p className="ai-chat-empty">Bạn muốn trao đổi về điều gì?</p>}
-          {messages.map((message, index) => <div key={`${message.id}-${index}`} className={`chat-bubble-row ${message.sender === 'member' ? 'user-row' : 'bot-row'}`}><div className={`chat-bubble ${message.sender === 'member' ? 'user-bubble' : 'bot-bubble'}`}><div className="chat-bubble-text" style={{ whiteSpace: 'pre-wrap' }}>{phase === 'typing' && index === messages.length - 1 ? message.message.slice(0, typed) : message.message}</div><time className="chat-bubble-meta" dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</time></div></div>)}
+          {messages.map((message, index) => { const cleanText = message.sender === 'ai' ? formatChatText(message.message) : message.message; return <div key={`${message.id}-${index}`} className={`chat-bubble-row ${message.sender === 'member' ? 'user-row' : 'bot-row'}`}><div className={`chat-bubble ${message.sender === 'member' ? 'user-bubble' : 'bot-bubble'}`}><div className="chat-bubble-text" style={{ whiteSpace: 'pre-wrap' }}>{phase === 'typing' && index === messages.length - 1 ? cleanText.slice(0, typed) : cleanText}</div><time className="chat-bubble-meta" dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</time></div></div>; })}
           {pending && <div className="chat-bubble-row user-row"><div className="chat-bubble user-bubble"><div className="chat-bubble-text">{pending.text}</div></div></div>}
           {phase === 'loading' && <LoadingSkeleton label="Đang tải hội thoại" count={2} />}
           {phase === 'sending' && <div className="chat-bubble bot-bubble typing-bubble" role="status" aria-label="AI đang trả lời"><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /></div>}

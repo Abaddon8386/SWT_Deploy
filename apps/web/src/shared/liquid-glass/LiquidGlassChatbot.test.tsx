@@ -166,6 +166,18 @@ it('respects reduced motion when revealing the returned answer', async () => {
   expect((host.querySelector('textarea') as HTMLTextAreaElement).disabled).toBe(false);
 });
 
+it('strips raw markdown symbols from AI messages for clean plain-text readability', async () => {
+  vi.mocked(api.getAiChatHistory).mockResolvedValue([
+    { id: 10, sessionId: 7, sender: 'ai', message: '### Lịch tập hôm nay\n* **HIIT Burn**: 18:00 tại `Studio A`', createdAt: session.startedAt },
+  ]);
+  await open();
+  const bubbleText = host.querySelector('.bot-bubble .chat-bubble-text')?.textContent ?? '';
+  expect(bubbleText).toContain('Lịch tập hôm nay');
+  expect(bubbleText).toContain('• HIIT Burn: 18:00 tại Studio A');
+  expect(bubbleText).not.toContain('**');
+  expect(bubbleText).not.toContain('###');
+});
+
 it('shows history errors and recovers by reloading without creating a session', async () => {
   vi.mocked(api.getAiChatHistory).mockRejectedValueOnce(new ApiError('Không thể tải lịch sử', 503));
   await open();
