@@ -1,0 +1,21 @@
+/* Quầy lễ tân: QR cổng thu gọn bên trái; tra cứu và hàng chờ thanh toán bên phải, form thu tiền ngay sau */
+.reception-top {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+.reception-top__main { display: grid; gap: 24px; min-width: 0; }
+.reception-top .gate-qr-panel { margin-bottom: 0; }
+.reception-top .gate-qr-panel__image { width: min(100%, 200px); }
+.reception-checkout { margin-bottom: 24px; scroll-margin-top: 24px; }
+
+@media (max-width: 1100px) {
+  .reception-top { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .reception-top__search form { flex-wrap: wrap; }
+  .reception-top__search .btn-primary { width: 100%; justify-content: center; }
+}
