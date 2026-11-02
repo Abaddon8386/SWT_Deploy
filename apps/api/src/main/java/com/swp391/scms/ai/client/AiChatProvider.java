@@ -29,10 +29,22 @@ public class AiChatProvider {
     }
 
     public AiChatProvider(String provider, String apiKey, String model, RestClient.Builder builder) {
-        this.provider = provider;
+        this.provider = provider != null ? provider.trim().toLowerCase() : "disabled";
         this.apiKey = apiKey;
-        this.model = model;
+        this.model = resolveDefaultModel(this.provider, model);
         this.client = builder.build();
+    }
+
+    private static String resolveDefaultModel(String provider, String configuredModel) {
+        if (configuredModel != null && !configuredModel.isBlank()) {
+            return configuredModel.trim();
+        }
+        return switch (provider) {
+            case "gemini" -> "gemini-2.0-flash";
+            case "groq" -> "llama-3.3-70b-versatile";
+            case "openai" -> "gpt-4o-mini";
+            default -> "";
+        };
     }
 
     private static RestClient.Builder builder() {
@@ -44,20 +56,26 @@ public class AiChatProvider {
 
     public String generate(String systemPrompt, List<Turn> turns) {
         if (apiKey == null || apiKey.isBlank() || model == null || !model.matches("[A-Za-z0-9._-]+")
-                || !("openai".equals(provider) || "gemini".equals(provider))) {
+                || !("openai".equals(provider) || "groq".equals(provider) || "gemini".equals(provider))) {
             throw new ServiceUnavailableException("AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null,
                     "The AI assistant is not configured.");
         }
         try {
             JsonNode response;
             String content;
-            if ("openai".equals(provider)) {
+            if ("openai".equals(provider) || "groq".equals(provider)) {
+                String endpoint = "groq".equals(provider)
+                        ? "https://api.groq.com/openai/v1/chat/completions"
+                        : "https://api.openai.com/v1/chat/completions";
                 var messages = new java.util.ArrayList<Map<String, String>>();
                 messages.add(Map.of("role", "system", "content", systemPrompt));
                 turns.forEach(turn -> messages.add(Map.of("role", turn.role(), "content", turn.content())));
-                response = client.post().uri("https://api.openai.com/v1/chat/completions")
+                Map<String, Object> body = "groq".equals(provider)
+                        ? Map.of("model", model, "messages", messages, "stream", false)
+                        : Map.of("model", model, "messages", messages, "stream", false, "store", false);
+                response = client.post().uri(endpoint)
                         .header("Authorization", "Bearer " + apiKey).contentType(MediaType.APPLICATION_JSON)
-                        .body(Map.of("model", model, "messages", messages, "stream", false, "store", false))
+                        .body(body)
                         .retrieve().body(JsonNode.class);
                 content = response == null ? "" : response.path("choices").path(0).path("message").path("content").asText("");
             } else {

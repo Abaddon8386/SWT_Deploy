@@ -24,6 +24,9 @@ public class AiClientConfig {
     public AiClient aiClient() {
         if ("openai".equalsIgnoreCase(provider) && apiKey != null && !apiKey.isBlank()) {
             return new OpenAiRestClient(apiKey, model);
+        } else if ("groq".equalsIgnoreCase(provider) && apiKey != null && !apiKey.isBlank()) {
+            String groqModel = (model != null && !model.isBlank()) ? model : "llama-3.3-70b-versatile";
+            return new OpenAiRestClient(apiKey, groqModel, "https://api.groq.com/openai/v1", "groq");
         } else if ("gemini".equalsIgnoreCase(provider) && apiKey != null && !apiKey.isBlank()) {
             return new GeminiRestClient(apiKey, model);
         }

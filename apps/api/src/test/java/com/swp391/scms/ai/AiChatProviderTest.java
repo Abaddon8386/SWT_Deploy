@@ -35,6 +35,29 @@ class AiChatProviderTest {
         server.verify();
     }
 
+    @Test void geminiDefaultsToFlashModelWhenModelIsBlank() {
+        RestClient.Builder builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"))
+                .andExpect(header("x-goog-api-key", "unit-test-key"))
+                .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Default Gemini answer\"}]}}]}", MediaType.APPLICATION_JSON));
+        assertEquals("Default Gemini answer", new AiChatProvider("gemini", "unit-test-key", "", builder)
+                .generate("System", List.of(new AiChatProvider.Turn("user", "Question"))));
+        server.verify();
+    }
+
+    @Test void groqUsesOpenAiCompatibleContractAndDefaultsToLlamaModel() {
+        RestClient.Builder builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(header("Authorization", "Bearer groq-test-key"))
+                .andExpect(jsonPath("$.model").value("llama-3.3-70b-versatile"))
+                .andRespond(withSuccess("{\"choices\":[{\"message\":{\"content\":\"Groq answer\"}}]}", MediaType.APPLICATION_JSON));
+        assertEquals("Groq answer", new AiChatProvider("groq", "groq-test-key", "", builder)
+                .generate("System", List.of(new AiChatProvider.Turn("user", "Question"))));
+        server.verify();
+    }
+
     @Test void disabledProviderNeverReturnsMockContent() {
         var exception = assertThrows(ServiceUnavailableException.class, () -> new AiChatProvider("mock", "", "", RestClient.builder())
                 .generate("System", List.of()));

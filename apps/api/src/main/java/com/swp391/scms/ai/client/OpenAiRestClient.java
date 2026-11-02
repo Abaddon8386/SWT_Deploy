@@ -16,32 +16,42 @@ public class OpenAiRestClient implements AiClient {
 
     private final String apiKey;
     private final String model;
+    private final String providerName;
     private final RestClient restClient;
 
     public OpenAiRestClient(String apiKey, String model) {
-        this(apiKey, model, defaultRestClient(apiKey));
+        this(apiKey, model, defaultRestClient("https://api.openai.com/v1", apiKey), "openai");
+    }
+
+    public OpenAiRestClient(String apiKey, String model, String baseUrl, String providerName) {
+        this(apiKey, model, defaultRestClient(baseUrl, apiKey), providerName);
     }
 
     public OpenAiRestClient(String apiKey, String model, RestClient restClient) {
-        this.apiKey = apiKey;
-        this.model = (model != null && !model.isBlank()) ? model : "gpt-4o-mini";
-        this.restClient = restClient != null ? restClient : defaultRestClient(apiKey);
+        this(apiKey, model, restClient, "openai");
     }
 
-    private static RestClient defaultRestClient(String apiKey) {
+    public OpenAiRestClient(String apiKey, String model, RestClient restClient, String providerName) {
+        this.apiKey = apiKey;
+        this.model = (model != null && !model.isBlank()) ? model : "gpt-4o-mini";
+        this.providerName = (providerName != null && !providerName.isBlank()) ? providerName : "openai";
+        this.restClient = restClient != null ? restClient : defaultRestClient("https://api.openai.com/v1", apiKey);
+    }
+
+    private static RestClient defaultRestClient(String baseUrl, String apiKey) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(30_000);
         return RestClient.builder()
                 .requestFactory(factory)
-                .baseUrl("https://api.openai.com/v1")
+                .baseUrl(baseUrl != null && !baseUrl.isBlank() ? baseUrl : "https://api.openai.com/v1")
                 .defaultHeader("Authorization", "Bearer " + (apiKey != null ? apiKey : ""))
                 .build();
     }
 
     @Override
     public String getProviderName() {
-        return "openai";
+        return providerName;
     }
 
     @Override
@@ -60,12 +70,12 @@ public class OpenAiRestClient implements AiClient {
                     Map.of("role", "user", "content", userMessage != null ? userMessage : "")
             );
             JsonNode response = restClient.post()
-                    .uri("/chat/completions")
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("model", model, "messages", messages, "stream", false))
-                    .retrieve()
-                    .body(JsonNode.class);
+                .uri("/chat/completions")
+                .header("Authorization", "Bearer " + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("model", model, "messages", messages, "stream", false))
+                .retrieve()
+                .body(JsonNode.class);
             String content = response == null ? "" : response.path("choices").path(0).path("message").path("content").asText("");
             String cleaned = stripCodeFence(content);
             if (!cleaned.isBlank()) {
@@ -95,13 +105,13 @@ public class OpenAiRestClient implements AiClient {
     private String fallbackPayload(String userMessage) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("status", "success");
-        payload.put("provider", "openai");
+        payload.put("provider", providerName);
         payload.put("model", model);
         payload.put("content", "OpenAI generated response for: " + (userMessage != null ? userMessage : ""));
         try {
             return MAPPER.writeValueAsString(payload);
         } catch (Exception e) {
-            return "{\"status\":\"success\",\"provider\":\"openai\"}";
+            return "{\"status\":\"success\",\"provider\":\"" + providerName + "\"}";
         }
     }
 }
