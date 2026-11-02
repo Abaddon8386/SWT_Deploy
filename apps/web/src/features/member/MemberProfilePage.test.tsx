@@ -211,10 +211,10 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     expect(host.textContent).toContain('Lễ tân');
   });
 
-  it('hides health metrics section and member fitness fields for MANAGER role', async () => {
+  it.each([['MANAGER', 'Quản lý trung tâm'], ['ADMIN', 'Quản trị hệ thống']])('shows the correct administrative profile without member fields: %s', async (role, label) => {
     localStorage.setItem(
       AUTH_STORAGE_KEY,
-      JSON.stringify({ id: '1', name: 'Admin Manager', identifier: 'admin', role: 'MANAGER' })
+      JSON.stringify({ id: '1', name: 'Admin Manager', identifier: 'admin', role })
     );
 
     await renderPage();
@@ -224,6 +224,6 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
-    expect(host.textContent).toContain('Quản lý trung tâm');
+    expect(host.textContent).toContain(label);
   });
 });

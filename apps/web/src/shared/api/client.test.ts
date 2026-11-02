@@ -12,6 +12,16 @@ import {
 } from './client';
 
 describe('client.ts (API client & Auth session)', () => {
+  it('supports Admin sessions and sends Admin to account administration', () => {
+    const admin = setAuthSession('admin-jwt', 'admin@example.com', 'ADMIN');
+    expect(admin.role).toBe('ADMIN');
+    expect(getCurrentUser()?.role).toBe('ADMIN');
+    expect(homePath(admin.role)).toBe('/admin/users');
+  });
+
+  it.each([['COACH', 'COACH'], ['RECEPTIONIST', 'STAFF']])('keeps the portal role from Google authentication: %s', (backendRole, sessionRole) => {
+    expect(setAuthSession('google-jwt', 'staff@gmail.com', backendRole).role).toBe(sessionRole);
+  });
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();

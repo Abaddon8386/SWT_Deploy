@@ -2,7 +2,7 @@ export interface UserSession {
   id: string;
   name: string;
   identifier: string;
-  role: 'MEMBER' | 'STAFF' | 'COACH' | 'MANAGER';
+  role: 'MEMBER' | 'STAFF' | 'COACH' | 'MANAGER' | 'ADMIN';
 }
 
 export interface LoginResponse {
@@ -54,6 +54,7 @@ export class ApiError extends Error {
 
 // Map backend role codes to the UI session roles
 const SESSION_ROLE: Record<string, UserSession['role']> = {
+  ADMIN: 'ADMIN',
   MEMBER: 'MEMBER',
   COACH: 'COACH',
   RECEPTIONIST: 'STAFF',
@@ -137,6 +138,8 @@ export function setAuthSession(token: string, username: string, roleCode: string
 // Màn hình mặc định sau đăng nhập theo từng vai trò
 export const homePath = (role: UserSession['role']): string => {
   switch (role) {
+    case 'ADMIN':
+      return '/admin/users';
     case 'MANAGER':
       return '/manager/users';
     case 'STAFF':

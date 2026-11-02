@@ -15,6 +15,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 export function UserManagerPage() {
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [rolePerms, setRolePerms] = useState<Record<SystemRole, string[]>>({
+    ADMIN: [],
     CENTER_MANAGER: [],
     COACH: [],
     RECEPTIONIST: [],
@@ -280,7 +281,7 @@ export function UserManagerPage() {
   }
 
   async function handleTogglePermission(role: SystemRole, permId: string) {
-    if (role === 'CENTER_MANAGER') return;
+    if (role === 'ADMIN') return;
 
     // Optimistic update
     const previous = rolePerms[role] ?? [];
@@ -304,6 +305,8 @@ export function UserManagerPage() {
 
   const getRoleBadge = (role: SystemRole) => {
     switch (role) {
+      case 'ADMIN':
+        return <span className="portal-badge">Quản trị hệ thống</span>;
       case 'CENTER_MANAGER':
         return <span className="badge badge-warning">Quản lý trung tâm</span>;
       case 'COACH':
@@ -415,6 +418,7 @@ export function UserManagerPage() {
             >
               <option value="ALL">Tất cả vai trò</option>
               <option value="CENTER_MANAGER">Quản lý trung tâm</option>
+              <option value="ADMIN">Quản trị hệ thống</option>
               <option value="COACH">Huấn luyện viên</option>
               <option value="RECEPTIONIST">Lễ tân</option>
               <option value="MEMBER">Hội viên</option>
@@ -595,8 +599,8 @@ export function UserManagerPage() {
                       <strong>{perm.name}</strong>
                     </td>
                     {CORE_ROLES.map((role) => {
-                      const isManager = role.id === 'CENTER_MANAGER';
-                      const isChecked = isManager || rolePerms[role.id]?.includes(perm.id);
+                      const isManager = role.id === 'ADMIN';
+                      const isChecked = rolePerms[role.id]?.includes(perm.id) ?? false;
 
                       return (
                         <td key={role.id} style={{ textAlign: 'center' }}>
@@ -606,7 +610,7 @@ export function UserManagerPage() {
                             disabled={isManager}
                             title={
                               isManager
-                                ? 'Quyền mặc định của Quản lý trung tâm (bất biến)'
+                                ? 'Quyền quản trị hệ thống'
                                 : 'Nhấp để gán hoặc hủy quyền'
                             }
                             onChange={() => handleTogglePermission(role.id, perm.id)}
@@ -761,6 +765,7 @@ export function UserManagerPage() {
                 <option value="RECEPTIONIST">Lễ tân (Receptionist)</option>
                 <option value="MEMBER">Hội viên (Member)</option>
                 <option value="CENTER_MANAGER">Quản lý trung tâm (Center Manager)</option>
+                <option value="ADMIN">Quản trị hệ thống (Admin)</option>
               </Select>
             </div>
 
@@ -887,6 +892,7 @@ export function UserManagerPage() {
                 <option value="RECEPTIONIST">Lễ tân (Receptionist)</option>
                 <option value="MEMBER">Hội viên (Member)</option>
                 <option value="CENTER_MANAGER">Quản lý trung tâm (Center Manager)</option>
+                <option value="ADMIN">Quản trị hệ thống (Admin)</option>
               </Select>
             </div>
 

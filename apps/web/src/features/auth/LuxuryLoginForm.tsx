@@ -20,10 +20,11 @@ interface LuxuryLoginFormProps {
 }
 
 const ROLE_NAMES: Record<UserSession['role'], string> = {
+  ADMIN: 'Quản trị hệ thống',
   MEMBER: 'Hội viên',
   STAFF: 'Lễ tân / Thu ngân',
   COACH: 'Huấn luyện viên',
-  MANAGER: 'Quản trị viên Trung tâm',
+  MANAGER: 'Quản lý trung tâm',
 };
 
 type AuthMode = 'standard' | 'google_otp';
@@ -113,7 +114,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       const msg = err instanceof Error ? err.message : 'Đăng nhập Google thất bại.';
       // BR-04 & BR-05: Chặn nhân sự (403) và tài khoản bị khóa
       if (msg.includes('nhân sự') || msg.toLowerCase().includes('staff') || msg.includes('403')) {
-        fail('Tài khoản nhân sự không được phép đăng nhập qua Google. Vui lòng sử dụng đăng nhập thường bằng tên tài khoản và mật khẩu.');
+        fail('Vai trò này chưa hỗ trợ đăng nhập Google. Vui lòng đăng nhập bằng email và mật khẩu.');
       } else if (msg.toLowerCase().includes('khóa') || msg.toLowerCase().includes('locked')) {
         fail('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
       } else {

@@ -101,6 +101,7 @@ export const router = createBrowserRouter([
               'COACH',
               'MANAGER',
               'CENTER_MANAGER',
+              'ADMIN',
             ]}
           />
         ),
@@ -172,6 +173,12 @@ export const router = createBrowserRouter([
 
       // Manager Routes
       {
+        element: <RoleGuard allowedRoles={['ADMIN']} />,
+        children: [
+          { path: '/admin/users', lazy: async () => ({ Component: (await import('../features/manager/UserManagerPage')).UserManagerPage }) },
+        ],
+      },
+      {
         element: (
           <RoleGuard allowedRoles={['MANAGER', 'CENTER_MANAGER']} />
         ),
@@ -182,7 +189,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/manager/users',
-            lazy: async () => ({ Component: (await import('../features/manager/UserManagerPage')).UserManagerPage }),
+            lazy: async () => ({ Component: (await import('../features/manager/StaffAccountsPage')).StaffAccountsPage }),
           },
           {
             path: '/manager/reports',

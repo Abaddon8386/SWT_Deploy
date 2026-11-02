@@ -42,6 +42,8 @@ export function MemberProfilePage() {
     ? 'Lễ tân'
     : currentUser?.role === 'MANAGER'
     ? 'Quản lý trung tâm'
+    : currentUser?.role === 'ADMIN'
+    ? 'Quản trị hệ thống'
     : 'Hội viên';
 
   const [profile, setProfile] = useState<Profile | null>(null);

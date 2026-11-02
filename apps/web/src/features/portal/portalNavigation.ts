@@ -2,6 +2,7 @@ import type { UserSession } from '../../shared/api/client';
 import type { PortalIconName } from './PortalIcon';
 
 export const ROLE_LABELS: Record<UserSession['role'], string> = {
+  ADMIN: 'Quản trị hệ thống',
   MEMBER: 'Hội viên', STAFF: 'Lễ tân', COACH: 'Huấn luyện viên', MANAGER: 'Quản lý trung tâm',
 };
 
@@ -24,18 +25,23 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/reception', label: 'Quầy Lễ tân & POS', icon: 'card', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/check-in', label: 'Cổng quét QR Check-in', icon: 'scan', roles: ['STAFF', 'MANAGER'] },
-  { to: '/manager/users', label: 'Tài khoản & Phân quyền', icon: 'users', roles: ['MANAGER'] },
+  { to: '/admin/users', label: 'Tài khoản & Phân quyền', icon: 'users', roles: ['ADMIN'] },
+  { to: '/manager/users', label: 'Tài khoản nhân sự', icon: 'users', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/cancellations', label: 'Yêu cầu hủy gói', icon: 'package', roles: ['MANAGER'] },
   { to: '/manager/reports', label: 'Báo cáo & Doanh thu', icon: 'chart', roles: ['MANAGER'] },
   { to: '/manager/audit-logs', label: 'Nhật ký kiểm toán & Lấp đầy', icon: 'board', roles: ['MANAGER'] },
   { to: '/manager/coach-reviews', label: 'Xếp hạng & Đánh giá HLV', icon: 'chart', roles: ['MANAGER'] },
   { to: '/manager/requests', label: 'Duyệt đơn nội bộ', icon: 'check', roles: ['MANAGER'] },
-  { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER'] },
+  { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] },
 ];
 
 /** Short labels for the three frequent tasks; permissions still come from PORTAL_NAV. */
 export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label: string }[]> = {
+  ADMIN: [
+    { to: '/admin/users', label: 'Tài khoản' },
+    { to: '/member/profile', label: 'Hồ sơ' },
+  ],
   MEMBER: [
     { to: '/member/dashboard', label: 'Tổng quan' },
     { to: '/member/classes', label: 'Lịch học' },

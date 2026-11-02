@@ -76,6 +76,7 @@ describe('UserManagerPage', () => {
 
     vi.mocked(userApi.getUsers).mockResolvedValue(sampleUsers);
     vi.mocked(userApi.getRolePermissions).mockResolvedValue({
+      ADMIN: [],
       CENTER_MANAGER: [],
       COACH: [],
       RECEPTIONIST: [],

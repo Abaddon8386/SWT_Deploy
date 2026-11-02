@@ -1,0 +1,56 @@
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import { StaffAccountsPage } from './StaffAccountsPage';
+import { createStaffAccount, listStaffAccounts } from './staffAccountsApi';
+
+vi.mock('./staffAccountsApi', () => ({ createStaffAccount: vi.fn(), listStaffAccounts: vi.fn() }));
+let host: HTMLDivElement;
+let root: Root;
+beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  host = document.createElement('div');
+  document.body.append(host);
+  root = createRoot(host);
+  vi.mocked(listStaffAccounts).mockResolvedValue([]);
+});
+afterEach(async () => {
+  await act(async () => root.unmount());
+  host.remove();
+  vi.resetAllMocks();
+  vi.unstubAllGlobals();
+});
+
+it('offers only Coach and Receptionist and creates an account using the provisioned email', async () => {
+  vi.mocked(createStaffAccount).mockResolvedValue({ id: 4, fullName: 'New Coach', email: 'coach@gmail.com', roleCode: 'COACH', status: 'active' });
+  await act(async () => root.render(<StaffAccountsPage />));
+  expect(host.textContent).toContain('Chưa có tài khoản nhân sự');
+  await act(async () => host.querySelector<HTMLButtonElement>('#staff-role')!.click());
+  expect([...host.querySelectorAll('[role="option"]')].map(option => option.textContent?.trim())).toEqual(['Huấn luyện viên', 'Lễ tân']);
+  await act(async () => host.querySelector<HTMLButtonElement>('#staff-role')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  const setInput = async (id: string, value: string) => {
+    const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
+  await setInput('staff-name', 'New Coach');
+  await setInput('staff-email', 'coach@gmail.com');
+  await setInput('staff-password', 'Secret123!');
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(createStaffAccount).toHaveBeenCalledWith({ fullName: 'New Coach', email: 'coach@gmail.com', phone: undefined, password: 'Secret123!', gender: 'other', roleCode: 'COACH' });
+  expect(host.querySelector('tbody')?.textContent).toContain('coach@gmail.com');
+  expect(host.querySelector<HTMLInputElement>('#staff-password')?.value).toBe('');
+  expect(host.textContent).not.toContain('Phân quyền');
+});
+
+it('shows a load failure with retry and never treats it as an empty list', async () => {
+  vi.mocked(listStaffAccounts).mockRejectedValueOnce(new Error('Không thể kết nối'));
+  await act(async () => root.render(<StaffAccountsPage />));
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không thể kết nối');
+  expect(host.textContent).not.toContain('Chưa có tài khoản nhân sự');
+  expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+  await act(async () => [...host.querySelectorAll('button')].find(button => button.textContent === 'Thử lại')!.click());
+  expect(host.textContent).toContain('Chưa có tài khoản nhân sự');
+});

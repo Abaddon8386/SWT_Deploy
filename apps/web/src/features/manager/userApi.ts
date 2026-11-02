@@ -1,6 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 
-export type SystemRole = 'CENTER_MANAGER' | 'COACH' | 'RECEPTIONIST' | 'MEMBER';
+export type SystemRole = 'CENTER_MANAGER' | 'COACH' | 'RECEPTIONIST' | 'MEMBER' | 'ADMIN';
 export type UserGender = 'male' | 'female' | 'other';
 
 export interface UserAccount {
@@ -24,9 +24,10 @@ export interface Permission {
   module: string;
 }
 
-// 4 role gốc bất biến của hệ thống
+// Backend role codes; the portal displays CENTER_MANAGER as Manager.
 export const CORE_ROLES: { id: SystemRole; name: string; description: string }[] = [
-  { id: 'CENTER_MANAGER', name: 'Quản lý trung tâm', description: 'Toàn quyền kiểm soát và cấu hình hệ thống' },
+  { id: 'ADMIN', name: 'Quản trị hệ thống', description: 'Quản trị tài khoản và phân quyền' },
+  { id: 'CENTER_MANAGER', name: 'Quản lý trung tâm', description: 'Quản lý vận hành và tạo tài khoản nhân sự' },
   { id: 'COACH', name: 'Huấn luyện viên', description: 'Quản lý lịch dạy, giáo án tập luyện và học viên' },
   { id: 'RECEPTIONIST', name: 'Lễ tân / Thu ngân', description: 'Tiếp đón, check-in và ghi nhận thanh toán' },
   { id: 'MEMBER', name: 'Hội viên', description: 'Đặt lớp, quản lý thẻ thành viên và xem lịch tập' },
