@@ -1,5 +1,6 @@
 package com.swp391.scms.auth;
 
+import com.swp391.scms.auth.dto.AuthSessionResponse;
 import com.swp391.scms.auth.dto.AuthTokenResponse;
 import com.swp391.scms.auth.dto.GoogleLoginRequest;
 import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
@@ -10,6 +11,7 @@ import com.swp391.scms.auth.dto.RegistrationResponse;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -60,6 +63,13 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.ok(msg("auth.login.success"), authService.login(request));
+    }
+
+    @Operation(summary = "Xác minh phiên hiện tại",
+            description = "Trả về tên đăng nhập và vai trò hiện hành trong cơ sở dữ liệu để frontend đồng bộ phiên sau khi Admin đổi vai trò")
+    @GetMapping("/me")
+    public ApiResponse<AuthSessionResponse> me(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("auth.me.success"), new AuthSessionResponse(principal.username(), principal.role()));
     }
 
     @Operation(summary = "Đăng ký tài khoản", description = "Tạo tài khoản hội viên mới và gửi mã kích hoạt")

@@ -50,6 +50,7 @@ public class SecurityConfig {
                     .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/catalog").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                     .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                     // Profile extensions (SCRUM-66)
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/coach").hasRole("COACH")
@@ -119,6 +120,15 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST,
                             "/api/v1/memberships/subscriptions/*/hold/approve", "/api/v1/subscriptions/*/hold/approve",
                             "/api/v1/memberships/subscriptions/*/hold/reject", "/api/v1/subscriptions/*/hold/reject")
+                            .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    // POS: nhân viên mua mới/gia hạn thay hội viên; phải đứng trước matcher MEMBER bên dưới
+                    .requestMatchers(HttpMethod.GET,
+                            "/api/v1/memberships/subscriptions/members/*/renewal-candidates",
+                            "/api/v1/subscriptions/members/*/renewal-candidates")
+                            .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST,
+                            "/api/v1/memberships/subscriptions/members/*/renew/*",
+                            "/api/v1/subscriptions/members/*/renew/*")
                             .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST,
                             "/api/v1/memberships/subscriptions/*/cancel", "/api/v1/subscriptions/*/cancel")

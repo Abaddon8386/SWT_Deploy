@@ -93,6 +93,22 @@ class OperationsSecurityRegressionTest {
     }
 
     @Test
+    void receptionAndManagerReachPosRenewalEndpointsButMemberCannot() throws Exception {
+        for (String path : List.of("/api/v1/memberships/subscriptions", "/api/v1/subscriptions")) {
+            for (String role : List.of("RECEPTIONIST", "CENTER_MANAGER")) {
+                mvc.perform(get(path + "/members/5/renewal-candidates").with(authentication(actor(role))))
+                        .andExpect(status().isOk());
+                mvc.perform(post(path + "/members/5/renew/9").with(authentication(actor(role))))
+                        .andExpect(status().isCreated());
+            }
+            mvc.perform(get(path + "/members/5/renewal-candidates").with(authentication(actor("MEMBER"))))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post(path + "/members/5/renew/9").with(authentication(actor("COACH"))))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
     void mergedMatchersAllowMemberBookingAndReceptionistScanning() throws Exception {
         when(checkins.scan(any(), any())).thenReturn(new CheckinDto(1L, 10L, "Member",
                 LocalDateTime.of(2026, 10, 17, 10, 0), null, "qr", null, "GRANTED"));

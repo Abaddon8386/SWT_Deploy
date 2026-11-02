@@ -86,6 +86,10 @@ paths:
       summary: Login (public). data = { token, username, role }
       security: []
       responses: { '200': { description: OK }, '401': { description: INVALID_CREDENTIALS }, '403': { description: ACCOUNT_INACTIVE } }
+  /auth/me:
+    get:
+      summary: Verify the current session. data = { username, role } where role is the role currently stored in the database
+      responses: { '200': { description: OK }, '401': { description: Missing, expired or deactivated session } }
   /auth/register:
     post:
       summary: Register a MEMBER account (public). data = { message, userId, username }
