@@ -116,7 +116,7 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   gap: 26px;
   height: calc(100dvh - 36px);
   max-height: none;
-  min-height: 540px;
+  min-height: 0;
   padding: 20px 10px;
   overflow: visible;
   border: 0;
@@ -145,7 +145,8 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-logo i { display: none; }
 .portal-logo > span { color: var(--portal-ink); display: inline-flex; align-items: center; justify-content: center; line-height: 1; transform: translateY(-0.5px); }
 .portal-rail-nav, .portal-rail-footer { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.portal-rail-nav { flex: 1 1 auto; min-height: 0; width: 100%; padding-block: 2px; overflow-y: auto; scrollbar-width: thin; }
+.portal-rail-nav { flex: 1 1 auto; min-height: 0; width: 100%; padding-block: 2px; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
+.portal-rail-nav::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .portal-rail-footer { flex-shrink: 0; margin-top: auto; gap: 8px; }
 .portal-v2 .portal-rail-link {
   position: relative;
@@ -372,9 +373,6 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 @media (min-width: 768px) and (max-height: 760px) {
   .portal-v2 .app-sidebar { gap: 12px; padding-block: 14px; min-height: 0; }
   .portal-rail-nav, .portal-rail-footer { gap: 4px; }
-}
-@media (min-width: 768px) and (max-height: 610px) {
-  .portal-v2 .app-sidebar { position: static; height: auto; max-height: none; min-height: 520px; }
 }
 @media (max-width: 1100px) {
   .portal-v2 .reports-charts-grid { grid-template-columns: minmax(0, 1fr); }

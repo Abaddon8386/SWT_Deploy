@@ -4,6 +4,8 @@ Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của ngư
 
 ## Phạm vi
 
+Sidebar portal (02/11/2026): giữ rail icon có chiều rộng hiện hành, chiều cao cố định theo viewport (`100dvh - 36px`) trên desktop, kể cả màn hình thấp. Danh sách menu cuộn dọc native trong phần còn lại, ẩn scrollbar và chặn tràn ngang; logo và cụm hồ sơ vẫn nằm ngoài vùng cuộn. Không áp dụng việc ẩn scrollbar này cho nội dung trang.
+
 Đồng bộ bộ môn và tải dữ liệu (01/11/2026, quyết định mới nhất): landing và bộ lọc đặt lớp dùng chung `PRIMARY_DISCIPLINES`: **Gym → Yoga → Pilates → Boxing**, Gym là bộ môn chính và đứng đầu. Giữ bố cục story, ba ý ngắn mỗi môn, ảnh minh họa đúng môn, CTA lịch học, cuộn native và animation hiện hành. Các tên bộ môn bổ sung từ API vẫn xuất hiện trong portal; nhóm Gym nhận cả tên lớp Strength của catalog. Không suy ra danh mục chính từ số buổi có lịch trong một tuần hoặc thay đổi quyền lợi gói tập.
 
 Skeleton dùng cho vùng dữ liệu/module/ảnh đang tải, cùng kích thước và theme với nội dung sắp hiện. Dùng `LoadingSkeleton` cho card, hàng, bảng và hồ sơ; giữ skeleton riêng khi đã khớp bố cục. Skeleton tĩnh, không shimmer vô hạn, có nhãn trạng thái cho trình đọc màn hình. Giữ shell portal khi chờ module và hỗ trợ cả tải đầu tiên; ảnh có nền giữ chỗ đến khi tải xong hoặc báo lỗi. Không chèn thời gian chờ tối thiểu, không giữ skeleton sau khi có dữ liệu, không hiện empty state trước khi request hoàn tất. Gửi form/thao tác ghi tiếp tục dùng trạng thái bận ngay tại nút. Tôn trọng reduced motion và focus; không đổi bố cục dashboard/sidebar.
