@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'receipt' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building' | 'bell' | 'support';
+export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'receipt' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building' | 'bell' | 'support' | 'inbox' | 'file' | 'feedback' | 'dumbbell' | 'star' | 'history' | 'clock';
 
 const paths: Record<PortalIconName, string> = {
   board: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -22,6 +22,13 @@ const paths: Record<PortalIconName, string> = {
   building: 'M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-5h6v5 M8 7h1 M15 7h1 M8 11h1 M15 11h1',
   bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',
   support: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-5 4V6Z M8 9h8 M8 12h5',
+  inbox: 'M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z',
+  file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z M14 2v6h6 M8 13h8 M8 17h5',
+  feedback: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-5 4V6Z M12 7v3.5 M12 13h.01',
+  dumbbell: 'M6.5 6.5v11 M17.5 6.5v11 M3 9.5v5 M21 9.5v5 M6.5 12h11',
+  star: 'm12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z',
+  history: 'M3 12a9 9 0 1 0 3-6.7L3 8 M3 3v5h5 M12 7v5l4 2',
+  clock: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M12 7v5l3 2',
 };
 
 export function PortalIcon({ name, size = 20, style }: { name: PortalIconName; size?: number; style?: CSSProperties }) {

@@ -7,7 +7,6 @@ export const ROLE_LABELS: Record<UserSession['role'], string> = {
 };
 
 export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; roles: UserSession['role'][] }[] = [
-  { to: '/staff/support', label: 'Hộp thư hỗ trợ', icon: 'support', roles: ['STAFF', 'MANAGER'] },
   { to: '/member/dashboard', label: 'Bảng điều khiển', icon: 'board', roles: ['MEMBER'] },
   { to: '/member/packages', label: 'Gói tập', icon: 'package', roles: ['MEMBER'] },
   { to: '/member/classes', label: 'Lịch học & Đặt chỗ', icon: 'calendar', roles: ['MEMBER'] },
@@ -17,22 +16,23 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/member/progress', label: 'Tiến độ & Giáo án', icon: 'chart', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER'] },
   { to: '/member/support', label: 'Hỗ trợ & Khiếu nại', icon: 'support', roles: ['MEMBER'] },
-  { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'calendar', roles: ['COACH', 'MANAGER'] },
-  { to: '/coach/training-plans', label: 'Soạn giáo án & AI Gợi ý', icon: 'profile', roles: ['COACH', 'MANAGER'] },
+  { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'clock', roles: ['COACH', 'MANAGER'] },
+  { to: '/coach/training-plans', label: 'Soạn giáo án & AI Gợi ý', icon: 'dumbbell', roles: ['COACH', 'MANAGER'] },
   { to: '/staff/attendance', label: 'Điểm danh học viên', icon: 'check', roles: ['COACH'] },
-  { to: '/coach/support', label: 'Khiếu nại & Ý kiến học viên', icon: 'support', roles: ['COACH', 'MANAGER'] },
-  { to: '/staff/requests', label: 'Đơn từ nội bộ', icon: 'support', roles: ['STAFF', 'COACH'] },
+  { to: '/coach/support', label: 'Khiếu nại & Ý kiến học viên', icon: 'feedback', roles: ['COACH', 'MANAGER'] },
+  { to: '/staff/requests', label: 'Đơn từ nội bộ', icon: 'file', roles: ['STAFF', 'COACH'] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/reception', label: 'Quầy Lễ tân & POS', icon: 'card', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/check-in', label: 'Cổng quét QR Check-in', icon: 'scan', roles: ['STAFF', 'MANAGER'] },
+  { to: '/staff/support', label: 'Hộp thư hỗ trợ', icon: 'inbox', roles: ['STAFF', 'MANAGER'] },
   { to: '/admin/users', label: 'Tài khoản & Phân quyền', icon: 'users', roles: ['ADMIN'] },
   { to: '/manager/users', label: 'Tài khoản nhân sự', icon: 'users', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/cancellations', label: 'Yêu cầu hủy gói', icon: 'package', roles: ['MANAGER'] },
   { to: '/manager/reports', label: 'Báo cáo & Doanh thu', icon: 'chart', roles: ['MANAGER'] },
-  { to: '/manager/audit-logs', label: 'Nhật ký kiểm toán & Lấp đầy', icon: 'board', roles: ['MANAGER'] },
-  { to: '/manager/coach-reviews', label: 'Xếp hạng & Đánh giá HLV', icon: 'chart', roles: ['MANAGER'] },
-  { to: '/manager/requests', label: 'Duyệt đơn nội bộ', icon: 'check', roles: ['MANAGER'] },
+  { to: '/manager/audit-logs', label: 'Nhật ký kiểm toán & Lấp đầy', icon: 'history', roles: ['MANAGER'] },
+  { to: '/manager/coach-reviews', label: 'Xếp hạng & Đánh giá HLV', icon: 'star', roles: ['MANAGER'] },
+  { to: '/manager/requests', label: 'Duyệt đơn nội bộ', icon: 'file', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] },
 ];
 
