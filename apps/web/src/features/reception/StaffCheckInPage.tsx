@@ -6,16 +6,13 @@ import { StatusMark } from '../../shared/ui/StatusMark';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { toast } from '../../shared/ui/toast';
+import { formatCenterTimeSeconds } from '../../shared/lib/centerTime';
 import { checkinApi, type CheckinDto } from './checkinApi';
 import './staff-check-in.css';
 import { GateQrPanel } from './GateQrPanel';
+import { QrCameraScanner } from '../checkin/QrCameraScanner';
 
-const formatTime = (iso?: string | null): string => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-};
+const formatTime = (iso?: string | null): string => formatCenterTimeSeconds(iso, iso ?? '—');
 
 const isCheckinGranted = (status?: string | null): boolean => {
   if (!status) return false;
@@ -35,6 +32,7 @@ export function StaffCheckInPage() {
   const [scanCode, setScanCode] = useState('');
   const [selectedGate, setSelectedGate] = useState('Turnstile A1 - Sảnh Chính');
   const [isScanning, setIsScanning] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
   const checkoutBusy = useRef(false);
   const [historyView, setHistoryView] = useState<'inside' | 'recent'>('inside');
@@ -94,6 +92,11 @@ export function StaffCheckInPage() {
       return;
     }
     if (isScanning) return;
+    // The gate QR is what members scan themselves; staff scan the member's own card.
+    if (trimmed.startsWith('SOL:GATE:')) {
+      toast('Đây là mã QR cổng, không phải thẻ hội viên. Hãy quét mã QR trong thẻ hội viên của học viên.', 'error');
+      return;
+    }
 
     setIsScanning(true);
     try {
@@ -114,8 +117,8 @@ export function StaffCheckInPage() {
       const msg = err instanceof Error ? err.message : 'Không thể xác thực mã QR lúc này.';
       const deniedRecord: CheckinDto = {
         id: Date.now(),
-        memberId: 0,
-        memberName: trimmed,
+        memberId: null,
+        memberName: null,
         checkInTime: new Date().toISOString(),
         checkOutTime: null,
         method: 'qr_code',
@@ -220,6 +223,19 @@ export function StaffCheckInPage() {
               </div>
             </div>
           </form>
+
+          <div style={{ marginBottom: '24px' }}>
+            <button type="button" className="btn-secondary" aria-expanded={cameraOpen} onClick={() => setCameraOpen((open) => !open)}>
+              {cameraOpen ? 'Đóng camera' : 'Quét QR thẻ hội viên bằng camera'}
+            </button>
+            {cameraOpen && (
+              <QrCameraScanner
+                onScan={(code) => void executeScan(code)}
+                disabled={isScanning}
+                hint="Đưa mã QR trên thẻ hội viên của học viên vào khung. Mỗi lần quét xong, bấm “Quét lại” cho học viên kế tiếp."
+              />
+            )}
+          </div>
 
           <GateQrPanel gateId={selectedGate.includes('A2') ? 'A2' : selectedGate.includes('B1') ? 'B1' : 'A1'} />
 

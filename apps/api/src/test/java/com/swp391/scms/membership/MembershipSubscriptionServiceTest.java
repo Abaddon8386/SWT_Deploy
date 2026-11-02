@@ -425,6 +425,41 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.previousSubscriptionId()).isEqualTo(100L);
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(89));
+        // 5 of 30 days used: only the difference to the new package is due.
+        assertThat(result.upgradeCharge()).isEqualByComparingTo("1000000");
+    }
+
+    @Test
+    void upgradeCharge_isTheDifferenceWithinHalfAndFullPriceBeyondIt() {
+        MembershipPackage silver = new MembershipPackage();
+        silver.setId(1L); silver.setPrice(new BigDecimal("500000")); silver.setDurationDays(30);
+        MembershipPackage gold = new MembershipPackage();
+        gold.setId(2L); gold.setPrice(new BigDecimal("1500000")); gold.setDurationDays(90);
+        LocalDate start = LocalDate.of(2026, 11, 1);
+        MembershipSubscription current = new MembershipSubscription();
+        current.setMembershipPackage(silver);
+        current.setStartDate(start);
+        current.setEndDate(start.plusDays(29));
+
+        // Day 0 and exactly 15 of 30 days used are not "more than half".
+        assertThat(MembershipSubscriptionService.upgradeCharge(current, silver, gold, start)).isEqualByComparingTo("1000000");
+        assertThat(MembershipSubscriptionService.upgradeCharge(current, silver, gold, start.plusDays(15))).isEqualByComparingTo("1000000");
+        // 16 of 30 days used: pay the whole new package again.
+        assertThat(MembershipSubscriptionService.upgradeCharge(current, silver, gold, start.plusDays(16))).isEqualByComparingTo("1500000");
+    }
+
+    @Test
+    void upgradeCharge_neverProducesAZeroPayment() {
+        MembershipPackage monthly = new MembershipPackage();
+        monthly.setPrice(new BigDecimal("500000")); monthly.setDurationDays(30);
+        MembershipPackage longer = new MembershipPackage();
+        longer.setPrice(new BigDecimal("500000")); longer.setDurationDays(60);
+        MembershipSubscription current = new MembershipSubscription();
+        current.setStartDate(LocalDate.of(2026, 11, 1));
+        current.setEndDate(LocalDate.of(2026, 11, 30));
+
+        assertThat(MembershipSubscriptionService.upgradeCharge(current, monthly, longer, LocalDate.of(2026, 11, 2)))
+                .isEqualByComparingTo("500000");
     }
 
     @Test

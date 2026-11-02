@@ -5,6 +5,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.support.dto.CreateSupportMessageDto;
 import com.swp391.scms.support.dto.CreateSupportRequestDto;
+import com.swp391.scms.support.dto.EscalateSupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestMessageDto;
 import com.swp391.scms.support.dto.UpdateSupportRequestStatusDto;
@@ -68,29 +69,42 @@ public class SupportRequestController {
         return ApiResponse.ok(msg("support.list.success"), requests);
     }
 
-    @Operation(summary = "Xem toàn bộ yêu cầu, lọc theo status (Manager/Receptionist/Coach)")
+    @Operation(summary = "Hộp thư khiếu nại: lễ tân thấy toàn bộ, quản lý chỉ thấy phần đã chuyển lên")
     @GetMapping
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST', 'COACH')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ApiResponse<Page<SupportRequestDto>> getAllRequests(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @RequestParam(required = false) String status,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<SupportRequestDto> requests = supportRequestService.getAllRequests(status, pageable);
+        Page<SupportRequestDto> requests = supportRequestService.getAllRequests(status, pageable, principal.role());
         return ApiResponse.ok(msg("support.list.success"), requests);
     }
 
-    @Operation(summary = "Cập nhật trạng thái và người phụ trách yêu cầu (Manager/Receptionist/Coach)")
+    @Operation(summary = "Cập nhật trạng thái và người phụ trách (lễ tân trước khi chuyển cấp, quản lý sau khi được chuyển lên)")
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST', 'COACH')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ApiResponse<SupportRequestDto> updateStatus(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id,
             @Valid @RequestBody UpdateSupportRequestStatusDto request) {
-        SupportRequestDto result = supportRequestService.updateStatus(id, request);
+        SupportRequestDto result = supportRequestService.updateStatus(id, request, principal.role());
         return ApiResponse.ok(msg("support.update_status.success"), result);
+    }
+
+    @Operation(summary = "Lễ tân chuyển khiếu nại không tự xử lý được lên quản lý")
+    @PostMapping("/{id}/escalate")
+    @PreAuthorize("hasRole('RECEPTIONIST')")
+    public ApiResponse<SupportRequestDto> escalate(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody EscalateSupportRequestDto request) {
+        SupportRequestDto result = supportRequestService.escalate(id, principal.id(), principal.role(), request);
+        return ApiResponse.ok(msg("support.escalate.success"), result);
     }
 
     @Operation(summary = "Gửi tin nhắn mới vào yêu cầu hỗ trợ (SCRUM-106)")
     @PostMapping("/{id}/messages")
-    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER', 'COACH')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER')")
     public ApiResponse<SupportRequestMessageDto> sendMessage(
             @PathVariable Long id,
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -101,7 +115,7 @@ public class SupportRequestController {
 
     @Operation(summary = "Lấy lịch sử hội thoại trong yêu cầu hỗ trợ theo thời gian (SCRUM-106)")
     @GetMapping("/{id}/messages")
-    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER', 'COACH')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER')")
     public ApiResponse<List<SupportRequestMessageDto>> getMessages(
             @PathVariable Long id,
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {

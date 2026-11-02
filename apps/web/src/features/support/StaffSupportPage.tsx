@@ -4,7 +4,9 @@ import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { ApiError } from '../../shared/api/client';
-import { getSupportInbox, getSupportTicket, getSupportMessages, sendSupportMessage, updateSupportStatus, type SupportTicket, type SupportMessage } from '../member/memberSupportApi';
+import { getCurrentUser } from '../../shared/api/client';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
+import { escalateSupportTicket, getSupportInbox, getSupportTicket, getSupportMessages, sendSupportMessage, updateSupportStatus, type SupportTicket, type SupportMessage } from '../member/memberSupportApi';
 import { subscribeSupport } from '../member/supportRealtime';
 import type { ChatConnection } from '../chat/chatRealtime';
 import '../member/member-support.css';
@@ -16,6 +18,9 @@ const transitions: Record<SupportTicket['status'], SupportTicket['status'][]> = 
 const failure = (error: unknown) => error instanceof ApiError ? error.message : 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.';
 
 export function StaffSupportPage() {
+  // Receptionists take every complaint first; managers only receive what a receptionist escalates.
+  const isManager = getCurrentUser()?.role === 'MANAGER';
+  const [escalating, setEscalating] = useState(false), [escalationReason, setEscalationReason] = useState('');
   const [tickets, setTickets] = useState<SupportTicket[]>([]), [page, setPage] = useState(0), [pages, setPages] = useState(0), [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true), [listError, setListError] = useState('');
   const [selected, setSelected] = useState<number | null>(null), [ticket, setTicket] = useState<SupportTicket | null>(null), [messages, setMessages] = useState<SupportMessage[]>([]);
@@ -94,7 +99,7 @@ export function StaffSupportPage() {
     listGeneration.current++;
     setPage(nextPage); setFilter(nextFilter);
   }
-  async function actOnTicket(operation: () => Promise<unknown>, sentDraft?: string) {
+  async function actOnTicket(operation: () => Promise<unknown>, sentDraft?: string, notice?: string) {
     if (!ticket || busy.current.has(ticket.id) || detailLoading || detailError) return;
     const id = ticket.id;
     busy.current.add(id); setBusyIds(ids => [...ids, id]); setActionErrors(values => ({ ...values, [id]: '' })); setNotices(values => ({ ...values, [id]: '' }));
@@ -102,7 +107,7 @@ export function StaffSupportPage() {
       await operation();
       if (!alive.current) return;
       if (sentDraft !== undefined) { setDrafts(values => values[id] === sentDraft ? { ...values, [id]: '' } : values); sendKeys.current.delete(id); }
-      setNotices(values => ({ ...values, [id]: sentDraft !== undefined ? 'Đã gửi tin nhắn.' : 'Đã cập nhật trạng thái.' }));
+      setNotices(values => ({ ...values, [id]: notice ?? (sentDraft !== undefined ? 'Đã gửi tin nhắn.' : 'Đã cập nhật trạng thái.') }));
       void loadList();
       // Always read after the write, invalidating GETs that began before commit.
       if (selection.current === id) await loadDetail(id);
@@ -119,12 +124,22 @@ export function StaffSupportPage() {
     void actOnTicket(() => sendSupportMessage(ticket.id, text, attempt.key), draft);
   }
   const isBusy = selected !== null && busyIds.includes(selected);
+  // Whoever is not the current handler may read the complaint but cannot act on it.
+  const canAct = (item: SupportTicket) => isManager ? !!item.escalatedAt : !item.escalatedAt;
+  const canEscalate = (item: SupportTicket) => !isManager && !item.escalatedAt && (item.status === 'open' || item.status === 'in_progress');
+  function submitEscalation(event: FormEvent) {
+    event.preventDefault();
+    const reason = escalationReason.trim();
+    if (!ticket || !reason || reason.length > 500) return;
+    setEscalating(false); setEscalationReason('');
+    void actOnTicket(() => escalateSupportTicket(ticket.id, reason), undefined, 'Đã chuyển khiếu nại lên quản lý.');
+  }
   return <div className="portal-container member-support staff-support">
-    <PageHeader eyebrow="Lễ tân" title="Hộp thư hỗ trợ" subtitle="Tiếp nhận, phản hồi và cập nhật yêu cầu của hội viên." />
+    <PageHeader eyebrow={isManager ? 'Quản lý' : 'Lễ tân'} title={isManager ? 'Khiếu nại chuyển lên quản lý' : 'Hộp thư hỗ trợ'} subtitle={isManager ? 'Các khiếu nại lễ tân chưa xử lý được. Xem lý do chuyển cấp, phản hồi và quyết định.' : 'Tiếp nhận và xử lý khiếu nại của hội viên. Việc lễ tân không xử lý được thì chuyển lên quản lý.'} />
     <p role="status" className="member-support-context">{connections[connection]}</p>
     <section className="portal-card" ref={listFocus} tabIndex={-1}>
       <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">Trạng thái</label><select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">Tất cả</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><RefreshButton disabled={loading} onClick={() => void loadList()} /></div>
-      {loading ? <LoadingSkeleton label="Đang tải phiếu hỗ trợ…" count={4} /> : listError ? <div role="alert"><p>{listError}</p><button className="member-support-link" onClick={() => void loadList()}>Thử lại</button></div> : !tickets.length ? <p className="portal-empty">Không có phiếu hỗ trợ phù hợp.</p> : <div className="member-support-list">{tickets.map(item => <button key={item.id} data-support-ticket={item.id} className="member-support-ticket" aria-haspopup="dialog" onClick={event => { returnFocus.current = event.currentTarget; selection.current = item.id; detailGeneration.current++; setTicket(null); setMessages([]); setDetailError(''); setSelected(item.id); }}><span className="member-support-ticket-top"><strong>#{item.id} · {item.subject}</strong><span className={`member-support-status member-support-status--${item.status}`}>{labels[item.status]}</span></span><span className="member-support-meta">{item.memberName || `Hội viên #${item.memberId}`} · {new Date(item.createdAt).toLocaleString('vi-VN')} · {item.assignedToName || 'Chưa phân công'}</span></button>)}</div>}
+      {loading ? <LoadingSkeleton label="Đang tải phiếu hỗ trợ…" count={4} /> : listError ? <div role="alert"><p>{listError}</p><button className="member-support-link" onClick={() => void loadList()}>Thử lại</button></div> : !tickets.length ? <p className="portal-empty">Không có phiếu hỗ trợ phù hợp.</p> : <div className="member-support-list">{tickets.map(item => <button key={item.id} data-support-ticket={item.id} className="member-support-ticket" aria-haspopup="dialog" onClick={event => { returnFocus.current = event.currentTarget; selection.current = item.id; detailGeneration.current++; setTicket(null); setMessages([]); setDetailError(''); setSelected(item.id); }}><span className="member-support-ticket-top"><strong>#{item.id} · {item.subject}</strong><span className={`member-support-status member-support-status--${item.status}`}>{labels[item.status]}</span>{item.escalatedAt && !isManager && <span className="member-support-status member-support-status--escalated">Đã chuyển quản lý</span>}</span><span className="member-support-meta">{item.memberName || `Hội viên #${item.memberId}`} · {formatCenterDateTime(item.createdAt)} · {item.assignedToName || 'Chưa phân công'}</span></button>)}</div>}
       {!loading && !listError && pages > 1 && <div className="member-support-pages"><button disabled={!page} onClick={() => changeQuery(page - 1, filter)}>Trước</button><span>{page + 1}/{pages}</span><button disabled={page + 1 >= pages} onClick={() => changeQuery(page + 1, filter)}>Sau</button></div>}
     </section>
     {selected !== null && <Modal title={`Hỗ trợ · Phiếu #${selected}`} onClose={close} returnFocusRef={returnFocus}><div className="member-support-conversation">
@@ -132,11 +147,21 @@ export function StaffSupportPage() {
       {detailLoading && <LoadingSkeleton label="Đang tải hội thoại…" count={3} />}
       {detailError && <div role="alert"><p>{detailError}</p><button className="member-support-link" onClick={() => void loadDetail(selected)}>Thử lại</button></div>}
       {ticket && <><h3>{ticket.subject}</h3><p className="member-support-description">{ticket.description}</p><p className="member-support-context">{ticket.memberName || `Hội viên #${ticket.memberId}`} · {ticket.assignedToName || 'Chưa phân công'}</p>
-        <label className="portal-label" htmlFor="staff-support-status">Trạng thái phiếu</label><select id="staff-support-status" className="portal-select" value={ticket.status} disabled={isBusy || detailLoading} onChange={event => { const status = event.target.value as SupportTicket['status']; void actOnTicket(() => updateSupportStatus(ticket.id, status)); }}>{transitions[ticket.status].map(value => <option key={value} value={value}>{labels[value]}</option>)}</select>
+        {ticket.escalatedAt && <p role="status" className="member-support-notice" data-testid="escalation-info">{isManager ? 'Lễ tân' : 'Đã chuyển lên quản lý'}{ticket.escalatedByName ? ` ${ticket.escalatedByName}` : ''} lúc {formatCenterDateTime(ticket.escalatedAt)}{ticket.escalationReason ? ` — Lý do: ${ticket.escalationReason}` : ''}.{!isManager && ' Quản lý đang xử lý, lễ tân chỉ xem.'}</p>}
+        <label className="portal-label" htmlFor="staff-support-status">Trạng thái phiếu</label><select id="staff-support-status" className="portal-select" value={ticket.status} disabled={isBusy || detailLoading || !canAct(ticket)} onChange={event => { const status = event.target.value as SupportTicket['status']; void actOnTicket(() => updateSupportStatus(ticket.id, status)); }}>{transitions[ticket.status].map(value => <option key={value} value={value}>{labels[value]}</option>)}</select>
         {actionErrors[ticket.id] && <p role="alert" className="member-support-error">{actionErrors[ticket.id]}</p>}{notices[ticket.id] && <p role="status" className="member-support-notice">{notices[ticket.id]}</p>}
-        {!detailLoading && (!messages.length ? <p className="portal-empty">Chưa có tin nhắn.</p> : <ol className="member-support-messages" tabIndex={0} aria-label={`Tin nhắn phiếu #${selected}`}>{messages.map(message => <li key={message.id} className={message.senderRole === 'MEMBER' ? 'is-member' : 'is-staff'}><strong>{message.senderName || (message.senderRole === 'MEMBER' ? 'Hội viên' : 'Nhân viên')}</strong><p>{message.message}</p><time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString('vi-VN')}</time></li>)}</ol>)}
-        {ticket.status === 'closed' ? <p className="member-support-context">Phiếu đã đóng, không thể gửi thêm tin nhắn.</p> : <form className="member-support-compose" onSubmit={send}><label className="portal-label" htmlFor="staff-support-message">Tin nhắn</label><textarea id="staff-support-message" className="portal-textarea" rows={3} maxLength={2000} value={drafts[ticket.id] ?? ''} disabled={isBusy} onChange={event => { const value = event.target.value; setDrafts(values => ({ ...values, [ticket.id]: value })); }} /><button type="submit" className="btn-primary" disabled={isBusy || detailLoading || !drafts[ticket.id]?.trim()}>{isBusy ? 'Đang gửi…' : 'Gửi tin nhắn'}</button></form>}
+        {!detailLoading && (!messages.length ? <p className="portal-empty">Chưa có tin nhắn.</p> : <ol className="member-support-messages" tabIndex={0} aria-label={`Tin nhắn phiếu #${selected}`}>{messages.map(message => <li key={message.id} className={message.senderRole === 'MEMBER' ? 'is-member' : 'is-staff'}><strong>{message.senderName || (message.senderRole === 'MEMBER' ? 'Hội viên' : 'Nhân viên')}</strong><p>{message.message}</p><time dateTime={message.createdAt}>{formatCenterDateTime(message.createdAt)}</time></li>)}</ol>)}
+        {canEscalate(ticket) && <button type="button" className="btn-secondary" disabled={isBusy || detailLoading} onClick={() => { setEscalationReason(''); setEscalating(true); }}>Chuyển lên quản lý</button>}
+        {ticket.status === 'closed' ? <p className="member-support-context">Phiếu đã đóng, không thể gửi thêm tin nhắn.</p> : !canAct(ticket) ? null : <form className="member-support-compose" onSubmit={send}><label className="portal-label" htmlFor="staff-support-message">Tin nhắn</label><textarea id="staff-support-message" className="portal-textarea" rows={3} maxLength={2000} value={drafts[ticket.id] ?? ''} disabled={isBusy} onChange={event => { const value = event.target.value; setDrafts(values => ({ ...values, [ticket.id]: value })); }} /><button type="submit" className="btn-primary" disabled={isBusy || detailLoading || !drafts[ticket.id]?.trim()}>{isBusy ? 'Đang gửi…' : 'Gửi tin nhắn'}</button></form>}
       </>}
     </div></Modal>}
+    {escalating && ticket && <Modal title={`Chuyển lên quản lý · Phiếu #${ticket.id}`} onClose={() => setEscalating(false)}>
+      <form className="member-support-compose" onSubmit={submitEscalation}>
+        <p className="member-support-context">Quản lý sẽ tiếp nhận và phản hồi hội viên. Sau khi chuyển, lễ tân không xử lý phiếu này nữa.</p>
+        <label className="portal-label" htmlFor="staff-support-escalation">Lý do chuyển lên quản lý</label>
+        <textarea id="staff-support-escalation" className="portal-textarea" rows={3} maxLength={500} required value={escalationReason} onChange={event => setEscalationReason(event.target.value)} />
+        <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setEscalating(false)}>Hủy</button><button type="submit" className="btn-primary" disabled={!escalationReason.trim()}>Chuyển lên quản lý</button></div>
+      </form>
+    </Modal>}
   </div>;
 }

@@ -19,6 +19,15 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
 
     Page<SupportRequest> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
 
+    Page<SupportRequest> findByEscalatedAtIsNotNullOrderByCreatedAtDesc(Pageable pageable);
+    Page<SupportRequest> findByStatusAndEscalatedAtIsNotNullOrderByCreatedAtDesc(String status, Pageable pageable);
+    /** Managers only ever work the requests a receptionist has escalated. */
+    default Page<SupportRequest> findEscalatedByStatus(String status, Pageable pageable) {
+        if (status == null || status.isBlank()) {
+            return findByEscalatedAtIsNotNullOrderByCreatedAtDesc(pageable);
+        }
+        return findByStatusAndEscalatedAtIsNotNullOrderByCreatedAtDesc(status, pageable);
+    }
     default Page<SupportRequest> findAllByStatus(@Param("status") String status, Pageable pageable) {
         if (status == null || status.isBlank()) {
             return findAllByOrderByCreatedAtDesc(pageable);

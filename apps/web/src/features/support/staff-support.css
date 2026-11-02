@@ -5,3 +5,4 @@
 .staff-support .member-support-messages li.is-staff time { color: inherit; }
 .staff-support .member-support-ticket, .staff-support-toolbar button { min-height: 44px; }
 @media (max-width: 767px) { .staff-support .portal-select { font-size: 16px; max-width: 100%; } }
+.member-support-status--escalated { background: color-mix(in srgb, var(--portal-salmon) 22%, transparent); color: var(--portal-salmon); }

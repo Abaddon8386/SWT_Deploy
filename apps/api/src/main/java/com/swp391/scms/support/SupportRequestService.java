@@ -2,12 +2,14 @@ package com.swp391.scms.support;
 
 import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.support.dto.CreateSupportMessageDto;
 import com.swp391.scms.support.dto.CreateSupportRequestDto;
+import com.swp391.scms.support.dto.EscalateSupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestMessageDto;
 import com.swp391.scms.support.dto.UpdateSupportRequestStatusDto;
@@ -34,7 +36,9 @@ import java.util.Set;
 public class SupportRequestService {
 
     private static final Set<String> VALID_STATUSES = Set.of("open", "in_progress", "resolved", "closed");
-    private static final Set<String> STAFF_ROLES = Set.of("CENTER_MANAGER", "RECEPTIONIST", "COACH");
+    private static final Set<String> STAFF_ROLES = Set.of("CENTER_MANAGER", "RECEPTIONIST");
+    private static final String MANAGER = "CENTER_MANAGER";
+    private static final String RECEPTIONIST = "RECEPTIONIST";
 
     private final SupportRequestRepository supportRequestRepository;
     private final SupportRequestMapper supportRequestMapper;
@@ -106,31 +110,38 @@ public class SupportRequestService {
 
         SupportRequest request = new SupportRequest(member, dto.subject(), dto.description());
         supportRequestRepository.save(request);
-        return supportRequestMapper.toDto(request);
+        // A new complaint reaches the receptionists first; managers only see what they escalate.
+        notifyStaff(RECEPTIONIST, "notifications.support.new_request.title", "notifications.support.new_request.body",
+                request.getId(), dto.subject());
+        return supportRequestMapper.toDto(request).forMember();
     }
 
     @Transactional(readOnly = true)
     public Page<SupportRequestDto> getMyRequests(Long memberId, Pageable pageable) {
         return supportRequestRepository.findByMemberUserIdOrderByCreatedAtDesc(memberId, pageable)
-                .map(supportRequestMapper::toDto);
+                .map(request -> supportRequestMapper.toDto(request).forMember());
     }
 
     @Transactional(readOnly = true)
-    public Page<SupportRequestDto> getAllRequests(String status, Pageable pageable) {
+    public Page<SupportRequestDto> getAllRequests(String status, Pageable pageable, String role) {
         String normalizedStatus = (status == null || status.isBlank()) ? null : status.trim().toLowerCase(Locale.ROOT);
         if (normalizedStatus != null && !VALID_STATUSES.contains(normalizedStatus)) {
             throw new BadRequestException("INVALID_SUPPORT_STATUS", "validation.support.status.invalid", null,
                     "Invalid support request status: " + status);
         }
-        return supportRequestRepository.findAllByStatus(normalizedStatus, pageable)
-                .map(supportRequestMapper::toDto);
+        requireInboxRole(role);
+        Page<SupportRequest> page = isManager(role)
+                ? supportRequestRepository.findEscalatedByStatus(normalizedStatus, pageable)
+                : supportRequestRepository.findAllByStatus(normalizedStatus, pageable);
+        return page.map(supportRequestMapper::toDto);
     }
 
     @Transactional
     @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
-    public SupportRequestDto updateStatus(Long id, UpdateSupportRequestStatusDto dto) {
+    public SupportRequestDto updateStatus(Long id, UpdateSupportRequestStatusDto dto, String actorRole) {
         SupportRequest request = supportRequestRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", id));
+        requireHandler(request, actorRole);
 
         if ("closed".equalsIgnoreCase(request.getStatus())) {
             throw new com.swp391.scms.common.exception.AppException(
@@ -171,10 +182,11 @@ public class SupportRequestService {
                 throw new BadRequestException("INVALID_ASSIGNEE", "support.assignee.invalid", null,
                         "Assignee must be an active staff account");
             }
+            String requiredAssigneeRole = request.isEscalated() ? MANAGER : RECEPTIONIST;
             if (assignee.getRole() != null && assignee.getRole().getCode() != null
-                    && !STAFF_ROLES.contains(assignee.getRole().getCode().toUpperCase(Locale.ROOT))) {
+                    && !requiredAssigneeRole.equals(normalizeRole(assignee.getRole().getCode()))) {
                 throw new BadRequestException("INVALID_ASSIGNEE", "support.assignee.invalid", null,
-                        "Assignee must hold a staff role");
+                        "Assignee must hold the role that handles this request");
             }
             request.setAssignedTo(assignee);
         }
@@ -213,6 +225,8 @@ public class SupportRequestService {
                         "You are not allowed to send messages in this support request"
                 );
             }
+        } else {
+            requireHandler(request, senderRole);
         }
 
         User sender = requireActor(senderUserId, senderRole);
@@ -276,19 +290,14 @@ public class SupportRequestService {
                     notificationService.send(memberUserId, title, body, "support_reply", "support_request", targetRequestId);
                 }
             } else {
-                // If member sends message, notify the assigned staff (if assigned)
+                // If member sends message, notify the assigned handler (if assigned)
                 if (request.getAssignedTo() != null && request.getAssignedTo().getId() != null) {
                     notificationService.send(request.getAssignedTo().getId(), title, body, "support_reply", "support_request", targetRequestId);
                 } else {
-                    // P2 #49: Ticket is unassigned: broadcast notification to active staff (Receptionists & Center Managers)
-                    List<User> activeStaff = userRepository.findActiveStaffUsers();
-                    if (activeStaff != null) {
-                        for (User staffUser : activeStaff) {
-                            if (staffUser.getId() != null) {
-                                notificationService.send(staffUser.getId(), title, body, "support_reply", "support_request", targetRequestId);
-                            }
-                        }
-                    }
+                    // Unassigned: tell whoever handles it now, receptionists first and managers once escalated.
+                    notifyStaff(request.isEscalated() ? MANAGER : RECEPTIONIST,
+                            "notifications.support.new_message.title", "notifications.support.new_message.body",
+                            targetRequestId, senderName, request.getSubject());
                 }
             }
         }
@@ -315,6 +324,7 @@ public class SupportRequestService {
         }
 
         requireActor(currentUserId, currentRole);
+        if (staff) requireReadable(request, currentRole);
         if (supportRequestMessageRepository == null) {
             return List.of();
         }
@@ -325,7 +335,8 @@ public class SupportRequestService {
 
     @Transactional(readOnly = true)
     public SupportRequestDto getRequest(Long requestId, Long actorId, String role) {
-        return supportRequestMapper.toDto(requireTicket(requestId, actorId, role));
+        SupportRequestDto dto = supportRequestMapper.toDto(requireTicket(requestId, actorId, role));
+        return isStaffRole(role) ? dto : dto.forMember();
     }
 
     @Transactional(readOnly = true)
@@ -335,6 +346,7 @@ public class SupportRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", requestId));
         if (!isStaffRole(role) && (request.getMember() == null || !Objects.equals(request.getMember().getUserId(), actorId)))
             throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
+        if (isStaffRole(role)) requireReadable(request, role);
         return request;
     }
 
@@ -348,13 +360,106 @@ public class SupportRequestService {
         return actor;
     }
 
-    private boolean isStaffRole(String role) {
-        if (role == null) return false;
+    private static String normalizeRole(String role) {
+        if (role == null) return "";
         String normalized = role.startsWith("ROLE_") ? role.substring(5) : role;
-        return STAFF_ROLES.contains(normalized.toUpperCase(Locale.ROOT))
-                || "MANAGER".equalsIgnoreCase(normalized)
-                || "STAFF".equalsIgnoreCase(normalized)
-                || "COACH".equalsIgnoreCase(normalized);
+        return normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private static boolean isManager(String role) {
+        String normalized = normalizeRole(role);
+        return MANAGER.equals(normalized) || "MANAGER".equals(normalized);
+    }
+
+    private static boolean isReceptionist(String role) {
+        String normalized = normalizeRole(role);
+        return RECEPTIONIST.equals(normalized) || "STAFF".equals(normalized);
+    }
+
+    /** Coaches no longer take part in complaints: only receptionists and managers are staff here. */
+    private boolean isStaffRole(String role) {
+        return isManager(role) || isReceptionist(role);
+    }
+
+    private void requireInboxRole(String role) {
+        if (!isStaffRole(role)) {
+            throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
+        }
+    }
+
+    /** Receptionists see every complaint; managers only the ones escalated to them. */
+    private void requireReadable(SupportRequest request, String role) {
+        if (isManager(role) && !request.isEscalated()) {
+            throw new ForbiddenException("SUPPORT_NOT_ESCALATED", "support.manager.not_escalated", null, null);
+        }
+    }
+
+    /** The receptionist handles a complaint until it is escalated; from then on only a manager may act on it. */
+    private void requireHandler(SupportRequest request, String role) {
+        if (isManager(role)) {
+            if (!request.isEscalated()) {
+                throw new ForbiddenException("SUPPORT_NOT_ESCALATED", "support.manager.not_escalated", null, null);
+            }
+        } else if (isReceptionist(role)) {
+            if (request.isEscalated()) {
+                throw new ForbiddenException("SUPPORT_ESCALATED_LOCKED", "support.escalated.locked", null, null);
+            }
+        } else {
+            throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
+        }
+    }
+
+    /** Hand a complaint the receptionist cannot resolve up to the managers. */
+    @Transactional
+    @Audited(action = "SUPPORT_ESCALATE", entity = "support_requests")
+    public SupportRequestDto escalate(Long id, Long actorId, String role, EscalateSupportRequestDto dto) {
+        if (!isReceptionist(role)) {
+            throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
+        }
+        User actor = requireActor(actorId, role);
+        SupportRequest request = supportRequestRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", id));
+        if (request.isEscalated()) {
+            throw new ConflictException("SUPPORT_ALREADY_ESCALATED", "support.escalate.already", null,
+                    "Support request is already escalated");
+        }
+        String status = request.getStatus() == null ? "" : request.getStatus().toLowerCase(Locale.ROOT);
+        if (!"open".equals(status) && !"in_progress".equals(status)) {
+            throw new BadRequestException("SUPPORT_ESCALATE_INVALID_STATE", "support.escalate.invalid_state", null,
+                    "Only an open or in-progress request can be escalated");
+        }
+        request.setEscalatedAt(LocalDateTime.now(clock));
+        request.setEscalatedBy(actor);
+        request.setEscalationReason(dto.reason().trim());
+        request.setAssignedTo(null);
+        SupportRequest saved = supportRequestRepository.save(request);
+        SupportRequest result = saved != null ? saved : request;
+        notifyStaff(MANAGER, "notifications.support.escalated_manager.title", "notifications.support.escalated_manager.body",
+                id, result.getSubject());
+        if (notificationService != null && result.getMember() != null && result.getMember().getUserId() != null) {
+            notificationService.send(result.getMember().getUserId(),
+                    text("notifications.support.escalated_member.title"),
+                    text("notifications.support.escalated_member.body", result.getSubject()),
+                    "support_reply", "support_request", id);
+        }
+        return supportRequestMapper.toDto(result);
+    }
+
+    private String text(String key, Object... args) {
+        return messageService != null ? messageService.getMessage(key, args) : key;
+    }
+
+    private void notifyStaff(String roleCode, String titleKey, String bodyKey, Long requestId, Object... bodyArgs) {
+        if (notificationService == null || userRepository == null) return;
+        List<User> staff = userRepository.findActiveStaffUsers();
+        if (staff == null) return;
+        for (User user : staff) {
+            if (user.getId() != null && user.getRole() != null
+                    && roleCode.equals(normalizeRole(user.getRole().getCode()))) {
+                notificationService.send(user.getId(), text(titleKey), text(bodyKey, bodyArgs),
+                        "support_reply", "support_request", requestId);
+            }
+        }
     }
 
     private void validateStatusTransition(String currentStatus, String targetStatus) {

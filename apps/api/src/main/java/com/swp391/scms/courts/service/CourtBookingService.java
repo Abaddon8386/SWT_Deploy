@@ -130,7 +130,9 @@ public class CourtBookingService {
     public Page<BookingDto> daily(AuthenticatedPrincipal principal, LocalDate date, Long roomId, int page, int size) {
         if (!STAFF_ROLES.contains(principal.role())) throw forbidden("forbidden");
         if (date == null) throw invalid("invalid_slot");
-        return bookings.findDaily(date, roomId, page(page, size)).map(b -> dto(b, principal));
+        Pageable pageable = page(page, size);
+        Page<CourtBooking> found = roomId == null ? bookings.findDaily(date, pageable) : bookings.findDailyByRoom(date, roomId, pageable);
+        return found.map(b -> dto(b, principal));
     }
     private Pageable page(int page, int size) {
         if (page < 0 || size < 1 || size > 100) throw invalid("invalid_slot");

@@ -255,14 +255,16 @@ CREATE OR REPLACE FUNCTION scms_require_active_membership_for_checkin()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
 BEGIN
     IF (NEW.status IS NULL OR NEW.status = 'GRANTED') AND NOT EXISTS (
         SELECT 1
         FROM membership_subscriptions subscription
         WHERE subscription.member_id = NEW.member_id
           AND subscription.status = 'active'
-          AND subscription.start_date <= CURRENT_DATE
-          AND subscription.end_date >= CURRENT_DATE
+          AND subscription.start_date <= business_date
+          AND subscription.end_date >= business_date
         FOR SHARE
     ) THEN
         RAISE EXCEPTION 'Học viên không có gói thành viên còn hiệu lực để check-in.'
@@ -450,7 +452,8 @@ BEGIN
         IF NOT EXISTS (
             SELECT 1 FROM membership_subscriptions m
             WHERE m.member_id = NEW.member_id AND m.status = 'active'
-              AND m.start_date <= CURRENT_DATE AND m.end_date >= CURRENT_DATE
+              AND m.start_date <= (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
+              AND m.end_date >= (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
               AND m.start_date <= NEW.booking_date AND m.end_date >= NEW.booking_date
         ) THEN
             RAISE EXCEPTION 'trg_enrollments_check_membership'
