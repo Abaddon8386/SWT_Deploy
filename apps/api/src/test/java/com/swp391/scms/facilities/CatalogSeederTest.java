@@ -53,7 +53,9 @@ class CatalogSeederTest {
 
         seeder.run(null);
 
-        verify(disciplines, never()).create(any());
+        // Không có bộ môn chuẩn nào trùng tên "Yoga": 5 bộ môn chuẩn được tạo thêm, bộ môn cũ giữ nguyên
+        verify(disciplines, times(5)).create(any());
+        verify(disciplines, never()).update(any(), any());
         verify(rooms, never()).create(any());
         verify(packages, times(6)).create(any());
     }
@@ -103,5 +105,25 @@ class CatalogSeederTest {
         verify(packages).updateStatus(9L, "inactive");
         verify(packages, never()).updateStatus(10L, "inactive");
         verify(packages, never()).update(any(), any());
+    }
+
+    @Test
+    void renamesLegacyDisciplinesToTheCanonicalListWithoutDuplicatingThem() {
+        when(disciplines.list()).thenReturn(List.of(
+                new DisciplineDto(1L, "Olympic Strength", "Tạ"),
+                new DisciplineDto(2L, "Thermal Aquatics", null),
+                new DisciplineDto(3L, "Boxing & Kickfit", "Đấm"),
+                new DisciplineDto(4L, "Tennis", null)));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
+        when(packages.list()).thenReturn(List.of());
+
+        seeder.run(null);
+
+        var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.DisciplineRequest.class);
+        verify(disciplines, times(3)).update(any(), requests.capture());
+        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.name()).toList())
+                .containsExactly("Gym", "Bơi lội", "Boxing");
+        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().description()).isEqualTo("Tạ");
+        verify(disciplines, times(1)).create(any());
     }
 }

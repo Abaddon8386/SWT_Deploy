@@ -124,13 +124,12 @@ public class CatalogSeeder implements ApplicationRunner {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
-        if (disciplines.list().isEmpty()) {
-            disciplines.create(new DisciplineRequest("Reformer Pilates", "Core strength and spine recovery on Reformer machines"));
-            disciplines.create(new DisciplineRequest("Olympic Strength", "Explosive strength with Olympic barbells"));
-            disciplines.create(new DisciplineRequest("Mindful Yoga", "Breathwork, deep stretching and meditation"));
-            disciplines.create(new DisciplineRequest("Boxing & Kickfit", "Combat tactics, reflexes and high-intensity fat burn"));
-            disciplines.create(new DisciplineRequest("Thermal Aquatics", "Hydrodynamic swimming and warm-water recovery"));
-        }
+        // Bộ môn chuẩn: Gym là bộ môn chính; Bơi lội, Boxing, Tennis, Cầu lông là bộ môn phụ.
+        upsertDiscipline("Gym", "Sức mạnh, thể lực và kỹ thuật tập tạ", "Olympic Strength");
+        upsertDiscipline("Bơi lội", "Kỹ thuật bơi, sức bền dưới nước và phục hồi", "Thermal Aquatics");
+        upsertDiscipline("Boxing", "Kỹ thuật đấm, phản xạ và thể lực theo hiệp", "Boxing & Kickfit");
+        upsertDiscipline("Tennis", "Kỹ thuật đánh bóng, di chuyển và đánh đôi");
+        upsertDiscipline("Cầu lông", "Bộ chân, phản xạ và kỹ thuật đánh cầu");
         if (rooms.list().isEmpty()) {
             rooms.create(new RoomRequest("Studio 01", "Level 2 - North Wing", 12, "available"));
             rooms.create(new RoomRequest("Arena 02 (Strength)", "Level 1 - Main Floor", 25, "available"));
@@ -154,6 +153,23 @@ public class CatalogSeeder implements ApplicationRunner {
                 SILVER_12M_NAME, GOLD_12M_NAME, PLATINUM_12M_NAME}) {
             retirePackage(retired);
         }
+    }
+
+    /** Tạo bộ môn chuẩn nếu chưa có; đổi tên bộ môn cũ tương ứng (giữ nguyên id và lớp học đang gắn). */
+    private void upsertDiscipline(String name, String description, String... legacyNames) {
+        for (var discipline : disciplines.list()) {
+            if (name.equalsIgnoreCase(discipline.name())) {
+                return;
+            }
+            for (String legacy : legacyNames) {
+                if (legacy.equalsIgnoreCase(discipline.name())) {
+                    disciplines.update(discipline.id(), new DisciplineRequest(name,
+                            discipline.description() != null ? discipline.description() : description));
+                    return;
+                }
+            }
+        }
+        disciplines.create(new DisciplineRequest(name, description));
     }
 
     /** Đặt gói đang active về inactive (idempotent); không tạo mới, không xóa. */
