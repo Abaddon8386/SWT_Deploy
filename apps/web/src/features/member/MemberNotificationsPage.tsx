@@ -4,6 +4,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, type MemberNotification, type NotificationPage } from './notificationsApi';
 import './notifications.css';
 import { getCurrentUser } from '../../shared/api/client';
+import { markNoticesRead, usePortalNotices } from '../../shared/lib/portalNotices';
 
 const category: Record<string, { icon: string; label: string }> = {
   schedule_change: { icon: '◷', label: 'Lịch học' },
@@ -33,6 +34,10 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const request = useRef({ version: 0 });
+  const notices = usePortalNotices();
+
+  // Mở bảng là đã xem các thông báo thao tác
+  useEffect(() => { markNoticesRead(); }, [notices.length]);
 
   const load = useCallback(async () => {
     const version = ++request.current.version;
@@ -85,8 +90,15 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
   return <div className="notification-panel">
     <div className="notification-panel__actions"><span>{loading ? 'Đang tải…' : data ? `${count} chưa đọc` : 'Chưa cập nhật'}</span><button className="notification-action" type="button" disabled={loading || busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button></div>
     <div className="notification-panel__scroll" aria-busy={loading || busy}>
+    {notices.length > 0 && <ul className="notification-activity" aria-label="Thông báo vừa phát sinh">
+      {notices.map((notice) => <li key={notice.id} className={`notification-activity__item notification-activity__item--${notice.type}`}>
+        <span className="notification-icon" aria-hidden="true">{notice.type === 'success' ? '✓' : notice.type === 'error' ? '!' : '✦'}</span>
+        <span className="notification-copy"><span>{notice.message}</span><small>{new Date(notice.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small></span>
+        {notice.action && <button type="button" className="notification-action" onClick={notice.action.run}>{notice.action.label}</button>}
+      </li>)}
+    </ul>}
     {error && <div className="portal-alert notification-error" role="alert">{error} <button type="button" onClick={() => void load()}>Thử lại</button></div>}
-    {loading ? <LoadingSkeleton label="Đang tải thông báo…" count={5} /> : !data?.content.length && !error ?
+    {loading ? <LoadingSkeleton label="Đang tải thông báo…" count={5} /> : !data?.content.length && !error && notices.length === 0 ?
       <div className="portal-empty"><h3>Chưa có thông báo</h3><p>Thông báo mới sẽ xuất hiện tại đây.</p></div> :
       <div className="notification-list" aria-label="Danh sách thông báo">
         {data?.content.map((item) => <button key={item.id} type="button" className={`notification-item${item.isRead ? '' : ' notification-item--unread'}`} disabled={busy} onClick={() => void open(item)}>

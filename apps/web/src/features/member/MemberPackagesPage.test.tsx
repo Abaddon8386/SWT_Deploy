@@ -4,6 +4,9 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberPackagesPage } from './MemberPackagesPage';
 import type { MemberSubscription } from './membershipApi';
+import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
+
+const noticeText = () => getNotices().map((notice) => notice.message).join(' ');
 
 const realtime = vi.hoisted(() => ({ subscribe: vi.fn(), changed: () => {}, cleanup: vi.fn() }));
 vi.mock('./membershipRealtime', () => ({ subscribeMembershipChanges: realtime.subscribe }));
@@ -65,6 +68,7 @@ describe('SCRUM-86 packages', () => {
   });
 
   beforeEach(() => {
+    clearNotices();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
     vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (this: HTMLDialogElement) { this.removeAttribute('open'); });
@@ -220,9 +224,11 @@ describe('SCRUM-86 packages', () => {
     await render();
     api.history.mockRejectedValueOnce(new Error('offline'));
     await act(async () => window.dispatchEvent(new Event('online')));
-    expect(host.textContent).toContain('Không thể đồng bộ trạng thái mới nhất');
+    expect(host.textContent).not.toContain('Không thể đồng bộ trạng thái mới nhất');
+    expect(getNotices().find((notice) => notice.key === 'packages-sync')).toMatchObject({ type: 'error', action: { label: 'Thử đồng bộ lại' } });
     expect(button('Đăng ký lần đầu')?.disabled).toBe(false);
     await act(async () => window.dispatchEvent(new Event('online')));
+    expect(getNotices().some((notice) => notice.key === 'packages-sync')).toBe(false);
     expect(button('Đăng ký lần đầu')?.disabled).toBe(false);
   });
   it('shows the same paid-through expiry as the member card and dashboard', async () => {
@@ -242,7 +248,8 @@ describe('SCRUM-86 packages', () => {
     expect(api.resume).toHaveBeenCalledExactlyOnceWith(1);
     expect(api.create).not.toHaveBeenCalled();
     expect(api.createPayment).not.toHaveBeenCalled();
-    expect(host.textContent).toContain('Đã mở lại gói tập');
+    expect(noticeText()).toContain('Đã mở lại gói tập');
+    expect(host.textContent).not.toContain('Đã mở lại gói tập');
   });
   it('keeps the frozen package and shows errors when resume fails', async () => {
     api.history.mockResolvedValue([{ ...active, status: 'frozen', holdStatus: 'APPROVED' }]);
@@ -372,7 +379,7 @@ describe('SCRUM-86 packages', () => {
     });
 
     expect(api.requestHold).toHaveBeenCalledExactlyOnceWith(1, 'Đi công tác dài ngày tại Nhật Bản');
-    expect(host.textContent).toContain('Đang chờ Lễ tân xử lý yêu cầu bảo lưu');
+    expect(noticeText()).toContain('Đã gửi yêu cầu bảo lưu gói tập');
     expect(button('Đang chờ duyệt bảo lưu')?.disabled).toBe(true);
   });
 
@@ -398,7 +405,7 @@ describe('SCRUM-86 packages', () => {
     await act(async () => button('Xác nhận gửi yêu cầu')?.click());
     expect(api.requestCancellation).toHaveBeenCalledExactlyOnceWith(1, 'Chuyển nơi ở');
     expect(button('Đang chờ duyệt hủy')?.disabled).toBe(true);
-    expect(host.textContent).toContain('Gói vẫn có hiệu lực');
+    expect(noticeText()).toContain('Gói vẫn có hiệu lực');
   });
 
   it('shows approved cancellation after the active membership disappears', async () => {
@@ -562,7 +569,7 @@ describe('SCRUM-86 packages', () => {
     await act(async () => { button('Xác nhận hủy')?.click(); });
 
     expect(api.cancelPending).toHaveBeenCalledExactlyOnceWith(12);
-    expect(host.textContent).toContain('Đã hủy yêu cầu gói tập #12');
+    expect(noticeText()).toContain('Đã hủy yêu cầu gói tập #12');
     expect(host.textContent).not.toContain('Thanh toán gói tập • Yêu cầu #12');
   });
 
@@ -606,7 +613,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([{ ...pending, status: 'active' }]);
     api.payments.mockResolvedValue([{ ...payment, status: 'success' }]);
     await render();
-    expect(host.textContent).toContain('Gói đã kích hoạt');
+    expect(host.textContent).toContain('Xem thẻ QR Check-in');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
   });

@@ -6,6 +6,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { PortalIcon } from '../portal/PortalIcon';
 import './member-packages.css';
+import { notify, resolveNotice } from '../../shared/lib/portalNotices';
 import { subscribeMembershipChanges } from './membershipRealtime';
 import {
   cancelPendingMembershipSubscription,
@@ -85,7 +86,6 @@ export function MemberPackagesPage() {
   const [paymentResult, setPaymentResult] = useState<MemberSubscription | null>(null);
 
   const [actionError, setActionError] = useState<string | null>(null);
-  const [holdSuccessMessage, setHoldSuccessMessage] = useState<string | null>(null);
 
   const [requestResult, setRequestResult] =
     useState<RequestResult | null>(null);
@@ -330,6 +330,28 @@ export function MemberPackagesPage() {
     };
   }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId]);
 
+  const needsPackage = currentState.status === 'success' && !current && !frozenSubscription && !pending && !isStatusSyncing;
+  const holdRejected = current?.holdStatus === 'REJECTED' ? current.id : null;
+  const cancellationRejected = latestCancellation?.status === 'REJECTED' ? latestCancellation : null;
+  useEffect(() => {
+    if (needsPackage) notify('Bạn chưa có gói đang hoạt động. Hãy chọn một gói tập để đăng ký và kích hoạt thẻ hội viên.', 'info', { key: 'packages-empty' });
+  }, [needsPackage]);
+  useEffect(() => {
+    if (holdRejected !== null) notify('Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.', 'info', { key: `hold-rejected-${holdRejected}` });
+  }, [holdRejected]);
+  useEffect(() => {
+    if (cancellationRejected) notify(`Yêu cầu hủy gói trước đó đã bị từ chối. ${cancellationRejected.resolutionNote ?? ''}`.trim(), 'info', { key: `cancel-rejected-${cancellationRejected.id}` });
+  }, [cancellationRejected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (syncError) {
+      notify('Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.', 'error', {
+        key: 'packages-sync', silent: true, action: { label: 'Thử đồng bộ lại', run: () => refreshNow.current() },
+      });
+    } else resolveNotice('packages-sync');
+    return () => resolveNotice('packages-sync');
+  }, [syncError]);
+
   useEffect(() => subscribeMembershipChanges(
     () => refreshNow.current(),
     () => setSyncError(true),
@@ -418,7 +440,7 @@ export function MemberPackagesPage() {
       setHistoryState((previous) => previous.status === 'success'
         ? { status: 'success', data: previous.data.map((item) => item.id === resumed.id ? resumed : item) }
         : previous);
-      setHoldSuccessMessage('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.');
+      notify('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.', 'success');
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Không thể mở lại gói tập. Vui lòng thử lại.');
     } finally {
@@ -447,7 +469,7 @@ export function MemberPackagesPage() {
       setCurrentState({ status: 'success', data: updated });
       setIsHoldModalOpen(false);
       setHoldReason('');
-      setHoldSuccessMessage('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.');
+      notify('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.', 'success');
       await loadHistory();
     } catch (error) {
       await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
@@ -486,7 +508,7 @@ export function MemberPackagesPage() {
       );
       setRequestResult(null);
       setPendingToCancel(null);
-      setHoldSuccessMessage(`Đã hủy yêu cầu gói tập #${cancelled.id}.`);
+      notify(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, 'success');
     } catch (error) {
       setActionError(
         error instanceof Error
@@ -518,7 +540,7 @@ export function MemberPackagesPage() {
       await loadCancellations();
       setIsCancellationModalOpen(false);
       setCancellationReason('');
-      setHoldSuccessMessage('Đã gửi yêu cầu hủy gói. Gói vẫn có hiệu lực cho đến khi quản lý duyệt.');
+      notify('Đã gửi yêu cầu hủy gói. Gói vẫn có hiệu lực cho đến khi quản lý duyệt.', 'success');
     } catch (error) {
       setCancellationError(error instanceof Error ? error.message : 'Không thể gửi yêu cầu hủy. Vui lòng thử lại.'); await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
     } finally {
@@ -544,11 +566,6 @@ export function MemberPackagesPage() {
         title="Gói tập"
         subtitle="Chọn gói, gia hạn và theo dõi yêu cầu của bạn."
       />
-
-      {syncError && <div className="portal-alert" role="alert">
-        Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.
-        <button type="button" className="btn-secondary btn-sm" onClick={() => refreshNow.current()}>Thử đồng bộ lại</button>
-      </div>}
 
       {/* Unified Skeleton for Status Area (replaces piecemeal text lines) */}
       {isStatusSyncing && !current && !pending && (
@@ -592,12 +609,6 @@ export function MemberPackagesPage() {
         </div>
       )}
 
-      {holdSuccessMessage && (
-        <div className="portal-alert portal-alert--success" role="status" style={{ marginBottom: 24 }}>
-          <span>{holdSuccessMessage}</span>
-        </div>
-      )}
-
       {current && (
         <section
           className="portal-card portal-card--feature"
@@ -617,32 +628,6 @@ export function MemberPackagesPage() {
               <p className="row-card__meta" style={{ marginTop: 4 }}>
                 Hiệu lực từ {formatDate(current.startDate)} đến {formatDate(current.paidThroughDate ?? current.endDate)}
               </p>
-              {current.status === 'active' && paymentsState.status === 'success' &&
-                paymentsState.data.some((payment) => payment.subscriptionId === current.id && payment.status === 'success') && (
-                  <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--portal-success, #86efac)', fontSize: '0.84rem' }}>
-                    ✓ Gói đã kích hoạt. Bạn có thể sử dụng thẻ QR để check-in và đặt lịch lớp học.
-                  </p>
-                )}
-              {current.holdStatus === 'PENDING' && (
-                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--color-accent-gold)', fontSize: '0.86rem' }}>
-                  Đang chờ Lễ tân xử lý yêu cầu bảo lưu{current.holdReason ? ` • Lý do: "${current.holdReason}"` : ''}
-                </p>
-              )}
-              {current.holdStatus === 'REJECTED' && (
-                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--portal-danger, #fca5a5)', fontSize: '0.84rem' }}>
-                  Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.
-                </p>
-              )}
-              {latestCancellation?.status === 'PENDING' && (
-                <p role="status" className="row-card__meta" style={{ marginTop: 8 }}>
-                  Đang chờ quản lý duyệt yêu cầu hủy. Gói vẫn có hiệu lực.
-                </p>
-              )}
-              {latestCancellation?.status === 'REJECTED' && (
-                <p role="status" className="row-card__meta" style={{ marginTop: 8 }}>
-                  Yêu cầu hủy trước đó đã bị từ chối. {latestCancellation.resolutionNote ?? ''}
-                </p>
-              )}
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="/member/card" className="btn-primary btn-sm">
@@ -771,12 +756,6 @@ export function MemberPackagesPage() {
             </ul>
           )}
         </section>
-      )}
-
-      {currentState.status === 'success' && !current && !frozenSubscription && !pending && !isStatusSyncing && (
-        <div className="portal-alert portal-alert--info" style={{ marginBottom: 24 }}>
-          <span>Bạn chưa có gói đang hoạt động. Hãy chọn một gói tập bên dưới để đăng ký và kích hoạt thẻ hội viên.</span>
-        </div>
       )}
 
       {pendingItems.length > 1 && (

@@ -8,6 +8,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from './PortalIcon';
 import { MOBILE_PRIMARY_NAV, PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
+import { usePortalNotices } from '../../shared/lib/portalNotices';
 import { ChatWidget } from '../chat/ChatWidget';
 import { LiquidGlassChatbot } from '../../shared/liquid-glass/LiquidGlassChatbot';
 import { PwaStatus } from '../pwa/PwaStatus';
@@ -45,6 +46,8 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const [query, setQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState<number | null>(null);
   const [notificationError, setNotificationError] = useState(false);
+  const clientUnread = usePortalNotices().filter((item) => !item.read).length;
+  const totalUnread = (unreadCount ?? 0) + clientUnread;
   const previousPath = useRef(location.pathname);
   const mainRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
@@ -166,9 +169,9 @@ function PortalShellContent({ user }: { user: UserSession }) {
           </div>
           <div className="portal-topbar-actions">
             <ThemeToggle />
-            {canReceiveNotifications && <button type="button" onClick={openNotifications} aria-haspopup="dialog" aria-expanded={dialog === 'notifications'} aria-controls="portal-notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${unreadCount ?? 0} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
+            {canReceiveNotifications && <button type="button" onClick={openNotifications} aria-haspopup="dialog" aria-expanded={dialog === 'notifications'} aria-controls="portal-notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${totalUnread} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
               <PortalIcon name="bell" size={19} />
-              {unreadCount !== null && unreadCount > 0 && <span className="member-notification-badge" aria-hidden="true">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+              {totalUnread > 0 && <span className="member-notification-badge" aria-hidden="true">{totalUnread > 99 ? '99+' : totalUnread}</span>}
             </button>}
             <button type="button" className="portal-search-trigger" aria-label="Tìm màn hình" onClick={() => openNavigation('search')}>
               <PortalIcon name="search" size={17} /><span>Tìm màn hình…</span>

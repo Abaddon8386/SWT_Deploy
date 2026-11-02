@@ -45,3 +45,10 @@
 .portal-screen-results button:hover { background: var(--portal-tint); color: var(--portal-salmon); }
 @media (max-width: 767px) { .notification-popover { top: calc(78px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); max-height: min(560px, calc(100dvh - 168px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))); } }
 @media (max-width: 600px) { .notification-item { padding: 16px; gap: 12px; } .notification-error { flex-wrap: wrap; } }
+
+/* Thông báo thao tác phát sinh tại client (gộp từ các banner trong trang) */
+.notification-activity { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.notification-activity__item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-raised); }
+.notification-activity__item--error { border-color: var(--portal-danger, #fca5a5); }
+.notification-activity__item .notification-copy { flex: 1; min-width: 0; display: grid; gap: 2px; font-size: 13px; }
+.notification-activity__item .notification-action { flex-shrink: 0; }

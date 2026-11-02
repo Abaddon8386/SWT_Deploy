@@ -1,3 +1,4 @@
+import { clearNotices } from '../lib/portalNotices';
 export interface UserSession {
   id: string;
   name: string;
@@ -67,6 +68,7 @@ export function setCurrentUser(user: UserSession): void {
 export function clearAuthSession(): void {
   localStorage.removeItem(AUTH_STORAGE_KEY);
   localStorage.removeItem(TOKEN_STORAGE_KEY);
+  clearNotices();
   notifySessionChange();
 }
 
