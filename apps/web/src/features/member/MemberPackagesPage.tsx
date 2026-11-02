@@ -651,23 +651,28 @@ export function MemberPackagesPage() {
               <a href="/member/classes" className="btn-secondary btn-sm">
                 Đặt lịch lớp học
               </a>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                disabled={current.holdStatus === 'PENDING'}
-                onClick={() => {
-                  setHoldError(null);
-                  setHoldReason(current.holdReason && current.holdStatus !== 'REJECTED' ? current.holdReason : '');
-                  setIsHoldModalOpen(true);
-                }}
-              >
-                {current.holdStatus === 'PENDING' ? 'Đang chờ duyệt bảo lưu' : 'Bảo lưu gói tập'}
-              </button>
-              <button type="button" className="btn-secondary btn-sm"
-                disabled={cancellationsState.status !== 'success' || latestCancellation?.status === 'PENDING'}
-                onClick={() => { setCancellationError(null); setIsCancellationModalOpen(true); }}>
-                {latestCancellation?.status === 'PENDING' ? 'Đang chờ duyệt hủy' : 'Yêu cầu hủy gói'}
-              </button>
+              <details className="package-manage">
+                <summary className="btn-secondary btn-sm">Quản lý gói</summary>
+                <div className="package-manage__menu">
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    disabled={current.holdStatus === 'PENDING'}
+                    onClick={() => {
+                      setHoldError(null);
+                      setHoldReason(current.holdReason && current.holdStatus !== 'REJECTED' ? current.holdReason : '');
+                      setIsHoldModalOpen(true);
+                    }}
+                  >
+                    {current.holdStatus === 'PENDING' ? 'Đang chờ duyệt bảo lưu' : 'Bảo lưu gói tập'}
+                  </button>
+                  <button type="button" className="btn-secondary btn-sm"
+                    disabled={cancellationsState.status !== 'success' || latestCancellation?.status === 'PENDING'}
+                    onClick={() => { setCancellationError(null); setIsCancellationModalOpen(true); }}>
+                    {latestCancellation?.status === 'PENDING' ? 'Đang chờ duyệt hủy' : 'Yêu cầu hủy gói'}
+                  </button>
+                </div>
+              </details>
             </div>
           </div>
         </section>
@@ -950,6 +955,13 @@ export function MemberPackagesPage() {
               return true;
             }).map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage);
+            // Chỉ điều có giá trị so sánh: lượt đặt lớp + quyền lợi do catalog mô tả (thời hạn đã nằm cạnh giá)
+            const highlights = [
+              membershipPackage.classCreditLimit != null
+                ? `${membershipPackage.classCreditLimit} lượt đặt lớp mỗi kỳ`
+                : 'Không giới hạn lượt đặt lớp',
+              ...details.perks,
+            ];
             const isCurrent =
               current?.packageId ===
               membershipPackage.id;
@@ -1057,12 +1069,7 @@ export function MemberPackagesPage() {
                     <div className="meta-label">
                       {selectedId === membershipPackage.id ? 'Gói bạn đã chọn · ' : ''}{details.tierBadge}
                     </div>
-                    <span className={`badge ${isCurrent ? 'badge-success' : 'badge-info'}`}>
-                      {isCurrent ? 'Gói hiện tại · ' : ''}
-                      {membershipPackage.classCreditLimit != null
-                        ? `${membershipPackage.classCreditLimit} buổi lớp HLV`
-                        : 'Không giới hạn lớp'}
-                    </span>
+                    {isCurrent && <span className="badge badge-success">Gói hiện tại</span>}
                   </div>
 
                   <h2
@@ -1077,13 +1084,26 @@ export function MemberPackagesPage() {
                   </p>
 
                   <ul className="package-benefit-list" aria-label={`Quyền lợi gói ${membershipPackage.name}`}>
-                    {details.benefits.map((benefit, index) => (
+                    {highlights.slice(0, 3).map((benefit, index) => (
                       <li key={index} className="package-benefit-item">
                         <span className="package-benefit-check" aria-hidden="true">✓</span>
                         <span>{benefit}</span>
                       </li>
                     ))}
                   </ul>
+                  {highlights.length > 3 && (
+                    <details className="package-benefit-more">
+                      <summary>Xem thêm {highlights.length - 3} quyền lợi</summary>
+                      <ul className="package-benefit-list">
+                        {highlights.slice(3).map((benefit, index) => (
+                          <li key={index} className="package-benefit-item">
+                            <span className="package-benefit-check" aria-hidden="true">✓</span>
+                            <span>{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
 
                 </div>
 
@@ -1096,9 +1116,7 @@ export function MemberPackagesPage() {
                     }}
                   >
                     {formatPrice(membershipPackage.price)}
-                  </div>
-                  <div className="row-card__meta" style={{ fontSize: '0.76rem', marginTop: 2 }}>
-                    Trọn gói {membershipPackage.durationDays} ngày • Kích hoạt sau xác nhận tại quầy
+                    <span className="package-price-term"> / {membershipPackage.durationDays} ngày</span>
                   </div>
 
                   <button

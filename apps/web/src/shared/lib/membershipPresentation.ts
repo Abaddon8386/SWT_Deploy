@@ -41,5 +41,7 @@ export function getPackageDetails(pkg: MembershipPackage) {
     tierBadge,
     summary: summary || `Gói tập có thời hạn ${pkg.durationDays} ngày.`,
     benefits: bulletPerks.length > 0 ? bulletPerks : defaultBenefits,
+    /** Chỉ các quyền lợi do catalog mô tả (không gồm dòng mặc định) */
+    perks: bulletPerks,
   };
 }
