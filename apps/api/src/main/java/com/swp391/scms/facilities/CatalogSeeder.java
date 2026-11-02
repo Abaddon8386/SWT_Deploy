@@ -124,12 +124,13 @@ public class CatalogSeeder implements ApplicationRunner {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
-        // Bộ môn chuẩn: Gym là bộ môn chính; Bơi lội, Boxing, Tennis, Cầu lông là bộ môn phụ.
+        // Bộ môn chuẩn: Gym là bộ môn chính; Bơi lội, Boxing, Tennis, Cầu lông, Yoga là bộ môn phụ.
         upsertDiscipline("Gym", "Sức mạnh, thể lực và kỹ thuật tập tạ", "Olympic Strength");
         upsertDiscipline("Bơi lội", "Kỹ thuật bơi, sức bền dưới nước và phục hồi", "Thermal Aquatics");
         upsertDiscipline("Boxing", "Kỹ thuật đấm, phản xạ và thể lực theo hiệp", "Boxing & Kickfit");
         upsertDiscipline("Tennis", "Kỹ thuật đánh bóng, di chuyển và đánh đôi");
         upsertDiscipline("Cầu lông", "Bộ chân, phản xạ và kỹ thuật đánh cầu");
+        upsertDiscipline("Yoga", "Hơi thở, thăng bằng và giãn cơ", "Mindful Yoga");
         if (rooms.list().isEmpty()) {
             rooms.create(new RoomRequest("Studio 01", "Level 2 - North Wing", 12, "available"));
             rooms.create(new RoomRequest("Arena 02 (Strength)", "Level 1 - Main Floor", 25, "available"));

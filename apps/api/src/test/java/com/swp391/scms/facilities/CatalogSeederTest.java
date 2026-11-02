@@ -36,7 +36,7 @@ class CatalogSeederTest {
 
         seeder.run(null);
 
-        verify(disciplines, times(5)).create(any());
+        verify(disciplines, times(6)).create(any());
         verify(rooms, times(5)).create(any());
         verify(packages, times(6)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
@@ -53,7 +53,7 @@ class CatalogSeederTest {
 
         seeder.run(null);
 
-        // Không có bộ môn chuẩn nào trùng tên "Yoga": 5 bộ môn chuẩn được tạo thêm, bộ môn cũ giữ nguyên
+        // "Yoga" đã có sẵn nên chỉ 5 bộ môn chuẩn còn lại được tạo thêm
         verify(disciplines, times(5)).create(any());
         verify(disciplines, never()).update(any(), any());
         verify(rooms, never()).create(any());
@@ -124,6 +124,6 @@ class CatalogSeederTest {
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.name()).toList())
                 .containsExactly("Gym", "Bơi lội", "Boxing");
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().description()).isEqualTo("Tạ");
-        verify(disciplines, times(1)).create(any());
+        verify(disciplines, times(2)).create(any());
     }
 }
