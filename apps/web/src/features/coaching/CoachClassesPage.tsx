@@ -531,7 +531,7 @@ export function CoachClassesPage() {
                               padding: '3px 8px',
                               borderRadius: 99,
                               background: 'var(--portal-salmon, #ce9180)',
-                              color: '#fff',
+                              color: 'var(--portal-on-accent)',
                             }}
                           >
                             PT 1:1 Riêng
@@ -892,7 +892,7 @@ export function CoachClassesPage() {
                             ? 'rgba(34, 197, 94, 0.14)'
                             : 'rgba(217, 119, 6, 0.14)',
                         color:
-                          currentMonthReview.status === 'published' ? 'var(--portal-success, #22c55e)' : '#d97706',
+                          currentMonthReview.status === 'published' ? 'var(--portal-success, #22c55e)' : 'var(--portal-warning)',
                       }}
                     >
                       {currentMonthReview.status === 'published'
@@ -925,7 +925,7 @@ export function CoachClassesPage() {
                         style={{
                           fontSize: 22,
                           fontWeight: 800,
-                          color: '#eab308',
+                          color: 'var(--portal-star)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: 6,
@@ -1150,7 +1150,7 @@ export function CoachClassesPage() {
                             }}
                           >
                             <div>
-                              <div style={{ fontWeight: 800, color: '#eab308', fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>
+                              <div style={{ fontWeight: 800, color: 'var(--portal-star)', fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>
                                 ⭐ {item.averageRating.toFixed(1)}
                               </div>
                               <div style={{ fontSize: 11, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
@@ -1241,7 +1241,7 @@ export function CoachClassesPage() {
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ color: '#eab308', fontWeight: 800, fontSize: 14 }}>
+                            <span style={{ color: 'var(--portal-star)', fontWeight: 800, fontSize: 14 }}>
                               {'★'.repeat(rev.rating)}
                               {'☆'.repeat(5 - rev.rating)}
                             </span>

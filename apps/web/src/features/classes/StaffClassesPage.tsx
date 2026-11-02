@@ -1424,8 +1424,7 @@ export function StaffClassesPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn-primary"
-                    style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
+                    className="btn-danger"
                     onClick={handleConfirmDeleteClass}
                     disabled={isSubmitting}
                     data-testid="delete-confirm-step2-btn"

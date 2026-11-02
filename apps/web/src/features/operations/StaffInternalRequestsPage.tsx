@@ -19,9 +19,9 @@ const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: strin
 };
 
 const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }> = {
-  PENDING: { label: '⏳ Chờ duyệt', bg: 'rgba(217, 119, 6, 0.12)', color: '#d97706' },
+  PENDING: { label: '⏳ Chờ duyệt', bg: 'color-mix(in srgb, var(--portal-warning) 14%, transparent)', color: 'var(--portal-warning)' },
   APPROVED: { label: '✓ Đã duyệt', bg: 'rgba(34, 100, 66, 0.12)', color: '#226442' },
-  REJECTED: { label: '✕ Từ chối', bg: 'rgba(220, 38, 38, 0.12)', color: '#dc2626' },
+  REJECTED: { label: '✕ Từ chối', bg: 'color-mix(in srgb, var(--portal-danger) 14%, transparent)', color: 'var(--portal-danger)' },
   CANCELLED: { label: 'Đã hủy', bg: 'rgba(156, 163, 175, 0.15)', color: '#6b7280' },
 };
 
@@ -217,7 +217,7 @@ export function StaffInternalRequestsPage() {
           style={{
             background: 'rgba(220, 38, 38, 0.08)',
             border: '1px solid rgba(220, 38, 38, 0.3)',
-            color: '#dc2626',
+            color: 'var(--portal-danger)',
             padding: '12px 18px',
             borderRadius: 12,
             marginBottom: 20,
@@ -232,7 +232,7 @@ export function StaffInternalRequestsPage() {
           <button
             type="button"
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--portal-danger)' }}
           >
             ✕
           </button>
@@ -388,7 +388,7 @@ export function StaffInternalRequestsPage() {
                       fontSize: 13,
                     }}
                   >
-                    <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : '#ef4444' }}>
+                    <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
                       {req.status === 'APPROVED' ? '✓ Quản lý chấp thuận' : '✕ Quản lý từ chối'} •{' '}
                       Người duyệt: {req.reviewedByName || 'Ban Quản Lý'} (
                       {new Date(req.reviewedAt).toLocaleDateString('vi-VN')})
@@ -416,7 +416,7 @@ export function StaffInternalRequestsPage() {
                         background: 'var(--portal-raised)',
                         fontSize: 12,
                         fontWeight: 650,
-                        color: '#ef4444',
+                        color: 'var(--portal-danger)',
                         cursor: 'pointer',
                         transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
                       }}
@@ -442,7 +442,7 @@ export function StaffInternalRequestsPage() {
                   padding: '10px 14px',
                   borderRadius: 8,
                   background: 'rgba(220, 38, 38, 0.1)',
-                  color: '#dc2626',
+                  color: 'var(--portal-danger)',
                   fontSize: 13,
                   fontWeight: 600,
                 }}
@@ -558,7 +558,7 @@ export function StaffInternalRequestsPage() {
                   fontSize: 14,
                   cursor: 'pointer',
                   background: 'var(--portal-salmon, #ce9180)',
-                  color: '#fff',
+                  color: 'var(--portal-on-accent)',
                 }}
               >
                 {submitting ? 'Đang gửi đơn...' : 'Gửi đơn tới Quản Lý'}

@@ -950,8 +950,7 @@ export function UserManagerPage() {
               </button>
               <button
                 type="button"
-                className="btn-primary"
-                style={{ background: '#ef4444', borderColor: '#ef4444' }}
+                className="btn-danger"
                 disabled={isDeleting}
                 onClick={() => void handleConfirmDelete()}
               >

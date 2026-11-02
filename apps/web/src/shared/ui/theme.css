@@ -29,6 +29,8 @@
   --portal-success: #226442;
   --portal-warning: #805400;
   --portal-info-surface: #eef3fa;
+  --portal-on-accent: #ffffff;
+  --portal-star: #92560a;
   color-scheme: light;
 }
 :root[data-theme='light'] .portal-v2 :is(.btn-primary, .filter-chip.is-active, .coach-tab-btn.is-active, .portal-rail-link.active, .ltp-item-btn.is-active, .ltp-done-btn, .ldp-day-cell.is-selected),

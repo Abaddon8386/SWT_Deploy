@@ -242,7 +242,7 @@ export function ManagerCoachReviewsPage() {
           <div style={{ display: 'grid', gap: 14 }}>
             {reviews.map((r) => {
               const rankColor =
-                r.rankPosition === 1 ? '#eab308' : r.rankPosition === 2 ? '#94a3b8' : r.rankPosition === 3 ? '#d97706' : 'var(--portal-muted, #71717a)';
+                r.rankPosition === 1 ? 'var(--portal-rank-gold)' : r.rankPosition === 2 ? 'var(--portal-rank-silver)' : r.rankPosition === 3 ? 'var(--portal-rank-bronze)' : 'var(--portal-muted)';
               return (
                 <div
                   key={r.id}
@@ -265,7 +265,7 @@ export function ManagerCoachReviewsPage() {
                         height: 48,
                         borderRadius: '50%',
                         background: rankColor,
-                        color: '#fff',
+                        color: r.rankPosition <= 3 ? 'var(--portal-rank-ink)' : 'var(--portal-on-accent)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -296,7 +296,7 @@ export function ManagerCoachReviewsPage() {
 
                       <p className="row-card__meta" style={{ margin: '4px 0 0', fontSize: 13 }}>
                         Chuyên môn: <strong>{r.coachSpecialization}</strong> • Đánh giá:{' '}
-                        <strong style={{ color: '#eab308' }}>⭐ {r.averageRating?.toFixed(1) || '5.0'} / 5.0</strong> ({r.totalReviews} lượt) • Tổng số buổi dạy:{' '}
+                        <strong style={{ color: 'var(--portal-star)' }}>⭐ {r.averageRating?.toFixed(1) || '5.0'} / 5.0</strong> ({r.totalReviews} lượt) • Tổng số buổi dạy:{' '}
                         <strong>{r.totalSessions} buổi</strong>
                       </p>
 
@@ -346,7 +346,7 @@ export function ManagerCoachReviewsPage() {
                       đánh giá HLV <strong>{mr.coachName}</strong>
                     </span>
                   </div>
-                  <span style={{ color: '#eab308', fontWeight: 800, fontSize: 15 }}>
+                  <span style={{ color: 'var(--portal-star)', fontWeight: 800, fontSize: 15 }}>
                     {'⭐'.repeat(mr.rating)} ({mr.rating} sao)
                   </span>
                 </div>

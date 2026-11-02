@@ -383,7 +383,7 @@ export function CoachTrainingPlanPage() {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
             <StatusMark type="error" size={56} />
           </div>
-          <h2 style={{ color: '#ef4444', marginBottom: '8px' }}>Truy cập bị từ chối (403 Forbidden)</h2>
+          <h2 style={{ color: 'var(--portal-danger)', marginBottom: '8px' }}>Truy cập bị từ chối (403 Forbidden)</h2>
           <p style={{ color: 'var(--color-text-muted)', maxWidth: '500px', margin: '0 auto' }}>
             Bàn làm việc thiết kế giáo án chỉ dành cho tài khoản <strong>Huấn luyện viên (COACH)</strong> hoặc{' '}
             <strong>Quản Lý (MANAGER)</strong>.

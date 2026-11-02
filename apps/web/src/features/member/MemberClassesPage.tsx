@@ -538,7 +538,7 @@ export function MemberClassesPage() {
                           minHeight: 32,
                           padding: '2px 4px',
                           marginLeft: -4,
-                          color: isFav ? '#f59e0b' : 'var(--portal-muted, #9ca3af)',
+                          color: isFav ? 'var(--portal-star)' : 'var(--portal-muted, #9ca3af)',
                         }}
                       >
                         {isFav ? '★' : '☆'}

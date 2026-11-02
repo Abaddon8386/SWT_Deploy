@@ -356,8 +356,8 @@ export function MemberCoachBookingView({
                     width: 32,
                     height: 32,
                     borderRadius: '50%',
-                    background: item.rankPosition === 1 ? '#eab308' : item.rankPosition === 2 ? '#94a3b8' : '#d97706',
-                    color: '#fff',
+                    background: item.rankPosition === 1 ? 'var(--portal-rank-gold)' : item.rankPosition === 2 ? 'var(--portal-rank-silver)' : 'var(--portal-rank-bronze)',
+                    color: 'var(--portal-rank-ink)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -372,7 +372,7 @@ export function MemberCoachBookingView({
                   <div style={{ fontSize: 14, fontWeight: 750, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {item.coachName}
                   </div>
-                  <div style={{ fontSize: 11, color: '#eab308', fontWeight: 700 }}>
+                  <div style={{ fontSize: 11, color: 'var(--portal-star)', fontWeight: 700 }}>
                     ⭐ {item.averageRating?.toFixed(1) || '5.0'} / 5.0 • {item.badge || 'Top Coach'}
                   </div>
                 </div>
@@ -406,7 +406,7 @@ export function MemberCoachBookingView({
                 padding: '3px 10px',
                 borderRadius: 99,
                 background: 'var(--portal-salmon, #ce9180)',
-                color: '#fff',
+                color: 'var(--portal-on-accent)',
               }}
             >
               Gói: {quotaStatus?.packageName || 'Chưa có gói'}
@@ -421,7 +421,7 @@ export function MemberCoachBookingView({
               <>
                 Gói {quotaStatus.packageName} được tặng <strong>{quotaStatus.monthlyQuota} lượt PT miễn phí/tháng</strong>.
                 Tháng này bạn đã dùng <strong>{quotaStatus.usedThisMonth} lượt</strong> (còn lại:{' '}
-                <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon, #ce9180)' : '#dc2626' }}>
+                <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-danger)' }}>
                   {quotaStatus.remainingQuota} lượt
                 </strong>
                 ).
@@ -540,7 +540,7 @@ export function MemberCoachBookingView({
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
             2. Chọn ngày tập luyện
           </h3>
-          <span className="row-card__meta" style={{ fontSize: 13, color: '#f59e0b' }}>
+          <span className="row-card__meta" style={{ fontSize: 13, color: 'var(--portal-star)' }}>
             ⚠️ Quy tắc: Buổi tập 1:1 phải được đặt trước ít nhất <strong>2 tiếng</strong>
           </span>
         </div>
@@ -640,13 +640,13 @@ export function MemberCoachBookingView({
               let badgeColor = 'var(--portal-muted, #71717a)';
               if (slot.reason === 'too_soon') {
                 badgeText = 'Cần đặt trước 2 tiếng';
-                badgeColor = '#d97706';
+                badgeColor = 'var(--portal-warning)';
               } else if (slot.reason === 'coach_busy') {
                 badgeText = 'HLV đã có lịch';
-                badgeColor = '#dc2626';
+                badgeColor = 'var(--portal-danger)';
               } else if (slot.reason === 'member_busy') {
                 badgeText = 'Bạn đã có lịch trùng';
-                badgeColor = '#dc2626';
+                badgeColor = 'var(--portal-danger)';
               }
 
               return (
@@ -719,7 +719,7 @@ export function MemberCoachBookingView({
                     padding: '14px 18px',
                     borderColor: isConfirmed
                       ? hasEnded
-                        ? 'rgba(59, 130, 246, 0.35)'
+                        ? 'var(--portal-border-strong)'
                         : 'rgba(206, 145, 128, 0.35)'
                       : 'var(--portal-border, #e4e2de)',
                   }}
@@ -730,8 +730,9 @@ export function MemberCoachBookingView({
                         width: 44,
                         height: 44,
                         borderRadius: '50%',
-                        background: hasEnded ? '#3b82f6' : 'var(--portal-salmon, #ce9180)',
-                        color: '#fff',
+                        background: hasEnded ? 'var(--portal-raised)' : 'var(--portal-salmon, #ce9180)',
+                        color: hasEnded ? 'var(--portal-paper)' : 'var(--portal-on-accent)',
+                        border: hasEnded ? '1px solid var(--portal-border-strong)' : 'none',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -768,7 +769,7 @@ export function MemberCoachBookingView({
                           </span>
                         )}
                         {existingReview && (
-                          <span style={{ fontSize: 11, fontWeight: 700, color: '#eab308' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-star)' }}>
                             ⭐ Đã đánh giá ({existingReview.rating} sao)
                           </span>
                         )}
@@ -792,13 +793,6 @@ export function MemberCoachBookingView({
                           <button
                             type="button"
                             className="btn-primary btn-sm"
-                            style={{
-                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                              borderColor: '#d97706',
-                              color: '#ffffff',
-                              fontWeight: 700,
-                              boxShadow: '0 2px 6px rgba(217, 119, 6, 0.25)',
-                            }}
                             onClick={() => {
                               setReviewTargetBooking(b);
                               setReviewRating(5);
@@ -844,7 +838,7 @@ export function MemberCoachBookingView({
                         <button
                           type="button"
                           className="btn-secondary btn-sm"
-                          style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                          style={{ color: 'var(--portal-danger)', borderColor: '#fca5a5' }}
                           onClick={() => setCancelTarget(b)}
                         >
                           Hủy lịch hẹn
@@ -891,7 +885,7 @@ export function MemberCoachBookingView({
                     onClick={() => setReviewRating(star)}
                     style={{
                       border: '1px solid',
-                      borderColor: star <= reviewRating ? '#eab308' : 'var(--portal-border, #e4e2de)',
+                      borderColor: star <= reviewRating ? 'var(--portal-star)' : 'var(--portal-border, #e4e2de)',
                       background: star <= reviewRating ? 'rgba(234, 179, 8, 0.15)' : 'transparent',
                       borderRadius: 8,
                       padding: '8px 12px',
@@ -902,7 +896,7 @@ export function MemberCoachBookingView({
                     {star <= reviewRating ? '⭐' : '☆'}
                   </button>
                 ))}
-                <span style={{ alignSelf: 'center', fontWeight: 700, fontSize: 14, color: '#eab308', marginLeft: 8 }}>
+                <span style={{ alignSelf: 'center', fontWeight: 700, fontSize: 14, color: 'var(--portal-star)', marginLeft: 8 }}>
                   {reviewRating === 5
                     ? 'Xuất sắc (5 sao)'
                     : reviewRating === 4
@@ -1022,7 +1016,7 @@ export function MemberCoachBookingView({
                           (Còn {quotaStatus?.remainingQuota} lượt miễn phí)
                         </span>
                       ) : (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-danger)' }}>
                           (Hết lượt hoặc không áp dụng)
                         </span>
                       )}

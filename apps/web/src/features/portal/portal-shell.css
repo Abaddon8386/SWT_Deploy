@@ -66,6 +66,12 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   --portal-success: #86efac;
   --portal-warning: #fcd89a;
   --portal-info-surface: #263444;
+  --portal-on-accent: #202020;
+  --portal-star: #f5c451;
+  --portal-rank-gold: #eab308;
+  --portal-rank-silver: #94a3b8;
+  --portal-rank-bronze: #d97706;
+  --portal-rank-ink: #202020;
   padding: 0;
   color-scheme: dark;
   accent-color: var(--portal-salmon);
