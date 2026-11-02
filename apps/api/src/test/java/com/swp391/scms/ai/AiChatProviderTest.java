@@ -38,7 +38,7 @@ class AiChatProviderTest {
     @Test void geminiDefaultsToFlashModelWhenModelIsBlank() {
         RestClient.Builder builder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent"))
+        server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"))
                 .andExpect(header("x-goog-api-key", "unit-test-key"))
                 .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Default Gemini answer\"}]}}]}", MediaType.APPLICATION_JSON));
         assertEquals("Default Gemini answer", new AiChatProvider("gemini", "unit-test-key", "", builder)
