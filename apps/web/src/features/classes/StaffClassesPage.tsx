@@ -934,7 +934,7 @@ export function StaffClassesPage() {
                               className="btn-secondary btn-sm"
                               style={{
                                 color: 'var(--portal-danger, #fca5a5)',
-                                borderColor: 'rgba(252, 165, 165, 0.35)',
+                                borderColor: 'color-mix(in srgb, var(--portal-danger) 35%, transparent)',
                               }}
                               onClick={() => handleOpenDeleteModal(cls)}
                               data-testid={`delete-class-${cls.id}`}
@@ -1371,7 +1371,7 @@ export function StaffClassesPage() {
                 style={{
                   padding: '14px 16px',
                   borderRadius: 8,
-                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                  backgroundColor: 'color-mix(in srgb, var(--portal-danger) 12%, transparent)',
                   border: '1px solid var(--portal-danger, #fca5a5)',
                   color: 'var(--portal-danger, #fca5a5)',
                   lineHeight: 1.5,

@@ -427,7 +427,7 @@ export function MemberClassesPage() {
       </div>
 
       {actionError && (
-        <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'rgba(180, 60, 60, 0.35)' }}>
+        <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'color-mix(in srgb, var(--portal-danger) 35%, transparent)' }}>
           <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{actionError}</strong>
           <div style={{ marginTop: 8 }}>
             <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>

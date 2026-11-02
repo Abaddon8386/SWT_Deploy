@@ -67,6 +67,8 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   --portal-warning: #fcd89a;
   --portal-info-surface: #263444;
   --portal-on-accent: #202020;
+  --portal-info: #93c5fd;
+  --portal-violet: #d8b4fe;
   --portal-star: #f5c451;
   --portal-rank-gold: #eab308;
   --portal-rank-silver: #94a3b8;

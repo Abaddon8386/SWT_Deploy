@@ -189,8 +189,8 @@ export function ManagerCoachReviewsPage() {
           className="portal-card"
           role="alert"
           style={{
-            borderColor: 'rgba(180, 60, 60, 0.45)',
-            background: 'rgba(180, 60, 60, 0.08)',
+            borderColor: 'color-mix(in srgb, var(--portal-danger) 45%, transparent)',
+            background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
             padding: 14,
             display: 'flex',
             justifyContent: 'space-between',
@@ -254,7 +254,7 @@ export function ManagerCoachReviewsPage() {
                     alignItems: 'center',
                     gap: 16,
                     padding: '18px 22px',
-                    borderColor: r.rankPosition === 1 ? 'rgba(234, 179, 8, 0.45)' : undefined,
+                    borderColor: r.rankPosition === 1 ? 'color-mix(in srgb, var(--portal-star) 45%, transparent)' : undefined,
                     background: r.rankPosition === 1 ? 'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(234, 179, 8, 0.01) 100%)' : undefined,
                   }}
                 >
@@ -286,7 +286,7 @@ export function ManagerCoachReviewsPage() {
                             fontWeight: 700,
                             padding: '3px 10px',
                             borderRadius: 99,
-                            background: 'rgba(206, 145, 128, 0.15)',
+                            background: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)',
                             color: 'var(--portal-salmon, #ce9180)',
                           }}
                         >

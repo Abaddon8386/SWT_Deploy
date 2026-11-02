@@ -289,8 +289,8 @@ export function MemberCoachBookingView({
           className="portal-card"
           role="alert"
           style={{
-            borderColor: 'rgba(180, 60, 60, 0.45)',
-            background: 'rgba(180, 60, 60, 0.08)',
+            borderColor: 'color-mix(in srgb, var(--portal-danger) 45%, transparent)',
+            background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
             padding: 14,
             display: 'flex',
             justifyContent: 'space-between',
@@ -316,7 +316,7 @@ export function MemberCoachBookingView({
           style={{
             padding: '16px 20px',
             background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(206, 145, 128, 0.04) 100%)',
-            borderColor: 'rgba(234, 179, 8, 0.35)',
+            borderColor: 'color-mix(in srgb, var(--portal-star) 35%, transparent)',
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
@@ -348,7 +348,7 @@ export function MemberCoachBookingView({
                   padding: '10px 14px',
                   borderRadius: 10,
                   background: 'var(--portal-surface, #ffffff)',
-                  border: '1px solid rgba(234, 179, 8, 0.25)',
+                  border: '1px solid color-mix(in srgb, var(--portal-star) 25%, transparent)',
                 }}
               >
                 <div
@@ -388,7 +388,7 @@ export function MemberCoachBookingView({
         style={{
           padding: '16px 20px',
           background: 'linear-gradient(135deg, rgba(206, 145, 128, 0.12) 0%, rgba(206, 145, 128, 0.03) 100%)',
-          borderColor: 'rgba(206, 145, 128, 0.35)',
+          borderColor: 'color-mix(in srgb, var(--portal-salmon) 35%, transparent)',
           display: 'flex',
           flexWrap: 'wrap',
           justifyContent: 'space-between',
@@ -493,7 +493,7 @@ export function MemberCoachBookingView({
                   gap: 14,
                   alignItems: 'center',
                   borderColor: isSelected ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-border, #e4e2de)',
-                  background: isSelected ? 'rgba(206, 145, 128, 0.12)' : 'var(--portal-surface, #ffffff)',
+                  background: isSelected ? 'color-mix(in srgb, var(--portal-salmon) 12%, transparent)' : 'var(--portal-surface, #ffffff)',
                   boxShadow: isSelected ? '0 0 0 2px var(--portal-salmon, #ce9180)' : undefined,
                   transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
                 }}
@@ -613,17 +613,17 @@ export function MemberCoachBookingView({
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: 4,
-                      borderColor: 'rgba(46, 107, 79, 0.45)',
-                      background: 'rgba(46, 107, 79, 0.05)',
+                      borderColor: 'color-mix(in srgb, var(--portal-success) 45%, transparent)',
+                      background: 'color-mix(in srgb, var(--portal-success) 5%, transparent)',
                       transition: 'transform 160ms ease, background 160ms ease',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.background = 'rgba(46, 107, 79, 0.14)';
+                      e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-success) 14%, transparent)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.background = 'rgba(46, 107, 79, 0.05)';
+                      e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-success) 5%, transparent)';
                     }}
                   >
                     <span style={{ fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #202020)' }}>
@@ -720,7 +720,7 @@ export function MemberCoachBookingView({
                     borderColor: isConfirmed
                       ? hasEnded
                         ? 'var(--portal-border-strong)'
-                        : 'rgba(206, 145, 128, 0.35)'
+                        : 'color-mix(in srgb, var(--portal-salmon) 35%, transparent)'
                       : 'var(--portal-border, #e4e2de)',
                   }}
                 >
@@ -756,9 +756,9 @@ export function MemberCoachBookingView({
                             className="badge badge-info"
                             style={{
                               fontSize: 11,
-                              background: 'rgba(59, 130, 246, 0.12)',
-                              borderColor: 'rgba(59, 130, 246, 0.3)',
-                              color: '#2563eb',
+                              background: 'color-mix(in srgb, var(--portal-info) 12%, transparent)',
+                              borderColor: 'color-mix(in srgb, var(--portal-info) 30%, transparent)',
+                              color: 'var(--portal-info)',
                             }}
                           >
                             ✓ Đã kết thúc buổi
@@ -838,7 +838,7 @@ export function MemberCoachBookingView({
                         <button
                           type="button"
                           className="btn-secondary btn-sm"
-                          style={{ color: 'var(--portal-danger)', borderColor: '#fca5a5' }}
+                          style={{ color: 'var(--portal-danger)', borderColor: 'var(--portal-danger)' }}
                           onClick={() => setCancelTarget(b)}
                         >
                           Hủy lịch hẹn
@@ -886,7 +886,7 @@ export function MemberCoachBookingView({
                     style={{
                       border: '1px solid',
                       borderColor: star <= reviewRating ? 'var(--portal-star)' : 'var(--portal-border, #e4e2de)',
-                      background: star <= reviewRating ? 'rgba(234, 179, 8, 0.15)' : 'transparent',
+                      background: star <= reviewRating ? 'color-mix(in srgb, var(--portal-star) 15%, transparent)' : 'transparent',
                       borderRadius: 8,
                       padding: '8px 12px',
                       cursor: 'pointer',
@@ -933,7 +933,7 @@ export function MemberCoachBookingView({
               <span>Đánh giá ẩn danh (Không hiển thị họ tên của tôi với Huấn luyện viên)</span>
             </label>
 
-            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(234, 179, 8, 0.45)', background: 'rgba(234, 179, 8, 0.1)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span>⚠️ <strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
+            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span>⚠️ <strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button
                 type="button"
@@ -998,7 +998,7 @@ export function MemberCoachBookingView({
                     border: '1px solid var(--portal-border, #e4e2de)',
                     cursor: hasRemainingQuota ? 'pointer' : 'not-allowed',
                     opacity: hasRemainingQuota ? 1 : 0.6,
-                    background: paymentMethod === 'package_quota' ? 'rgba(206, 145, 128, 0.1)' : 'transparent',
+                    background: paymentMethod === 'package_quota' ? 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)' : 'transparent',
                   }}
                 >
                   <input
@@ -1038,7 +1038,7 @@ export function MemberCoachBookingView({
                     borderRadius: 10,
                     border: '1px solid var(--portal-border, #e4e2de)',
                     cursor: 'pointer',
-                    background: paymentMethod === 'hourly_pay' ? 'rgba(206, 145, 128, 0.1)' : 'transparent',
+                    background: paymentMethod === 'hourly_pay' ? 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)' : 'transparent',
                   }}
                 >
                   <input
@@ -1078,7 +1078,7 @@ export function MemberCoachBookingView({
               />
             </div>
 
-            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(234, 179, 8, 0.45)', background: 'rgba(234, 179, 8, 0.1)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span>⚠️ <strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
+            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span>⚠️ <strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button
                 type="button"
@@ -1112,8 +1112,8 @@ export function MemberCoachBookingView({
               style={{
                 padding: 14,
                 borderRadius: 12,
-                background: 'rgba(46, 107, 79, 0.08)',
-                border: '1px solid rgba(46, 107, 79, 0.35)',
+                background: 'color-mix(in srgb, var(--portal-success) 8%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--portal-success) 35%, transparent)',
               }}
             >
               <h4 style={{ margin: '0 0 6px', color: 'var(--portal-success, #226442)', fontSize: 15, fontWeight: 750 }}>

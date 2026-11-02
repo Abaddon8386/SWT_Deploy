@@ -11,23 +11,23 @@ import {
 import { notify } from '../../shared/lib/portalNotices';
 
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
-  LEAVE: { label: 'Xin nghỉ phép', bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
-  SHIFT_EXCHANGE: { label: 'Đổi ca trực', bg: 'rgba(168, 85, 247, 0.12)', color: '#9333ea' },
-  SCHEDULE_CHANGE: { label: 'Đổi lịch dạy', bg: 'rgba(206, 145, 128, 0.15)', color: 'var(--portal-salmon, #ce9180)' },
-  OTHER: { label: 'Đề xuất khác', bg: 'rgba(107, 114, 128, 0.12)', color: '#4b5563' },
+  LEAVE: { label: 'Xin nghỉ phép', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
+  SHIFT_EXCHANGE: { label: 'Đổi ca trực', bg: 'color-mix(in srgb, var(--portal-violet) 12%, transparent)', color: 'var(--portal-violet)' },
+  SCHEDULE_CHANGE: { label: 'Đổi lịch dạy', bg: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)', color: 'var(--portal-salmon, #ce9180)' },
+  OTHER: { label: 'Đề xuất khác', bg: 'color-mix(in srgb, var(--portal-muted) 12%, transparent)', color: 'var(--portal-muted)' },
 };
 
 const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }> = {
   PENDING: { label: '⏳ Chờ duyệt', bg: 'color-mix(in srgb, var(--portal-warning) 14%, transparent)', color: 'var(--portal-warning)' },
-  APPROVED: { label: '✓ Đã duyệt', bg: 'rgba(34, 100, 66, 0.12)', color: '#226442' },
+  APPROVED: { label: '✓ Đã duyệt', bg: 'color-mix(in srgb, var(--portal-success) 12%, transparent)', color: 'var(--portal-success)' },
   REJECTED: { label: '✕ Từ chối', bg: 'color-mix(in srgb, var(--portal-danger) 14%, transparent)', color: 'var(--portal-danger)' },
-  CANCELLED: { label: 'Đã hủy', bg: 'rgba(156, 163, 175, 0.15)', color: '#6b7280' },
+  CANCELLED: { label: 'Đã hủy', bg: 'color-mix(in srgb, var(--portal-muted) 15%, transparent)', color: 'var(--portal-muted)' },
 };
 
 const ROLE_DISPLAY: Record<string, { label: string; bg: string; color: string }> = {
-  COACH: { label: 'Huấn luyện viên', bg: 'rgba(206, 145, 128, 0.15)', color: 'var(--portal-salmon, #ce9180)' },
-  STAFF: { label: 'Nhân viên lễ tân', bg: 'rgba(37, 99, 235, 0.12)', color: '#2563eb' },
-  RECEPTIONIST: { label: 'Lễ tân quầy', bg: 'rgba(37, 99, 235, 0.12)', color: '#2563eb' },
+  COACH: { label: 'Huấn luyện viên', bg: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)', color: 'var(--portal-salmon, #ce9180)' },
+  STAFF: { label: 'Nhân viên lễ tân', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
+  RECEPTIONIST: { label: 'Lễ tân quầy', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
 };
 
 export function ManagerInternalRequestsPage() {
@@ -167,7 +167,7 @@ export function ManagerInternalRequestsPage() {
                   cursor: 'pointer',
                   background: isActive ? 'var(--portal-salmon, #ce9180)' : 'transparent',
                   color: isActive ? 'var(--portal-ink, #202020)' : 'var(--portal-muted)',
-                  boxShadow: isActive ? '0 2px 8px rgba(206, 145, 128, 0.25)' : 'none',
+                  boxShadow: isActive ? '0 2px 8px color-mix(in srgb, var(--portal-salmon) 25%, transparent)' : 'none',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
@@ -215,8 +215,8 @@ export function ManagerInternalRequestsPage() {
         <div
           role="alert"
           style={{
-            background: 'rgba(220, 38, 38, 0.08)',
-            border: '1px solid rgba(220, 38, 38, 0.3)',
+            background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--portal-danger) 30%, transparent)',
             color: 'var(--portal-danger)',
             padding: '12px 18px',
             borderRadius: 12,
@@ -426,9 +426,9 @@ export function ManagerInternalRequestsPage() {
                       borderRadius: 10,
                       background:
                         req.status === 'APPROVED'
-                          ? 'rgba(34, 197, 94, 0.08)'
-                          : 'rgba(220, 38, 38, 0.08)',
-                      border: `1px solid ${req.status === 'APPROVED' ? 'rgba(34, 197, 94, 0.34)' : 'rgba(220, 38, 38, 0.34)'}`,
+                          ? 'color-mix(in srgb, var(--portal-success) 8%, transparent)'
+                          : 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
+                      border: `1px solid ${req.status === 'APPROVED' ? 'color-mix(in srgb, var(--portal-success) 34%, transparent)' : 'color-mix(in srgb, var(--portal-danger) 34%, transparent)'}`,
                       fontSize: 13,
                     }}
                   >
@@ -463,7 +463,7 @@ export function ManagerInternalRequestsPage() {
                         minHeight: 40,
                         padding: '8px 18px',
                         borderRadius: 10,
-                        border: '1px solid rgba(239, 68, 68, 0.45)',
+                        border: '1px solid color-mix(in srgb, var(--portal-danger) 45%, transparent)',
                         background: 'var(--portal-raised)',
                         fontSize: 13,
                         fontWeight: 700,
@@ -487,7 +487,7 @@ export function ManagerInternalRequestsPage() {
                         fontWeight: 750,
                         color: 'var(--portal-on-accent)',
                         cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(34, 100, 66, 0.2)',
+                        boxShadow: '0 2px 8px color-mix(in srgb, var(--portal-success) 20%, transparent)',
                         transition: 'background-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease',
                       }}
                     >
@@ -518,7 +518,7 @@ export function ManagerInternalRequestsPage() {
                 style={{
                   padding: '10px 14px',
                   borderRadius: 8,
-                  background: 'rgba(220, 38, 38, 0.1)',
+                  background: 'color-mix(in srgb, var(--portal-danger) 10%, transparent)',
                   color: 'var(--portal-danger)',
                   fontSize: 13,
                   fontWeight: 600,

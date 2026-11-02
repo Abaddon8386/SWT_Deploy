@@ -403,7 +403,7 @@ export function StaffCheckInPage() {
                             {ok ? 'Mở Cổng' : 'Từ Chối'}
                           </span>
                           {rec.denialReason && (
-                            <div style={{ fontSize: '0.72rem', color: '#fca5a5', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--portal-danger)', marginTop: 2 }}>
                               {rec.denialReason}
                             </div>
                           )}

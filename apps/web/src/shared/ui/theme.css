@@ -30,6 +30,8 @@
   --portal-warning: #805400;
   --portal-info-surface: #eef3fa;
   --portal-on-accent: #ffffff;
+  --portal-info: #1d4ed8;
+  --portal-violet: #7e22ce;
   --portal-star: #92560a;
   color-scheme: light;
 }

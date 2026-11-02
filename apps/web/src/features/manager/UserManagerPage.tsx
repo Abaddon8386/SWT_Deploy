@@ -477,9 +477,9 @@ export function UserManagerPage() {
                               <span
                                 className="badge"
                                 style={{
-                                  background: 'rgba(14, 165, 233, 0.12)',
-                                  color: '#0284c7',
-                                  border: '1px solid rgba(14, 165, 233, 0.3)',
+                                  background: 'color-mix(in srgb, var(--portal-info) 12%, transparent)',
+                                  color: 'var(--portal-info)',
+                                  border: '1px solid color-mix(in srgb, var(--portal-info) 30%, transparent)',
                                   fontSize: '0.72rem',
                                 }}
                                 title="Hội viên đang có gói bảo lưu tập (được miễn trừ tự động xóa)"
@@ -528,7 +528,7 @@ export function UserManagerPage() {
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
-                              style={{ color: 'var(--portal-danger)', borderColor: 'rgba(239, 68, 68, 0.35)' }}
+                              style={{ color: 'var(--portal-danger)', borderColor: 'color-mix(in srgb, var(--portal-danger) 35%, transparent)' }}
                               disabled={u.role === 'CENTER_MANAGER'}
                               title={
                                 u.role === 'CENTER_MANAGER'
@@ -917,10 +917,10 @@ export function UserManagerPage() {
                 style={{
                   padding: '10px 12px',
                   borderRadius: 6,
-                  background: 'rgba(14, 165, 233, 0.1)',
-                  border: '1px solid rgba(14, 165, 233, 0.25)',
+                  background: 'color-mix(in srgb, var(--portal-info) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--portal-info) 25%, transparent)',
                   fontSize: '0.85rem',
-                  color: '#0284c7',
+                  color: 'var(--portal-info)',
                 }}
               >
                 ❄️ Tài khoản này hiện đang có gói tập bảo lưu. Vui lòng cân nhắc trước khi xóa thủ công.
@@ -930,10 +930,10 @@ export function UserManagerPage() {
               style={{
                 padding: '10px 12px',
                 borderRadius: 6,
-                background: 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
+                background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--portal-danger) 20%, transparent)',
                 fontSize: '0.85rem',
-                color: '#b91c1c',
+                color: 'var(--portal-danger)',
               }}
             >
               ⚠️ Lưu ý: Thao tác này sẽ xóa mềm tài khoản khỏi hệ thống và vô hiệu hóa quyền truy cập vĩnh viễn.
@@ -987,10 +987,10 @@ export function UserManagerPage() {
                 style={{
                   padding: '12px 14px',
                   borderRadius: 6,
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  background: 'color-mix(in srgb, var(--portal-success) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--portal-success) 30%, transparent)',
                   fontSize: '0.88rem',
-                  color: '#065f46',
+                  color: 'var(--portal-success)',
                 }}
               >
                 ✅ {cleanupResult.message || `Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`}

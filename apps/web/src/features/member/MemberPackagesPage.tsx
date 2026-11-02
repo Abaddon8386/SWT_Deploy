@@ -815,7 +815,7 @@ export function MemberPackagesPage() {
             <button
               type="button"
               className="btn-secondary btn-sm"
-              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
+              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger)' }}
               disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
               onClick={() => { setActionError(null); setPendingToCancel(pending); }}
             >

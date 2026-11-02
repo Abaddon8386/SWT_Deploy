@@ -19,8 +19,8 @@ const STATUS_CONFIG: {
   className: string;
   indicatorColor: string;
 }[] = [
-  { value: 'present', label: 'Có mặt', className: 'is-present', indicatorColor: '#4ade80' },
-  { value: 'absent', label: 'Vắng mặt', className: 'is-absent', indicatorColor: '#f87171' },
+  { value: 'present', label: 'Có mặt', className: 'is-present', indicatorColor: 'var(--portal-success)' },
+  { value: 'absent', label: 'Vắng mặt', className: 'is-absent', indicatorColor: 'var(--portal-danger)' },
 ];
 
 export interface AttendanceHistoryRecord {

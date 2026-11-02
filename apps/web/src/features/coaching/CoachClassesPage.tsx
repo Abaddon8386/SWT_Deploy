@@ -494,7 +494,7 @@ export function CoachClassesPage() {
                         daily1on1Bookings.length > 0
                           ? 'var(--portal-salmon, #ce9180)'
                           : undefined,
-                      color: daily1on1Bookings.length > 0 ? '#fff' : undefined,
+                      color: daily1on1Bookings.length > 0 ? 'var(--portal-on-accent)' : undefined,
                     }}
                   >
                     {daily1on1Bookings.length} buổi kèm 1:1
@@ -512,7 +512,7 @@ export function CoachClassesPage() {
                         key={b.id}
                         className="coach-session-card"
                         style={{
-                          borderColor: 'rgba(206, 145, 128, 0.45)',
+                          borderColor: 'color-mix(in srgb, var(--portal-salmon) 45%, transparent)',
                           background:
                             'linear-gradient(135deg, rgba(206, 145, 128, 0.08) 0%, rgba(206, 145, 128, 0.02) 100%)',
                         }}
@@ -889,8 +889,8 @@ export function CoachClassesPage() {
                         fontWeight: 750,
                         background:
                           currentMonthReview.status === 'published'
-                            ? 'rgba(34, 197, 94, 0.14)'
-                            : 'rgba(217, 119, 6, 0.14)',
+                            ? 'color-mix(in srgb, var(--portal-success) 14%, transparent)'
+                            : 'color-mix(in srgb, var(--portal-warning) 14%, transparent)',
                         color:
                           currentMonthReview.status === 'published' ? 'var(--portal-success, #22c55e)' : 'var(--portal-warning)',
                       }}
@@ -994,7 +994,7 @@ export function CoachClassesPage() {
                         background: 'var(--portal-surface)',
                         padding: '18px 22px',
                         borderRadius: 14,
-                        border: '1px solid rgba(206, 145, 128, 0.36)',
+                        border: '1px solid color-mix(in srgb, var(--portal-salmon) 36%, transparent)',
                       }}
                     >
                       <span
@@ -1097,11 +1097,11 @@ export function CoachClassesPage() {
                                 fontVariantNumeric: 'tabular-nums',
                                 background:
                                   item.rankPosition === 1
-                                    ? 'rgba(234, 179, 8, 0.2)'
+                                    ? 'color-mix(in srgb, var(--portal-star) 20%, transparent)'
                                     : item.rankPosition === 2
-                                    ? 'rgba(148, 163, 184, 0.2)'
+                                    ? 'color-mix(in srgb, var(--portal-rank-silver) 20%, transparent)'
                                     : item.rankPosition === 3
-                                    ? 'rgba(217, 119, 6, 0.2)'
+                                    ? 'color-mix(in srgb, var(--portal-warning) 20%, transparent)'
                                     : 'var(--portal-surface)',
                                 color: 'var(--portal-paper)',
                               }}
@@ -1230,8 +1230,8 @@ export function CoachClassesPage() {
                                 padding: '2px 8px',
                                 borderRadius: 99,
                                 background: rev.bookingId
-                                  ? 'rgba(206, 145, 128, 0.15)'
-                                  : 'rgba(34, 197, 94, 0.14)',
+                                  ? 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)'
+                                  : 'color-mix(in srgb, var(--portal-success) 14%, transparent)',
                                 color: rev.bookingId ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-success, #22c55e)',
                                 fontWeight: 700,
                               }}
