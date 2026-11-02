@@ -221,7 +221,6 @@ export function MemberDashboardPage() {
                       />
                     </div>
                     </Link>
-                    <Link className="member-text-link" to="/member/packages">Quản lý gói tập<PortalIcon name="arrow" size={14} /></Link>
                   </div>
                 </section>
               ) : (
@@ -254,7 +253,6 @@ export function MemberDashboardPage() {
             </>
           )}
 
-          <Link className="member-board-note" to="/member/packages"><PortalIcon name="package" size={18} /><span>Xem các gói tập<small>So sánh giá và quyền lợi</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--orange" aria-labelledby="board-classes">
@@ -325,7 +323,6 @@ export function MemberDashboardPage() {
                 </div>
               )}
           </section>
-          <Link className="member-discover-card" to="/member/classes"><LoadingImage src="/images/pilates-reformer-studio.jpg" alt="Không gian tập Pilates tại SÖL" /><span><strong>Lịch lớp học</strong><small>Xem buổi học và đặt chỗ</small></span><PortalIcon name="arrow" size={16} /></Link>
           <Link className="member-board-note" to="/member/classes?tab=pt"><PortalIcon name="profile" size={18} /><span>Đặt lịch HLV 1:1<small>PT kèm riêng theo giờ · Đặt trước 2 tiếng</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
@@ -337,14 +334,12 @@ export function MemberDashboardPage() {
             <strong>{userName}</strong>
             <div className="member-digital-card-bottom"><span>Thẻ hội viên điện tử</span><PortalIcon name="arrow" size={17} /></div>
           </Link>
-          <Link className="portal-card member-board-info" to="/member/card"><span className="member-info-icon"><PortalIcon name="scan" size={20} /></span><h3>Mã QR check-in</h3><p>Xuất trình mã QR khi đến tập.</p><span className="member-text-link">Mở thẻ hội viên<PortalIcon name="arrow" size={14} /></span></Link>
-          <Link className="member-board-note" to="/member/packages"><PortalIcon name="card" size={18} /><span>Gói tập & thanh toán<small>Kiểm tra đăng ký và thanh toán</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/invoices"><PortalIcon name="receipt" size={18} /><span>Giao dịch & hóa đơn<small>Xem các khoản đã thanh toán</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
           <div className="member-column-heading"><h2 id="board-wellness"><i />Sức khỏe & cân bằng</h2><Link to="/member/profile" aria-label="Xem hồ sơ và sức khỏe"><PortalIcon name="arrow" size={16} /></Link></div>
           <Link className="member-profile-card" to="/member/profile"><span className="member-info-icon"><PortalIcon name="profile" size={20} /></span><h3>Hồ sơ sức khỏe</h3><p>Cập nhật thông tin cá nhân và chỉ số cơ thể.</p><span className="member-text-link">Hồ sơ & sức khỏe<PortalIcon name="arrow" size={14} /></span></Link>
-          <Link className="member-sanctuary-card" to="/"><LoadingImage src="/images/about-thermal-recovery.jpg" alt="Không gian thư giãn tại SÖL" /><span><small>SÖL FITNESS</small><strong>Thông tin<br />câu lạc bộ.</strong><span>Về trang chủ<PortalIcon name="arrow" size={14} /></span></span></Link>
         </section>
       </div>
     </div>

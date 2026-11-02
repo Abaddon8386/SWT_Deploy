@@ -53,7 +53,7 @@ describe('SCRUM-85 dashboard', () => {
     });
   }
 
-  it('opens Packages from the membership image and card details', async () => {
+  it('opens Packages from the membership image and card details without repeating the link', async () => {
     await renderDashboard();
     const image = host.querySelector<HTMLImageElement>('.member-card-cover');
     const imageLink = image?.closest('a');
@@ -64,7 +64,8 @@ describe('SCRUM-85 dashboard', () => {
     const detailsLink = host.querySelector<HTMLAnchorElement>('.member-card-details-link');
     expect(detailsLink?.getAttribute('href')).toBe('/member/packages');
     expect(detailsLink?.textContent).toContain('Essential');
-    expect(host.querySelector('.member-membership-card .member-text-link')?.getAttribute('href')).toBe('/member/packages');
+    expect(host.querySelector('.member-membership-card .member-text-link')).toBeNull();
+    expect(host.querySelector('.member-board-column--orange ~ .member-board-column .member-board-note[href="/member/packages"]')).toBeNull();
   });
 
   it('shows paid renewal expiry and remaining days across 120 days', async () => {
@@ -79,18 +80,18 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.querySelector('.member-card-details-link')?.textContent).toContain('Còn 120 ngày');
   });
 
-  it('opens Classes from the class card and discovery image', async () => {
+  it('opens Classes from the class card without a duplicate photo card', async () => {
     await renderDashboard();
     const classLink = host.querySelector<HTMLAnchorElement>('.member-card-overlay-link');
     expect(classLink?.getAttribute('href')).toBe('/member/classes');
     await act(async () => classLink?.click());
     expect(host.querySelector('[data-testid="location"]')?.textContent).toBe('/member/classes');
-    expect(host.querySelector('.member-discover-card img')?.closest('a')?.getAttribute('href')).toBe('/member/classes');
+    expect(host.querySelector('.member-discover-card')).toBeNull();
   });
 
   it('opens Digital Card from the member cards and supports keyboard focus', async () => {
     await renderDashboard();
-    const card = host.querySelector<HTMLAnchorElement>('.member-board-info');
+    const card = host.querySelector<HTMLAnchorElement>('.member-digital-card');
     expect(card?.getAttribute('href')).toBe('/member/card');
     expect(card?.querySelector('a, button')).toBeNull();
     card?.focus();
@@ -98,7 +99,7 @@ describe('SCRUM-85 dashboard', () => {
     expect(card?.tabIndex).toBe(0);
     await act(async () => card?.click());
     expect(host.querySelector('[data-testid="location"]')?.textContent).toBe('/member/card');
-    expect(host.querySelector('.member-digital-card')?.getAttribute('href')).toBe('/member/card');
+    expect(host.querySelector('.member-board-info')).toBeNull();
   });
   it('shows an empty class list independently of membership', async () => {
     await renderDashboard();
