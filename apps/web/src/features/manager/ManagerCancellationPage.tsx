@@ -4,6 +4,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import type { MembershipCancellationRequest } from '../member/membershipApi';
 import { notify } from '../../shared/lib/portalNotices';
+import { Modal } from '../../shared/ui/Modal';
 
 const loadRequests = () => apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations');
 const decideRequest = (id: number, action: 'approve' | 'reject', note: string) =>
@@ -70,26 +71,21 @@ export function ManagerCancellationPage() {
           </div>}
         </article>)}
       </div>}
-    {decision && <div role="presentation" onClick={(e) => e.target === e.currentTarget && !busy && setDecision(null)}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.6)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
-      <section className="portal-card" role="dialog" aria-modal="true" aria-labelledby="manager-cancellation-title"
-        onKeyDown={(e) => { if (e.key === 'Escape' && !busy) setDecision(null); }}
-        style={{ width: 'min(520px, 100%)', marginBottom: 0, borderRadius: 22, border: '1px solid var(--portal-border)' }}>
-        <h2 className="portal-card-title" id="manager-cancellation-title">
-          {decision.action === 'approve' ? 'Duyệt hủy gói tập?' : 'Từ chối yêu cầu hủy?'}
-        </h2>
-        <p className="row-card__meta" style={{ marginTop: 12 }}>{decision.item.memberName} • {decision.item.packageName}</p>
-        {decision.action === 'approve' && <p className="row-card__meta">Sau khi duyệt, gói ngừng cấp quyền, lịch học tương lai được xử lý và không hoàn tiền. Nếu còn quyền lợi khác chưa thể phân định, hệ thống sẽ từ chối để quản lý xử lý riêng.</p>}
-        <label className="portal-label" htmlFor="manager-cancellation-note">Ghi chú xử lý</label>
-        <textarea className="portal-input" id="manager-cancellation-note" rows={3} maxLength={500} value={note}
-          onChange={(e) => setNote(e.target.value)} disabled={busy} style={{ width: '100%' }} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-          <button type="button" className="btn-secondary" autoFocus disabled={busy} onClick={() => setDecision(null)}>Quay lại</button>
-          <button type="button" className="btn-primary" disabled={busy} onClick={() => void submitDecision()}>
-            {busy ? 'Đang xử lý…' : 'Xác nhận quyết định'}
-          </button>
-        </div>
-      </section>
-    </div>}
+    {decision && <Modal
+      title={decision.action === 'approve' ? 'Duyệt hủy gói tập?' : 'Từ chối yêu cầu hủy?'}
+      busy={busy}
+      onClose={() => setDecision(null)}>
+      <p className="row-card__meta" style={{ marginTop: 12 }}>{decision.item.memberName} • {decision.item.packageName}</p>
+      {decision.action === 'approve' && <p className="row-card__meta">Sau khi duyệt, gói ngừng cấp quyền, lịch học tương lai được xử lý và không hoàn tiền. Nếu còn quyền lợi khác chưa thể phân định, hệ thống sẽ từ chối để quản lý xử lý riêng.</p>}
+      <label className="portal-label" htmlFor="manager-cancellation-note">Ghi chú xử lý</label>
+      <textarea className="portal-input" id="manager-cancellation-note" rows={3} maxLength={500} value={note}
+        onChange={(e) => setNote(e.target.value)} disabled={busy} style={{ width: '100%' }} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+        <button type="button" className="btn-secondary" autoFocus disabled={busy} onClick={() => setDecision(null)}>Quay lại</button>
+        <button type="button" className="btn-primary" disabled={busy} onClick={() => void submitDecision()}>
+          {busy ? 'Đang xử lý…' : 'Xác nhận quyết định'}
+        </button>
+      </div>
+    </Modal>}
   </div>;
 }
