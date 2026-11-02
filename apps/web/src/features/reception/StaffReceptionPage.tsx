@@ -5,6 +5,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { PaymentInvoice } from './PaymentInvoice';
 import { GateQrPanel } from './GateQrPanel';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
 import { toast } from '../../shared/ui/toast';
 import {
@@ -387,14 +388,7 @@ export function StaffReceptionPage() {
                   Xác nhận thu tiền cho gói tập hội viên đã chọn.
                 </p>
               </div>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => void loadPendingSubscriptions()}
-                disabled={loadingPending}
-              >
-                {loadingPending ? 'Đang tải...' : 'Làm mới danh sách'}
-              </button>
+              <RefreshButton label="Làm mới danh sách" onClick={() => void loadPendingSubscriptions()} disabled={loadingPending} />
             </div>
 
             {loadingPending ? (
@@ -719,18 +713,13 @@ export function StaffReceptionPage() {
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 className="portal-card-title">Yêu cầu bảo lưu ({holdList.length})</h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
-              Duyệt bảo lưu sẽ hủy các lịch học tương lai của hội viên.
-            </p>
+            {holdList.length > 0 && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
+                Duyệt bảo lưu sẽ hủy các lịch học tương lai của hội viên.
+              </p>
+            )}
           </div>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => void loadPendingHolds()}
-            disabled={loadingHolds}
-          >
-            {loadingHolds ? 'Đang tải...' : 'Làm mới bảo lưu'}
-          </button>
+          <RefreshButton label="Làm mới bảo lưu" onClick={() => void loadPendingHolds()} disabled={loadingHolds} />
         </div>
 
         {loadingHolds ? (
@@ -750,7 +739,7 @@ export function StaffReceptionPage() {
             </div>
           </div>
         ) : holdList.length === 0 ? (
-          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+          <div style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
             Hiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.
           </div>
         ) : (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { ApiError } from '../../shared/api/client';
@@ -122,7 +123,7 @@ export function StaffSupportPage() {
     <PageHeader eyebrow="Lễ tân" title="Hộp thư hỗ trợ" subtitle="Tiếp nhận, phản hồi và cập nhật yêu cầu của hội viên." />
     <p role="status" className="member-support-context">{connections[connection]}</p>
     <section className="portal-card" ref={listFocus} tabIndex={-1}>
-      <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">Trạng thái</label><select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">Tất cả</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button className="member-support-link" disabled={loading} onClick={() => void loadList()}>Làm mới</button></div>
+      <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">Trạng thái</label><select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">Tất cả</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><RefreshButton disabled={loading} onClick={() => void loadList()} /></div>
       {loading ? <LoadingSkeleton label="Đang tải phiếu hỗ trợ…" count={4} /> : listError ? <div role="alert"><p>{listError}</p><button className="member-support-link" onClick={() => void loadList()}>Thử lại</button></div> : !tickets.length ? <p className="portal-empty">Không có phiếu hỗ trợ phù hợp.</p> : <div className="member-support-list">{tickets.map(item => <button key={item.id} data-support-ticket={item.id} className="member-support-ticket" aria-haspopup="dialog" onClick={event => { returnFocus.current = event.currentTarget; selection.current = item.id; detailGeneration.current++; setTicket(null); setMessages([]); setDetailError(''); setSelected(item.id); }}><span className="member-support-ticket-top"><strong>#{item.id} · {item.subject}</strong><span className={`member-support-status member-support-status--${item.status}`}>{labels[item.status]}</span></span><span className="member-support-meta">{item.memberName || `Hội viên #${item.memberId}`} · {new Date(item.createdAt).toLocaleString('vi-VN')} · {item.assignedToName || 'Chưa phân công'}</span></button>)}</div>}
       {!loading && !listError && pages > 1 && <div className="member-support-pages"><button disabled={!page} onClick={() => changeQuery(page - 1, filter)}>Trước</button><span>{page + 1}/{pages}</span><button disabled={page + 1 >= pages} onClick={() => changeQuery(page + 1, filter)}>Sau</button></div>}
     </section>

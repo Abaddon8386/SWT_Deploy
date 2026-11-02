@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
@@ -237,7 +238,7 @@ export function MemberSupportPage() {
         </form>
       </section>
       <section className="portal-card" ref={listFocus} tabIndex={-1} aria-labelledby="support-list-title">
-        <div className="portal-card-header member-support-heading"><h2 id="support-list-title" className="portal-card-title">Phiếu của tôi</h2><button type="button" className="member-support-link" onClick={() => void loadTickets(page)} disabled={loading}>Làm mới</button></div>
+        <div className="portal-card-header member-support-heading"><h2 id="support-list-title" className="portal-card-title">Phiếu của tôi</h2><RefreshButton onClick={() => void loadTickets(page)} disabled={loading} /></div>
         {loading ? <LoadingSkeleton label="Đang tải phiếu hỗ trợ…" count={3} /> : listError ? <div role="alert"><p>{listError}</p><button type="button" className="member-support-link" onClick={() => void loadTickets(page)}>Thử lại</button></div> : tickets.length === 0 ? <p className="portal-empty">Bạn chưa có phiếu hỗ trợ nào.</p> : <div className="member-support-list">{tickets.map((ticket) => <button type="button" key={ticket.id} data-support-ticket={ticket.id} className={`member-support-ticket${selectedId === ticket.id ? ' is-active' : ''}`} onClick={event => { openChat(ticket, event.currentTarget); void loadTickets(page); }} aria-haspopup="dialog" aria-current={selectedId === ticket.id ? 'true' : undefined}>
           <span className="member-support-ticket-top"><strong>#{ticket.id} · {displaySubject(ticket.subject)}</strong><span className={`member-support-status member-support-status--${ticket.status}`}>{statusLabel[ticket.status] ?? ticket.status}</span></span>
           <span className="member-support-meta">{categoryOf(ticket.subject)} · {dateTime(ticket.createdAt)}</span>

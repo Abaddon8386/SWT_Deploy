@@ -1,6 +1,7 @@
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
@@ -164,14 +165,7 @@ export function StaffCheckInPage() {
         eyebrow="Lễ tân"
         title="Check-in & checkout"
         actions={
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => void loadHistory()}
-            disabled={loadingHistory}
-          >
-            Làm mới nhật ký
-          </button>
+          <RefreshButton label="Làm mới nhật ký" onClick={() => void loadHistory()} disabled={loadingHistory} />
         }
       />
 
