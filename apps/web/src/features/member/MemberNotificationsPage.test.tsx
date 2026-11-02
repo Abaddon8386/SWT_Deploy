@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { MemberNotificationsPage } from './MemberNotificationsPage';
+import { MemberNotificationsPanel as MemberNotificationsPage } from './MemberNotificationsPage';
 
 const api = vi.hoisted(() => ({ list: vi.fn(), count: vi.fn(), read: vi.fn(), all: vi.fn() }));
 vi.mock('./notificationsApi', async (importOriginal) => ({

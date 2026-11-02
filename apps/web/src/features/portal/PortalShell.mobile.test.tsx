@@ -4,8 +4,9 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_STORAGE_KEY, type UserSession } from '../../shared/api/client';
 import { PortalShell } from './PortalShell';
+import { MemberNotificationsPage } from '../member/MemberNotificationsPage';
 
-vi.mock('../member/notificationsApi', () => ({ getUnreadCount: vi.fn().mockResolvedValue(0) }));
+vi.mock('../member/notificationsApi', () => ({ getUnreadCount: vi.fn().mockResolvedValue(0), getNotifications: vi.fn().mockResolvedValue({ content: [], number: 0, totalPages: 1 }) }));
 
 let host: HTMLDivElement;
 let root: Root;
@@ -31,7 +32,7 @@ afterEach(async () => {
 async function renderPortal(role: UserSession['role'], path: string) {
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '1', name: 'Nguyễn An', identifier: 'an', role }));
   const router = createMemoryRouter([
-    { element: <PortalShell />, children: [{ path: '*', element: <h1>Nội dung portal</h1> }] },
+    { element: <PortalShell />, children: [{ path: '/member/notifications', element: <MemberNotificationsPage /> }, { path: '*', element: <h1>Nội dung portal</h1> }] },
     { path: '/login', element: <h1>Đăng nhập</h1> },
   ], { initialEntries: [path] });
   await act(async () => root.render(<RouterProvider router={router} />));
@@ -39,6 +40,47 @@ async function renderPortal(role: UserSession['role'], path: string) {
 }
 
 describe('mobile portal navigation', () => {
+  it('opens legacy notification URLs as a panel over the dashboard', async () => {
+    const router = await renderPortal('MEMBER', '/member/notifications');
+    expect(router.state.location.pathname).toBe('/member/dashboard');
+    expect(host.querySelector('.notification-popover')).not.toBeNull();
+  });
+
+  it('opens notifications from More without navigating and closes its navigation modal', async () => {
+    const router = await renderPortal('MEMBER', '/member/dashboard');
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Thêm màn hình"]')!.click());
+    const notifications = [...host.querySelectorAll<HTMLButtonElement>('.portal-screen-results button')].find(button => button.textContent === 'Thông báo');
+    expect(notifications).toBeDefined();
+    await act(async () => notifications!.click());
+    expect(router.state.location.pathname).toBe('/member/dashboard');
+    expect(host.querySelector('dialog')).toBeNull();
+    expect(host.querySelector('.notification-popover')).not.toBeNull();
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Đóng thông báo');
+  });
+
+  it('opens notifications in a corner panel without navigating and restores focus on Escape', async () => {
+    const router = await renderPortal('MEMBER', '/member/dashboard');
+    const bell = host.querySelector<HTMLButtonElement>('button.member-notification-bell');
+    expect(bell).not.toBeNull();
+    await act(async () => bell!.click());
+    expect(router.state.location.pathname).toBe('/member/dashboard');
+    expect(host.querySelector('[role="dialog"][aria-label="Thông báo"]')?.textContent).toContain('Chưa có thông báo');
+    await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    expect(host.querySelector('.notification-popover')).toBeNull();
+    expect(document.activeElement).toBe(bell);
+  });
+
+  it('opens the same panel from the rail and closes on outside pointerdown', async () => {
+    const router = await renderPortal('MEMBER', '/member/dashboard');
+    const trigger = host.querySelector<HTMLButtonElement>('.portal-rail-nav button[aria-label="Thông báo"]');
+    expect(trigger).not.toBeNull();
+    await act(async () => trigger!.click());
+    expect(host.querySelector('.notification-popover')).not.toBeNull();
+    expect(router.state.location.pathname).toBe('/member/dashboard');
+    await act(async () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+    expect(host.querySelector('.notification-popover')).toBeNull();
+  });
+
   it.each([
     ['MEMBER', '/member/dashboard', ['/member/dashboard', '/member/classes', '/member/check-in']],
     ['STAFF', '/staff/reception', ['/staff/reception', '/staff/classes', '/staff/check-in']],

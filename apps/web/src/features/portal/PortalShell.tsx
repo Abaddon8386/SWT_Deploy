@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigation } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser } from '../../shared/api/client';
 import { Modal } from '../../shared/ui/Modal';
@@ -9,6 +9,7 @@ import { MOBILE_PRIMARY_NAV, PORTAL_NAV, ROLE_LABELS } from './portalNavigation'
 import { getUnreadCount } from '../member/notificationsApi';
 import { LiquidGlassChatbot } from '../../shared/liquid-glass/LiquidGlassChatbot';
 import { PwaStatus } from '../pwa/PwaStatus';
+import { NotificationsPopover } from '../member/NotificationsPopover';
 
 function searchable(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -20,7 +21,16 @@ export function PortalShell() {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const navigating = navigation.state !== 'idle';
-  const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | null>(null);
+  const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | 'notifications' | null>(null);
+  const notificationTrigger = useRef<HTMLElement | null>(null);
+  const closeNotifications = useCallback(() => {
+    setDialog(null);
+    notificationTrigger.current?.focus();
+  }, []);
+  const openNotifications = (event: MouseEvent<HTMLButtonElement>) => {
+    notificationTrigger.current = event.currentTarget;
+    setDialog(current => current === 'notifications' ? null : 'notifications');
+  };
   const [query, setQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState<number | null>(null);
   const [notificationError, setNotificationError] = useState(false);
@@ -66,10 +76,18 @@ export function PortalShell() {
 
   useEffect(() => {
     if (previousPath.current !== location.pathname) {
+      setDialog(current => current === 'notifications' ? null : current);
       mainRef.current?.focus();
       previousPath.current = location.pathname;
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (isMember && location.state?.openNotifications) {
+      setDialog('notifications');
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [isMember, location.state, location.pathname, navigate]);
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -85,7 +103,10 @@ export function PortalShell() {
       <aside className="app-sidebar" aria-label="Thanh công cụ SÖL">
         <Link to="/" className="portal-logo" aria-label="SÖL · Về trang chủ"><span>S</span><i /></Link>
         <nav className="portal-rail-nav" aria-label="Điều hướng portal">
-          {navItems.filter((item) => item.to !== '/member/profile').map((item) => <NavLink
+          {navItems.filter((item) => item.to !== '/member/profile').map((item) => item.to === '/member/notifications' ? <button
+            key={item.to} type="button" className="portal-rail-link" aria-label={item.label} title={item.label} aria-haspopup="dialog" aria-expanded={dialog === 'notifications'} aria-controls="portal-notifications" onClick={openNotifications}>
+            <PortalIcon name={item.icon} /><span className="portal-rail-tooltip">{item.label}</span>
+          </button> : <NavLink
             key={item.to} to={item.to} className="portal-rail-link" aria-label={item.label} title={item.label}>
             <PortalIcon name={item.icon} /><span className="portal-rail-tooltip">{item.label}</span>
           </NavLink>)}
@@ -111,10 +132,10 @@ export function PortalShell() {
           </div>
           <div className="portal-topbar-actions">
             <ThemeToggle />
-            {isMember && <Link to="/member/notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${unreadCount ?? 0} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
+            {isMember && <button type="button" onClick={openNotifications} aria-haspopup="dialog" aria-expanded={dialog === 'notifications'} aria-controls="portal-notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${unreadCount ?? 0} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
               <PortalIcon name="bell" size={19} />
               {unreadCount !== null && unreadCount > 0 && <span className="member-notification-badge" aria-hidden="true">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-            </Link>}
+            </button>}
             <button type="button" className="portal-search-trigger" aria-label="Tìm màn hình" onClick={() => openNavigation('search')}>
               <PortalIcon name="search" size={17} /><span>Tìm màn hình…</span>
             </button>
@@ -142,6 +163,7 @@ export function PortalShell() {
       </nav>
 
       {isMember && location.pathname !== '/member/check-in' && <LiquidGlassChatbot />}
+      {isMember && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
       {dialog === 'logout' && <Modal title="Đăng xuất khỏi SÖL?" onClose={() => setDialog(null)}>
         <p className="portal-subtitle">Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.</p>
         <div className="form-actions" style={{ marginTop: 24 }}>
@@ -153,7 +175,10 @@ export function PortalShell() {
         <label className="portal-label" htmlFor="portal-screen-search">Tên màn hình</label>
         <input id="portal-screen-search" className="portal-input" type="search" placeholder="Ví dụ: lịch học, gói tập…" value={query} onChange={(event) => setQuery(event.target.value)} />
         <nav className="portal-screen-results" aria-label="Các màn hình của bạn">
-          {results.map((item) => <NavLink key={item.to} to={item.to} onClick={() => setDialog(null)}>
+          {results.map((item) => item.to === '/member/notifications' ? <button key={item.to} type="button" onClick={() => {
+            notificationTrigger.current = document.querySelector<HTMLButtonElement>('.member-notification-bell');
+            setDialog('notifications');
+          }}><PortalIcon name={item.icon} /><span>{item.label}</span><PortalIcon name="arrow" size={16} /></button> : <NavLink key={item.to} to={item.to} onClick={() => setDialog(null)}>
             <PortalIcon name={item.icon} /><span>{item.label}</span><PortalIcon name="arrow" size={16} />
           </NavLink>)}
           {results.length === 0 && <p className="portal-search-empty" role="status">Không tìm thấy màn hình. Hãy thử từ khóa khác.</p>}

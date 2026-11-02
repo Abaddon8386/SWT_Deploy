@@ -4,6 +4,8 @@ Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của ngư
 
 ## Phạm vi
 
+Thông báo hội viên — SCRUM-127 (02/11/2026): chuông topbar, sidebar và mục trong menu/tìm kiếm mở cùng bảng nhỏ ở góc phải, giữ trang đang xem. Bảng rộng tối đa 400px, chiều cao giới hạn theo viewport; danh sách cuộn native ẩn scrollbar. Hiển thị loại, tiêu đề, nội dung, thời gian, dấu chưa đọc; giữ đánh dấu từng mục/tất cả, phân trang và link tới nội dung liên quan. Đóng bằng nút, Escape hoặc bấm ngoài, trả focus về nút mở; có skeleton, empty, error/thử lại, dùng token Light/Dark charcoal–salmon. URL thông báo cũ chuyển về dashboard và mở bảng.
+
 Sidebar portal (02/11/2026): giữ rail icon có chiều rộng hiện hành, chiều cao cố định theo viewport (`100dvh - 36px`) trên desktop, kể cả màn hình thấp. Danh sách menu cuộn dọc native trong phần còn lại, ẩn scrollbar và chặn tràn ngang; logo và cụm hồ sơ vẫn nằm ngoài vùng cuộn. Không áp dụng việc ẩn scrollbar này cho nội dung trang.
 
 Đồng bộ bộ môn và tải dữ liệu (01/11/2026, quyết định mới nhất): landing và bộ lọc đặt lớp dùng chung `PRIMARY_DISCIPLINES`: **Gym → Yoga → Pilates → Boxing**, Gym là bộ môn chính và đứng đầu. Giữ bố cục story, ba ý ngắn mỗi môn, ảnh minh họa đúng môn, CTA lịch học, cuộn native và animation hiện hành. Các tên bộ môn bổ sung từ API vẫn xuất hiện trong portal; nhóm Gym nhận cả tên lớp Strength của catalog. Không suy ra danh mục chính từ số buổi có lịch trong một tuần hoặc thay đổi quyền lợi gói tập.

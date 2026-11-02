@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PageHeader } from '../../shared/ui/PageHeader';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, type MemberNotification, type NotificationPage } from './notificationsApi';
 import './notifications.css';
@@ -21,6 +20,10 @@ function errorMessage(error: unknown): string {
 }
 
 export function MemberNotificationsPage() {
+  return <Navigate to="/member/dashboard" replace state={{ openNotifications: true }} />;
+}
+
+export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [data, setData] = useState<NotificationPage | null>(null);
@@ -28,30 +31,38 @@ export function MemberNotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const request = useRef({ version: 0 });
 
   const load = useCallback(async () => {
+    const version = ++request.current.version;
     setLoading(true); setError(null);
     try {
       const [list, unread] = await Promise.all([getNotifications(page), getUnreadCount()]);
-      setData(list); setCount(unread);
-    } catch (reason) { setData(null); setError(errorMessage(reason)); }
-    finally { setLoading(false); }
+      if (version === request.current.version) { setData(list); setCount(unread); }
+    } catch (reason) { if (version === request.current.version) { setData(null); setError(errorMessage(reason)); } }
+    finally { if (version === request.current.version) setLoading(false); }
   }, [page]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const sequence = request.current;
+    void load();
+    return () => { sequence.version++; };
+  }, [load]);
 
   async function open(item: MemberNotification) {
     if (busy) return;
+    const version = request.current.version;
     setBusy(true); setError(null);
     try {
       if (!item.isRead) {
         await markNotificationRead(item.id);
+        window.dispatchEvent(new Event('member-notifications-changed'));
+        if (version !== request.current.version) return;
         setData((current) => current && ({ ...current, content: current.content.map((n) => n.id === item.id ? { ...n, isRead: true } : n) }));
         setCount((current) => Math.max(0, current - 1));
-        window.dispatchEvent(new Event('member-notifications-changed'));
       }
       const destination = notificationDestination(item);
-      if (destination) navigate(destination);
+      if (destination) { onNavigate?.(); navigate(destination); }
     } catch (reason) { setError(errorMessage(reason)); }
     finally { setBusy(false); }
   }
@@ -70,9 +81,9 @@ export function MemberNotificationsPage() {
 
   const hasUnread = count > 0 || Boolean(data?.content.some((item) => !item.isRead));
 
-  return <div className="portal-container">
-    <PageHeader eyebrow="Hội viên" title="Thông báo" subtitle="Cập nhật về lịch học, gói tập và dịch vụ của bạn."
-      actions={<button className="notification-action" type="button" disabled={busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button>} />
+  return <div className="notification-panel">
+    <div className="notification-panel__actions"><span>{loading ? 'Đang tải…' : data ? `${count} chưa đọc` : 'Chưa cập nhật'}</span><button className="notification-action" type="button" disabled={loading || busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button></div>
+    <div className="notification-panel__scroll" aria-busy={loading || busy}>
     {error && <div className="portal-alert notification-error" role="alert">{error} <button type="button" onClick={() => void load()}>Thử lại</button></div>}
     {loading ? <LoadingSkeleton label="Đang tải thông báo…" count={5} /> : !data?.content.length && !error ?
       <div className="portal-empty"><h3>Chưa có thông báo</h3><p>Thông báo mới sẽ xuất hiện tại đây.</p></div> :
@@ -83,6 +94,7 @@ export function MemberNotificationsPage() {
           {!item.isRead && <span className="notification-dot" aria-label="Chưa đọc" />}
         </button>)}
       </div>}
+    </div>
     {!loading && data && data.totalPages > 1 && <nav className="notification-pages" aria-label="Phân trang thông báo">
       <button type="button" disabled={page === 0 || busy} onClick={() => setPage(page - 1)}>Trước</button>
       <span>Trang {page + 1} / {data.totalPages}</span>
