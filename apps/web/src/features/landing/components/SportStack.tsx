@@ -115,8 +115,8 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
   }, []);
 
   const illustration = (sport: typeof sports[number]) => <>
-    <LoadingImage src={sport.image} alt={`Ảnh minh họa không gian ${sport.name.toLowerCase()}`} loading="lazy" decoding="async" />
-    <figcaption>Ảnh minh họa · {sport.name}</figcaption>
+    <LoadingImage src={sport.image} alt={`Không gian ${sport.name.toLowerCase()}`} loading="lazy" decoding="async" />
+
   </>;
 
   return <div className="fit-sport-story" ref={story} role="region" aria-label="Khám phá các bộ môn">
