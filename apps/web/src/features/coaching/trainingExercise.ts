@@ -18,3 +18,4 @@ export function validateExercise(values: ExerciseValues, required = false): stri
   if (values.dayOfWeek != null && values.dayOfWeek > 7) return 'Ngày tập phải từ thứ 2 đến Chủ nhật.';
   return null;
 }
+

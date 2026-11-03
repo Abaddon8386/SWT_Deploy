@@ -854,7 +854,7 @@ export function StaffClassesPage() {
               onClick={() => handleOpenModal()}
               data-testid="create-class-button"
             >
-              + Tạo lớp học &amp; xếp lịch
+              Tạo lớp học &amp; xếp lịch
             </button>
           ) : (
             <span className="badge badge-neutral" data-testid="read-only-schedule-badge">
@@ -980,7 +980,7 @@ export function StaffClassesPage() {
             </p>
             {isManager && (
               <button type="button" className="btn-primary" onClick={() => handleOpenModal()}>
-                + Tạo lớp học đầu tiên
+                Tạo lớp học đầu tiên
               </button>
             )}
           </div>
