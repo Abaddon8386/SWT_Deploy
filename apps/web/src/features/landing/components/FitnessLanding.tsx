@@ -35,6 +35,8 @@ const clubMetrics = [
   { value: 'Lịch lớp', label: 'ĐẶT CHỖ TRỰC TUYẾN' },
   { value: 'QR Pass', label: '01 THẺ ĐA PHÂN KHU' },
 ];
+const MUSCLE_CLOSE_DELAY_MS = 600;
+
 const muscleGroups = [
   {
     id: 'chest',
@@ -391,6 +393,7 @@ export function FitnessLanding() {
     setActiveMuscleId(id);
   };
 
+  // Callout nằm cách vùng cơ một khoảng; cần đủ thời gian để rê chuột sang nút CTA.
   const scheduleClearMuscle = () => {
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current);
@@ -398,7 +401,7 @@ export function FitnessLanding() {
     closeTimerRef.current = window.setTimeout(() => {
       setActiveMuscleId(null);
       closeTimerRef.current = null;
-    }, 180);
+    }, MUSCLE_CLOSE_DELAY_MS);
   };
 
   const activeMuscle = muscleGroups.find((group) => group.id === activeMuscleId) ?? null;
@@ -435,7 +438,7 @@ export function FitnessLanding() {
         fetchPriority="high"
         decoding="async"
       />
-      <div className="fit-hero-anatomy-stage" onPointerLeave={scheduleClearMuscle}>
+      <div className="fit-hero-anatomy-stage" onPointerLeave={(e) => { if (e.pointerType !== 'touch') scheduleClearMuscle(); }}>
         <svg
           className="fit-hero-anatomy"
           viewBox="0 0 1024 1536"
