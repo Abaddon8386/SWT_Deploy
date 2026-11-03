@@ -67,23 +67,44 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          api() { curl -sS --fail-with-body -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" "$@"; }
+          # Gọi Render API; nếu lỗi thì in mã HTTP và lời nhắn của Render để biết nguyên nhân.
+          api() {
+            local out code; out=$(mktemp)
+            code=$(curl -sS -o "$out" -w '%{http_code}' -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" "$@") || code=000
+            if [[ ! "$code" =~ ^2 ]]; then
+              echo "::error::Render API trả HTTP $code: $(jq -r '.message // empty' "$out" 2>/dev/null | head -c 300)" >&2
+              return 1
+            fi
+            cat "$out"
+          }
           service="https://api.render.com/v1/services/$RENDER_SERVICE_ID"
 
           # Yêu cầu Render deploy đúng commit mà CI vừa kiểm tra.
-          deploy_id=$(api -X POST "$service/deploys" -d "{\"commitId\":\"$COMMIT\"}" | jq -er '(.deploy // .).id')
-          echo "Render deploy $deploy_id cho commit ${COMMIT:0:7}"
+          # Render trả 201 kèm deploy, hoặc 202 "xếp hàng" KHÔNG có nội dung (khi đang có deploy khác chạy).
+          resp=$(api -X POST "$service/deploys" -d "{\"commitId\":\"$COMMIT\"}")
+          deploy_id=$(jq -r '(.deploy // .) | .id // empty' <<<"${resp:-null}")
 
-          # Hỏi trạng thái mỗi 15 giây, tối đa 30 phút.
+          # Tìm deploy của đúng commit này trong danh sách deploy gần nhất (mới nhất đứng đầu).
+          find_deploy() {
+            api "$service/deploys?limit=20" | jq -r --arg c "$COMMIT" \
+              '[.[] | (.deploy // .) | select((.commit.id // "") == $c)][0].id // empty'
+          }
+
+          # Hỏi mỗi 15 giây, tối đa 30 phút. Nếu Render chỉ xếp hàng thì chờ tới khi deploy của commit này xuất hiện.
           status=""
           for _ in $(seq 1 120); do
-            status=$(api "$service/deploys/$deploy_id" | jq -er '(.deploy // .).status')
-            echo "Trạng thái: $status"
-            case "$status" in
-              live) break ;;
-              build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
-                echo "::error::Render deploy kết thúc với trạng thái $status"; exit 1 ;;
-            esac
+            [ -n "$deploy_id" ] || deploy_id=$(find_deploy)
+            if [ -n "$deploy_id" ]; then
+              status=$(api "$service/deploys/$deploy_id" | jq -r '(.deploy // .).status // empty')
+              echo "Deploy ${deploy_id} (commit ${COMMIT:0:7}) trạng thái: $status"
+              case "$status" in
+                live) break ;;
+                build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
+                  echo "::error::Render deploy kết thúc với trạng thái $status"; exit 1 ;;
+              esac
+            else
+              echo "Render đang xếp hàng, chưa thấy deploy của commit ${COMMIT:0:7}"
+            fi
             sleep 15
           done
           [ "$status" = "live" ] || { echo "::error::Quá 30 phút mà Render chưa live"; exit 1; }
@@ -93,8 +114,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          url=$(curl -sS --fail-with-body -H "Authorization: Bearer $RENDER_API_KEY" \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID" | jq -er '(.service // .).serviceDetails.url')
+          api() { curl -sS --fail-with-body -H "Authorization: Bearer $RENDER_API_KEY" "$@"; }
+          url=$(api "https://api.render.com/v1/services/$RENDER_SERVICE_ID" | jq -er '(.service // .).serviceDetails.url')
           for i in $(seq 1 12); do
             if curl -fsS --max-time 15 "${url%/}$HEALTH_PATH" | jq -e '.status == "UP"' >/dev/null; then
               echo "Backend khỏe: $url"; exit 0
