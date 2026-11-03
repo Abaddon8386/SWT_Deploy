@@ -110,6 +110,12 @@ components:
           type: integer
           format: int64
           nullable: true
+        actionPath:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Internal portal destination; legacy notifications omit it.
+          example: /member/progress#coach-evaluations
         isRead:
           type: boolean
         createdAt:

@@ -17,8 +17,11 @@ import java.util.List;
 public record BatchAttendanceRequest(
         @NotEmpty(message = "{validation.attendance.records.not_empty}")
         @Valid
-        List<AttendanceItem> records
+        List<AttendanceItem> records,
+        boolean publishEvaluations
 ) {
+
+    public BatchAttendanceRequest(List<AttendanceItem> records) { this(records, false); }
 
     public record AttendanceItem(
             @NotNull(message = "{validation.attendance.member_id.not_null}")

@@ -13,6 +13,7 @@ export interface PortalNotice {
   message: string;
   createdAt: number;
   read: boolean;
+  destination?: string;
   key?: string;
   action?: { label: string; run: () => void };
 }
@@ -29,7 +30,7 @@ function commit(next: PortalNotice[]) {
 
 /** `key` thay thế thông báo cùng khóa (ví dụ trạng thái đồng bộ) để không lặp lại. */
 export function notify(message: string, type: PortalNoticeType = 'info', options: { key?: string; action?: PortalNotice['action']; silent?: boolean } = {}) {
-  const notice: PortalNotice = { id: ++sequence, type, message, createdAt: Date.now(), read: false, key: options.key, action: options.action };
+  const notice: PortalNotice = { id: ++sequence, type, message, createdAt: Date.now(), read: false, destination: typeof window !== 'undefined' ? window.location.pathname : undefined, key: options.key, action: options.action };
   commit([notice, ...notices.filter((item) => !options.key || item.key !== options.key)].slice(0, MAX_NOTICES));
   if (type !== 'info' && !options.silent) toast(message, type);
 }

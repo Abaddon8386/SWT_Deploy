@@ -186,6 +186,24 @@ class SessionAttendanceServiceTest {
         assertThrows(ConflictException.class, () -> service.recordBatchAttendance(100L, request, coachPrincipal));
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void evaluationNotificationsOnlyWhenCoachPublishes(boolean publish) {
+        var evaluations = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.SessionEvaluationRepository.class);
+        var notifications = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
+        ReflectionTestUtils.setField(service, "evaluationRepository", evaluations);
+        ReflectionTestUtils.setField(service, "notificationService", notifications);
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        stubBookedEnrollment();
+        when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
+        when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
+        when(attendanceRepository.saveAndFlush(any(SessionAttendance.class))).thenAnswer(inv -> inv.getArgument(0));
+        var request = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", "Good form", 85)), publish);
+        service.recordBatchAttendance(100L, request, coachPrincipal);
+        verify(evaluations).save(any(com.swp391.scms.coaching.entity.SessionEvaluation.class));
+        verify(notifications, times(publish ? 1 : 0)).notifyEvaluation(20L);
+    }
+
     private void stubBookedEnrollment() {
         ClassEnrollment enrollment = new ClassEnrollment();
         enrollment.setGymClass(gymClass);

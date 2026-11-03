@@ -42,3 +42,14 @@ export const setTrainingItemCompleted = (itemId: number, exerciseDate: string, c
   apiFetch<TrainingCompletion>(`/coaching/training-completions/my/${itemId}?exerciseDate=${exerciseDate}`, {
     method: completed ? 'PUT' : 'DELETE',
   });
+
+export interface CoachEvaluation {
+  id: number;
+  sessionId: number | null;
+  coachId: number;
+  progressScore: number;
+  performanceNotes: string | null;
+  feedback: string | null;
+  evaluatedAt: string;
+}
+export const getMyEvaluations = () => apiFetch<CoachEvaluation[]>('/coaching/evaluations/my');

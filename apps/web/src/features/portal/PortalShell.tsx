@@ -54,9 +54,8 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const mainRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   const isMember = user.role === 'MEMBER';
-  const isCoach = user.role === 'COACH';
-  // Chỉ Hội viên/HLV có thông báo từ server; mọi vai trò đều có chuông cho thông báo thao tác tại client.
-  const hasServerNotifications = isMember || isCoach;
+  // Mọi vai trò đều mở được hộp thư server và thông báo thao tác tại client.
+  const hasServerNotifications = true;
   const canReceiveNotifications = true;
   const profileLabel = isMember ? 'Hồ sơ & Sức khỏe' : 'Hồ sơ cá nhân';
   const navItems = PORTAL_NAV.filter((item) => item.roles.includes(user.role)).map((item) => {

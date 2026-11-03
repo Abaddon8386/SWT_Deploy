@@ -316,7 +316,7 @@ export function CoachAttendancePage() {
         notes: s.notes.trim(),
       }));
 
-      await attendanceApi.saveBatchAttendance(selectedSessionId, payload);
+      await attendanceApi.saveBatchAttendance(selectedSessionId, payload, true);
 
       const totalScore = students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
       const averageScore = students.length > 0 ? Math.round(totalScore / students.length) : 0;
@@ -346,7 +346,7 @@ export function CoachAttendancePage() {
       const newEvalHistory = [updatedEvalItem, ...filtered];
       saveEvalHistoryToStorage(newEvalHistory);
 
-      showCenterNotification('Đã lưu đánh giá tiến bộ học viên vào Lịch sử đánh giá!');
+      showCenterNotification('Đã gửi đánh giá tiến độ và thông báo đến học viên.');
     } catch {
       notify('Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.', 'error');
     } finally {
@@ -490,7 +490,7 @@ export function CoachAttendancePage() {
         status: student.status,
         progressScore: student.progressScore,
         notes: student.notes.trim(),
-      })));
+      })), true);
 
       const totalScore = editingEvalRecord.students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
       const averageScore =

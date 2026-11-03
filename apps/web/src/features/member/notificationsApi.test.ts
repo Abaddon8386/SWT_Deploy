@@ -26,3 +26,20 @@ describe('SCRUM-127 notification API', () => {
     expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' })).toBe('/member/support');
   });
 });
+
+it('routes training plans and coach notifications to the correct workspace', () => {
+  expect(notificationDestination({ relatedEntityType: 'training_plan', type: 'system' })).toBe('/member/progress');
+  expect(notificationDestination({ relatedEntityType: 'class_session', type: 'schedule_change' }, 'COACH')).toBe('/coach/classes');
+});
+
+it('uses safe action links and rejects external or other-role destinations', () => {
+  expect(notificationDestination({ relatedEntityType: null, type: 'system', actionPath: '/member/progress#coach-evaluations' })).toBe('/member/progress#coach-evaluations');
+  for (const actionPath of ['https://example.com', '//example.com', '/admin/users', '/member/../admin/users']) {
+    expect(notificationDestination({ relatedEntityType: null, type: 'system', actionPath })).toBe('/member/dashboard');
+  }
+});
+
+it('opens staff and manager support notifications in their own queues', () => {
+  expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'STAFF')).toBe('/staff/support');
+  expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'MANAGER')).toBe('/manager/support');
+});

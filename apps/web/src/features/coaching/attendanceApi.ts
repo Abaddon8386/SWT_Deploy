@@ -92,13 +92,15 @@ export const attendanceApi = {
    */
   saveBatchAttendance: async (
     sessionId: number,
-    payload: BatchAttendancePayloadItem[]
+    payload: BatchAttendancePayloadItem[],
+    publishEvaluations = false
   ): Promise<{ success: boolean; updatedCount: number; message: string }> => {
     return await apiFetch<{ success: boolean; updatedCount: number; message: string }>(
       `/attendance/sessions/${sessionId}/batch`,
       {
         method: 'POST',
         body: JSON.stringify({
+          publishEvaluations,
           records: payload.map((item) => ({
             memberId: item.memberId,
             status: item.status,

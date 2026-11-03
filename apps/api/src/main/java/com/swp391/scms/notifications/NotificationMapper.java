@@ -16,7 +16,8 @@ public class NotificationMapper {
             entity.getRelatedEntityType(),
             entity.getRelatedEntityId(),
             entity.isRead(),
-            entity.getCreatedAt()
+            entity.getCreatedAt(),
+            entity.getActionPath()
         );
     }
 }

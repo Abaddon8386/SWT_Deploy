@@ -60,7 +60,8 @@ public class SessionAttendanceService {
     @Autowired(required = false)
     private SessionEvaluationRepository evaluationRepository;
 
-    @Autowired
+    private final com.swp391.scms.notifications.NotificationService notificationService;
+
     public SessionAttendanceService(SessionAttendanceRepository attendanceRepository,
                                   ClassSessionRepository sessionRepository,
                                   ClassEnrollmentRepository enrollmentRepository,
@@ -68,6 +69,14 @@ public class SessionAttendanceService {
                                   MemberRepository memberRepository,
                                   MessageService messageService,
                                   Clock clock) {
+        this(attendanceRepository, sessionRepository, enrollmentRepository, coachRepository, memberRepository, messageService, clock, null);
+    }
+
+    @Autowired
+    public SessionAttendanceService(SessionAttendanceRepository attendanceRepository, ClassSessionRepository sessionRepository,
+            ClassEnrollmentRepository enrollmentRepository, CoachRepository coachRepository, MemberRepository memberRepository,
+            MessageService messageService, Clock clock, com.swp391.scms.notifications.NotificationService notificationService) {
+        this.notificationService = notificationService;
         this.attendanceRepository = attendanceRepository;
         this.sessionRepository = sessionRepository;
         this.enrollmentRepository = enrollmentRepository;
@@ -312,6 +321,7 @@ public class SessionAttendanceService {
                         eval.setCreatedAt(now);
                     }
                     evaluationRepository.save(eval);
+                    if (request.publishEvaluations() && notificationService != null) notificationService.notifyEvaluation(member.getUserId());
                 }
 
                 User user = member.getUser();

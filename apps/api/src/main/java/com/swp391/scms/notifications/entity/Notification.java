@@ -39,6 +39,12 @@ public class Notification {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "action_path", length = 500)
+    private String actionPath;
+
+    public String getActionPath() { return actionPath; }
+    public void setActionPath(String actionPath) { this.actionPath = actionPath; }
+
     public Notification() {}
 
     public Notification(User user, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {

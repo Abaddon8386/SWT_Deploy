@@ -2,7 +2,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { MemberNotificationsPanel as MemberNotificationsPage } from './MemberNotificationsPage';
 
 const api = vi.hoisted(() => ({ list: vi.fn(), count: vi.fn(), read: vi.fn(), all: vi.fn() }));
@@ -11,6 +11,8 @@ vi.mock('./notificationsApi', async (importOriginal) => ({
   getNotifications: api.list, getUnreadCount: api.count,
   markNotificationRead: api.read, markAllNotificationsRead: api.all,
 }));
+
+function CurrentPath() { const location = useLocation(); return <output>{location.pathname}{location.hash}</output>; }
 
 describe('SCRUM-127 member notifications', () => {
   let host: HTMLDivElement;
@@ -23,7 +25,7 @@ describe('SCRUM-127 member notifications', () => {
     api.count.mockResolvedValue(0); api.read.mockResolvedValue(undefined); api.all.mockResolvedValue(undefined);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
-  const render = async () => act(async () => root.render(<MemoryRouter><MemberNotificationsPage /></MemoryRouter>));
+  const render = async () => act(async () => root.render(<MemoryRouter><MemberNotificationsPage /><CurrentPath /></MemoryRouter>));
   const button = (text: string) => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes(text));
 
   it('shows empty state from the API', async () => {
@@ -89,6 +91,14 @@ describe('SCRUM-127 member notifications', () => {
     await act(async () => button('Đổi phòng')?.click());
     expect(host.textContent).toContain('Không thể cập nhật');
     expect(api.read).toHaveBeenCalledWith(3);
+  });
+
+  it('opens a new evaluation at the feedback section and marks it read', async () => {
+    api.list.mockResolvedValue({ content: [{ id: 7, title: 'Đánh giá mới', message: 'Xem nhận xét', type: 'system', relatedEntityType: null, relatedEntityId: null, actionPath: '/member/progress#coach-evaluations', isRead: false, createdAt: '2026-11-03T10:00:00' }], number: 0, totalPages: 1 });
+    await render();
+    await act(async () => button('Đánh giá mới')?.click());
+    expect(api.read).toHaveBeenCalledWith(7);
+    expect(host.querySelector('output')?.textContent).toBe('/member/progress#coach-evaluations');
   });
 
   it('marks all visible notifications read through the backend', async () => {

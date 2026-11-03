@@ -38,6 +38,10 @@ components:
       type: object
       required: [records]
       properties:
+        publishEvaluations:
+          type: boolean
+          default: false
+          description: Send each evaluated member a notification after successful evaluation save.
         records:
           type: array
           items:

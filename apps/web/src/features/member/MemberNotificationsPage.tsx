@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
-import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, type MemberNotification, type NotificationPage } from './notificationsApi';
+import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, safeNotificationPath, type MemberNotification, type NotificationPage } from './notificationsApi';
 import './notifications.css';
 import { getCurrentUser } from '../../shared/api/client';
 import { errorMessage as safeMessage } from '../../shared/lib/errorMessage';
@@ -42,8 +42,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
   useEffect(() => { markNoticesRead(); }, [notices.length]);
 
   const role = getCurrentUser()?.role;
-  // Vai trò quản lý/nhân viên chưa có thông báo từ server: bảng chỉ liệt kê thông báo thao tác tại client
-  const serverEnabled = role !== 'STAFF' && role !== 'MANAGER' && role !== 'ADMIN';
+  const serverEnabled = true;
 
   const load = useCallback(async () => {
     const version = ++request.current.version;
@@ -74,7 +73,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
         setData((current) => current && ({ ...current, content: current.content.map((n) => n.id === item.id ? { ...n, isRead: true } : n) }));
         setCount((current) => Math.max(0, current - 1));
       }
-      const destination = notificationDestination(item);
+      const destination = notificationDestination(item, role);
       if (destination) { onNavigate?.(); navigate(destination); }
     } catch (reason) { setError(errorMessage(reason)); }
     finally { setBusy(false); }
@@ -99,7 +98,10 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
     <div className="notification-panel__scroll" aria-busy={loading || busy}>
     {notices.length > 0 && <ul className="notification-activity" aria-label="Thông báo vừa phát sinh">
       {notices.map((notice) => <li key={notice.id} className={`notification-activity__item notification-activity__item--${notice.type}`}>
-        <span className="notification-copy"><span>{notice.message}</span><small>{formatCenterDateTime(new Date(notice.createdAt).toISOString())}</small></span>
+        <button type="button" className="notification-action notification-copy" onClick={() => {
+          onNavigate?.();
+          navigate(safeNotificationPath(notice.destination, role) ?? notificationDestination({ relatedEntityType: null, type: 'system' }, role));
+        }}><span>{notice.message}</span><small>{formatCenterDateTime(new Date(notice.createdAt).toISOString())}</small></button>
         {notice.action && <button type="button" className="notification-action" onClick={notice.action.run}>{notice.action.label}</button>}
       </li>)}
     </ul>}

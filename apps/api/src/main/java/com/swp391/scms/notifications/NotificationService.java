@@ -34,11 +34,20 @@ public class NotificationService {
         this(notificationRepository, userRepository, notificationMapper, null);
     }
 
-    @Autowired
+    private final com.swp391.scms.common.i18n.MessageService messageService;
+
     public NotificationService(NotificationRepository notificationRepository, 
                                UserRepository userRepository,
                                NotificationMapper notificationMapper,
                                @Autowired(required = false) NotificationDispatcher notificationDispatcher) {
+        this(notificationRepository, userRepository, notificationMapper, notificationDispatcher, null);
+    }
+
+    @Autowired
+    public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository,
+            NotificationMapper notificationMapper, @Autowired(required = false) NotificationDispatcher notificationDispatcher,
+            @Autowired(required = false) com.swp391.scms.common.i18n.MessageService messageService) {
+        this.messageService = messageService;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.notificationMapper = notificationMapper;
@@ -73,10 +82,27 @@ public class NotificationService {
 
     @Transactional
     public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
+        send(userId, title, message, type, relatedEntityType, relatedEntityId, null);
+    }
+
+    private String evaluationMessage(String key) {
+        return messageService != null ? messageService.getMessage(key) : key;
+    }
+
+    @Transactional
+    public void notifyEvaluation(Long memberId) {
+        send(memberId, evaluationMessage("notifications.evaluation.title"),
+                evaluationMessage("notifications.evaluation.body"), "system", null, null,
+                "/member/progress#coach-evaluations");
+    }
+
+    @Transactional
+    public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId, String actionPath) {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
         
         Notification notification = new Notification(user, title, message, type, relatedEntityType, relatedEntityId);
+        notification.setActionPath(actionPath);
         notificationRepository.save(notification);
         if (notificationDispatcher != null) {
             Runnable dispatch = () -> {

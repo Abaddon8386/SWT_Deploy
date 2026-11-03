@@ -29,6 +29,21 @@ import static org.mockito.Mockito.*;
 class NotificationServiceTest {
 
     @Test
+    void evaluationNotificationHasSafeProgressLinkAndLocalizedCopy() {
+        var messages = org.mockito.Mockito.mock(com.swp391.scms.common.i18n.MessageService.class);
+        when(messages.getMessage("notifications.evaluation.title")).thenReturn("Evaluation");
+        when(messages.getMessage("notifications.evaluation.body")).thenReturn("View feedback");
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, null, messages);
+        var user = new User(); user.setId(101L);
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+        service.notifyEvaluation(101L);
+        var captured = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.notifications.entity.Notification.class);
+        verify(notificationRepository).save(captured.capture());
+        org.junit.jupiter.api.Assertions.assertEquals("/member/progress#coach-evaluations", captured.getValue().getActionPath());
+        org.junit.jupiter.api.Assertions.assertEquals("View feedback", captured.getValue().getMessage());
+    }
+
+    @Test
     void sendDispatchesExternalChannelsOnlyAfterCommit() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
         var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);

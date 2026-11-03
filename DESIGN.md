@@ -204,3 +204,5 @@ Thứ tự tra cứu khi làm UI: yêu cầu mới nhất của người dùng �
 5. Commit thay đổi UI và quy chuẩn theo phần, ghi rõ phần có thể hoàn tác. Cập nhật tài liệu này khi người dùng đổi quyết định thiết kế.
 
 Member Profile (03/11/2026): tiêu đề “Hồ sơ cá nhân”, chỉ giữ card Thông tin cá nhân; dùng layout `profile-grid profile-grid--single` (tối đa 860px, form responsive hiện có). Bỏ card nhập/lịch sử chỉ số sức khỏe và skeleton tương ứng; không xóa API, dữ liệu hoặc thay Member Progress. Vị trí Member nhập số đo thay thế chờ leader quyết định.
+
+Thông báo & đánh giá tiến độ (03/11/2026): gửi đánh giá từ tab Đánh giá hoặc sửa lịch sử sẽ lưu thông báo cho học viên cùng transaction; chỉ lưu điểm danh không phát thông báo đánh giá. Chuông của mọi vai trò mở hộp thư server; bấm thông báo đánh giá tới `/member/progress#coach-evaluations`, xem điểm và nhận xét từ API. Thông báo cũ ánh xạ theo loại và vai trò; thông báo thao tác lưu trang phát sinh để quay lại. Giữ giao diện charcoal–salmon, nút chữ, loading/empty/error và thử lại. Không theo URL bên ngoài hoặc đường dẫn khác vai trò.

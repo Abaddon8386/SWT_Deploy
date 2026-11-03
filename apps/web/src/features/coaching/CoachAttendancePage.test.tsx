@@ -149,6 +149,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       await vi.advanceTimersByTimeAsync(50);
     });
 
+    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.any(Array), true);
     expect(notify).toHaveBeenCalledWith(expect.stringContaining('đánh giá'), 'success');
   });
 
@@ -240,7 +241,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     // Kết quả đi vào chuông thông báo (kèm toast góc), không còn overlay giữa màn hình
     expect(notify).toHaveBeenCalledWith('Cập nhật thành công', 'success');
     expect(host.querySelector('.center-toast-card')).toBeNull();
-    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ progressScore: 85 })]));
+    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ progressScore: 85 })]), true);
   });
   it('keeps a failed history edit open and does not overwrite its stored record', async () => {
     vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new Error('Rejected'));
@@ -281,7 +282,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
-    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101, status: 'absent', progressScore: 85 })]));
+    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101, status: 'absent', progressScore: 85 })]), true);
   });
 
   it('isolates cached histories between coaches sharing a browser', async () => {

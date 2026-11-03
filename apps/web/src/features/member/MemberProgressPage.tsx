@@ -4,6 +4,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getMyCompletedItemIds, getMyProgressMetrics, getMyTrainingPlans, setTrainingItemCompleted, type ProgressMetric, type TrainingPlan } from './memberProgressApi';
 import { dailyExercises, weeklyMeasurements, type WeeklyPoint } from './progressPresentation';
 import './member-progress.css';
+import { CoachEvaluations } from './CoachEvaluations';
 
 type LoadState<T> = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: T };
 const todayKey = () => {
@@ -94,6 +95,7 @@ export function MemberProgressPage() {
   const exercises = plans.kind === 'ready' ? dailyExercises(plans.data, today) : [];
   return <div className="portal-container member-progress">
     <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" subtitle="Số đo đã ghi nhận và bài tập từ huấn luyện viên." />
+    <CoachEvaluations />
     <section className="portal-card" aria-labelledby="progress-metrics-title">
       <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">Thay đổi qua các tuần</h2></div>
       {metrics.kind === 'loading' ? <LoadingSkeleton label="Đang tải số đo…" variant="cards" count={2} /> : metrics.kind === 'error' ? <div role="alert">Không thể tải số đo. <button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>Thử lại</button></div> : points.length === 0 ? <p className="portal-empty">Chưa có số đo cân nặng hoặc BMI.</p> : <div className="member-progress-charts">

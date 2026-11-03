@@ -9,6 +9,7 @@ export interface MemberNotification {
   relatedEntityId: number | null;
   isRead: boolean;
   createdAt: string;
+  actionPath?: string | null;
 }
 
 export interface NotificationPage {
@@ -26,18 +27,36 @@ export const markNotificationRead = (id: number) =>
 export const markAllNotificationsRead = () =>
   apiFetch<void>('/notifications/read-all', { method: 'PATCH' });
 
-export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type'>): string | null {
+/** Accept only internal portal routes; never follow arbitrary URLs from notification content. */
+export function safeNotificationPath(path: string | null | undefined, role = 'MEMBER'): string | null {
+  if (!path || !/^\/[a-z0-9/-]+(?:#[a-z0-9-]+)?$/.test(path)) return null;
+  const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
+  return path.startsWith(prefix) || path === '/member/profile' || (role === 'COACH' && path === '/staff/attendance') || (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts'].includes(path)) || path === '/messages' ? path : null;
+}
+
+export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath'>, role = 'MEMBER'): string {
+  const explicit = safeNotificationPath(notification.actionPath, role);
+  if (explicit) return explicit;
+  if (role === 'COACH') return notification.relatedEntityType === 'training_plan' ? '/coach/training-plans' : '/coach/classes';
+  if (['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER'].includes(role)) {
+    const manager = ['MANAGER', 'CENTER_MANAGER'].includes(role);
+    if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return manager ? '/manager/support' : '/staff/support';
+    if (['class_session', 'class_enrollment'].includes(notification.relatedEntityType ?? '') || ['schedule_change', 'class_reminder'].includes(notification.type)) return '/staff/classes';
+    return manager ? '/manager/reports' : '/staff/reception';
+  }
+  if (role === 'ADMIN') return '/admin/users';
   switch (notification.relatedEntityType) {
     case 'class_session':
     case 'class_enrollment': return '/member/classes';
     case 'membership_subscription': return '/member/packages';
     case 'payment': return '/member/invoices';
     case 'support_request': return '/member/support';
+    case 'training_plan': return '/member/progress';
     default:
       if (notification.type === 'class_reminder' || notification.type === 'schedule_change') return '/member/classes';
       if (notification.type === 'package_expiry') return '/member/packages';
       if (notification.type === 'payment') return '/member/invoices';
       if (notification.type === 'support_reply') return '/member/support';
-      return null;
+      return '/member/dashboard';
   }
 }

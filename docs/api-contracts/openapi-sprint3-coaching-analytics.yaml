@@ -218,3 +218,13 @@ paths:
         '200':
           description: Class utilization report retrieved successfully
 
+
+# SCRUM-119/123/127 (2026-11-03): Successful evaluation creation also stores an
+# in-app system notification for the evaluated member in the same transaction.
+# GET /notifications includes optional nullable actionPath (max 500 characters).
+# Evaluation notification actionPath: /member/progress#coach-evaluations.
+# Existing notification fields and enum values remain compatible.
+# POST /attendance/sessions/{id}/batch additionally accepts publishEvaluations:
+# boolean (default false). true sends notifications for records with progressScore;
+# attendance-only saves omit/disable it. The coach UI enables it on evaluation
+# submission and evaluation edits. No notification survives a rolled-back save.

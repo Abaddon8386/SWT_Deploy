@@ -45,6 +45,7 @@ class SessionEvaluationServiceTest {
     @Mock
     private ClassSessionRepository classSessionRepository;
 
+    @Mock private com.swp391.scms.notifications.NotificationService notifications;
     private SessionEvaluationService evaluationService;
     private Member member;
     private Coach coach;
@@ -54,6 +55,7 @@ class SessionEvaluationServiceTest {
         evaluationService = new SessionEvaluationService(
                 evaluationRepository, memberRepository, coachRepository, classSessionRepository);
 
+        ReflectionTestUtils.setField(evaluationService, "notificationService", notifications);
         member = new Member();
         member.setUserId(101L);
         member.setMembershipCode("MEM-101");
@@ -84,6 +86,7 @@ class SessionEvaluationServiceTest {
         assertEquals(202L, result.coachId());
         assertEquals(new BigDecimal("88.5"), result.progressScore());
         verify(evaluationRepository).save(any(SessionEvaluation.class));
+        verify(notifications).notifyEvaluation(101L);
     }
 
     @Test

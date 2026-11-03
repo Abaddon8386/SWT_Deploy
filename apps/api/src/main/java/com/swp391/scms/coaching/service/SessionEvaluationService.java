@@ -45,12 +45,21 @@ public class SessionEvaluationService {
         this(evaluationRepository, memberRepository, coachRepository, classSessionRepository, Clock.systemDefaultZone());
     }
 
-    @Autowired
+    private final com.swp391.scms.notifications.NotificationService notificationService;
+
     public SessionEvaluationService(SessionEvaluationRepository evaluationRepository,
                                     MemberRepository memberRepository,
                                     CoachRepository coachRepository,
                                     @Autowired(required = false) ClassSessionRepository classSessionRepository,
                                     @Autowired(required = false) Clock clock) {
+        this(evaluationRepository, memberRepository, coachRepository, classSessionRepository, clock, null);
+    }
+
+    @Autowired
+    public SessionEvaluationService(SessionEvaluationRepository evaluationRepository, MemberRepository memberRepository,
+            CoachRepository coachRepository, ClassSessionRepository classSessionRepository, Clock clock,
+            com.swp391.scms.notifications.NotificationService notificationService) {
+        this.notificationService = notificationService;
         this.evaluationRepository = evaluationRepository;
         this.memberRepository = memberRepository;
         this.coachRepository = coachRepository;
@@ -94,6 +103,7 @@ public class SessionEvaluationService {
         evaluation.setCreatedAt(now);
 
         SessionEvaluation saved = evaluationRepository.save(evaluation);
+        if (notificationService != null) notificationService.notifyEvaluation(member.getUserId());
         return toDto(saved);
     }
 
