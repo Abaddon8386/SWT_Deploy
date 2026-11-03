@@ -21,9 +21,7 @@ import {
 import {
   createCoachReview,
   getMyCoachReviews,
-  getCoachLeaderboard,
   type CoachReviewDto,
-  type CoachLeaderboardItemDto,
 } from '../../coaching/coachReviewApi';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
@@ -53,17 +51,36 @@ function localToday(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-function nextDays(count = 7): Array<{ iso: string; label: string; isToday: boolean }> {
-  const days: Array<{ iso: string; label: string; isToday: boolean }> = [];
+function nextDays(count = 14): Array<{
+  iso: string;
+  dayName: string;
+  dayNumber: string;
+  monthText: string;
+  label: string;
+  isToday: boolean;
+}> {
+  const days: Array<{
+    iso: string;
+    dayName: string;
+    dayNumber: string;
+    monthText: string;
+    label: string;
+    isToday: boolean;
+  }> = [];
   const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
   for (let i = 0; i < count; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
     const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const name = i === 0 ? 'Hôm nay' : dayNames[d.getDay()];
+    const dayName = dayNames[d.getDay()];
+    const dayNumber = String(d.getDate()).padStart(2, '0');
+    const monthText = `Tháng ${d.getMonth() + 1}`;
     days.push({
       iso,
-      label: `${name} (${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')})`,
+      dayName,
+      dayNumber,
+      monthText,
+      label: `${i === 0 ? 'Hôm nay' : dayName} (${dayNumber}/${String(d.getMonth() + 1).padStart(2, '0')})`,
       isToday: i === 0,
     });
   }
@@ -80,12 +97,12 @@ export function MemberCoachBookingView({
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(localToday());
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<CoachAvailableSlotDto | null>(null);
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
   const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined>();
   // quotaStatus stays null while loading or when the request fails; only a loaded answer without a package means none.
   const hasNoPackage = quotaStatus !== null && !quotaStatus.packageName;
-  const [leaderboard, setLeaderboard] = useState<CoachLeaderboardItemDto[]>([]);
   const [myReviews, setMyReviews] = useState<CoachReviewDto[]>([]);
 
   const [loadingCoaches, setLoadingCoaches] = useState(true);
@@ -117,25 +134,23 @@ export function MemberCoachBookingView({
 
   const daysList = nextDays(10);
 
-  // Load coaches, member bookings, reviews and leaderboard
+  // Load coaches, member bookings and reviews
   useEffect(() => {
     let active = true;
     async function init() {
       setLoadingCoaches(true);
       setError('');
       try {
-        const [coachList, bookingsList, quota, board, reviews] = await Promise.all([
+        const [coachList, bookingsList, quota, reviews] = await Promise.all([
           getCoaches(),
           getMyCoachBookings(),
           getMemberQuotaStatus().catch(() => null),
-          getCoachLeaderboard().catch(() => []),
           getMyCoachReviews().catch(() => []),
         ]);
         if (!active) return;
         setCoaches(coachList);
         setMyBookings(bookingsList);
         if (quota) setQuotaStatus(quota);
-        setLeaderboard(board);
         setMyReviews(reviews);
         setSelectedCoachId((current) => current ?? coachList[0]?.id ?? null);
       } catch (err: unknown) {
@@ -155,6 +170,7 @@ export function MemberCoachBookingView({
     async function loadSlots() {
       setLoadingSlots(true);
       setSlots([]);
+      setSelectedSlot(null);
       try {
         const availableSlots = await getAvailableSlots(selectedCoachId!, selectedDate);
         if (active) setSlots(availableSlots);
@@ -186,7 +202,7 @@ export function MemberCoachBookingView({
     if (!selectedCoach || !modalSlot) return;
     setSubmitting(true);
     setError('');
-    
+
     try {
       const standing = recurrenceRequest(recurrence, selectedDate);
       if (standing) {
@@ -223,6 +239,7 @@ export function MemberCoachBookingView({
       });
 
       setModalSlot(null);
+      setSelectedSlot(null);
       setNotes('');
 
       const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
@@ -240,7 +257,7 @@ export function MemberCoachBookingView({
       } else {
         notify(
           `Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
-        , 'success');
+          , 'success');
       }
     } catch (err: unknown) {
       setErrorCode(err instanceof ApiError ? err.code : undefined);
@@ -263,12 +280,8 @@ export function MemberCoachBookingView({
         isAnonymous: reviewAnonymous,
       });
 
-      const [updatedReviews, updatedLeaderboard] = await Promise.all([
-        getMyCoachReviews().catch(() => []),
-        getCoachLeaderboard().catch(() => []),
-      ]);
+      const updatedReviews = await getMyCoachReviews().catch(() => []);
       setMyReviews(updatedReviews);
-      setLeaderboard(updatedLeaderboard);
 
       notify(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${formatCoachName(reviewTargetBooking.coachName)} thành công.`, 'success');
       setReviewTargetBooking(null);
@@ -340,79 +353,6 @@ export function MemberCoachBookingView({
           >
             ✕
           </button>
-        </div>
-      )}
-
-      {/* Top Coach Honor Ribbon */}
-      {leaderboard.length > 0 && (
-        <div
-          className="portal-card"
-          style={{
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, color-mix(in srgb, var(--portal-warning) 12%, transparent) 0%, color-mix(in srgb, var(--portal-salmon) 4%, transparent) 100%)',
-            borderColor: 'color-mix(in srgb, var(--portal-star) 35%, transparent)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #202020)' }}>
-              Bảng vinh danh top huấn luyện viên xuất sắc tháng này
-            </h4>
-            <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
-              Dựa trên đánh giá và mức độ hài lòng của hội viên
-            </span>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 12,
-            }}
-          >
-            {leaderboard.slice(0, 3).map((item) => (
-              <div
-                key={item.coachId}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 14px',
-                  borderRadius: 10,
-                  background: 'var(--portal-surface, #ffffff)',
-                  border: '1px solid color-mix(in srgb, var(--portal-star) 25%, transparent)',
-                }}
-              >
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    background: item.rankPosition === 1 ? 'var(--portal-rank-gold)' : item.rankPosition === 2 ? 'var(--portal-rank-silver)' : 'var(--portal-rank-bronze)',
-                    color: 'var(--portal-rank-ink)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: 14,
-                    flexShrink: 0,
-                  }}
-                >
-                  #{item.rankPosition}
-                </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 750, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {item.coachName}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--portal-star)', fontWeight: 700 }}>
-                    {item.averageRating?.toFixed(1) || '5.0'} / 5.0 • {item.badge || 'Top Coach'}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
@@ -494,7 +434,7 @@ export function MemberCoachBookingView({
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-            1. Chọn Huấn luyện viên cá nhân (PT 1:1)
+            Chọn Huấn luyện viên cá nhân (PT 1:1)
           </h3>
           <span className="row-card__meta" style={{ fontSize: 13 }}>
             Phí tập tiêu chuẩn: <strong>{formatPrice(200000)} / giờ</strong> (Miễn phí với gói Gold/Platinum)
@@ -570,152 +510,358 @@ export function MemberCoachBookingView({
         </div>
       </section>
 
-      {/* Bước 2: Chọn Ngày tập */}
-      <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-            2. Chọn ngày tập luyện
-          </h3>
-          <span className="row-card__meta" style={{ fontSize: 13, color: 'var(--portal-star)' }}>
-            Quy tắc: Buổi tập 1:1 phải được đặt trước ít nhất <strong>2 tiếng</strong>
-          </span>
-        </div>
+      {/* Chọn ngày và khung giờ */}
+      {(() => {
+        const morningSlots = slots.filter((s) => {
+          const h = parseInt(s.startTime.split(':')[0], 10);
+          return h < 12;
+        });
+        const afternoonSlots = slots.filter((s) => {
+          const h = parseInt(s.startTime.split(':')[0], 10);
+          return h >= 12 && h < 18;
+        });
+        const eveningSlots = slots.filter((s) => {
+          const h = parseInt(s.startTime.split(':')[0], 10);
+          return h >= 18;
+        });
 
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6 }}>
-          {daysList.map((d) => {
-            const isSelected = d.iso === selectedDate;
+        const renderSlotPill = (slot: CoachAvailableSlotDto) => {
+          const startFmt = slot.startTime.slice(0, 5);
+          const endFmt = slot.endTime.slice(0, 5);
+          const isSelected = selectedSlot?.startTime === slot.startTime;
+
+          if (slot.available) {
             return (
               <button
-                key={d.iso}
+                key={slot.startTime}
                 type="button"
-                className={`filter-chip ${isSelected ? 'is-active' : ''}`}
-                style={{
-                  minWidth: 105,
-                  padding: '9px 12px',
-                  fontWeight: isSelected ? 700 : 500,
-                  fontSize: 12,
-                  whiteSpace: 'nowrap',
-                }}
                 onClick={() => {
-                  setSelectedDate(d.iso);
-                  setError('');
+                  setSelectedSlot(slot);
+                  handleOpenBookingModal(slot);
                 }}
+                style={{
+                  minWidth: 70,
+                  padding: '9px 18px',
+                  borderRadius: 12,
+                  fontSize: 15,
+                  fontWeight: isSelected ? 750 : 600,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  transition: 'all 160ms ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: isSelected ? '1px solid transparent' : '1px solid var(--portal-border, #e5e0db)',
+                  background: isSelected
+                    ? 'linear-gradient(155deg, #5c351c 0%, #3a2012 100%)'
+                    : 'var(--portal-surface, #ffffff)',
+                  color: isSelected ? '#ffffff' : 'var(--portal-paper, #201b17)',
+                  boxShadow: isSelected
+                    ? '0 4px 12px rgba(78, 45, 25, 0.32)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--portal-salmon) 50%, transparent)';
+                    e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface, #ffffff))';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.borderColor = 'var(--portal-border, #e5e0db)';
+                    e.currentTarget.style.background = 'var(--portal-surface, #ffffff)';
+                  }
+                }}
+                title={`Còn trống: ${startFmt} – ${endFmt} (Nhấn để đặt lịch)`}
               >
-                {d.label}
+                {startFmt}
               </button>
             );
-          })}
-        </div>
-      </section>
+          }
 
-      {/* Bước 3: Xem và Chọn Khung Giờ (Hourly Slots) */}
-      <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-            3. Chọn khung giờ (Theo giờ)
-          </h3>
-          <span className="row-card__meta">
-            HLV: <strong>{selectedCoach?.fullName}</strong> • Ngày: <strong>{selectedDate}</strong>
-          </span>
-        </div>
+          let badgeText = 'Đã kín lịch';
+          if (slot.reason === 'coach_on_leave') {
+            badgeText = 'HLV nghỉ phép';
+          } else if (slot.reason === 'too_soon') {
+            badgeText = 'Cần đặt trước 2 tiếng';
+          } else if (slot.reason === 'coach_busy') {
+            badgeText = 'HLV đã có lịch';
+          } else if (slot.reason === 'member_busy') {
+            badgeText = 'Bạn đã có lịch trùng';
+          }
 
-        {loadingSlots ? (
-          <div className="portal-card" style={{ padding: 24, textAlign: 'center' }}>
-            <p className="row-card__meta">Đang kiểm tra lịch trống của huấn luyện viên...</p>
-          </div>
-        ) : (
-          <div
+          return (
+            <div
+              key={slot.startTime}
+              style={{
+                minWidth: 70,
+                padding: '9px 18px',
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 500,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid var(--portal-border, #e5e0db)',
+                background: 'var(--portal-raised, #f5f2ee)',
+                color: 'var(--portal-muted, #9c948c)',
+                opacity: 0.5,
+                cursor: 'not-allowed',
+              }}
+              title={`${startFmt} – ${endFmt} (${badgeText})`}
+            >
+              {startFmt}
+            </div>
+          );
+        };
+
+        return (
+          <section
+            className="portal-card"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
-              gap: 10,
+              padding: '24px 24px',
+              borderRadius: 20,
+              background: 'var(--portal-surface, #ffffff)',
+              border: '1px solid var(--portal-border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 22,
             }}
           >
-            {slots.map((slot) => {
-              const startFmt = slot.startTime.slice(0, 5);
-              const endFmt = slot.endTime.slice(0, 5);
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--portal-paper)' }}>
+                Chọn ngày và khung giờ
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span className="row-card__meta" style={{ fontSize: 13, color: 'var(--portal-star)' }}>
+                  Quy tắc: Đặt trước <strong>2 tiếng</strong>
+                </span>
+                {selectedCoach && (
+                  <span className="row-card__meta" style={{ fontSize: 13 }}>
+                    HLV: <strong>{selectedCoach.fullName}</strong>
+                  </span>
+                )}
+              </div>
+            </div>
 
-              if (slot.available) {
-                return (
-                  <button
-                    key={slot.startTime}
-                    type="button"
-                    onClick={() => handleOpenBookingModal(slot)}
-                    className="portal-card"
+            {/* Calendar Day Cards Row */}
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  overflowX: 'auto',
+                  padding: '4px 2px 14px',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'thin',
+                }}
+              >
+                {daysList.map((d) => {
+                  const isSelected = d.iso === selectedDate;
+                  return (
+                    <button
+                      key={d.iso}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(d.iso);
+                        setSelectedSlot(null);
+                        setError('');
+                      }}
+                      style={{
+                        minWidth: 70,
+                        width: 72,
+                        height: 96,
+                        padding: '12px 6px',
+                        borderRadius: 16,
+                        border: isSelected
+                          ? '1px solid transparent'
+                          : '1px solid var(--portal-border, #e5e0db)',
+                        background: isSelected
+                          ? 'linear-gradient(155deg, #5c351c 0%, #3a2012 100%)'
+                          : 'var(--portal-surface, #ffffff)',
+                        color: isSelected ? '#ffffff' : 'var(--portal-paper, #201b17)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 3,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        boxShadow: isSelected
+                          ? '0 6px 16px rgba(78, 45, 25, 0.32)'
+                          : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                        transition: 'all 180ms ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--portal-salmon) 50%, transparent)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.transform = 'none';
+                          e.currentTarget.style.borderColor = 'var(--portal-border, #e5e0db)';
+                        }
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: isSelected ? 'rgba(255, 255, 255, 0.85)' : 'var(--portal-muted, #736b63)',
+                          lineHeight: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
+                        {d.dayName}
+                        {d.isToday && (
+                          <span
+                            style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: '50%',
+                              background: isSelected ? '#ffffff' : 'var(--portal-salmon)',
+                            }}
+                            title="Hôm nay"
+                          />
+                        )}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 24,
+                          fontWeight: 800,
+                          color: isSelected ? '#ffffff' : 'var(--portal-paper, #201b17)',
+                          lineHeight: 1.1,
+                        }}
+                      >
+                        {d.dayNumber}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: isSelected ? 'rgba(255, 255, 255, 0.8)' : 'var(--portal-muted, #8a8279)',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {d.monthText}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Time Slots Grouped by Time of Day */}
+            {loadingSlots ? (
+              <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                <p className="row-card__meta" style={{ margin: 0 }}>
+                  Đang kiểm tra lịch trống của huấn luyện viên...
+                </p>
+              </div>
+            ) : slots.length === 0 ? (
+              <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                <p className="row-card__meta" style={{ margin: 0 }}>
+                  Huấn luyện viên không có khung giờ nào trong ngày này. Vui lòng chọn ngày khác!
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {morningSlots.length > 0 && (
+                  <div>
+                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                      Buổi sáng
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {morningSlots.map(renderSlotPill)}
+                    </div>
+                  </div>
+                )}
+
+                {afternoonSlots.length > 0 && (
+                  <div>
+                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                      Buổi chiều
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {afternoonSlots.map(renderSlotPill)}
+                    </div>
+                  </div>
+                )}
+
+                {eveningSlots.length > 0 && (
+                  <div>
+                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                      Buổi tối
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {eveningSlots.map(renderSlotPill)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected Slot Summary Action */}
+                {selectedSlot && (
+                  <div
                     style={{
-                      padding: '12px 14px',
-                      cursor: 'pointer',
+                      marginTop: 6,
+                      padding: '14px 18px',
+                      borderRadius: 14,
+                      background: 'linear-gradient(135deg, color-mix(in srgb, var(--portal-salmon) 12%, transparent) 0%, color-mix(in srgb, var(--portal-salmon) 4%, transparent) 100%)',
+                      border: '1px solid color-mix(in srgb, var(--portal-salmon) 35%, transparent)',
                       display: 'flex',
-                      flexDirection: 'column',
+                      flexWrap: 'wrap',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      gap: 4,
-                      borderColor: 'color-mix(in srgb, var(--portal-success) 45%, transparent)',
-                      background: 'color-mix(in srgb, var(--portal-success) 5%, transparent)',
-                      transition: 'transform 160ms ease, background 160ms ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-success) 14%, transparent)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-success) 5%, transparent)';
+                      gap: 12,
                     }}
                   >
-                    <span style={{ fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #202020)' }}>
-                      {startFmt} – {endFmt}
-                    </span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--portal-success, #226442)' }}>
-                      Còn trống • Đặt lịch
-                    </span>
-                  </button>
-                );
-              }
-
-              let badgeText = 'Đã kín lịch';
-              let badgeColor = 'var(--portal-muted, #71717a)';
-              if (slot.reason === 'coach_on_leave') {
-                badgeText = 'HLV nghỉ phép';
-                badgeColor = 'var(--portal-warning)';
-              } else if (slot.reason === 'too_soon') {
-                badgeText = 'Cần đặt trước 2 tiếng';
-                badgeColor = 'var(--portal-warning)';
-              } else if (slot.reason === 'coach_busy') {
-                badgeText = 'HLV đã có lịch';
-                badgeColor = 'var(--portal-danger)';
-              } else if (slot.reason === 'member_busy') {
-                badgeText = 'Bạn đã có lịch trùng';
-                badgeColor = 'var(--portal-danger)';
-              }
-
-              return (
-                <div
-                  key={slot.startTime}
-                  className="portal-card"
-                  style={{
-                    padding: '12px 14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 4,
-                    opacity: 0.5,
-                    background: 'var(--portal-raised, #f4f4f5)',
-                    cursor: 'not-allowed',
-                  }}
-                  title={badgeText}
-                >
-                  <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--portal-muted, #a1a1aa)' }}>
-                    {startFmt} – {endFmt}
-                  </span>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: badgeColor }}>
-                    {badgeText}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: 'var(--portal-salmon)',
+                          display: 'inline-block',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div>
+                        <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>Khung giờ đã chọn: </span>
+                        <strong style={{ fontSize: 15, color: 'var(--portal-paper)' }}>
+                          {selectedSlot.startTime.slice(0, 5)} – {selectedSlot.endTime.slice(0, 5)}
+                        </strong>
+                        <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
+                          {` (${selectedDate} • HLV ${selectedCoach?.fullName})`}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{
+                        padding: '8px 22px',
+                        borderRadius: 99,
+                        fontWeight: 700,
+                        fontSize: 13,
+                      }}
+                      onClick={() => handleOpenBookingModal(selectedSlot)}
+                    >
+                      Tiến hành đặt lịch
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {/* Danh sách Lịch 1:1 đã đặt của Hội viên */}
       <section style={{ marginTop: 12 }}>
@@ -940,12 +1086,12 @@ export function MemberCoachBookingView({
                   {reviewRating === 5
                     ? 'Xuất sắc (5 sao)'
                     : reviewRating === 4
-                    ? 'Rất tốt (4 sao)'
-                    : reviewRating === 3
-                    ? 'Bình thường (3 sao)'
-                    : reviewRating === 2
-                    ? 'Chưa hài lòng (2 sao)'
-                    : 'Rất thất vọng (1 sao)'}
+                      ? 'Rất tốt (4 sao)'
+                      : reviewRating === 3
+                        ? 'Bình thường (3 sao)'
+                        : reviewRating === 2
+                          ? 'Chưa hài lòng (2 sao)'
+                          : 'Rất thất vọng (1 sao)'}
                 </span>
               </div>
             </div>
@@ -999,150 +1145,471 @@ export function MemberCoachBookingView({
       {/* Modal Xác nhận Đặt lịch */}
       {modalSlot && selectedCoach && (
         <Modal
-          title="Xác nhận Đặt lịch HLV 1:1 (PT riêng)"
+          title={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: 'color-mix(in srgb, var(--portal-salmon) 20%, #f5e8df)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60381e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <circle cx="8" cy="14" r="1.2" fill="#60381e"></circle>
+                  <circle cx="12" cy="14" r="1.2" fill="#60381e"></circle>
+                  <circle cx="16" cy="14" r="1.2" fill="#60381e"></circle>
+                  <circle cx="8" cy="18" r="1.2" fill="#60381e"></circle>
+                  <circle cx="12" cy="18" r="1.2" fill="#60381e"></circle>
+                  <circle cx="16" cy="18" r="1.2" fill="#60381e"></circle>
+                </svg>
+              </span>
+              <span style={{ fontSize: 22, fontWeight: 750, color: 'var(--portal-paper, #201b17)', fontFamily: 'inherit' }}>
+                Xác nhận đặt lịch
+              </span>
+            </span>
+          }
           onClose={() => setModalSlot(null)}
         >
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div style={{ display: 'grid', gap: 18 }}>
+            {/* Coach & Session Info Card */}
             <div
               style={{
-                padding: 14,
-                borderRadius: 12,
-                background: 'var(--portal-raised, #f4f4f5)',
-                display: 'grid',
-                gap: 6,
+                padding: '16px 20px',
+                borderRadius: 18,
+                background: 'color-mix(in srgb, var(--portal-salmon) 6%, var(--portal-surface, #ffffff))',
+                border: '1px solid color-mix(in srgb, var(--portal-salmon) 22%, var(--portal-border, #e5dbd2))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 16,
+                flexWrap: 'wrap',
               }}
             >
-              <div>
-                Huấn luyện viên: <strong>{selectedCoach.fullName}</strong> ({selectedCoach.specialization})
+              {/* Coach */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 200, flex: '1 1 auto' }}>
+                <div style={{ position: 'relative', width: 62, height: 62, flexShrink: 0 }}>
+                  <img
+                    src={selectedCoach.avatarUrl || coachIllustration(selectedCoach.specialization, selectedCoach.fullName)}
+                    alt={selectedCoach.fullName}
+                    style={{
+                      width: 62,
+                      height: 62,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid #ffffff',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      right: 0,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#5c351c',
+                      border: '2px solid #ffffff',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      fontWeight: 900,
+                    }}
+                  >
+                    ✓
+                  </div>
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: 'var(--portal-muted, #8c827a)', marginBottom: 2 }}>
+                    Huấn luyện viên
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #201b17)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selectedCoach.fullName}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--portal-muted, #8c827a)' }}>
+                    {selectedCoach.specialization || 'Fitness & Cardio'}
+                  </div>
+                </div>
               </div>
-              <div>
-                Thời gian: <strong>{selectedDate}</strong> từ <strong>{modalSlot.startTime.slice(0, 5)} đến {modalSlot.endTime.slice(0, 5)}</strong>
+
+              {/* Time */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 140, flex: '1 1 auto' }}>
+                <span style={{ color: '#8c5b3e', marginTop: 2, flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </span>
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--portal-muted, #8c827a)', marginBottom: 2 }}>
+                    Thời gian
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--portal-paper, #201b17)' }}>
+                    {selectedDate}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper, #201b17)' }}>
+                    {modalSlot.startTime.slice(0, 5)} – {modalSlot.endTime.slice(0, 5)}
+                  </div>
+                </div>
               </div>
-              <div>
-                Chi phí buổi tập: <strong>{formatPrice(200000)} / buổi</strong>
+
+              {/* Cost */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 140, flex: '1 1 auto' }}>
+                <span style={{ color: '#8c5b3e', marginTop: 2, flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M14.5 9a2.5 2.5 0 0 0-5 0c0 4 5 2 5 6a2.5 2.5 0 0 1-5 0"></path>
+                    <line x1="12" y1="6" x2="12" y2="8"></line>
+                    <line x1="12" y1="16" x2="12" y2="18"></line>
+                  </svg>
+                </span>
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--portal-muted, #8c827a)', marginBottom: 2 }}>
+                    Chi phí buổi tập
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                    {formatPrice(selectedCoach.defaultHourlyRate || 200000)} / buổi
+                  </div>
+                </div>
               </div>
             </div>
 
+            {/* Payment Method Section */}
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
-                Phương thức thanh toán / Sử dụng quyền lợi:
-              </label>
-              <div style={{ display: 'grid', gap: 8 }}>
-                <label
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60381e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                  Phương thức thanh toán
+                </h4>
+              </div>
+
+              <div style={{ display: 'grid', gap: 10 }}>
+                {/* Option 1: Gói tập */}
+                <div
+                  onClick={() => hasRemainingQuota && setPaymentMethod('package_quota')}
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '10px 14px',
-                    borderRadius: 10,
-                    border: '1px solid var(--portal-border, #e4e2de)',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                    padding: '14px 16px',
+                    borderRadius: 14,
+                    border: paymentMethod === 'package_quota'
+                      ? '1.5px solid #60381e'
+                      : '1px solid var(--portal-border, #e7ded5)',
+                    background: paymentMethod === 'package_quota'
+                      ? 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface, #ffffff))'
+                      : 'var(--portal-surface, #ffffff)',
                     cursor: hasRemainingQuota ? 'pointer' : 'not-allowed',
-                    opacity: hasRemainingQuota ? 1 : 0.6,
-                    background: paymentMethod === 'package_quota' ? 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)' : 'transparent',
+                    opacity: hasRemainingQuota ? 1 : 0.7,
+                    transition: 'all 160ms ease',
                   }}
                 >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    disabled={!hasRemainingQuota}
-                    checked={paymentMethod === 'package_quota'}
-                    onChange={() => setPaymentMethod('package_quota')}
-                  />
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <strong>Sử dụng quyền lợi PT trong gói tập (Gold / Platinum)</strong>
+                  <div
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      border: paymentMethod === 'package_quota' ? '2px solid #60381e' : '2px solid var(--portal-border, #c4b9af)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: 2,
+                    }}
+                  >
+                    {paymentMethod === 'package_quota' && (
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#60381e' }} />
+                    )}
+                  </div>
+
+                  <span style={{ color: '#60381e', marginTop: 2, flexShrink: 0 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                      <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                  </span>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: 14, color: 'var(--portal-paper, #201b17)' }}>
+                        Sử dụng quyền lợi PT trong gói tập (Gold / Platinum)
+                      </strong>
                       {hasRemainingQuota ? (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-success, #226442)' }}>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: 'var(--portal-success, #226442)',
+                            background: 'color-mix(in srgb, var(--portal-success) 12%, transparent)',
+                            padding: '2px 8px',
+                            borderRadius: 99,
+                          }}
+                        >
                           (Còn {quotaStatus?.remainingQuota} lượt miễn phí)
                         </span>
                       ) : (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-danger)' }}>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: '#a45338',
+                            background: '#f8eee7',
+                            padding: '2px 8px',
+                            borderRadius: 99,
+                          }}
+                        >
                           (Hết lượt hoặc không áp dụng)
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--portal-muted, #71717a)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)', marginTop: 4, lineHeight: 1.4 }}>
                       {hasRemainingQuota
                         ? 'Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn (0 đ).'
-                        : 'Gói hiện tại không có lượt PT miễn phí hoặc bạn đã dùng hết quota tháng. Vui lòng chọn đóng phí 200.000 đ.'}
+                        : 'Gói hiện tại không có lượt PT miễn phí hoặc bạn đã dùng hết quota tháng. Vui lòng chọn đóng phí ' + formatPrice(selectedCoach.defaultHourlyRate || 200000) + '.'}
                     </div>
                   </div>
-                </label>
+                </div>
 
-                <label
+                {/* Option 2: Trả phí theo giờ */}
+                <div
+                  onClick={() => setPaymentMethod('hourly_pay')}
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '10px 14px',
-                    borderRadius: 10,
-                    border: '1px solid var(--portal-border, #e4e2de)',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                    padding: '14px 16px',
+                    borderRadius: 14,
+                    border: paymentMethod === 'hourly_pay'
+                      ? '1.5px solid #60381e'
+                      : '1px solid var(--portal-border, #e7ded5)',
+                    background: paymentMethod === 'hourly_pay'
+                      ? 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface, #ffffff))'
+                      : 'var(--portal-surface, #ffffff)',
                     cursor: 'pointer',
-                    background: paymentMethod === 'hourly_pay' ? 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)' : 'transparent',
+                    transition: 'all 160ms ease',
                   }}
                 >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    checked={paymentMethod === 'hourly_pay'}
-                    onChange={() => setPaymentMethod('hourly_pay')}
-                  />
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <strong>Đăng ký trả phí theo giờ (200.000 đ / giờ)</strong>
+                  <div
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      border: paymentMethod === 'hourly_pay' ? '2px solid #60381e' : '2px solid var(--portal-border, #c4b9af)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: 2,
+                    }}
+                  >
+                    {paymentMethod === 'hourly_pay' && (
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#60381e' }} />
+                    )}
+                  </div>
+
+                  <span style={{ color: '#60381e', marginTop: 2, flexShrink: 0 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                      <rect x="2" y="7" width="20" height="5"></rect>
+                      <line x1="12" y1="22" x2="12" y2="7"></line>
+                      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+                    </svg>
+                  </span>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: 14, color: 'var(--portal-paper, #201b17)' }}>
+                        Đăng ký trả phí theo giờ ({formatPrice(selectedCoach.defaultHourlyRate || 200000)} / giờ)
+                      </strong>
                       {!hasRemainingQuota && !hasNoPackage && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon, #ce9180)' }}>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: '#a45338',
+                            background: '#f8eee7',
+                            padding: '2px 8px',
+                            borderRadius: 99,
+                          }}
+                        >
                           (Khuyến nghị cho gói của bạn)
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--portal-muted, #71717a)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)', marginTop: 4, lineHeight: 1.4 }}>
                       Thanh toán tại quầy lễ tân hoặc chuyển khoản theo thông tin do lễ tân cung cấp.
                     </div>
                   </div>
-                </label>
+                </div>
               </div>
             </div>
 
-            <RecurrenceFields
-              startDate={selectedDate}
-              value={recurrence}
-              onChange={setRecurrence}
-              disabled={submitting}
-              hint="Mỗi buổi vẫn theo luật đặt 1:1: trùng lịch, hết hạn mức tháng hoặc quá giới hạn chưa thanh toán sẽ được bỏ qua và báo lại."
-            />
+            {/* Recurrence Option (collapsible) */}
+            <details style={{ cursor: 'pointer' }}>
+              <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--portal-muted, #8c827a)' }}>
+                Tùy chọn đặt lịch định kỳ (lặp lại hàng tuần/tháng)
+              </summary>
+              <div style={{ marginTop: 10 }}>
+                <RecurrenceFields
+                  startDate={selectedDate}
+                  value={recurrence}
+                  onChange={setRecurrence}
+                  disabled={submitting}
+                  hint="Hệ thống sẽ tự động gia hạn lịch tập vào cùng ngày này mỗi tháng. Bạn có thể hủy hoặc thay đổi lịch tập bất cứ lúc nào."
+                />
+              </div>
+            </details>
 
+            {/* Notes Section */}
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                Ghi chú cho HLV (Mục tiêu, tình trạng sức khỏe...):
-              </label>
-              <textarea
-                rows={3}
-                className="portal-input"
-                placeholder="Ví dụ: Muốn tập trung cơ bụng và lưng, từng đau khớp gối nhẹ..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                style={{ width: '100%', resize: 'vertical' }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 8 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60381e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                </svg>
+                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                  Ghi chú
+                </h4>
+              </div>
+              <div
+                style={{
+                  position: 'relative',
+                  borderRadius: 14,
+                  border: '1px solid var(--portal-border, #e2dad2)',
+                  background: 'color-mix(in srgb, var(--portal-salmon) 4%, var(--portal-surface, #ffffff))',
+                  padding: '12px 14px 28px',
+                }}
+              >
+                <textarea
+                  rows={3}
+                  placeholder="Ví dụ: Muốn tập trung cơ bụng và lưng, từng đau khớp gối nhẹ..."
+                  value={notes}
+                  maxLength={200}
+                  onChange={(e) => setNotes(e.target.value)}
+                  style={{
+                    width: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    outline: 'none',
+                    resize: 'none',
+                    fontFamily: 'inherit',
+                    fontSize: 14,
+                    color: 'var(--portal-paper, #201b17)',
+                    lineHeight: 1.5,
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 8,
+                    right: 14,
+                    fontSize: 12,
+                    color: 'var(--portal-muted, #a89f97)',
+                    fontWeight: 500,
+                  }}
+                >
+                  {notes.length}/200
+                </div>
+              </div>
             </div>
 
-            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span><strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+            {hasNoPackage && (
+              <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span><strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span>
+                <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button>
+              </div>
+            )}
+
+            {/* Footer Action Buttons */}
+            <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
               <button
                 type="button"
-                className="btn-secondary"
                 disabled={submitting}
                 onClick={() => setModalSlot(null)}
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 9999,
+                  border: '1.5px solid #60381e',
+                  background: 'transparent',
+                  color: 'var(--portal-paper, #201b17)',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'all 160ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
                 Đóng
               </button>
               <button
                 type="button"
-                className="btn-primary"
                 disabled={submitting}
                 onClick={() => void handleConfirmBooking()}
+                style={{
+                  flex: 1.4,
+                  height: 48,
+                  borderRadius: 9999,
+                  border: 'none',
+                  background: 'linear-gradient(155deg, #6c3f21 0%, #4a2612 100%)',
+                  color: '#ffffff',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  cursor: submitting ? 'wait' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  fontFamily: 'inherit',
+                  boxShadow: '0 4px 14px rgba(78, 45, 25, 0.32)',
+                  transition: 'all 160ms ease',
+                  opacity: submitting ? 0.7 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!submitting) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 18px rgba(78, 45, 25, 0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!submitting) {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(78, 45, 25, 0.32)';
+                  }
+                }}
               >
-                {submitting ? 'Đang xử lý…' : recurrence.period !== 'once' ? 'Xác nhận đặt định kỳ' : paymentMethod === 'hourly_pay' ? 'Xác nhận & Đến thanh toán' : 'Xác nhận Đặt lịch (0 đ)'}
+                <span>
+                  {submitting
+                    ? 'Đang xử lý…'
+                    : recurrence.period !== 'once'
+                      ? 'Xác nhận đặt định kỳ'
+                      : 'Xác nhận & Đặt lịch'}
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
               </button>
             </div>
           </div>
