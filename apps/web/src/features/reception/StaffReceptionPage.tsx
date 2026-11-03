@@ -1,3 +1,4 @@
+import { CoachHealthMetrics } from '../coaching/CoachHealthMetrics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { errorMessage } from '../../shared/lib/errorMessage';
@@ -966,6 +967,8 @@ export function StaffReceptionPage() {
           </div>
         )}
       </div>
+
+      {selectedMember && currentUser?.role === 'STAFF' && <CoachHealthMetrics memberId={selectedMember.userId} memberName={selectedMember.fullName} intakeOnly />}
 
       {/* BR-04: Popup Hóa đơn điện tử chỉ hiện khi Payment thành công */}
       {completedPayment && (

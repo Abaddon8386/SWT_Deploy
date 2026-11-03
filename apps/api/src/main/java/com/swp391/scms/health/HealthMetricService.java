@@ -25,6 +25,11 @@ public class HealthMetricService {
             "weight", "height", "bmi", "body_fat", "muscle_mass", "waist"
     );
 
+    private java.time.Clock clock = java.time.Clock.system(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void useClock(java.time.Clock clock) { this.clock = clock; }
+
     private final MemberProgressLogRepository progressLogRepository;
     private final MemberRepository memberRepository;
     private final UserRepository userRepository;
@@ -42,13 +47,13 @@ public class HealthMetricService {
 
     @Transactional(readOnly = true)
     public List<HealthMetricDto> getMetrics(Long memberId, Long currentUserId, String currentUserRole) {
+        if (!("MEMBER".equals(currentUserRole) || isCoach(currentUserRole) || isManager(currentUserRole)))
+            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden", null, "Health history access denied.");
         if (!memberId.equals(currentUserId) && !isManager(currentUserRole) && !isCoach(currentUserRole)) {
             throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden", null,
                     "You do not have permission to view these health metrics");
         }
-        if (coachMemberAccess != null && !memberId.equals(currentUserId)) {
-            coachMemberAccess.requireAccess(currentUserId, currentUserRole, memberId);
-        }
+        if (isCoach(currentUserRole)) requireAssignedCoach(currentUserId, memberId);
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("resource.member", memberId);
         }
@@ -72,8 +77,9 @@ public class HealthMetricService {
 
     @Transactional
     public HealthMetricDto addMetric(Long memberId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
-        ensureCanModify(memberId, currentUserId, currentUserRole);
+        ensureCanModify(memberId, currentUserId, currentUserRole, true);
         String metricName = validateAndNormalizeMetricName(request.metricName());
+        validatedUnit(metricName, request.metricValue(), request.unit());
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
@@ -84,14 +90,15 @@ public class HealthMetricService {
         log.setMember(member);
         log.setMetricName(metricName);
         log.setMetricValue(request.metricValue());
-        log.setUnit(request.unit());
+        log.setUnit(validatedUnit(metricName, request.metricValue(), request.unit()));
         log.setRecordedBy(recordedBy);
+        log.setRecordedAt(java.time.LocalDateTime.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))));
         return toDto(progressLogRepository.save(log));
     }
 
     @Transactional
     public HealthMetricDto updateMetric(Long memberId, Long metricId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
-        ensureCanModify(memberId, currentUserId, currentUserRole);
+        ensureCanModify(memberId, currentUserId, currentUserRole, false);
         MemberProgressLog log = findOwnedMetric(memberId, metricId);
 
         if (request.metricName() != null && !request.metricName().isBlank()) {
@@ -103,12 +110,13 @@ public class HealthMetricService {
         if (request.unit() != null) {
             log.setUnit(request.unit());
         }
+        log.setUnit(validatedUnit(log.getMetricName(), log.getMetricValue(), log.getUnit()));
         return toDto(progressLogRepository.save(log));
     }
 
     @Transactional
     public void deleteMetric(Long memberId, Long metricId, Long currentUserId, String currentUserRole) {
-        ensureCanModify(memberId, currentUserId, currentUserRole);
+        ensureCanModify(memberId, currentUserId, currentUserRole, false);
         MemberProgressLog log = findOwnedMetric(memberId, metricId);
         progressLogRepository.delete(log);
     }
@@ -122,14 +130,60 @@ public class HealthMetricService {
         return addMetric(targetMemberId, dto, currentUserId, currentUserRole);
     }
 
-    private void ensureCanModify(Long memberId, Long currentUserId, String currentUserRole) {
-        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
+    private void ensureCanModify(Long memberId, Long currentUserId, String role, boolean append) {
+        if ("RECEPTIONIST".equals(role) && append) { requireIntake(memberId, currentUserId); return; }
+        if (!isCoach(role) && !isManager(role)) {
             throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
-                    "You do not have permission to modify this health metric");
+                    "Only assigned coaches and managers may record measurements.");
         }
-        if (coachMemberAccess != null && !memberId.equals(currentUserId)) {
-            coachMemberAccess.requireAccess(currentUserId, currentUserRole, memberId);
+        if (isCoach(role)) requireAssignedCoach(currentUserId, memberId);
+    }
+
+    private void requireAssignedCoach(Long coachId, Long memberId) {
+        if (currentCoachMembers == null) throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
+                "Coach member access cannot be verified.");
+        currentCoachMembers.requireCoachOf(coachId, memberId);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.swp391.scms.coaching.service.CurrentCoachMembers currentCoachMembers;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.swp391.scms.attendance.repository.CenterCheckinRepository checkins;
+
+    private void requireIntake(Long memberId, Long staffId) {
+        var today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+        var now = java.time.LocalDateTime.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+        var candidate = checkins == null ? java.util.Optional.<com.swp391.scms.attendance.entity.CenterCheckin>empty()
+            : checkins.findFirstByMemberUserIdAndStatusAndCheckOutTimeIsNullOrderByCheckInTimeDesc(memberId, "GRANTED");
+        var checkin = candidate.flatMap(row -> checkins.findByIdForUpdate(row.getId())).orElse(null);
+        if (checkin == null || checkin.getMember() == null || !java.util.Objects.equals(checkin.getMember().getUserId(), memberId)
+                || !"GRANTED".equals(checkin.getStatus()) || checkin.getCheckOutTime() != null
+                || checkin.getCheckInTime() == null || !checkin.getCheckInTime().toLocalDate().equals(today)
+                || checkin.getCheckInTime().isAfter(now) || checkin.getRecordedBy() == null
+                || !java.util.Objects.equals(checkin.getRecordedBy().getId(), staffId)
+                || checkin.getMember().getUser() == null || checkin.getMember().getUser().getDeletedAt() != null
+                || !"active".equals(checkin.getMember().getUser().getStatus())) {
+            throw new ForbiddenException("HEALTH_INTAKE_REQUIRED", "health.metrics.intake_required", null,
+                    "An open check-in recorded by this receptionist today is required.");
         }
+    }
+
+    private String validatedUnit(String name, java.math.BigDecimal value, String unit) {
+        String expected = switch (name) {
+            case "weight", "muscle_mass" -> "kg";
+            case "height", "waist" -> "cm";
+            case "body_fat" -> "%";
+            default -> "";
+        };
+        String actual = unit == null ? "" : unit.trim();
+        if (value == null || value.compareTo(new java.math.BigDecimal("0.01")) < 0
+                || value.compareTo(new java.math.BigDecimal("99999999.99")) > 0 || value.stripTrailingZeros().scale() > 2
+                || ("body_fat".equals(name) && value.compareTo(new java.math.BigDecimal("100")) > 0)
+                || !expected.equalsIgnoreCase(actual)) {
+            throw new BadRequestException("INVALID_HEALTH_MEASUREMENT", "health.metrics.invalid_measurement", null,
+                    "Invalid measurement value or unit.");
+        }
+        return expected.isEmpty() ? null : expected;
     }
 
     private String validateAndNormalizeMetricName(String rawName) {
