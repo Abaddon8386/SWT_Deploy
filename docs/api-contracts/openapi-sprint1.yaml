@@ -391,8 +391,8 @@ paths:
     put: { summary: Update receptionist profile (RECEPTIONIST), responses: { '200': { description: OK }, '403': { description: FORBIDDEN } } }
   /members/{memberId}/health-metrics:
     parameters: [ { name: memberId, in: path, required: true, schema: { type: integer } } ]
-    get: { summary: "Health metric history (owner, manager, or a coach who trains the member: training plan, 1:1 session or class enrollment)", responses: { '200': { description: OK }, '403': { description: FORBIDDEN or COACH_MEMBER_NOT_ASSIGNED } } }
-    post: { summary: Record a health metric, responses: { '200': { description: OK }, '400': { description: INVALID_METRIC } } }
+    get: { summary: "Health metric history (owner, manager, or a coach who trains the member: training plan, 1:1 session or class enrollment)", responses: { '200': { description: OK }, '403': { description: FORBIDDEN, COACH_MEMBER_NOT_ASSIGNED or HEALTH_INTAKE_REQUIRED } } }
+    post: { summary: 'Append measurement (current assigned COACH, CENTER_MANAGER, or scoped RECEPTIONIST; MEMBER cannot write; RECEPTIONIST may append only after personally recording an open GRANTED check-in today)', responses: { '200': { description: OK }, '400': { description: INVALID_METRIC or INVALID_HEALTH_MEASUREMENT }, '403': { description: FORBIDDEN, COACH_MEMBER_NOT_ASSIGNED or HEALTH_INTAKE_REQUIRED } } }
   /members/lookup:
     get:
       summary: Reception member lookup (CENTER_MANAGER, RECEPTIONIST)

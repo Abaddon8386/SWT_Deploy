@@ -164,7 +164,8 @@ paths:
           description: Session evaluations retrieved successfully
   /api/v1/health/metrics:
     post:
-      summary: Record a health metric (SCRUM-119)
+      summary: Record a health metric (current assigned COACH, CENTER_MANAGER or scoped RECEPTIONIST)
+      description: MEMBER cannot write. RECEPTIONIST can append only after their own open GRANTED check-in today; no history reads or update/delete. Append with server-recorded actor/time in Asia/Ho_Chi_Minh; no backdating or automatic BMI. Units must match kg, cm, percent or null BMI. Invalid unit/value returns INVALID_HEALTH_MEASUREMENT.
       tags: [Health]
       requestBody:
         required: true
@@ -182,11 +183,17 @@ paths:
                 metricValue:
                   type: number
                   minimum: 0.01
+                  maximum: 99999999.99
+                  multipleOf: 0.01
                 unit:
                   type: string
       responses:
         '200':
           description: Health metric recorded successfully
+        '400':
+          description: INVALID_METRIC or INVALID_HEALTH_MEASUREMENT
+        '403':
+          description: Role denied, COACH_MEMBER_NOT_ASSIGNED or HEALTH_INTAKE_REQUIRED
   /api/v1/health/metrics/my:
     get:
       summary: Retrieve current member's health metric history (SCRUM-119)

@@ -35,6 +35,7 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Xem lịch sử chỉ số sức khỏe", description = "Lấy danh sách các chỉ số sức khỏe đã đo của hội viên")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER')")
     @GetMapping("/api/v1/members/{memberId}/health-metrics")
     public ApiResponse<List<HealthMetricDto>> getMetrics(@PathVariable Long memberId,
                                                          @AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -43,6 +44,7 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Thêm chỉ số sức khỏe mới", description = "Ghi nhận chỉ số thể chất mới (chiều cao, cân nặng, huyết áp, v.v.)")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
     @PostMapping("/api/v1/members/{memberId}/health-metrics")
     public ApiResponse<HealthMetricDto> addMetric(@PathVariable Long memberId,
                                                   @Valid @RequestBody HealthMetricDto request,
@@ -52,6 +54,7 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Cập nhật chỉ số sức khỏe", description = "Chỉnh sửa giá trị chỉ số thể chất đã đo")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PutMapping("/api/v1/members/{memberId}/health-metrics/{metricId}")
     public ApiResponse<HealthMetricDto> updateMetric(@PathVariable Long memberId,
                                                      @PathVariable Long metricId,
@@ -62,6 +65,7 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Xóa chỉ số sức khỏe", description = "Xóa một bản ghi chỉ số thể chất")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @DeleteMapping("/api/v1/members/{memberId}/health-metrics/{metricId}")
     public ApiResponse<Void> deleteMetric(@PathVariable Long memberId,
                                           @PathVariable Long metricId,
@@ -70,7 +74,8 @@ public class HealthMetricController {
         return ApiResponse.ok(msg("health.metrics.delete.success"), null);
     }
 
-    @Operation(summary = "Ghi nhận chỉ số sức khỏe mới (SCRUM-119)", description = "Hội viên hoặc HLV ghi nhận chỉ số sức khỏe mới (cân nặng, tỷ lệ mỡ, vòng eo, BMI...)")
+    @Operation(summary = "Ghi nhận chỉ số sức khỏe mới (SCRUM-119)", description = "HLV được phân công hoặc Quản lý ghi nhận chỉ số sức khỏe mới (cân nặng, tỷ lệ mỡ, vòng eo, BMI...)")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
     @PostMapping("/api/v1/health/metrics")
     public ApiResponse<HealthMetricDto> recordMetric(@Valid @RequestBody HealthMetricCreateDto request,
                                                      @AuthenticationPrincipal AuthenticatedPrincipal principal) {
