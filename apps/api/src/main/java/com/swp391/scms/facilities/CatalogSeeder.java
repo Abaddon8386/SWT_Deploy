@@ -9,10 +9,12 @@ import com.swp391.scms.facilities.service.RoomService;
 import java.math.BigDecimal;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /** Seeds sample disciplines, rooms and packages into empty catalogs (idempotent). */
 @Component
+@Order(50)
 public class CatalogSeeder implements ApplicationRunner {
 
     // --- 1 THÁNG (30 NGÀY) ---
