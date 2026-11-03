@@ -1052,7 +1052,7 @@ export function MemberPackagesPage() {
         </>
       ))}
 
-      {paymentResult && !blockedMessage && !pendingToCancel && !isHoldModalOpen && !isCancellationModalOpen && (
+      {paymentResult && !blockedMessage && !pendingToCancel && !isHoldModalOpen && (
         <Modal returnFocusRef={membershipFocus} title="Thanh toán thành công" onClose={() => setPaymentResult(null)}>
           <div className="package-result">
             <h3>{paymentResult.packageName}</h3>
