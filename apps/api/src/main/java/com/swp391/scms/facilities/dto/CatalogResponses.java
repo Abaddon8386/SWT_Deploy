@@ -17,14 +17,20 @@ public final class CatalogResponses {
     }
 
     public record RoomDto(Long id, String name, String location, int capacity, String status,
-                          Long disciplineId, String disciplineName, LocalTime openTime, LocalTime closeTime) {
+                          Long disciplineId, String disciplineName, LocalTime openTime, LocalTime closeTime,
+                          String tier) {
         public RoomDto(Long id, String name, String location, int capacity, String status) {
-            this(id, name, location, capacity, status, null, null, null, null);
+            this(id, name, location, capacity, status, null, null, null, null, "STANDARD");
+        }
+        public RoomDto(Long id, String name, String location, int capacity, String status,
+                       Long disciplineId, String disciplineName, LocalTime openTime, LocalTime closeTime) {
+            this(id, name, location, capacity, status, disciplineId, disciplineName, openTime, closeTime, "STANDARD");
         }
         public static RoomDto of(Room r) {
             return new RoomDto(r.getId(), r.getName(), r.getLocation(), r.getCapacity(), r.getStatus(),
                     r.getDiscipline() == null ? null : r.getDiscipline().getId(),
-                    r.getDiscipline() == null ? null : r.getDiscipline().getName(), r.getOpenTime(), r.getCloseTime());
+                    r.getDiscipline() == null ? null : r.getDiscipline().getName(), r.getOpenTime(), r.getCloseTime(),
+                    r.getTier() != null ? r.getTier() : "STANDARD");
         }
     }
 

@@ -35,6 +35,9 @@ public class Room {
     @Column(name = "close_time")
     private LocalTime closeTime;
 
+    @Column(length = 30)
+    private String tier = "STANDARD"; // STANDARD, PLATINUM
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Discipline getDiscipline() { return discipline; }
@@ -51,4 +54,6 @@ public class Room {
     public void setCapacity(int capacity) { this.capacity = capacity; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getTier() { return tier; }
+    public void setTier(String tier) { this.tier = tier; }
 }
