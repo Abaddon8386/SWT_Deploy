@@ -39,7 +39,7 @@ public class CoachBookingService {
 
     private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 hours
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
-            java.util.Set.of("package_quota", "cash", "bank_transfer", "online_wallet");
+            java.util.Set.of("package_quota", "cash");
     private static final int MAX_UNPAID_UPCOMING = 2;
     private static final java.util.Set<String> DESK_ROLES = java.util.Set.of("RECEPTIONIST", "CENTER_MANAGER");
 
@@ -517,7 +517,7 @@ public class CoachBookingService {
                     "error.coach_booking.payment_not_pending", null, "This 1:1 session has no payment to collect.");
         }
         String paidWith = method == null || method.isBlank()
-                ? booking.getPaymentMethod() : method.trim().toLowerCase(java.util.Locale.ROOT);
+                ? "cash" : method.trim().toLowerCase(java.util.Locale.ROOT);
         if (!ALLOWED_PAYMENT_METHODS.contains(paidWith) || "package_quota".equals(paidWith)) {
             throw new BadRequestException("INVALID_PAYMENT_METHOD", "error.coach_booking.invalid_payment_method",
                     "Unsupported payment method.");

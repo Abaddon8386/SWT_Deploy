@@ -105,7 +105,7 @@ public class SessionBookingService {
         notifications.send(member.getUserId(), msg("notifications.booking.session_booked.title"),
                 msg("notifications.booking.session_booked.body", className(booking), booking.getSession().getSessionDate().toString(),
                         timeRange(booking.getSession())),
-                "system", "session_booking", booking.getId());
+                "system", "class_session", booking.getSession().getId());
         return toDto(booking);
     }
 
@@ -140,8 +140,8 @@ public class SessionBookingService {
         skipped.sort(Comparator.comparing(Skipped::date, Comparator.nullsLast(Comparator.naturalOrder())));
         if (!booked.isEmpty()) {
             notifications.send(member.getUserId(), msg("notifications.booking.bulk_booked.title"),
-                    msg("notifications.booking.bulk_booked.body", booked.size()), "system", "session_booking",
-                    booked.get(0).id());
+                    msg("notifications.booking.bulk_booked.body", booked.size()), "system", "class_session",
+                    booked.get(0).sessionId());
         }
         return new BulkBookResult(booked, skipped);
     }
@@ -212,7 +212,7 @@ public class SessionBookingService {
         notifications.send(booking.getMember().getUserId(), msg("notifications.booking.session_cancelled.title"),
                 msg("notifications.booking.session_cancelled.body", className(booking),
                         booking.getSession().getSessionDate().toString()),
-                "system", "session_booking", booking.getId());
+                "system", "class_session", booking.getSession().getId());
         return dto;
     }
 
@@ -233,13 +233,13 @@ public class SessionBookingService {
         }
         if (!cancelled.isEmpty() && notifyUser != null && cancelled.size() > 1) {
             notifications.send(notifyUser, msg("notifications.booking.bulk_cancelled.title"),
-                    msg("notifications.booking.bulk_cancelled.body", cancelled.size()), "system", "session_booking",
-                    cancelled.get(0).id());
+                    msg("notifications.booking.bulk_cancelled.body", cancelled.size()), "system", "class_session",
+                    cancelled.get(0).sessionId());
         } else if (cancelled.size() == 1 && notifyUser != null) {
             notifications.send(notifyUser, msg("notifications.booking.session_cancelled.title"),
                     msg("notifications.booking.session_cancelled.body", cancelled.get(0).className(),
                             cancelled.get(0).sessionDate().toString()),
-                    "system", "session_booking", cancelled.get(0).id());
+                    "system", "class_session", cancelled.get(0).sessionId());
         }
         return new BulkCancelResult(cancelled, skipped);
     }
@@ -301,7 +301,7 @@ public class SessionBookingService {
         }
         if (cancelled > 0) {
             notifications.send(memberId, msg("notifications.booking.bulk_cancelled.title"),
-                    msg("notifications.booking.bulk_cancelled.body", cancelled), "system", "session_booking", null);
+                    msg("notifications.booking.bulk_cancelled.body", cancelled), "system", "class_session", null);
         }
         return cancelled;
     }

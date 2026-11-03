@@ -47,7 +47,9 @@ public class CourtBookingService {
     /** Optional so the service stays constructible in unit tests; without it no revenue row is written. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository payments;
-    private static final Set<String> PAYMENT_METHODS = Set.of("online_wallet", "bank_transfer", "vnpay");
+    @org.springframework.beans.factory.annotation.Value("${app.vnpay.timeout-minutes:15}")
+    private int vnpayTimeoutMinutes = 15;
+    private static final Set<String> PAYMENT_METHODS = Set.of("cash", "vnpay");
 
     public CourtBookingService(CourtBookingRepository bookings, RoomRepository rooms,
                                MembershipSubscriptionRepository subscriptions, MemberRepository members, Clock clock) {
@@ -193,13 +195,13 @@ public class CourtBookingService {
         booking.setBookingDate(date); booking.setStartTime(start); booking.setEndTime(end); booking.setCreatedAt(now());
         booking.setPrice(covered ? BigDecimal.ZERO : price);
         booking.setPaymentMethod(covered ? CourtPricing.PACKAGE_QUOTA : method);
-        booking.setPaymentStatus(covered ? "covered" : "vnpay".equals(method) ? "pending" : "paid");
+        booking.setPaymentStatus(covered ? "covered" : "pending");
         CourtBooking saved = bookings.saveAndFlush(booking);
         if (!covered && payments != null) {
             Payment payment = new Payment();
-            payment.setMember(member); payment.setAmount(price); payment.setMethod("vnpay".equals(method) ? "online_wallet" : method); payment.setStatus("vnpay".equals(method) ? "pending" : "success");
+            payment.setMember(member); payment.setAmount(price); payment.setMethod("vnpay".equals(method) ? "online_wallet" : "cash"); payment.setStatus("pending");
             payment.setCourtBookingId(saved.getId());
-            if (!"vnpay".equals(method)) payment.setPaidAt(now()); payment.setNote("Court #" + saved.getId());
+            payment.setNote("Court #" + saved.getId());
             payments.save(payment);
         }
         return dto(saved, principal);
@@ -267,6 +269,50 @@ public class CourtBookingService {
         booking.setStatus("cancelled"); booking.setCancelledAt(now());
         booking.setCancelReason(reason == null || reason.isBlank() ? null : reason.trim());
         return dto(bookings.saveAndFlush(booking), principal);
+    }
+
+    /** The desk records that a counter (cash) court fee was collected: the booking becomes paid and revenue is written. */
+    @Transactional
+    public BookingDto confirmPayment(AuthenticatedPrincipal principal, Long id) {
+        if (principal == null || !STAFF_ROLES.contains(principal.role())) throw forbidden("forbidden");
+        CourtBooking booking = bookings.findByIdForUpdate(id).orElseThrow(CourtBookingService::notFound);
+        if (!"booked".equals(booking.getStatus()) || !"pending".equals(booking.getPaymentStatus())
+                || !"cash".equals(booking.getPaymentMethod())) throw conflict("payment_not_pending");
+        booking.setPaymentStatus("paid");
+        if (payments != null) {
+            payments.findAllByCourtBookingId(id).stream().filter(payment -> "pending".equals(payment.getStatus()))
+                    .forEach(payment -> { payment.setStatus("success"); payment.setPaidAt(now()); });
+        }
+        return dto(bookings.saveAndFlush(booking), principal);
+    }
+
+    /**
+     * Frees slots held by unpaid bookings: a VNPay booking not paid within the gateway timeout, and a counter booking
+     * still unpaid when its slot starts. Bookings VNPay may still confirm are left for reconciliation.
+     */
+    @Transactional
+    public int expireUnpaid() {
+        LocalDateTime current = now();
+        List<CourtBooking> stale = new ArrayList<>(bookings.findUnpaidOnlineBefore(current.minusMinutes(vnpayTimeoutMinutes + 1L)));
+        stale.addAll(bookings.findUnpaidCashStarted(current.toLocalDate(), current.toLocalTime()));
+        int cancelled = 0;
+        for (CourtBooking booking : stale) {
+            try {
+                if (vnpayGuard != null) vnpayGuard.court(booking.getId());
+            } catch (RuntimeException awaitingGateway) {
+                continue;
+            }
+            if (payments != null) {
+                payments.findAllByCourtBookingId(booking.getId()).stream()
+                        .filter(payment -> "pending".equals(payment.getStatus()))
+                        .forEach(payment -> payment.setStatus("failed"));
+            }
+            booking.setStatus("cancelled"); booking.setCancelledAt(current);
+            booking.setCancelReason(messages != null ? messages.getMessage("courts.auto_cancel.unpaid") : "Unpaid");
+            bookings.save(booking);
+            cancelled++;
+        }
+        return cancelled;
     }
 
     private boolean canCancel(CourtBooking b, AuthenticatedPrincipal principal) {

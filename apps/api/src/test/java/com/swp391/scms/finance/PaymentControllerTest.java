@@ -54,7 +54,7 @@ class PaymentControllerTest {
         PaymentCreateDto request = new PaymentCreateDto();
         request.setMemberId(2L);
         request.setAmount(new BigDecimal("1500000.00"));
-        request.setMethod("pos");
+        request.setMethod("cash");
         request.setStatus("success");
 
         PaymentDto responseDto = new PaymentDto();
@@ -145,7 +145,7 @@ class PaymentControllerTest {
     @DisplayName("POST /api/v1/payments/process should return 201 Created when process request is valid")
     void shouldProcessPaymentSuccessfully() throws Exception {
         com.swp391.scms.finance.dto.PaymentProcessDto request =
-                new com.swp391.scms.finance.dto.PaymentProcessDto(2L, 10L, null, new BigDecimal("1500000.00"), "pos", null, "Thanh toan");
+                new com.swp391.scms.finance.dto.PaymentProcessDto(2L, 10L, null, new BigDecimal("1500000.00"), "cash", null, "Thanh toan");
 
         PaymentDto responseDto = new PaymentDto();
         responseDto.setId(100L);

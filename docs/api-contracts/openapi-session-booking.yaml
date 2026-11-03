@@ -10,6 +10,8 @@ info:
     skipped while the others are kept. Seats are counted per session: members who booked the session plus any
     class-wide enrollment of the class. Database triggers repeat the capacity and membership checks and a unique
     index forbids booking a session twice. There is no waitlist: a full session is simply full.
+    Booking and cancellation notifications use relatedEntityType=class_session and relatedEntityId=sessionId
+    (a representative session for bulk requests; null for membership-driven bulk cancellation).
 servers:
   - url: /api/v1
 paths:

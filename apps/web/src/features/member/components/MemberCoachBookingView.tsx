@@ -196,7 +196,7 @@ export function MemberCoachBookingView({
           startTime: modalSlot.startTime,
           endTime: modalSlot.endTime,
           ...standing,
-          paymentMethod: paymentMethod === 'package_quota' ? 'package_quota' : 'bank_transfer',
+          paymentMethod: paymentMethod === 'package_quota' ? 'package_quota' : 'cash',
           notes: notes.trim() || undefined,
         });
         setModalSlot(null);
@@ -218,7 +218,7 @@ export function MemberCoachBookingView({
         bookingDate: selectedDate,
         startTime: modalSlot.startTime,
         endTime: modalSlot.endTime,
-        paymentMethod: paymentMethod === 'package_quota' ? 'package_quota' : 'bank_transfer',
+        paymentMethod: paymentMethod === 'package_quota' ? 'package_quota' : 'cash',
         notes: notes.trim() || undefined,
       });
 

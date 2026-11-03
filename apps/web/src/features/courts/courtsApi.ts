@@ -12,8 +12,8 @@ export interface Court {
 }
 export interface CourtSlot { startTime: string; endTime: string; status: 'free' | 'booked' | 'class' | 'past'; price: number | null }
 export interface CourtQuota { packageName: string | null; monthlyQuota: number; used: number; remaining: number }
-export type CourtPaymentMethod = 'online_wallet' | 'bank_transfer' | 'vnpay';
-export const PAYMENT_METHODS: { value: CourtPaymentMethod; label: string }[] = [{ value: 'vnpay', label: 'VNPay Sandbox' }, { value: 'online_wallet', label: 'Ví điện tử' }, { value: 'bank_transfer', label: 'Chuyển khoản' }];
+export type CourtPaymentMethod = 'cash' | 'vnpay';
+export const PAYMENT_METHODS: { value: CourtPaymentMethod; label: string }[] = [{ value: 'vnpay', label: 'VNPay Sandbox' }, { value: 'cash', label: 'Tiền mặt tại quầy' }];
 export const formatVnd = (amount: number) => `${new Intl.NumberFormat('vi-VN').format(amount)}đ`;
 export interface CourtBooking {
   id: number; roomId: number; roomName: string; disciplineName: string; memberId: number; memberName: string;
@@ -34,6 +34,7 @@ export const courtsApi = {
   quota: (date: string) => apiFetch<CourtQuota>(`/court-bookings/quota?date=${date}`),
   my: (page = 0) => apiFetch<BookingPage>(`/court-bookings/my?page=${page}&size=20`),
   list: (date: string, roomId = '', page = 0) => apiFetch<BookingPage>(`/court-bookings?date=${date}&page=${page}&size=20${roomId ? `&roomId=${encodeURIComponent(roomId)}` : ''}`),
+  confirmPayment: (id: number) => apiFetch<CourtBooking>(`/court-bookings/${id}/confirm-payment`, { method: 'PATCH' }),
   cancel: (id: number, reason = '') => apiFetch<CourtBooking>(`/court-bookings/${id}/cancel`, json('PATCH', { reason: reason.trim() || null })),
 };
 export function centerDate(value = new Date()): string {

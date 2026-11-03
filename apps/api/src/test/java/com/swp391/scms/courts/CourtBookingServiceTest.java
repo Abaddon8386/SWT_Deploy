@@ -131,18 +131,18 @@ class CourtBookingServiceTest {
     }
     @Test void paidDaytimeBookingCosts100kAndWritesAPayment() {
         used(1);
-        var result = service.book(member, paid(LocalTime.NOON, "online_wallet"));
+        var result = service.book(member, paid(LocalTime.NOON, "cash"));
         assertEquals(0, new BigDecimal("100000").compareTo(result.price()));
-        assertEquals("online_wallet", result.paymentMethod()); assertEquals("paid", result.paymentStatus());
+        assertEquals("cash", result.paymentMethod()); assertEquals("pending", result.paymentStatus());
         var captor = org.mockito.ArgumentCaptor.forClass(Payment.class);
         verify(payments).save(captor.capture());
         assertEquals(0, new BigDecimal("100000").compareTo(captor.getValue().getAmount()));
-        assertEquals("success", captor.getValue().getStatus());
+        assertEquals("pending", captor.getValue().getStatus()); assertEquals("cash", captor.getValue().getMethod());
     }
     @Test void paidBookingStartingAtSixPmCosts125k() {
         used(1);
-        assertEquals(0, new BigDecimal("125000").compareTo(service.book(member, paid(LocalTime.of(18, 0), "bank_transfer")).price()));
-        assertEquals(0, new BigDecimal("100000").compareTo(service.book(member, paid(LocalTime.of(17, 0), "bank_transfer")).price()));
+        assertEquals(0, new BigDecimal("125000").compareTo(service.book(member, paid(LocalTime.of(18, 0), "cash")).price()));
+        assertEquals(0, new BigDecimal("100000").compareTo(service.book(member, paid(LocalTime.of(17, 0), "cash")).price()));
     }
     @Test void goldGetsTwoAndPlatinumThreeIncludedBookings() {
         plan("GOLD"); used(1);
@@ -153,12 +153,12 @@ class CourtBookingServiceTest {
         error("COURT_BOOKING_PAYMENT_REQUIRED", () -> service.book(member, request(date, LocalTime.of(14, 0))));
     }
     @Test void paymentIsNotChargedWhileTheQuotaStillCoversTheSlot() {
-        var result = service.book(member, paid(LocalTime.NOON, "online_wallet"));
+        var result = service.book(member, paid(LocalTime.NOON, "cash"));
         assertEquals("package_quota", result.paymentMethod());
         verify(payments, never()).save(any());
     }
     @Test void rejectsUnknownPaymentMethod() {
-        used(1); error("COURT_BOOKING_INVALID_PAYMENT_METHOD", () -> service.book(member, paid(LocalTime.NOON, "cash")));
+        used(1); error("COURT_BOOKING_INVALID_PAYMENT_METHOD", () -> service.book(member, paid(LocalTime.NOON, "bank_transfer")));
     }
     @Test void standingBookingUsesTheQuotaFirstThenSkipsUnpaidDays() {
         when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
@@ -221,6 +221,28 @@ class CourtBookingServiceTest {
     @Test void unknownBookingIsNotFound() { error("COURT_BOOKING_NOT_FOUND", () -> service.cancel(member, 99L, null)); }
     @Test void staffCannotCancelStartedBooking() {
         existing(LocalTime.of(10, 0)); error("COURT_BOOKING_CANCEL_TOO_LATE", () -> service.cancel(new AuthenticatedPrincipal(3L, "staff", "STAFF"), 8L, null));
+    }
+    @Test void deskConfirmsCounterPaymentAndWritesRevenue() {
+        CourtBooking booking = existing(LocalTime.NOON); booking.setPaymentMethod("cash"); booking.setPaymentStatus("pending");
+        var payment = new Payment(); payment.setStatus("pending");
+        when(payments.findAllByCourtBookingId(8L)).thenReturn(List.of(payment));
+        assertEquals("paid", service.confirmPayment(new AuthenticatedPrincipal(3L, "desk", "RECEPTIONIST"), 8L).paymentStatus());
+        assertEquals("success", payment.getStatus()); assertNotNull(payment.getPaidAt());
+    }
+    @Test void onlyDeskCanConfirmAndOnlyPendingCounterPayments() {
+        CourtBooking booking = existing(LocalTime.NOON); booking.setPaymentMethod("cash"); booking.setPaymentStatus("pending");
+        error("COURT_BOOKING_FORBIDDEN", () -> service.confirmPayment(member, 8L));
+        booking.setPaymentStatus("paid");
+        error("COURT_BOOKING_PAYMENT_NOT_PENDING", () -> service.confirmPayment(new AuthenticatedPrincipal(3L, "desk", "RECEPTIONIST"), 8L));
+    }
+    @Test void unpaidBookingsAreReleasedAndTheirPendingPaymentFails() {
+        CourtBooking booking = existing(LocalTime.NOON); booking.setPaymentMethod("cash"); booking.setPaymentStatus("pending");
+        var payment = new Payment(); payment.setStatus("pending");
+        when(payments.findAllByCourtBookingId(8L)).thenReturn(List.of(payment));
+        when(bookings.findUnpaidOnlineBefore(any())).thenReturn(List.of());
+        when(bookings.findUnpaidCashStarted(any(), any())).thenReturn(List.of(booking));
+        assertEquals(1, service.expireUnpaid());
+        assertEquals("cancelled", booking.getStatus()); assertEquals("failed", payment.getStatus());
     }
     @Test void repeatedCancellationIsIdempotent() {
         CourtBooking booking = existing(LocalTime.NOON); booking.setStatus("cancelled");
