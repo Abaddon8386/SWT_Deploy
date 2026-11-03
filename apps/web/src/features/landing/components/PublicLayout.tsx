@@ -14,7 +14,7 @@ const links = [
   { to: '/#multisport', hash: 'multisport', label: 'Bộ môn' },
   { to: '/#trainers', hash: 'trainers', label: 'Huấn luyện viên' },
   { to: '/#packages', hash: 'packages', label: 'Gói tập' },
-  { to: '/#stories', hash: 'stories', label: 'Câu chuyện' },
+
 ];
 
 const scrollToSection = (targetId: string) => {
