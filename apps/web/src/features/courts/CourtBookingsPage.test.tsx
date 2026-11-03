@@ -98,7 +98,7 @@ it('books free while the plan has included bookings left', async () => {
   vi.mocked(courtsApi.book).mockResolvedValue({} as never);
   await render();
   await click('Trống');
-  expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Miễn phí');
+  expect(host.querySelector('[role="dialog"]')?.textContent).toContain('lượt đặt sân miễn phí');
   await click('Xác nhận đặt');
   expect(courtsApi.book).toHaveBeenCalledWith({ roomId: 5, date: expect.any(String), startTime: '09:00' });
 });
@@ -108,7 +108,7 @@ it('charges the slot price and sends the payment method once the plan quota is u
   vi.mocked(courtsApi.book).mockResolvedValue({} as never);
   await render();
   await click('Trống');
-  expect(host.querySelector('[role="dialog"]')?.textContent).toContain('100.000đ');
-  await click('Thanh toán 100.000đ và đặt');
+  expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Còn 0 lượt đặt sân miễn phí');
+  await click('Thanh toán và đặt');
   expect(courtsApi.book).toHaveBeenCalledWith({ roomId: 5, date: expect.any(String), startTime: '09:00', paymentMethod: 'online_wallet' });
 });
