@@ -501,9 +501,6 @@ public class PaymentService {
                 }
                 enrollment.setCancelledAt(LocalDateTime.now(clock));
                 classEnrollmentRepository.save(enrollment);
-                if (enrollmentService != null && enrollment.getGymClass() != null && enrollment.getGymClass().getId() != null) {
-                    enrollmentService.promoteNextWaitlistEntry(enrollment.getGymClass().getId(), LocalDateTime.now(clock));
-                }
             });
         }
     }

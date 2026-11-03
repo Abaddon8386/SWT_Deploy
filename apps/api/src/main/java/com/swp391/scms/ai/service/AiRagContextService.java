@@ -45,6 +45,9 @@ public class AiRagContextService {
     private final PublicCatalogService catalogService;
     private final MembershipSubscriptionRepository subscriptionRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
     private final TrainingPlanRepository trainingPlanRepository;
     private final TrainingPlanItemRepository trainingPlanItemRepository;
 
@@ -126,6 +129,9 @@ public class AiRagContextService {
             if (ids != null) {
                 bookedClassIds.addAll(ids);
             }
+        }
+        if (sessionBookings != null) {
+            bookedClassIds.addAll(sessionBookings.findBookedClassIdsByMemberId(memberId));
         }
 
         if (trainingPlanRepository != null) {
@@ -221,7 +227,7 @@ public class AiRagContextService {
     private void appendPolicyContext(StringBuilder sb) {
         sb.append("\n5. QUY ĐỊNH & TIỆN ÍCH TRUNG TÂM SÖL:\n");
         sb.append("- Check-in: Hội viên có gói tập active quét mã QR cổng tại sảnh lễ tân từ mục 'Quét QR Check-in' trên Portal.\n");
-        sb.append("- Đặt lớp & Hàng chờ (Waitlist): Đặt lịch trực tiếp tại mục 'Lịch học'. Khi lớp đầy, hội viên có thể đăng ký Waitlist; khi có chỗ trống, hệ thống giữ quyền ưu tiên xác nhận trong 24 giờ.\n");
+        sb.append("- Đặt lớp: Đặt lịch trực tiếp tại mục 'Lịch học'. Hội viên đặt từng buổi, hoặc bật 'Đặt nhiều buổi' để đặt cả tuần hay cả tháng một lượt; buổi đã đầy chỗ thì không đặt được.\n");
         sb.append("- Bảo lưu & Hỗ trợ: Gửi yêu cầu bảo lưu gói tập hoặc tạo phiếu tại mục 'Hỗ trợ & Khiếu nại' / nút 'Tin nhắn' để nhân viên lễ tân xử lý.\n");
     }
 }

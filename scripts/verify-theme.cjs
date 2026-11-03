@@ -11,7 +11,7 @@ const fixtures = {
   '/packages': [{ id: 1, name: 'The Essential', price: 500000, durationDays: 30, classCreditLimit: 12, status: 'active', description: 'Phòng tập và lớp nhóm.' }],
   '/memberships/subscriptions/my': subscription, '/memberships/subscriptions/history': [subscription],
   '/memberships/cancellations/my': [], '/payments/my': [],
-  '/classes/enrollments/my': [], '/classes/waitlists/my': [], '/classes/sessions': [],
+  '/classes/enrollments/my': [], '/classes/sessions': [],
   '/users': [{ id: 1, fullName: profile.fullName, email: profile.email, roleCode: 'MEMBER', status: 'active' }],
   '/roles': [{ id: 1, code: 'MEMBER' }],
 };

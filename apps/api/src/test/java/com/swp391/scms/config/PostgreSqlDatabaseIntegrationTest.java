@@ -303,18 +303,13 @@ class PostgreSqlDatabaseIntegrationTest {
     }
 
     @Test
-    void partialIndexesAllowHistoryButRejectDuplicateActiveEntries() {
+    void partialIndexAllowsHistoryButRejectsDuplicateActiveEnrollment() {
         long gymClass = gymClass(10, coach(), room()), member = activeMember();
         enroll(gymClass, member, "cancelled");
         enroll(gymClass, member, "cancelled");
         enroll(gymClass, member, "booked");
         var duplicate = assertThrows(DataIntegrityViolationException.class, () -> enroll(gymClass, member, "booked"));
         assertTrue(duplicate.getMostSpecificCause().getMessage().contains("uq_enrollment_active"));
-        jdbc.update("insert into class_waitlists (class_id, member_id, status, requested_at) values (?, ?, 'waiting', now())", gymClass, member);
-        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
-                "insert into class_waitlists (class_id, member_id, status, requested_at) values (?, ?, 'waiting', now())", gymClass, member));
-        jdbc.update("update class_waitlists set status = 'expired' where class_id = ?", gymClass);
-        jdbc.update("insert into class_waitlists (class_id, member_id, status, requested_at) values (?, ?, 'waiting', now())", gymClass, member);
     }
 
     @Test

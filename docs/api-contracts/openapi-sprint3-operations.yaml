@@ -5,7 +5,7 @@ info:
   description: >
     API contracts for Sprint 3 Operations subsystem:
     - SCRUM-111: Session Attendance Roster and Batch Attendance API
-    - SCRUM-112: Smart Waitlist Automatic 24h Expiry & Promotion Background Scheduler
+    - SCRUM-112: Smart Waitlist Automatic 24h Expiry & Promotion Background Scheduler (removed; there is no waitlist)
     - SCRUM-113: Class Session Cancellation with Reason & In-App Notification
     All endpoints require Bearer JWT authentication and enforce strict RBAC via @PreAuthorize.
 servers:

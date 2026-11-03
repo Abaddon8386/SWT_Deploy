@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 /**
- * SCRUM-73 / SCRUM-74: response payloads for enrollments and waitlists.
+ * SCRUM-73: response payloads for enrollments.
  */
 public final class EnrollmentResponses {
 
@@ -26,19 +26,5 @@ public final class EnrollmentResponses {
             LocalDateTime cancelledAt,
             String cancelReason
     ) {
-    }
-
-    public record WaitlistDto(
-            Long id,
-            Long classId,
-            String className,
-            Long memberId,
-            String status,
-            LocalDateTime requestedAt,
-            LocalDateTime reservationExpiresAt
-    ) {
-        public WaitlistDto(Long id, Long classId, String className, Long memberId, String status, LocalDateTime requestedAt) {
-            this(id, classId, className, memberId, status, requestedAt, null);
-        }
     }
 }

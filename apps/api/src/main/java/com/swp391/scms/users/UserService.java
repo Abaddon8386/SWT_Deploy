@@ -88,6 +88,9 @@ public class UserService {
     com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollmentRepository;
 
     @Autowired(required = false)
+    com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookingRepository;
+
+    @Autowired(required = false)
     com.swp391.scms.scheduling.repository.ClassSessionRepository classSessionRepository;
 
     @Autowired(required = false)
@@ -289,6 +292,7 @@ public class UserService {
                 throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.membership", null, null);
             }
             if ((classEnrollmentRepository != null && classEnrollmentRepository.existsUpcomingBookedForMember(id, today))
+                    || (sessionBookingRepository != null && sessionBookingRepository.existsUpcomingBookedForMember(id, today))
                     || (coachBookingRepository != null && coachBookingRepository.existsUpcomingForMember(id, today))
                     || (courtBookingRepository != null && courtBookingRepository.existsUpcomingForMember(id, today))) {
                 throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.bookings", null, null);

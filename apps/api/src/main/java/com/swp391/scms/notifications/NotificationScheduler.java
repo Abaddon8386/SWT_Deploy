@@ -35,6 +35,9 @@ public class NotificationScheduler {
     private final MembershipSubscriptionRepository subscriptionRepository;
     private final ClassSessionRepository sessionRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
     private final NotificationRepository notificationRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
@@ -222,11 +225,21 @@ public class NotificationScheduler {
                     sessionDateStr
             );
 
+            java.util.Set<Long> recipients = new java.util.LinkedHashSet<>();
             for (ClassEnrollment enrollment : enrollments) {
-                if (enrollment.getMember() == null || enrollment.getMember().getUserId() == null) {
-                    continue;
+                if (enrollment.getMember() != null && enrollment.getMember().getUserId() != null) {
+                    recipients.add(enrollment.getMember().getUserId());
                 }
-                Long userId = enrollment.getMember().getUserId();
+            }
+            if (sessionBookings != null) {
+                for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(session.getId(), "booked")) {
+                    if (booking.getMember() != null && booking.getMember().getUserId() != null) {
+                        recipients.add(booking.getMember().getUserId());
+                    }
+                }
+            }
+
+            for (Long userId : recipients) {
 
                 // Idempotency check: do not resend class reminder for the same session to the same user
                 boolean alreadySent = notificationRepository.existsNotification(

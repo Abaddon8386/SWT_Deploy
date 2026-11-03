@@ -234,6 +234,8 @@ public class GlobalExceptionHandler {
                 );
             }
             if (normalizedRootMsg.contains("trg_enrollments_check_capacity")
+                    || normalizedRootMsg.contains("trg_session_bookings_check_capacity")
+                    || normalizedRootMsg.contains("buổi học đã đầy chỗ (vượt quá capacity cho phép).")
                     || normalizedRootMsg.contains("lớp học đã đầy chỗ (vượt quá capacity cho phép).")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "CLASS_CAPACITY_EXCEEDED",

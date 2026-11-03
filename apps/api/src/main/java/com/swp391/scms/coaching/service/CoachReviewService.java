@@ -36,6 +36,9 @@ public class CoachReviewService {
     private final CoachBookingRepository bookingRepository;
     private final ClassSessionRepository sessionRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
     private final Clock clock;
 
     @Autowired(required = false)
@@ -179,9 +182,11 @@ public class CoachReviewService {
                     .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", request.classSessionId()));
             var gymClass = session.getGymClass();
             if (!gymClass.getCoach().getUserId().equals(request.coachId())
-                    || enrollmentRepository.findByGymClassId(gymClass.getId()).stream()
+                    || (enrollmentRepository.findByGymClassId(gymClass.getId()).stream()
                         .noneMatch(e -> e.getMember() != null && memberId.equals(e.getMember().getUserId())
-                                && !"cancelled".equals(e.getStatus()))) {
+                                && !"cancelled".equals(e.getStatus()))
+                        && (sessionBookings == null
+                            || !sessionBookings.existsBySessionIdAndMemberUserIdAndStatusNot(session.getId(), memberId, "cancelled")))) {
                 throw new ForbiddenException("FORBIDDEN", "error.review.forbidden_source", null, "You cannot review this session.");
             }
             if ("cancelled".equals(session.getStatus())

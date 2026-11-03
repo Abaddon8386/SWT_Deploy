@@ -19,6 +19,9 @@ public class CoachMemberAccess {
     private final CoachBookingRepository bookings;
     private final ClassEnrollmentRepository enrollments;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
+
     public CoachMemberAccess(TrainingPlanRepository plans, CoachBookingRepository bookings,
                              ClassEnrollmentRepository enrollments) {
         this.plans = plans;
@@ -31,7 +34,8 @@ public class CoachMemberAccess {
         if (coachId == null || memberId == null) return false;
         return plans.existsForCoachAndMember(coachId, memberId)
                 || bookings.existsForCoachAndMember(coachId, memberId)
-                || enrollments.existsForCoachAndMember(coachId, memberId);
+                || enrollments.existsForCoachAndMember(coachId, memberId)
+                || (sessionBookings != null && sessionBookings.existsForCoachAndMember(coachId, memberId));
     }
 
     /** Throws for a coach who does not work with the member; other roles are checked elsewhere. */

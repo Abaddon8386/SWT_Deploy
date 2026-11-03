@@ -7,7 +7,7 @@ info:
     - Module I1: In-App Notification Module (SCRUM-67)
     - Module I2: Support Requests / Tickets Module (SCRUM-68)
     - Module M1: Membership Subscriptions (SCRUM-71)
-    - Module S1-S3: Classes, Sessions, Enrollments & Waitlists (SCRUM-72, SCRUM-73, SCRUM-74)
+    - Module S1-S3: Classes, Sessions & Enrollments (SCRUM-72, SCRUM-73); the waitlist (SCRUM-74) was removed
     - Module A1: Center QR Check-in & Attendance (SCRUM-75)
     - Module F1: Member payment requests and own payment history (SCRUM-76)
     All endpoints require Bearer JWT authentication and enforce RBAC via @PreAuthorize.
@@ -514,28 +514,6 @@ components:
         generatedAt:
           type: string
           format: date-time
-
-    ClassWaitlistDto:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        classId:
-          type: integer
-          format: int64
-        className:
-          type: string
-        status:
-          type: string
-        requestedAt:
-          type: string
-          format: date-time
-        reservationExpiresAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: Deadline for a notified member to claim their reserved seat
 
     # --- Attendance / Check-in Schemas (SCRUM-75) ---
     CheckinDto:
@@ -1490,14 +1468,7 @@ paths:
         Chỉ nhận buổi scheduled có thời điểm bắt đầu trong tương lai, theo Asia/Ho_Chi_Minh.
         Một subscription active phải bao phủ cả ngày đặt hiện tại và ngày diễn ra buổi học;
         startDate/endDate được tính inclusive. Không ghép quyền với kỳ gia hạn tương lai.
-        Claim chỗ notified gửi thêm waitlistId để định danh offer, dùng cùng endpoint và được kiểm tra lại các điều kiện này;
-        thời hạn giữ chỗ 24 giờ không thay đổi.
-        Offer hết hạn tại thời điểm deadline (deadline <= now); offer đang notified nhưng quá hạn
-        trả 409 SCHEDULING_WAITLIST_OFFER_EXPIRED. Enroll/join khóa member rồi class;
-        cancel/withdraw/promotion/expiry cùng tuần tự hóa bằng khóa class trước khi ghi trạng thái.
-        Khi có waitlistId, offer phải thuộc Member hiện tại và cùng class của session (sai/mất trả 404),
-        phải đang notified (khác trả 409 SCHEDULING_WAITLIST_OFFER_NOT_ACTIVE) và còn hạn.
-        Không chuyển claim thất bại thành đặt mới. Bỏ waitlistId giữ hành vi enroll legacy.
+        Đây là đường ghi danh theo cả lớp (legacy). Đặt chỗ mới dùng đặt theo từng buổi, xem openapi-session-booking.yaml.
         Legacy persistence vẫn gắn enrollment với classId, không phải sessionId;
         kiểm tra ngày chỉ áp dụng cho session được yêu cầu, không cam kết mọi session của lớp.
         Trigger kiểm tra membership theo ngày Việt Nam hiện tại; ngày session do service kiểm tra.
@@ -1509,14 +1480,6 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: waitlistId
-          in: query
-          required: false
-          description: ID offer khi xác nhận suất giữ chỗ. ID phải dương; bỏ qua tham số để dùng luồng đặt chỗ legacy.
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
       responses:
         '201':
           description: Đăng ký thành công
@@ -1529,13 +1492,13 @@ paths:
                       data:
                         $ref: '#/components/schemas/ClassEnrollmentDto'
         '400':
-          description: Buổi học không hợp lệ/đã qua, hoặc waitlistId không dương (SCHEDULING_WAITLIST_ID_INVALID).
+          description: Buổi học không hợp lệ hoặc đã qua.
         '403':
           description: Gói không active/không có hiệu lực hiện tại (SCHEDULING_MEMBERSHIP_INVALID), hoặc gói active hiện tại không bao phủ ngày học (SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION).
         '409':
-          description: Lớp đầy, đã đăng ký, offer hết hạn (SCHEDULING_WAITLIST_OFFER_EXPIRED), hoặc offer không còn notified (SCHEDULING_WAITLIST_OFFER_NOT_ACTIVE).
+          description: Lớp đầy (SCHEDULING_CLASS_FULL) hoặc đã đăng ký.
         '404':
-          description: Không tìm thấy session hoặc offer thuộc Member hiện tại và cùng class của session.
+          description: Không tìm thấy session.
 
   /classes/enrollments/{id}:
     delete:
@@ -1583,78 +1546,6 @@ paths:
                         items:
                           $ref: '#/components/schemas/ClassEnrollmentDto'
 
-  /classes/sessions/{id}/waitlist:
-    post:
-      summary: Tham gia danh sách chờ khi lớp đã đầy chỗ (MEMBER)
-      description: Chỉ nhận buổi scheduled chưa bắt đầu theo Asia/Ho_Chi_Minh. Một subscription active phải bao phủ cả ngày hiện tại và ngày session (startDate/endDate inclusive), không ghép kỳ gia hạn tương lai. Không nhận trùng waiting hoặc notified còn hạn. Offer hết hạn có thể tham gia lại cuối hàng khi lớp vẫn đầy. FIFO theo requestedAt rồi id khi trùng thời điểm; suất giữ chỗ vẫn 24 giờ. Legacy chỉ có waiting/notified/expired; claim và withdraw được biểu diễn bằng expired, không có status claimed/withdrawn riêng.
-      tags: [Waitlist]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '201':
-          description: Đăng ký danh sách chờ thành công
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/ClassWaitlistDto'
-        '400':
-          description: Lớp còn chỗ hoặc đã đăng ký/chờ trước đó
-        '403':
-          description: Gói không active/không có hiệu lực hiện tại (SCHEDULING_MEMBERSHIP_INVALID), hoặc không bao phủ ngày học (SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION).
-
-  /classes/waitlists/{id}:
-    delete:
-      summary: Rút khỏi danh sách chờ (MEMBER)
-      tags: [Waitlist]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: Rút khỏi danh sách chờ thành công
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/ClassWaitlistDto'
-        '400':
-          description: Không ở trạng thái waiting
-        '403':
-          description: Không phải người tạo yêu cầu
-
-  /classes/waitlists/my:
-    get:
-      summary: Danh sách chờ của hội viên hiện tại (MEMBER)
-      tags: [Waitlist]
-      responses:
-        '200':
-          description: Thành công
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/ClassWaitlistDto'
   # ==========================================
   # Center Check-in Endpoints (SCRUM-75)
   # ==========================================
