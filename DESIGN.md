@@ -194,3 +194,5 @@ Thứ tự tra cứu khi làm UI: yêu cầu mới nhất của người dùng �
 3. Chạy `scripts/verify-public-animation.cjs`: animation bật, replay khi cuộn xuống và cuộn ngược, không reset component còn thấy một phần, đăng ký component mới sau khi lọc, nhập BMI, đóng/mở FAQ, nhập liệu, mobile và reduced motion.
 4. Kiểm tra portal khi thay selector/token dùng chung: full viewport tại 390/768/1440/1920/2560px, màu nút, bảng, form và dialog; giữ nguyên dashboard/sidebar và không tràn document trên mobile. Dùng `scripts/verify-ux-consistency.cjs` với API giả lập.
 5. Commit thay đổi UI và quy chuẩn theo phần, ghi rõ phần có thể hoàn tác. Cập nhật tài liệu này khi người dùng đổi quyết định thiết kế.
+
+Member Profile (03/11/2026): tiêu đề “Hồ sơ cá nhân”, chỉ giữ card Thông tin cá nhân; dùng layout `profile-grid profile-grid--single` (tối đa 860px, form responsive hiện có). Bỏ card nhập/lịch sử chỉ số sức khỏe và skeleton tương ứng; không xóa API, dữ liệu hoặc thay Member Progress. Vị trí Member nhập số đo thay thế chờ leader quyết định.
