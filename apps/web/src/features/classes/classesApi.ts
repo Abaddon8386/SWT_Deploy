@@ -10,6 +10,11 @@ export interface ClassSessionDto {
   endTime: string;
   status: 'scheduled' | 'completed' | 'cancelled';
   cancelReason?: string | null;
+  className?: string;
+  roomName?: string;
+  coachName?: string;
+  capacity?: number;
+  bookedCount?: number;
 }
 
 export interface ClassItem {

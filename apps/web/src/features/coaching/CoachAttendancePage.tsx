@@ -1,17 +1,20 @@
 import { coachHistoryStorageKey } from './coachHistoryStorage';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { notify } from '../../shared/lib/portalNotices';
-import { formatTimeRange } from '../../shared/lib/centerTime';
+import { formatCenterDate, formatTimeRange } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
   attendanceApi,
   type AttendanceStudent,
   type CoachClassSession,
 } from './attendanceApi';
+import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
+import { mondayOf, parseISODate, todayISO } from '../schedule/timetable';
+import { coachSessionEvents } from './coachTimetable';
 import './coach-attendance.css';
 
 // Chỉ giữ lại 2 trạng thái điểm danh: Có mặt và Vắng mặt (đã bỏ Đi muộn & Có phép)
@@ -76,6 +79,10 @@ export function CoachAttendancePage() {
 
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [sessionsAttempt, setSessionsAttempt] = useState(0);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
+  const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
+  const [classFilter, setClassFilter] = useState('ALL');
+  const headerRef = useRef<HTMLDivElement>(null);
   const [confirm, confirmDialog] = useConfirm();
   const showCenterNotification = useCallback((msg: string = 'Cập nhật thành công') => notify(msg, 'success'), []);
 
@@ -136,13 +143,20 @@ export function CoachAttendancePage() {
         if (mounted) {
           setSessions(data);
           if (data.length > 0) {
-            const preferred = data.find((s) => (s.bookedCount ?? 0) > 0) ?? data[0]; setSelectedSessionId((prev) => (prev === null ? preferred.id : prev));
+            // Mở sẵn buổi gần hôm nay nhất (ưu tiên buổi đã có học viên) và tuần chứa buổi đó.
+            const withStudents = data.filter((s) => (s.bookedCount ?? 0) > 0);
+            const pool = withStudents.length > 0 ? withStudents : data;
+            const today = parseISODate(todayISO()).getTime();
+            const distance = (s: CoachClassSession) => Math.abs(parseISODate(s.sessionDate).getTime() - today);
+            const preferred = pool.reduce((best, s) => (distance(s) < distance(best) ? s : best), pool[0]);
+            setSelectedSessionId((prev) => (prev === null ? preferred.id : prev));
+            setWeekStart(mondayOf(preferred.sessionDate));
           }
         }
       } catch {
         if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) { setLoading(false); setSessionsLoaded(true); }
       }
     };
 
@@ -602,9 +616,54 @@ export function CoachAttendancePage() {
         </div>
       )}
 
+      {/* Chọn buổi học trên thời khóa biểu tuần (Dùng cho tab Điểm danh & Đánh giá) */}
+      {!sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
+        <WeeklyTimetable
+          label="Thời khóa biểu buổi dạy cần điểm danh"
+          weekStart={weekStart}
+          events={coachSessionEvents(
+            sessions.filter((s) => classFilter === 'ALL' || s.className === classFilter),
+            'attendance',
+            new Set(history.map((h) => Number(h.sessionId))),
+          )}
+          loading={!sessionsLoaded}
+          selectedId={selectedSessionId === null ? undefined : String(selectedSessionId)}
+          disabled={saving || savingEvaluation}
+          onWeekChange={setWeekStart}
+          onEventClick={(id) => {
+            setSelectedSessionId(Number(id));
+            // Bảng cao hơn một màn hình: đưa thông tin buổi và danh sách học viên vào tầm nhìn.
+            const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            headerRef.current?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+          }}
+          emptyLabel="Tuần này bạn chưa có buổi dạy nào."
+          toolbar={
+            <div className="attendance-class-filter">
+              <Select
+                className="portal-select"
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                aria-label="Lọc theo lớp"
+              >
+                <option value="ALL">Tất cả lớp</option>
+                {[...new Set(sessions.map((s) => s.className))].sort((a, b) => a.localeCompare(b)).map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </Select>
+            </div>
+          }
+          legend={[
+            { tone: 'open', label: 'Sắp diễn ra' },
+            { tone: 'full', label: 'Đã diễn ra, chưa điểm danh' },
+            { tone: 'mine', label: 'Đã điểm danh' },
+            { tone: 'cancelled', label: 'Đã hủy' },
+          ]}
+        />
+      )}
+
       {/* Header Selector & Session Info (Dùng cho tab Điểm danh & Đánh giá) */}
       {!sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
-        <div className="attendance-header-card">
+        <div className="attendance-header-card" ref={headerRef}>
           <div className="attendance-session-meta">
             <div className="session-title-wrap">
               <h3 className="session-name-title">
@@ -625,6 +684,9 @@ export function CoachAttendancePage() {
                 Phòng: <strong>{activeSession?.roomName || 'Studio chính'}</strong>
               </span>
               <span>
+                Ngày: <strong>{activeSession ? formatCenterDate(activeSession.sessionDate) : '—'}</strong>
+              </span>
+              <span>
                 Giờ: <strong>{activeSession ? formatTimeRange(activeSession.startTime, activeSession.endTime) : '—'}</strong>
               </span>
               <span>
@@ -636,22 +698,6 @@ export function CoachAttendancePage() {
                 </span>
               )}
             </div>
-          </div>
-
-          <div className="attendance-session-selector">
-            <Select
-              className="portal-select"
-              value={String(selectedSessionId || '')}
-              disabled={saving || savingEvaluation}
-              onChange={(e) => setSelectedSessionId(Number(e.target.value))}
-              aria-label="Chọn buổi học cần quản lý"
-            >
-              {sessions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.className} ({formatTimeRange(s.startTime, s.endTime)})
-                </option>
-              ))}
-            </Select>
           </div>
         </div>
       )}

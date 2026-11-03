@@ -299,11 +299,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     vi.mocked(attendanceApi.getCoachSessions).mockResolvedValueOnce([mockSessions[0], { ...mockSessions[0], id: 202, className: 'Session B' }]);
     await act(async () => { root.render(<CoachAttendancePage />); });
     vi.mocked(attendanceApi.getSessionStudents).mockRejectedValueOnce(new Error('Session B unavailable'));
-    await act(async () => {
-      const select = host.querySelector('.attendance-session-selector select') as HTMLSelectElement;
-      select.value = '202';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    await act(async () => { host.querySelector<HTMLButtonElement>('.tt__event[aria-label^="Session B"]')!.click(); });
     expect(host.textContent).not.toContain(mockStudents[0].fullName);
     expect(host.querySelector('[role="alert"]')).not.toBeNull();
     expect((host.querySelector('.btn-batch-save') as HTMLButtonElement).disabled).toBe(true);
@@ -317,10 +313,34 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     vi.mocked(attendanceApi.saveBatchAttendance).mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
     await act(async () => { root.render(<CoachAttendancePage />); });
     await act(async () => { (host.querySelector('.btn-batch-save') as HTMLButtonElement).click(); });
-    expect((host.querySelector('.attendance-session-selector select') as HTMLSelectElement).disabled).toBe(true);
+    expect([...host.querySelectorAll<HTMLButtonElement>('.tt__event')].every((b) => b.disabled)).toBe(true);
     await act(async () => { complete({ success: true, updatedCount: 2, message: 'Saved' }); });
-    expect((host.querySelector('.attendance-session-selector select') as HTMLSelectElement).disabled).toBe(false);
+    expect([...host.querySelectorAll<HTMLButtonElement>('.tt__event')].some((b) => b.disabled)).toBe(false);
     expect(JSON.parse(localStorage.getItem(coachHistoryStorageKey('attendance'))!)[0].sessionId).toBe(101);
+  });
+
+  it('picks sessions from the weekly timetable, marks saved ones and filters by class', async () => {
+    const other = { ...mockSessions[0], id: 202, className: 'Session B', sessionDate: '2026-10-25', startTime: '09:00', endTime: '10:00' };
+    vi.mocked(attendanceApi.getCoachSessions).mockResolvedValueOnce([mockSessions[0], other]);
+    await act(async () => { root.render(<CoachAttendancePage />); });
+
+    // Mở đúng tuần chứa buổi gần hôm nay nhất; buổi 101 đã có bản ghi điểm danh, buổi 202 đã diễn ra nhưng chưa lưu.
+    const saved = host.querySelector<HTMLButtonElement>('.tt__event--mine')!;
+    expect(saved.textContent).toContain('Đã điểm danh');
+    expect(host.querySelector('.tt__event--full')!.textContent).toContain('Chưa điểm danh');
+    expect(host.querySelectorAll('.tt__gutter .tt__hour')).toHaveLength(16);
+
+    await act(async () => { host.querySelector<HTMLButtonElement>('.tt__event--full')!.click(); });
+    expect(vi.mocked(attendanceApi.getSessionStudents)).toHaveBeenLastCalledWith(202);
+    expect(host.querySelector('.session-name-title')!.textContent).toBe('Session B');
+    expect(host.querySelector('.tt__event.is-selected')!.textContent).toContain('Session B');
+
+    await act(async () => {
+      const select = host.querySelector('.attendance-class-filter select') as HTMLSelectElement;
+      select.value = 'Session B';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(host.querySelectorAll('.tt__event')).toHaveLength(1);
   });
 
 });

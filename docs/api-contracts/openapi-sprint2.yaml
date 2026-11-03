@@ -1425,6 +1425,7 @@ paths:
   /classes/sessions:
     get:
       summary: Tra cứu lịch học theo bộ lọc
+      description: Người dùng vai trò COACH luôn chỉ nhận buổi học của chính mình; tham số coachId bị bỏ qua và thay bằng id của HLV đang đăng nhập.
       tags: [Classes]
       parameters:
         - name: fromDate

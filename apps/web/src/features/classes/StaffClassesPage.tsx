@@ -14,6 +14,8 @@ import {
   type ClassSessionDto as ClassSessionItem,
 } from './classesApi';
 import { Link } from 'react-router-dom';
+import { WeeklyTimetable, type TimetableSlot } from '../schedule/WeeklyTimetable';
+import { hhmm, mondayOf, shortDate, todayISO, type TimetableEvent } from '../schedule/timetable';
 
 type DisciplineOption = Awaited<ReturnType<typeof classesApi.getDisciplines>>[number];
 type RoomOption = Awaited<ReturnType<typeof classesApi.getAvailableRooms>>[number];
@@ -81,6 +83,10 @@ export function StaffClassesPage() {
   const [rooms, setRooms] = useState<RoomOption[]>([]);
   const [coaches, setCoaches] = useState<CoachOption[]>([]);
 
+  const [view, setView] = useState<'timetable' | 'list'>('timetable');
+  const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
+  const [createMode, setCreateMode] = useState<'new' | 'existing'>('new');
+  const [existingClassId, setExistingClassId] = useState('');
   const [loading, setLoading] = useState(true);
   const [catalogsLoading, setCatalogsLoading] = useState(true);
   const [catalogsError, setCatalogsError] = useState<string | null>(null);
@@ -206,6 +212,20 @@ export function StaffClassesPage() {
     null,
   );
 
+  const existingClass = createMode === 'existing' && existingClassId
+    ? classes.find((cls) => cls.id === Number(existingClassId)) ?? null
+    : null;
+  const addSessionConflictWarning = existingClass
+    ? detectRoomOrCoachConflict(
+        String(existingClass.coachId || ''),
+        String(existingClass.roomId || ''),
+        formData.sessionDate,
+        formData.startTime,
+        formData.endTime,
+        null,
+      )
+    : null;
+
   const rescheduleConflictWarning = reschedulingClass
     ? detectRoomOrCoachConflict(
         String(reschedulingClass.coachId || ''),
@@ -313,9 +333,11 @@ export function StaffClassesPage() {
     );
   }
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (slot?: TimetableSlot) => {
     if (!isManager) return;
     setModalError(null);
+    setCreateMode('new');
+    setExistingClassId('');
     setPendingClassId(null);
     setPendingClassSignature(null);
     setFormData((prev) => ({
@@ -323,7 +345,9 @@ export function StaffClassesPage() {
       disciplineId: prev.disciplineId || (disciplines[0] ? String(disciplines[0].id) : ''),
       roomId: prev.roomId || (rooms[0] ? String(rooms[0].id) : ''),
       coachId: prev.coachId || (coaches[0] ? String(coaches[0].id) : ''),
-      sessionDate: prev.sessionDate || getTodayString(),
+      sessionDate: slot?.date ?? (prev.sessionDate || getTodayString()),
+      startTime: slot?.startTime ?? prev.startTime,
+      endTime: slot?.endTime ?? prev.endTime,
     }));
     setShowModal(true);
   };
@@ -473,6 +497,47 @@ export function StaffClassesPage() {
           : apiErr?.message || 'Có lỗi xảy ra khi tạo lớp học.';
 
       setModalError(errMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Thêm một buổi học mới cho lớp đã có (bấm ô trống trên thời khóa biểu rồi chọn lớp)
+  const handleAddSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting || !isManager) return;
+    setModalError(null);
+    if (!existingClass) {
+      setModalError('Vui lòng chọn lớp học.');
+      return;
+    }
+    if (formData.sessionDate < getTodayString()) {
+      setModalError('Ngày học không được ở trong quá khứ.');
+      return;
+    }
+    if (formData.endTime <= formData.startTime) {
+      setModalError('Giờ kết thúc phải sau giờ bắt đầu.');
+      return;
+    }
+    if (addSessionConflictWarning) {
+      setModalError(addSessionConflictWarning);
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await classesApi.createSession({
+        classId: existingClass.id,
+        sessionDate: formData.sessionDate,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+      });
+      notify(`Đã thêm buổi học cho lớp "${existingClass.name}".`, 'success');
+      setShowModal(false);
+      setCreateMode('new');
+      setExistingClassId('');
+      await loadData();
+    } catch (err: unknown) {
+      setModalError(errorMessage(err, 'Không thể thêm buổi học.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -735,6 +800,42 @@ export function StaffClassesPage() {
     return 'Chưa có lịch';
   };
 
+  const nowForTone = new Date();
+  const nowTime = `${String(nowForTone.getHours()).padStart(2, '0')}:${String(nowForTone.getMinutes()).padStart(2, '0')}`;
+  const timetableEvents: TimetableEvent[] = sessions.map((session) => {
+    const cls = classes.find((item) => item.id === session.classId);
+    const name = session.className || cls?.name || `Lớp #${session.classId}`;
+    const room = session.roomName || cls?.roomName;
+    const coach = session.coachName || cls?.coachName;
+    const capacity = session.capacity ?? cls?.capacity;
+    const booked = session.bookedCount ?? 0;
+    const past = session.sessionDate < todayISO()
+      || (session.sessionDate === todayISO() && hhmm(session.endTime) <= nowTime);
+    const tone: TimetableEvent['tone'] = session.status === 'cancelled' ? 'cancelled'
+      : past ? 'past'
+      : capacity !== undefined && booked >= capacity ? 'full'
+      : 'open';
+    const seats = capacity !== undefined ? `${booked}/${capacity} chỗ` : undefined;
+    const statusText = tone === 'cancelled' ? 'đã hủy' : tone === 'past' ? 'đã qua' : tone === 'full' ? 'đã đầy' : 'còn chỗ';
+    return {
+      id: String(session.id),
+      date: session.sessionDate,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      title: name,
+      meta: [room, coach].filter(Boolean).join(' · ') || undefined,
+      badge: tone === 'cancelled' ? 'Đã hủy' : tone === 'full' ? 'Đầy' : capacity !== undefined ? `${booked}/${capacity}` : undefined,
+      tone,
+      ariaLabel: `${name}, ${shortDate(session.sessionDate)} ${hhmm(session.startTime)}–${hhmm(session.endTime)}${room ? `, ${room}` : ''}${seats ? `, ${seats}` : ''}, ${statusText}. Bấm để xem chi tiết lớp`,
+    };
+  });
+
+  const openSessionDetail = (sessionId: string) => {
+    const session = sessions.find((item) => String(item.id) === sessionId);
+    const cls = session ? classes.find((item) => item.id === session.classId) : undefined;
+    if (cls) setSelectedClassDetail(cls);
+  };
+
   return (
     <div className="portal-container">
       <PageHeader
@@ -750,7 +851,7 @@ export function StaffClassesPage() {
             <button
               type="button"
               className="btn-primary"
-              onClick={handleOpenModal}
+              onClick={() => handleOpenModal()}
               data-testid="create-class-button"
             >
               + Tạo lớp học &amp; xếp lịch
@@ -794,8 +895,49 @@ export function StaffClassesPage() {
         </div>
       )}
 
-      {/* State 1: Loading skeleton */}
-      {loading ? (
+      <div className="portal-tabs" role="tablist" aria-label="Chế độ xem lịch học" style={{ marginBottom: 18 }}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'timetable'}
+          className={`portal-tab ${view === 'timetable' ? 'active' : ''}`}
+          onClick={() => setView('timetable')}
+          data-testid="view-timetable"
+        >
+          Thời khóa biểu tuần
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'list'}
+          className={`portal-tab ${view === 'list' ? 'active' : ''}`}
+          onClick={() => setView('list')}
+          data-testid="view-list"
+        >
+          Danh sách lớp
+        </button>
+      </div>
+
+      {view === 'timetable' ? (
+        <WeeklyTimetable
+          label="Thời khóa biểu tuần của trung tâm"
+          weekStart={weekStart}
+          events={timetableEvents}
+          loading={loading}
+          onWeekChange={setWeekStart}
+          onEventClick={openSessionDetail}
+          onSlotClick={isManager ? (slot) => { if (!catalogsLoading) handleOpenModal(slot); } : undefined}
+          slotActionLabel="bấm để tạo lịch"
+          legendNote="Số trên khối: đã đặt / sức chứa"
+          legend={[
+            ...(isManager ? [{ tone: 'free' as const, label: 'Ô trống: bấm để tạo lịch' }] : []),
+            { tone: 'open', label: 'Có lịch, còn chỗ' },
+            { tone: 'full', label: 'Đã đầy' },
+            { tone: 'past', label: 'Đã qua' },
+            { tone: 'cancelled', label: 'Đã hủy' },
+          ]}
+        />
+      ) : loading ? (
         <div className="portal-card portal-card--flush" data-testid="classes-skeleton">
           <div style={{ padding: '24px' }}>
             <div style={{ display: 'grid', gap: '16px' }}>
@@ -837,7 +979,7 @@ export function StaffClassesPage() {
                 : 'Hiện chưa có lớp học nào được xếp lịch trong hệ thống.'}
             </p>
             {isManager && (
-              <button type="button" className="btn-primary" onClick={handleOpenModal}>
+              <button type="button" className="btn-primary" onClick={() => handleOpenModal()}>
                 + Tạo lớp học đầu tiên
               </button>
             )}
@@ -1422,8 +1564,99 @@ export function StaffClassesPage() {
 
       {/* Modal: Tạo lớp học và xếp lịch (Manager Only) */}
       {isManager && showModal && (
-        <Modal title="Tạo lớp học & xếp lịch" onClose={handleCloseModal}>
-          {catalogsLoading ? <LoadingSkeleton label="Đang tải bộ môn, phòng tập và huấn luyện viên…" count={4} />
+        <Modal title={createMode === 'existing' ? 'Thêm buổi học cho lớp' : 'Tạo lớp học & xếp lịch'} onClose={handleCloseModal}>
+          <div className="filter-chips" role="group" aria-label="Kiểu tạo lịch" style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              className={`filter-chip ${createMode === 'new' ? 'is-active' : ''}`}
+              aria-pressed={createMode === 'new'}
+              onClick={() => { setCreateMode('new'); setModalError(null); }}
+              disabled={isSubmitting}
+            >
+              Lớp mới
+            </button>
+            <button
+              type="button"
+              className={`filter-chip ${createMode === 'existing' ? 'is-active' : ''}`}
+              aria-pressed={createMode === 'existing'}
+              onClick={() => { setCreateMode('existing'); setModalError(null); }}
+              disabled={isSubmitting || classes.length === 0}
+            >
+              Thêm buổi cho lớp có sẵn
+            </button>
+          </div>
+          {createMode === 'existing' ? (
+            <form onSubmit={handleAddSession} style={{ display: 'grid', gap: 11 }}>
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="existing-class">Lớp học *</label>
+                <Select
+                  id="existing-class"
+                  className="portal-select"
+                  value={existingClassId}
+                  onChange={(e) => { setExistingClassId(e.target.value); setModalError(null); }}
+                  disabled={isSubmitting}
+                >
+                  <option value="">-- Chọn lớp học --</option>
+                  {classes.filter((cls) => (cls.status || '').toUpperCase() === 'ACTIVE').map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name} · {cls.roomName ?? `Phòng #${cls.roomId}`}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="add-session-date">Ngày học *</label>
+                <DatePicker
+                  id="add-session-date"
+                  required
+                  min={getTodayString()}
+                  value={formData.sessionDate}
+                  onChange={(e) => setFormData({ ...formData, sessionDate: e.target.value })}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="grid-2">
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor="add-session-start">Giờ bắt đầu *</label>
+                  <TimePicker
+                    id="add-session-start"
+                    required
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor="add-session-end">Giờ kết thúc *</label>
+                  <TimePicker
+                    id="add-session-end"
+                    required
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+              {(modalError || addSessionConflictWarning) && (
+                <div className="form-error" role="alert" data-testid="add-session-error">
+                  {modalError || addSessionConflictWarning}
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+                <button type="button" className="btn-secondary" onClick={handleCloseModal} disabled={isSubmitting}>
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isSubmitting || !existingClass || Boolean(addSessionConflictWarning)}
+                  data-testid="submit-add-session-button"
+                >
+                  {isSubmitting ? 'Đang lưu...' : 'Thêm buổi học'}
+                </button>
+              </div>
+            </form>
+          ) : catalogsLoading ? <LoadingSkeleton label="Đang tải bộ môn, phòng tập và huấn luyện viên…" count={4} />
             : catalogsError ? <div role="alert"><p>{catalogsError}</p><button type="button" className="btn-secondary" onClick={() => void loadCatalogs()}>Thử lại</button></div>
             : <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
             <div className="portal-form-group">

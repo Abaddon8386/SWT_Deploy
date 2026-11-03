@@ -24,6 +24,7 @@ export interface CoachClassSession {
   endTime: string; // HH:mm
   bookedCount: number;
   capacity: number;
+  status?: string;
 }
 
 export interface BatchAttendancePayloadItem {

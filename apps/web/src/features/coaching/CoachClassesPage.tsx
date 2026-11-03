@@ -24,6 +24,9 @@ import {
   type CoachLeaderboardItemDto,
   type CoachReviewDto,
 } from './coachReviewApi';
+import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
+import { parseISODate } from '../schedule/timetable';
+import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
 import './coach-classes.css';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 
@@ -80,8 +83,6 @@ function formatYmd(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-const DAY_NAMES = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
-
 export function CoachClassesPage() {
   const currentUser = getCurrentUser();
 
@@ -89,7 +90,7 @@ export function CoachClassesPage() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'students' | 'ranking'>('schedule');
 
   const [currentMonday, setCurrentMonday] = useState<Date>(() => getWeekMonday(new Date()));
-  const [selectedDayOffset, setSelectedDayOffset] = useState<number>(0);
+  const [selectedPt, setSelectedPt] = useState<CoachBookingDto | null>(null);
   const [sessions, setSessions] = useState<CoachSession[]>([]);
   const [coach1on1Bookings, setCoach1on1Bookings] = useState<CoachBookingDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -217,22 +218,6 @@ export function CoachClassesPage() {
     });
   }, [allStudents, allStudentsSearch, allStudentsLevelFilter]);
 
-  const daysOfWeek = useMemo(() => {
-    return Array.from({ length: 7 }).map((_, idx) => {
-      const d = new Date(currentMonday);
-      d.setDate(d.getDate() + idx);
-      return {
-        idx,
-        name: DAY_NAMES[idx],
-        dateStr: formatYmd(d),
-        displayDate: `${d.getDate()}/${d.getMonth() + 1}`,
-        rawDate: d,
-      };
-    });
-  }, [currentMonday]);
-
-  const selectedDateStr = daysOfWeek[selectedDayOffset]?.dateStr;
-
   const loadWeeklySessions = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -297,39 +282,14 @@ export function CoachClassesPage() {
     );
   }, [myMonthlyReviews, reviewYear, reviewMonth]);
 
-  const handlePrevWeek = () => {
-    setCurrentMonday((prev) => {
-      const d = new Date(prev);
-      d.setDate(d.getDate() - 7);
-      return d;
-    });
+  const handleEventClick = (eventId: string) => {
+    if (eventId.startsWith('pt-')) {
+      setSelectedPt(coach1on1Bookings.find((booking) => `pt-${booking.id}` === eventId) ?? null);
+      return;
+    }
+    const session = sessions.find((item) => String(item.id) === eventId);
+    if (session) void handleOpenStudentsModal(session);
   };
-
-  const handleNextWeek = () => {
-    setCurrentMonday((prev) => {
-      const d = new Date(prev);
-      d.setDate(d.getDate() + 7);
-      return d;
-    });
-  };
-
-  const handleThisWeek = () => {
-    const todayMonday = getWeekMonday(new Date());
-    setCurrentMonday(todayMonday);
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    setSelectedDayOffset(dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-  };
-
-  const dailySessions = useMemo(() => {
-    return sessions.filter((s) => s.sessionDate === selectedDateStr);
-  }, [sessions, selectedDateStr]);
-
-  const daily1on1Bookings = useMemo(() => {
-    return coach1on1Bookings.filter(
-      (b) => b.bookingDate === selectedDateStr && b.status === 'confirmed'
-    );
-  }, [coach1on1Bookings, selectedDateStr]);
 
   const handleOpenStudentsModal = async (session: CoachSession) => {
     setActiveSession(session);
@@ -366,12 +326,6 @@ export function CoachClassesPage() {
     });
   }, [students, studentSearch, selectedFitnessFilter]);
 
-  const weekRangeLabel = useMemo(() => {
-    const sunday = new Date(currentMonday);
-    sunday.setDate(sunday.getDate() + 6);
-    return `${currentMonday.getDate()}/${currentMonday.getMonth() + 1} - ${sunday.getDate()}/${sunday.getMonth() + 1}/${sunday.getFullYear()}`;
-  }, [currentMonday]);
-
   return (
     <div className="portal-container coach-page">
       <PageHeader
@@ -379,7 +333,7 @@ export function CoachClassesPage() {
         title="Thời khóa biểu & học viên phụ trách"
         subtitle={
           activeTab === 'schedule'
-            ? `HLV: ${currentUser?.name || 'Huấn luyện viên'} | Theo dõi lịch đứng lớp theo ngày và tuần.`
+            ? `HLV: ${currentUser?.name || 'Huấn luyện viên'} | Lịch đứng lớp và kèm 1:1 của riêng bạn theo tuần, từ 06:00 đến 22:00.`
             : `HLV: ${currentUser?.name || 'Huấn luyện viên'} | Quản lý thông tin sức khỏe, mục tiêu thể lực và thông tin liên hệ của học viên.`
         }
       />
@@ -413,248 +367,40 @@ export function CoachClassesPage() {
           TAB 1: THỜI KHÓA BIỂU
           ==================================================================== */}
       {activeTab === 'schedule' && (
-        <>
-          <div className="coach-week-bar">
-            <div className="coach-week-nav">
-              <span className="coach-week-range">Tuần {weekRangeLabel}</span>
-            </div>
-            <div className="coach-week-actions">
-              <button
-                type="button"
-                className="btn-nav-week"
-                onClick={handlePrevWeek}
-                aria-label="Tuần trước"
-              >
-                ← Tuần trước
-              </button>
-              <button
-                type="button"
-                className="btn-nav-week is-today"
-                onClick={handleThisWeek}
-              >
-                Tuần hiện tại
-              </button>
-              <button
-                type="button"
-                className="btn-nav-week"
-                onClick={handleNextWeek}
-                aria-label="Tuần sau"
-              >
-                Tuần sau →
-              </button>
-            </div>
+        <WeeklyTimetable
+          label="Thời khóa biểu giảng dạy của tôi"
+          weekStart={formatYmd(currentMonday)}
+          events={[...coachSessionEvents(sessions, 'schedule'), ...ptBookingEvents(coach1on1Bookings)]}
+          loading={loading}
+          error={error}
+          onRetry={() => void loadWeeklySessions()}
+          onWeekChange={(iso) => setCurrentMonday(getWeekMonday(parseISODate(iso)))}
+          onEventClick={handleEventClick}
+          emptyLabel="Tuần này bạn chưa có buổi dạy nào."
+          legendNote="Số trên khối: đã đặt / sức chứa"
+          legend={[
+            { tone: 'open', label: 'Lớp còn chỗ' },
+            { tone: 'full', label: 'Lớp đã đầy' },
+            { tone: 'mine', label: 'Kèm riêng 1:1' },
+            { tone: 'past', label: 'Đã qua' },
+            { tone: 'cancelled', label: 'Đã hủy' },
+          ]}
+        />
+      )}
 
-            <div className="coach-day-strip">
-              {daysOfWeek.map((day) => {
-                const countForDay = sessions.filter((s) => s.sessionDate === day.dateStr).length + coach1on1Bookings.filter((booking) => booking.bookingDate === day.dateStr && booking.status === 'confirmed').length;
-                const isActive = day.idx === selectedDayOffset;
-                return (
-                  <button
-                    key={day.dateStr}
-                    type="button"
-                    className={`coach-day-tab ${isActive ? 'is-active' : ''}`}
-                    onClick={() => setSelectedDayOffset(day.idx)}
-                  >
-                    <span className="coach-day-name">{day.name}</span>
-                    <span className="coach-day-date">{day.displayDate}</span>
-                    {countForDay > 0 && (
-                      <span className="coach-day-badge">{countForDay} lớp</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+      {selectedPt && (
+        <Modal title="Buổi kèm riêng 1:1" onClose={() => setSelectedPt(null)}>
+          <div className="kv-list">
+            <div className="kv-row"><span>Học viên</span><strong>{selectedPt.memberName}</strong></div>
+            <div className="kv-row"><span>Thời gian</span><strong>{formatCenterDate(selectedPt.bookingDate)} · {selectedPt.startTime.slice(0, 5)}–{selectedPt.endTime.slice(0, 5)}</strong></div>
+            <div className="kv-row"><span>Bộ môn</span><strong>{selectedPt.disciplineName || 'Huấn luyện cá nhân'}</strong></div>
+            <div className="kv-row"><span>Hình thức</span><strong>{selectedPt.paymentMethod === 'package_quota' ? 'Quyền lợi gói tập' : 'Hội viên trả phí'}</strong></div>
+            {selectedPt.notes && <div className="kv-row"><span>Ghi chú của học viên</span><strong>{selectedPt.notes}</strong></div>}
           </div>
-
-          {loading && (
-            <LoadingSkeleton label="Đang tải lịch dạy của huấn luyện viên…" variant="cards" count={3} />
-          )}
-
-          {error && !loading && (
-            <div className="coach-error-box">
-              <p>{error}</p>
-              <button type="button" className="btn-retry" onClick={loadWeeklySessions}>
-                Thử lại
-              </button>
-            </div>
-          )}
-
-          {!loading && !error && (
-            <div className="coach-session-section">
-              {/* Section 1: Lịch Kèm Riêng PT 1:1 */}
-              <div>
-                <div className="coach-section-header">
-                  <h3>
-                    Lịch kèm riêng PT 1:1 ngày {daysOfWeek[selectedDayOffset]?.name} (
-                    {daysOfWeek[selectedDayOffset]?.displayDate})
-                  </h3>
-                  <span
-                    className="session-count-tag"
-                    style={{
-                      background:
-                        daily1on1Bookings.length > 0
-                          ? 'var(--portal-salmon, #ce9180)'
-                          : undefined,
-                      color: daily1on1Bookings.length > 0 ? 'var(--portal-on-accent)' : undefined,
-                    }}
-                  >
-                    {daily1on1Bookings.length} buổi kèm 1:1
-                  </span>
-                </div>
-
-                {daily1on1Bookings.length === 0 ? (
-                  <div className="coach-empty-box" style={{ padding: '18px 24px' }}>
-                    <p style={{ margin: 0 }}>Chưa có lịch đặt kèm 1:1 nào trong ngày này.</p>
-                  </div>
-                ) : (
-                  <div className="coach-session-grid">
-                    {daily1on1Bookings.map((b) => (
-                      <div
-                        key={b.id}
-                        className="coach-session-card"
-                        style={{
-                          borderColor: 'color-mix(in srgb, var(--portal-salmon) 45%, transparent)',
-                          background:
-                            'linear-gradient(135deg, rgba(206, 145, 128, 0.08) 0%, rgba(206, 145, 128, 0.02) 100%)',
-                        }}
-                      >
-                        <div className="coach-session-top">
-                          <div className="coach-session-time">
-                            <span className="time-icon" aria-hidden="true" />
-                            <span className="time-text">
-                              {b.startTime.slice(0, 5)} - {b.endTime.slice(0, 5)}
-                            </span>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 750,
-                              padding: '3px 8px',
-                              borderRadius: 99,
-                              background: 'var(--portal-salmon, #ce9180)',
-                              color: 'var(--portal-on-accent)',
-                            }}
-                          >
-                            PT 1:1 Riêng
-                          </span>
-                        </div>
-
-                        <h4 className="coach-class-title" style={{ fontSize: 16 }}>
-                          Học viên: {b.memberName}
-                        </h4>
-                        <p className="coach-discipline-tag">
-                          {b.disciplineName || 'Huấn luyện cá nhân'}
-                        </p>
-
-                        <div className="coach-session-info">
-                          <div className="info-row">
-                            <span className="info-label">Hình thức:</span>
-                            <span className="info-value">
-                              {b.paymentMethod === 'package_quota'
-                                ? '🎁 Quyền lợi gói tập'
-                                : '💳 Hội viên trả phí'}
-                            </span>
-                          </div>
-                          <div className="info-row">
-                            <span className="info-label">Trạng thái:</span>
-                            <span
-                              className="info-value"
-                              style={{
-                                color: 'var(--portal-success, #226442)',
-                                fontWeight: 650,
-                              }}
-                            >
-                              ✓ Đã xác nhận
-                            </span>
-                          </div>
-                          {b.notes && (
-                            <div
-                              className="info-row"
-                              style={{ gridColumn: '1 / -1', marginTop: 4 }}
-                            >
-                              <span className="info-label">Ghi chú học viên:</span>
-                              <span className="info-value" style={{ fontStyle: 'italic' }}>
-                                {b.notes}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="coach-section-header">
-                <h3>
-                  Lịch đứng lớp ngày {daysOfWeek[selectedDayOffset]?.name} (
-                  {daysOfWeek[selectedDayOffset]?.displayDate})
-                </h3>
-                <span className="session-count-tag">{dailySessions.length} buổi học</span>
-              </div>
-
-              {dailySessions.length === 0 ? (
-                <div className="coach-empty-box">
-                  <p>Không có buổi dạy nào trong ngày này.</p>
-                  <span>HLV có thể nghỉ ngơi hoặc chuẩn bị giáo án cho các buổi tiếp theo.</span>
-                </div>
-              ) : (
-                <div className="coach-session-grid">
-                  {dailySessions.map((session) => (
-                    <div key={session.id} className="coach-session-card">
-                      <div className="coach-session-top">
-                        <div className="coach-session-time">
-                          <span className="time-text">
-                            {session.startTime} - {session.endTime}
-                          </span>
-                        </div>
-                        <span className={`status-pill status-${session.status}`}>
-                          {session.status === 'scheduled'
-                            ? 'Sắp diễn ra'
-                            : session.status === 'completed'
-                            ? 'Đã xong'
-                            : 'Hủy'}
-                        </span>
-                      </div>
-
-                      <h4 className="coach-class-title">{session.className}</h4>
-                      <p className="coach-discipline-tag">{session.disciplineName || 'Fitness'}</p>
-
-                      <div className="coach-session-info">
-                        <div className="info-row">
-                          <span className="info-label">Phòng:</span>
-                          <span className="info-value">{session.roomName || 'Studio chính'}</span>
-                        </div>
-                        <div className="info-row">
-                          <span className="info-label">Sĩ số:</span>
-                          <span className="info-value">
-                            {session.bookedCount} / {session.capacity} học viên
-                          </span>
-                        </div>
-                        {session.level && (
-                          <div className="info-row">
-                            <span className="info-label">Trình độ:</span>
-                            <span className="info-value">{session.level}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="coach-card-actions">
-                        <button
-                          type="button"
-                          className="btn-view-students"
-                          onClick={() => handleOpenStudentsModal(session)}
-                        >
-                          Xem lịch sử ({session.bookedCount})
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+            <button type="button" className="btn-secondary" onClick={() => setSelectedPt(null)}>Đóng</button>
+          </div>
+        </Modal>
       )}
 
       {/* ====================================================================

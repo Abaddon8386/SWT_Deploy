@@ -125,6 +125,35 @@ class ClassControllerTest {
     }
 
     @Test
+    void listSessions_coachOnlySeesOwnSessionsEvenWhenAskingForAnotherCoach() throws Exception {
+        com.swp391.scms.security.AuthenticatedPrincipal coach =
+                new com.swp391.scms.security.AuthenticatedPrincipal(7L, "coach@test.com", "COACH");
+        MockMvc coachMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    @Override
+                    public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(
+                                org.springframework.security.core.annotation.AuthenticationPrincipal.class);
+                    }
+
+                    @Override
+                    public Object resolveArgument(org.springframework.core.MethodParameter parameter,
+                                                  org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                                                  org.springframework.web.context.request.NativeWebRequest webRequest,
+                                                  org.springframework.web.bind.support.WebDataBinderFactory binderFactory) {
+                        return coach;
+                    }
+                })
+                .build();
+        when(classService.searchSessions(any(), any(), any(), any())).thenReturn(List.of());
+
+        coachMvc.perform(get("/api/v1/classes/sessions").param("coachId", "99"))
+                .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(classService).searchSessions(null, null, null, 7L);
+    }
+
+    @Test
     void listClasses_returnsOk() throws Exception {
         GymClassDto dto = new GymClassDto(
                 1L, "Yoga Cơ Bản", 1L, "Yoga", 2L, "Coach Name", 3L, "Phòng 101", 20, "beginner", "Lớp học yoga cho người mới", "active"

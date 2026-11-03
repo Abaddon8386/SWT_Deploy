@@ -1,0 +1,121 @@
+.tt { --tt-hour: 64px; --tt-gutter: 56px; font-variant-numeric: tabular-nums; display: grid; gap: 12px; min-width: 0; }
+.tt__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.tt__nav { display: inline-flex; gap: 8px; }
+.tt__range { font-size: 15px; color: var(--portal-paper); }
+.tt__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--portal-muted); }
+.tt__legend li { display: inline-flex; align-items: center; gap: 6px; }
+.tt__swatch { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--portal-border-strong); background: var(--portal-surface); }
+.tt__swatch--free { background: transparent; border-style: dashed; border-color: var(--portal-salmon); }
+.tt__swatch--open { background: color-mix(in srgb, var(--portal-info) 28%, var(--portal-surface)); border-color: var(--portal-info); }
+.tt__swatch--mine { background: var(--portal-salmon); border-color: var(--portal-salmon); }
+.tt__swatch--full { background: color-mix(in srgb, var(--portal-warning) 28%, var(--portal-surface)); border-color: var(--portal-warning); }
+.tt__swatch--past { background: var(--portal-raised); border-style: dashed; }
+.tt__swatch--cancelled { background: color-mix(in srgb, var(--portal-danger) 22%, var(--portal-surface)); border-color: var(--portal-danger); }
+
+.tt__scroll { isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 300px)); border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-surface); scrollbar-color: var(--portal-salmon) transparent; }
+.tt__grid { display: grid; grid-template-columns: var(--tt-gutter) repeat(var(--tt-days, 7), minmax(100px, 1fr)); grid-template-rows: auto auto; min-width: 760px; }
+.tt__grid.is-single { grid-template-columns: var(--tt-gutter) minmax(0, 1fr); min-width: 0; }
+/* Xem một ngày: dải chọn ngày đã ghi thứ/ngày nên bỏ hàng tiêu đề lặp lại */
+.tt__grid.is-single :is(.tt__corner, .tt__dayhead) { display: none; }
+.tt__grid.is-loading { opacity: .55; }
+
+/* Tiêu đề ngày và cột giờ dính khi cuộn trong khung */
+.tt__corner, .tt__dayhead { position: sticky; top: 0; z-index: 4; background: var(--portal-raised); border-bottom: 1px solid var(--portal-border-strong); }
+.tt__corner { left: 0; z-index: 6; }
+.tt__dayhead { display: grid; gap: 2px; justify-items: center; padding: 8px 4px; border-left: 1px solid var(--portal-border); font-size: 12px; color: var(--portal-muted); }
+.tt__dayhead strong { font-size: 15px; color: var(--portal-paper); }
+.tt__dayhead.is-today { background: color-mix(in srgb, var(--portal-salmon) 22%, var(--portal-raised)); color: var(--portal-paper); }
+.tt__dayhead.is-today strong { color: var(--portal-salmon); }
+
+.tt__gutter { position: sticky; left: 0; z-index: 3; background: var(--portal-surface); border-right: 1px solid var(--portal-border-strong); }
+/* Cột giờ là mốc chính: nhãn nằm đúng trên vạch giờ, gạch ngắn đánh dấu giờ và nửa giờ */
+.tt__hour { position: relative; height: var(--tt-hour); font-size: 12px; font-weight: 600; color: var(--portal-muted); }
+.tt__hour::before, .tt__hour::after { content: ''; position: absolute; right: 0; border-top: 1px solid var(--portal-border-strong); }
+.tt__hour::before { top: 0; width: 8px; }
+.tt__hour::after { top: 50%; width: 4px; border-color: var(--portal-border); }
+.tt__hour span { position: absolute; right: 12px; top: 0; line-height: 1; transform: translateY(-50%); white-space: nowrap; }
+.tt__hour:first-child span:first-child { transform: translateY(3px); }
+.tt__hour .tt__hour-end { top: auto; bottom: 0; transform: translateY(50%); }
+
+.tt__day { position: relative; border-left: 1px solid var(--portal-border); }
+.tt__day.is-today { background: color-mix(in srgb, var(--portal-salmon) 5%, transparent); }
+
+/* Ô giờ: mỗi giờ một ô bằng nhau, chỉ có vạch giờ */
+.tt__slot { display: block; position: relative; width: 100%; height: var(--tt-hour); margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--portal-border); background: transparent; font: inherit; }
+.tt__slot.is-past { background: color-mix(in srgb, var(--portal-ink) 40%, transparent); }
+.tt__slot.is-action { cursor: pointer; }
+.tt__slot.is-action.is-past { cursor: not-allowed; }
+.tt__plus { position: absolute; inset: 4px; display: grid; place-items: center; border: 1px dashed var(--portal-salmon); border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--portal-salmon); opacity: 0; transition: opacity 120ms ease; }
+.tt__slot.is-action:not(.is-past):is(:hover, :focus-visible) { background: var(--portal-tint); }
+.tt__slot.is-action:not(.is-past):is(:hover, :focus-visible) .tt__plus { opacity: 1; }
+.tt__slot.is-action:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: -2px; z-index: 1; }
+
+.tt__now { position: absolute; left: 0; right: 0; height: 2px; background: var(--portal-danger); z-index: 3; pointer-events: none; }
+.tt__now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--portal-danger); }
+
+/* Khối buổi học: tên lớp, nhãn trạng thái, phòng. Giờ đọc theo cột giờ bên trái; nội dung tự rút gọn theo bề rộng thật của khối. */
+.tt__event { container: tt-event / inline-size; position: absolute; z-index: 2; display: block; min-width: 0; overflow: hidden; padding: 4px 6px; text-align: left; font: inherit; font-size: 11px; line-height: 1.25; cursor: pointer;
+  color: var(--portal-paper); border: 1px solid var(--portal-info); border-left-width: 3px; border-radius: 6px;
+  background: color-mix(in srgb, var(--portal-info) 22%, var(--portal-surface));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--portal-ink) 35%, transparent); }
+.tt__event:hover { filter: brightness(1.08); }
+.tt__event.is-selected { outline: 2px solid var(--portal-paper); outline-offset: 1px; z-index: 4; }
+.tt__event:disabled { cursor: wait; filter: none; }
+.tt__event:active { transform: translateY(1px); }
+.tt__event:focus-visible { outline: 2px solid var(--portal-paper); outline-offset: 1px; z-index: 5; }
+.tt__event-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tt__event-title { font-size: 12.5px; font-weight: 700; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: normal; word-break: normal; }
+.tt__event-badge { align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 6px; border-radius: 999px; font-size: 10.5px; font-weight: 700; box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 45%, transparent); }
+.tt__event-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@container tt-event (max-width: 84px) {
+  .tt__event-meta { display: none; }
+  .tt__event-title { -webkit-line-clamp: 3; line-clamp: 3; font-size: 12px; }
+}
+@container tt-event (max-width: 56px) {
+  .tt__event-badge { display: none; }
+  .tt__event-title { font-size: 11px; letter-spacing: -.01em; -webkit-line-clamp: 4; line-clamp: 4; }
+}
+
+/* Buổi ngắn hơn 50 phút: một hàng tên + trạng thái */
+.tt__event.is-compact { padding-block: 1px; }
+.tt__event.is-compact .tt__event-body { flex-direction: row; align-items: center; gap: 6px; }
+.tt__event.is-compact .tt__event-title { display: block; white-space: nowrap; text-overflow: ellipsis; flex: 1 1 auto; }
+.tt__event.is-compact .tt__event-badge { align-self: center; flex: none; }
+.tt__event.is-compact .tt__event-meta { display: none; }
+
+.tt__event--mine { background: var(--portal-salmon); border-color: var(--portal-salmon); color: var(--portal-on-accent); }
+.tt__event--full { border-color: var(--portal-warning); background: color-mix(in srgb, var(--portal-warning) 22%, var(--portal-surface)); }
+.tt__event--past { border-color: var(--portal-border-strong); border-style: dashed; background: var(--portal-raised); color: var(--portal-muted); box-shadow: none; }
+.tt__event--cancelled { border-color: var(--portal-danger); background: color-mix(in srgb, var(--portal-danger) 16%, var(--portal-surface)); }
+.tt__event--cancelled .tt__event-title { text-decoration: line-through; }
+.tt__event--neutral { border-color: var(--portal-border-strong); background: var(--portal-raised); }
+
+.tt__note { margin: 0; font-size: 13px; color: var(--portal-muted); text-wrap: pretty; }
+.tt__note--empty { padding: 10px 14px; border: 1px dashed var(--portal-border-strong); border-radius: 10px; color: var(--portal-paper); }
+.tt__legend-note { margin-left: auto; }
+
+/* Màn hẹp: chọn ngày ở dải trên, bảng hiển thị một ngày rộng toàn màn hình */
+.tt__daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.tt__daychip { display: grid; justify-items: center; gap: 0; min-height: 56px; padding: 4px 2px; border: 1px solid var(--portal-border); border-radius: 10px; background: var(--portal-surface); color: var(--portal-muted); font: inherit; font-size: 11px; cursor: pointer; }
+.tt__daychip strong { font-size: 16px; color: var(--portal-paper); }
+.tt__daychip small { font-size: 10px; white-space: nowrap; }
+.tt__daychip.is-today { border-color: var(--portal-salmon); }
+.tt__daychip.is-active { background: var(--portal-salmon); border-color: var(--portal-salmon); color: var(--portal-on-accent); }
+.tt__daychip.is-active strong { color: var(--portal-on-accent); }
+.tt__daychip:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+
+@media (max-width: 767px) {
+  .tt { --tt-gutter: 48px; --tt-hour: 72px; }
+  .tt__legend { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; white-space: nowrap; scrollbar-width: none; }
+  .tt__legend-note { margin-left: 0; }
+  .portal-v2 .tt-chips.filter-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .portal-v2 .tt-chips.filter-chips > * { flex: none; }
+  .tt__scroll { max-height: none; }
+  .tt__nav .btn-sm { min-height: 44px; }
+  .tt__event { font-size: 12px; padding: 6px 8px; }
+  .tt__event-title { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tt__plus { transition: none; }
+}

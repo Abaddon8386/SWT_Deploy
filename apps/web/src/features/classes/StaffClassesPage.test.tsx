@@ -37,6 +37,12 @@ describe('StaffClassesPage (SCRUM-131 & SCRUM-132)', () => {
     },
   ];
 
+  async function openListView() {
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="view-list"]')!.click();
+    });
+  }
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
@@ -76,6 +82,7 @@ describe('StaffClassesPage (SCRUM-131 & SCRUM-132)', () => {
     await act(async () => {
       root.render(<StaffClassesPage />);
     });
+    await openListView();
 
     expect(host.textContent).toContain('Morning Yoga Flow');
     expect(host.querySelector('[data-testid="read-only-schedule-badge"]')).not.toBeNull();
@@ -98,6 +105,7 @@ describe('StaffClassesPage (SCRUM-131 & SCRUM-132)', () => {
     await act(async () => {
       root.render(<StaffClassesPage />);
     });
+    await openListView();
 
     expect(host.textContent).toContain('Morning Yoga Flow');
     expect(host.querySelector('[data-testid="create-class-button"]')).not.toBeNull();
@@ -172,6 +180,7 @@ describe('StaffClassesPage (SCRUM-131 & SCRUM-132)', () => {
     await act(async () => {
       root.render(<StaffClassesPage />);
     });
+    await openListView();
 
     const rescheduleBtn = host.querySelector('[data-testid="reschedule-class-102"]') as HTMLButtonElement;
     expect(rescheduleBtn).not.toBeNull();
@@ -236,4 +245,77 @@ it('shows catalog failure with retry instead of an apparently empty creation for
   expect(host.querySelector('#class-discipline')?.parentElement?.querySelector('select')?.textContent).toContain('Gym');
 });
 
+});
+
+describe('StaffClassesPage weekly timetable', () => {
+  let host: HTMLDivElement;
+  let root: Root;
+  const cls: ClassItem = {
+    id: 101, name: 'Morning Yoga Flow', disciplineId: 1, disciplineName: 'Yoga', coachId: 10, coachName: 'HLV Quân',
+    roomId: 2, roomName: 'Studio A', capacity: 15, level: 'all', status: 'ACTIVE',
+  };
+  const monday: ClassSessionDto = {
+    id: 501, classId: 101, sessionDate: '2099-01-05', startTime: '08:00:00', endTime: '09:30:00', status: 'scheduled',
+    capacity: 15, bookedCount: 4,
+  };
+  const as = (role: 'MANAGER' | 'STAFF') =>
+    vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({ id: '1', name: 'U', identifier: 'u', role });
+  const render = () => act(async () => root.render(<StaffClassesPage />));
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2099, 0, 5, 6, 0) });
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute('open'); } });
+    vi.spyOn(classesApi, 'getClasses').mockResolvedValue([cls]);
+    vi.spyOn(classesApi, 'getSessions').mockResolvedValue([monday]);
+    vi.spyOn(classesApi, 'getDisciplines').mockResolvedValue([{ id: 1, name: 'Yoga', description: '' }]);
+    vi.spyOn(classesApi, 'getAvailableRooms').mockResolvedValue([{ id: 2, name: 'Studio A', capacity: 20, location: 'T1', status: 'available' }]);
+    vi.spyOn(classesApi, 'getActiveCoaches').mockResolvedValue([{ id: 10, fullName: 'HLV Quân', email: 'c@x.test', status: 'active' }]);
+    host = document.createElement('div'); document.body.append(host); root = createRoot(host);
+  });
+  afterEach(async () => {
+    await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.useRealTimers(); vi.unstubAllGlobals();
+  });
+
+  it('opens on the timetable and shows scheduled sessions', async () => {
+    as('MANAGER');
+    await render();
+    expect(host.querySelector('[data-testid="view-timetable"]')!.getAttribute('aria-selected')).toBe('true');
+    expect(host.querySelector('.tt__event')!.textContent).toContain('Morning Yoga Flow');
+    expect(host.querySelector('.tt__event')!.textContent).toContain('4/15');
+  });
+
+  it('lets a manager click an empty slot to prefill the create form', async () => {
+    as('MANAGER');
+    await render();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-slot="2099-01-06|10"]')!.click());
+    const dialog = host.querySelector('dialog[open]')!;
+    expect(dialog.textContent).toContain('Tạo lớp học');
+    expect(dialog.querySelector('#session-date')!.textContent).toContain('06/01/2099');
+    expect(dialog.querySelector('#session-start')!.textContent).toContain('10:00');
+    expect(dialog.querySelector('#session-end')!.textContent).toContain('11:00');
+  });
+
+  it('adds a session for an existing class from the empty slot', async () => {
+    as('MANAGER');
+    const createSession = vi.spyOn(classesApi, 'createSession').mockResolvedValue({ ...monday, id: 502 });
+    await render();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-slot="2099-01-07|15"]')!.click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Thêm buổi cho lớp có sẵn')!.click());
+    const select = host.querySelector<HTMLSelectElement>('select#existing-class, #existing-class select, .ui-select select')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, '101');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="submit-add-session-button"]')!.click());
+    expect(createSession).toHaveBeenCalledWith({ classId: 101, sessionDate: '2099-01-07', startTime: '15:00', endTime: '16:00' });
+  });
+
+  it('keeps the timetable read-only for receptionists', async () => {
+    as('STAFF');
+    await render();
+    expect(host.querySelector('.tt__event')).not.toBeNull();
+    expect(host.querySelectorAll('button.tt__slot')).toHaveLength(0);
+  });
 });

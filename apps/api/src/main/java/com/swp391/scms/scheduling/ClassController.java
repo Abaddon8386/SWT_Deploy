@@ -11,6 +11,7 @@ import com.swp391.scms.scheduling.dto.SchedulingResponses.CoachOptionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.EnrolledStudentDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.GymClassDto;
 import com.swp391.scms.scheduling.service.ClassService;
+import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -102,15 +103,17 @@ public class ClassController {
         return ApiResponse.ok(msg("scheduling.session.rescheduled"), service.rescheduleSession(id, sessionId, request));
     }
 
-    @Operation(summary = "List class sessions with optional filters (date range, discipline, coach, classId)")
+    @Operation(summary = "List class sessions with optional filters (date range, discipline, coach, classId); a COACH only ever sees their own sessions")
     @GetMapping("/sessions")
     public ApiResponse<List<ClassSessionDto>> listSessions(
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
             @RequestParam(required = false) Long disciplineId,
             @RequestParam(required = false) Long coachId,
-            @RequestParam(required = false) Long classId) {
-        List<ClassSessionDto> result = service.searchSessions(fromDate, toDate, disciplineId, coachId);
+            @RequestParam(required = false) Long classId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        Long effectiveCoachId = principal != null && "COACH".equalsIgnoreCase(principal.role()) ? principal.id() : coachId;
+        List<ClassSessionDto> result = service.searchSessions(fromDate, toDate, disciplineId, effectiveCoachId);
         if (classId != null) {
             result = result.stream().filter(s -> classId.equals(s.classId())).toList();
         }

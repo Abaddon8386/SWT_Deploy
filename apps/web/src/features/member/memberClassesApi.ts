@@ -52,6 +52,13 @@ export const getSessions = (weekOffset = 0) => {
   return apiFetch<ClassSessionDto[]>(`/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`)
     .then((sessions) => sessions.filter((item) => isStandardDiscipline(item.disciplineName)));
 };
+/** Buổi học trong khoảng ngày tùy ý (thời khóa biểu tuần). */
+export const getSessionsBetween = (fromDate: string, toDate: string) =>
+  apiFetch<ClassSessionDto[]>(`/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`)
+    .then((sessions) => sessions.filter((item) => isStandardDiscipline(item.disciplineName)));
+/** Lượt đặt buổi của tôi trong khoảng ngày (gồm cả buổi đã học), bỏ lượt đã hủy ở phía gọi. */
+export const getMyBookingsBetween = (from: string, to: string) =>
+  apiFetch<SessionBookingDto[]>(`/classes/session-bookings/my?from=${from}&to=${to}`);
 export const UPCOMING_DAYS = 30;
 const isoDate = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 /** Today through the next 30 days, in local calendar dates. */

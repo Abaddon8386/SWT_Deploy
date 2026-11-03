@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoachClassesPage } from './CoachClassesPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { coachingApi } from './coachingApi';
+import { getCoachSchedule } from '../member/coachBookingApi';
 
 vi.mock('../member/coachBookingApi', () => ({ getCoachSchedule: vi.fn().mockResolvedValue([]) }));
 
@@ -157,7 +158,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     vi.unstubAllGlobals();
   });
 
-  it('renders weekly schedule and day tabs correctly', async () => {
+  it('renders the coach weekly timetable from 06:00 to 22:00 with only their own sessions', async () => {
     await act(async () => {
       root.render(
         <MemoryRouter>
@@ -171,8 +172,14 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     expect(host.textContent).toContain('Học viên phụ trách');
     expect(host.textContent).toContain('Tuần trước');
     expect(host.textContent).toContain('Tuần sau');
+    expect(host.querySelectorAll('.tt__day')).toHaveLength(7);
+    expect(host.querySelector('.tt__gutter')!.textContent).toContain('06:00');
+    expect(host.querySelector('.tt__gutter')!.textContent).toContain('21:00');
     expect(host.textContent).toContain('Thứ 2');
-    expect(host.textContent).toContain('Chủ Nhật');
+    expect(host.textContent).toContain('Chủ nhật');
+    const titles = [...host.querySelectorAll('.tt__event-title')].map((node) => node.textContent);
+    expect(titles).toEqual(expect.arrayContaining(['High-Intensity Strength & Conditioning', 'Olympic Weightlifting Fundamentals']));
+    expect(host.querySelector('.tt__slot.is-action')).toBeNull();
 
     // Ensure raw emojis are removed
     expect(host.textContent).not.toContain('⏰');
@@ -190,7 +197,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       );
     });
 
-    const nextWeekBtn = host.querySelector('button[aria-label="Tuần sau"]') as HTMLButtonElement;
+    const nextWeekBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Tuần sau') as HTMLButtonElement;
     expect(nextWeekBtn).not.toBeNull();
 
     await act(async () => {
@@ -238,18 +245,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       );
     });
 
-    let viewStudentsBtn = host.querySelector('.btn-view-students') as HTMLButtonElement;
-    if (!viewStudentsBtn) {
-      const prevWeekBtn = host.querySelector('button[aria-label="Tuần trước"]') as HTMLButtonElement;
-      if (prevWeekBtn) {
-        await act(async () => {
-          prevWeekBtn.click();
-        });
-      }
-      viewStudentsBtn = host.querySelector('.btn-view-students') as HTMLButtonElement;
-    }
+    const viewStudentsBtn = host.querySelector('.tt__event') as HTMLButtonElement;
     expect(viewStudentsBtn).not.toBeNull();
-    expect(viewStudentsBtn.textContent).toContain('Xem lịch sử');
 
     await act(async () => {
       viewStudentsBtn.click();
@@ -279,5 +276,22 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     });
 
     expect(host.querySelectorAll('.history-record-card')).toHaveLength(0);
+  });
+
+  it('shows confirmed 1:1 bookings on the same timetable and opens their detail', async () => {
+    vi.mocked(getCoachSchedule).mockResolvedValueOnce([
+      { id: 9, memberName: 'Phạm Quốc Bảo', bookingDate: currentMondayStr, startTime: '18:00:00', endTime: '19:00:00',
+        status: 'confirmed', paymentMethod: 'package_quota', disciplineName: 'Gym', notes: 'Đau vai trái' },
+      { id: 10, memberName: 'Đã hủy', bookingDate: currentMondayStr, startTime: '20:00:00', endTime: '21:00:00', status: 'cancelled' },
+    ] as never);
+    await act(async () => { root.render(<MemoryRouter><CoachClassesPage /></MemoryRouter>); });
+    const events = [...host.querySelectorAll<HTMLButtonElement>('.tt__event--mine')];
+    expect(events).toHaveLength(1);
+    expect(events[0].textContent).toContain('PT 1:1 · Phạm Quốc Bảo');
+    await act(async () => events[0].click());
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.textContent).toContain('Đau vai trái');
+    expect(dialog.textContent).toContain('Quyền lợi gói tập');
+    expect(coachingApi.getSessionStudents).not.toHaveBeenCalled();
   });
 });
