@@ -8,6 +8,13 @@ import { errorMessage } from '../../shared/lib/errorMessage';
 import { catalogApi, type Room } from './catalogApi';
 import { equipmentApi, type Equipment, type EquipmentInput } from './equipmentApi';
 
+const STATUS_LABEL: Record<string, { label: string; badgeClass: string }> = {
+  active: { label: 'Đang hoạt động', badgeClass: 'badge-success' },
+  maintenance: { label: 'Đang bảo trì', badgeClass: 'badge-warning' },
+  broken: { label: 'Hỏng hóc', badgeClass: 'badge-danger' },
+  retired: { label: 'Ngừng sử dụng', badgeClass: 'badge-secondary' },
+};
+
 const CATEGORIES = ['Tất cả', 'Cardio', 'Strength', 'Free Weights', 'Diagnostic', 'Khác'];
 
 interface FormState {
