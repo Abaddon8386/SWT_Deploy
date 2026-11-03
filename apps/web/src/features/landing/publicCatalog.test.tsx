@@ -26,6 +26,7 @@ it('renders API price, duration, benefits, coaches and actual session seats with
   expect(host.textContent).toContain('45 ngày');
   expect(host.textContent).toContain('Quyền lợi mới');
   expect(host.textContent).toContain('HLV An');
+  expect(host.textContent).toContain('Ảnh minh họa');
   expect(host.textContent).toContain('Yoga sáng');
   expect(host.textContent).toContain('7 chỗ trống');
   expect(host.querySelector('a[href="/trainers/2"]')).not.toBeNull();

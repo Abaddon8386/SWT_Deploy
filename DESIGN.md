@@ -171,7 +171,7 @@ Các nguyên tắc bắt buộc:
 
 Ảnh hiện hành nằm tại `apps/web/public/images/fitness/`; dùng lại ảnh studio có sẵn khi phù hợp. Ảnh hero được tách nền, ảnh HLV cùng ánh sáng. Giữ tỷ lệ và crop có chủ đích; dùng lazy loading cho ảnh dưới hero.
 
-Ảnh/câu chuyện minh họa phải tiếp tục được nhận diện là minh họa. Không biến sao đánh giá hoặc hình stock thành nhận xét/HLV thật. Khi HLV chưa có ảnh đại diện, dùng ảnh minh họa theo bộ môn và hiển thị nhãn “Ảnh minh họa”.
+Ảnh/câu chuyện minh họa phải tiếp tục được nhận diện là minh họa. Không biến sao đánh giá hoặc hình stock thành nhận xét/HLV thật. Khi HLV chưa có ảnh đại diện, dùng ảnh minh họa theo bộ môn và hiển thị nhãn “Ảnh minh họa”. PR #82 bổ sung ảnh riêng cho đúng ba hồ sơ Huỳnh Đắc Tài, Nguyễn Minh Quân và Trần Thị Mỹ Trâm; ghép theo toàn bộ tên đã chuẩn hóa, không ghép chuỗi con. Chỉ ba hồ sơ này được dùng ảnh riêng khi API chưa có avatar; các hồ sơ khác giữ ảnh dự phòng và nhãn minh họa.
 
 Đồng bộ landing–portal (23/10/2026): bảng giá, thời hạn, mô tả/quyền lợi gói tập, lịch lớp và HLV công khai lấy từ `GET /api/v1/public/catalog`, dùng cùng Entity với portal. Chỉ công khai gói active, HLV active có tài khoản active chưa xóa và buổi học scheduled còn trong tương lai trong 7 ngày tới. Không lấy giá, tên HLV hay lịch cố định từ dữ liệu minh họa; không suy đoán quyền vào hồ bơi/Tennis từ thời hạn gói. Dùng chung `membershipPresentation.ts` để định dạng tiền/quyền lợi với portal. Tải lại khi quay về tab và mỗi 60 giây; khi lỗi phải ẩn giá/lịch cũ, hiện thông báo và nút thử lại. Trang HLV dùng ID thực tế; ảnh bộ môn mới dùng chung qua `coachIllustration.ts`.
 
