@@ -136,6 +136,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST,
                             "/api/v1/memberships/subscriptions/*/cancel", "/api/v1/subscriptions/*/cancel")
                             .hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers("/api/v1/memberships/trial/**").hasRole("MEMBER")
                     .requestMatchers("/api/v1/memberships/subscriptions/**", "/api/v1/memberships/subscriptions",
                             "/api/v1/subscriptions/**", "/api/v1/subscriptions").hasRole("MEMBER")
 

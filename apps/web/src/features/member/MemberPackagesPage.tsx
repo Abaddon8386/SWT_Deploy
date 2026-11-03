@@ -28,6 +28,7 @@ import {
   type Payment,
 } from './membershipApi';
 import { errorMessage } from '../../shared/lib/errorMessage';
+import { trialApi, type TrialStatus } from './trialApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 
 type LoadState<T> =
@@ -98,6 +99,53 @@ export function MemberPackagesPage() {
   const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
   const [holdReason, setHoldReason] = useState('');
   const [holdError, setHoldError] = useState<string | null>(null);
+  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
+  const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
+  const [trialCccd, setTrialCccd] = useState('');
+  const [trialFullName, setTrialFullName] = useState('');
+  const [trialError, setTrialError] = useState('');
+  const [isClaimingTrial, setIsClaimingTrial] = useState(false);
+
+  const loadTrialStatus = useCallback(async () => {
+    try {
+      const res = await trialApi.getStatus();
+      setTrialStatus(res);
+    } catch {
+      // Ignore background check failure
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadTrialStatus();
+  }, [loadTrialStatus]);
+
+  const handleClaimTrial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cccdClean = trialCccd.trim();
+    if (!/^\d{9,12}$/.test(cccdClean)) {
+      setTrialError('Số CCCD không hợp lệ (phải gồm 9 hoặc 12 chữ số).');
+      return;
+    }
+    if (!trialFullName.trim()) {
+      setTrialError('Vui lòng nhập họ và tên theo CCCD.');
+      return;
+    }
+    setIsClaimingTrial(true);
+    setTrialError('');
+    try {
+      await trialApi.claim({ cccd: cccdClean, fullName: trialFullName.trim() });
+      notify('Kích hoạt 3 ngày tập thử miễn phí đặc quyền Gold thành công!', 'success');
+      setIsTrialModalOpen(false);
+      setTrialCccd('');
+      setTrialFullName('');
+      await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
+    } catch (err) {
+      setTrialError(errorMessage(err, 'Không thể nhận gói tập thử. Vui lòng kiểm tra lại số CCCD.'));
+    } finally {
+      setIsClaimingTrial(false);
+    }
+  };
+
   const [isSubmittingHold, setIsSubmittingHold] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
@@ -610,6 +658,43 @@ export function MemberPackagesPage() {
           <span>Không thể kiểm tra trạng thái yêu cầu hủy gói.</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCancellations()}>Thử lại</button>
         </div>
+      )}
+
+      {!current && trialStatus?.eligible && (
+        <section
+          className="portal-card"
+          style={{
+            marginBottom: 20,
+            background: 'linear-gradient(135deg, rgba(226, 91, 69, 0.12) 0%, rgba(217, 119, 6, 0.15) 100%)',
+            border: '1px solid rgba(226, 91, 69, 0.3)',
+            borderRadius: '12px',
+            padding: '20px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <div className="meta-label" style={{ color: 'var(--color-primary, #e25b45)' }}>
+                Đặc quyền Hội viên mới
+              </div>
+              <h2 className="portal-card-title" style={{ marginTop: 6, fontSize: '1.25rem' }}>
+                Trải nghiệm 3 ngày tập miễn phí với đặc quyền Gold
+              </h2>
+              <p className="row-card__meta" style={{ marginTop: 4 }}>
+                Xác thực số Căn cước công dân (CCCD) để kích hoạt ngay 3 ngày tập miễn phí tại toàn bộ cơ sở và lớp học Gold.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                setTrialError('');
+                setIsTrialModalOpen(true);
+              }}
+            >
+              Nhận 3 ngày tập miễn phí
+            </button>
+          </div>
+        </section>
       )}
 
       {current && (
@@ -1182,6 +1267,71 @@ export function MemberPackagesPage() {
                 </button>
               </div>
             </form>
+        </Modal>
+      )}
+
+      {isTrialModalOpen && (
+        <Modal
+          title="Nhận 3 ngày tập miễn phí (Đặc quyền Gold)"
+          onClose={() => setIsTrialModalOpen(false)}
+          busy={isClaimingTrial}
+        >
+          <div className="meta-label">Xác minh Căn cước công dân (CCCD)</div>
+          <p className="row-card__meta" style={{ marginTop: 8 }}>
+            Theo quy định của trung tâm, mỗi hội viên và mỗi số CCCD chỉ được nhận gói tập trải nghiệm 3 ngày Gold một lần duy nhất.
+          </p>
+          <form onSubmit={(e) => void handleClaimTrial(e)} style={{ marginTop: 16 }}>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="trial-full-name">Họ và tên trên CCCD *</label>
+              <input
+                id="trial-full-name"
+                className="portal-input"
+                type="text"
+                required
+                maxLength={150}
+                placeholder="Vd: Nguyễn Văn A"
+                value={trialFullName}
+                onChange={(e) => setTrialFullName(e.target.value)}
+                disabled={isClaimingTrial}
+              />
+            </div>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="trial-cccd">Số CCCD (12 chữ số) *</label>
+              <input
+                id="trial-cccd"
+                className="portal-input"
+                type="text"
+                required
+                maxLength={12}
+                placeholder="Vd: 001200001234"
+                value={trialCccd}
+                onChange={(e) => setTrialCccd(e.target.value.replace(/\D/g, ''))}
+                disabled={isClaimingTrial}
+              />
+            </div>
+            {trialError && (
+              <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', marginTop: 8, fontSize: '0.88rem' }}>
+                {trialError}
+              </p>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={isClaimingTrial}
+                onClick={() => setIsTrialModalOpen(false)}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isClaimingTrial || !trialCccd.trim() || !trialFullName.trim()}
+              >
+                {isClaimingTrial ? 'Đang xác thực…' : 'Xác minh & Kích hoạt'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 
