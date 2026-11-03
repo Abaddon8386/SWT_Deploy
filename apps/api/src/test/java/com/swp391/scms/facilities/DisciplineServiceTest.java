@@ -56,4 +56,38 @@ class DisciplineServiceTest {
 
         assertThrows(ConflictException.class, () -> service.update(1L, new DisciplineRequest("Yoga", null)));
     }
+
+    @Test void deleteClearsFavouritesAndRemovesUnusedDiscipline() {
+        Discipline discipline = new Discipline();
+        var members = org.mockito.Mockito.mock(com.swp391.scms.users.MemberRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "members", members);
+        when(disciplines.findById(1L)).thenReturn(Optional.of(discipline));
+        service.delete(1L);
+        verify(members).removeFavoriteDiscipline(1L);
+        verify(disciplines).delete(discipline);
+    }
+
+    @Test void deleteBlockedWhileClassRoomOrBookingUsesDiscipline() {
+        var classes = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.GymClassRepository.class);
+        var rooms = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.RoomRepository.class);
+        var coachBookings = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "classes", classes);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "rooms", rooms);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookings", coachBookings);
+        when(disciplines.findById(1L)).thenReturn(Optional.of(new Discipline()));
+        when(classes.existsByDisciplineId(1L)).thenReturn(true);
+        assertThrows(ConflictException.class, () -> service.delete(1L));
+        when(classes.existsByDisciplineId(1L)).thenReturn(false);
+        when(rooms.existsByDisciplineId(1L)).thenReturn(true);
+        assertThrows(ConflictException.class, () -> service.delete(1L));
+        when(rooms.existsByDisciplineId(1L)).thenReturn(false);
+        when(coachBookings.existsByDisciplineId(1L)).thenReturn(true);
+        assertThrows(ConflictException.class, () -> service.delete(1L));
+        verify(disciplines, never()).delete(any(Discipline.class));
+    }
+
+    @Test void deleteMissingDisciplineThrowsNotFound() {
+        when(disciplines.findById(9L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(9L));
+    }
 }

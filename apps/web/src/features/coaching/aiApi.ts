@@ -63,7 +63,33 @@ export interface CoachOption {
   email?: string;
 }
 
+export interface SavedTrainingPlan {
+  id: number;
+  memberId: number;
+  memberName?: string | null;
+  coachId?: number | null;
+  coachName?: string | null;
+  goal: string | null;
+  startDate: string;
+  endDate: string;
+  status: 'draft' | 'active' | 'completed' | 'cancelled' | string;
+  aiGenerated?: boolean;
+  items?: Array<{ id: number; exerciseName: string }>;
+}
+
 export const aiApi = {
+  /** Giáo án đã lưu trên server: Coach thấy của mình, Manager thấy tất cả. */
+  listTrainingPlans: () => apiFetch<SavedTrainingPlan[]>('/coaching/training-plans'),
+
+  updateTrainingPlan: (id: number, input: { goal: string; startDate: string; endDate: string }) =>
+    apiFetch<SavedTrainingPlan>(`/coaching/training-plans/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ goal: input.goal, start_date: input.startDate, end_date: input.endDate }),
+    }),
+
+  /** Chỉ xóa được giáo án nháp; giáo án đã kích hoạt trả 409. */
+  deleteTrainingPlan: (id: number) => apiFetch<void>(`/coaching/training-plans/${id}`, { method: 'DELETE' }),
+
   /**
    * Lấy danh sách học viên thực tế đã ghi danh trong các lớp học từ Backend.
    * Danh sách rỗng nghĩa là chưa có học viên; lỗi tải được ném ra để UI báo lỗi, không bao giờ thay bằng dữ liệu mẫu.

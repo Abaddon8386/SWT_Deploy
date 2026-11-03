@@ -6,9 +6,11 @@ import { Modal } from '../../shared/ui/Modal';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { notify } from '../../shared/lib/portalNotices';
 import { ApiError } from '../../shared/api/client';
+import { RecurrenceFields, RecurrenceSummary } from '../../shared/ui/RecurrenceFields';
+import { recurrenceRequest, type RecurrenceChoice } from '../../shared/lib/recurrence';
 import { matchesDiscipline } from '../../shared/lib/disciplines';
 import { CourtBookingList, CourtLoadError } from './CourtBookingList';
-import { courtsApi, COURT_DISCIPLINES, centerDate, dateAfter, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
+import { courtsApi, type RecurringCourtResult, COURT_DISCIPLINES, centerDate, dateAfter, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
 import './courts.css';
 
 const SLOT_LABELS = { free: 'Trống', booked: 'Đã đặt', class: 'Đang có lớp', past: 'Đã qua' };
@@ -25,6 +27,8 @@ export function CourtBookingFeature() {
   const [actionError, setActionError] = useState('');
   const [conflict, setConflict] = useState(false);
   const [needsMembership, setNeedsMembership] = useState(false);
+  const [recurrence, setRecurrence] = useState<RecurrenceChoice>({ period: 'once', days: [] });
+  const [outcome, setOutcome] = useState<RecurringCourtResult | null>(null);
   const gridHeading = useRef<HTMLHeadingElement>(null);
   const today = centerDate();
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= today && date <= dateAfter(today, 7);
@@ -45,8 +49,15 @@ export function CourtBookingFeature() {
     if (!selection || busy) return;
     setBusy(true); setActionError('');
     try {
-      await courtsApi.book({ roomId: selection.court.id, date: selection.date, startTime: selection.slot.startTime });
-      setSelection(null); reload(); notify('Đã đặt sân thành công.', 'success');
+      const standing = recurrenceRequest(recurrence, selection.date);
+      if (standing) {
+        const result = await courtsApi.bookRecurring({ roomId: selection.court.id, startDate: selection.date, startTime: selection.slot.startTime, ...standing });
+        setOutcome(result); reload();
+        notify(result.booked.length ? `Đã đặt ${result.booked.length} buổi sân định kỳ.` : 'Không đặt được buổi nào.', result.booked.length ? 'success' : 'error');
+      } else {
+        await courtsApi.book({ roomId: selection.court.id, date: selection.date, startTime: selection.slot.startTime });
+        setSelection(null); reload(); notify('Đã đặt sân thành công.', 'success');
+      }
     } catch (reason) {
       setActionError(courtError(reason));
       setNeedsMembership(reason instanceof ApiError && reason.code === 'COURT_BOOKING_MEMBERSHIP_INVALID');
@@ -66,7 +77,7 @@ export function CourtBookingFeature() {
         {rows.map(({ court, slots }) => <article className="portal-card court-card" key={court.id}>
           <h3 className="portal-card-title">{court.name}</h3>
           <p className="muted">{court.location ? `${court.location} · ` : ''}{shortTime(court.openTime)}–{shortTime(court.closeTime)}</p>
-          <div className="court-slots">{slots.map(slot => <button type="button" key={slot.startTime} className={`court-slot court-slot--${slot.status}`} disabled={slot.status !== 'free' || busy} onClick={() => { setActionError(''); setNeedsMembership(false); setConflict(false); setSelection({ court, slot, date }); }} aria-label={`${court.name}, ${shortTime(slot.startTime)}–${shortTime(slot.endTime)}, ${SLOT_LABELS[slot.status]}`}><strong>{shortTime(slot.startTime)}–{shortTime(slot.endTime)}</strong><span>{SLOT_LABELS[slot.status]}</span></button>)}</div>
+          <div className="court-slots">{slots.map(slot => <button type="button" key={slot.startTime} className={`court-slot court-slot--${slot.status}`} disabled={slot.status !== 'free' || busy} onClick={() => { setActionError(''); setNeedsMembership(false); setConflict(false); setOutcome(null); setRecurrence({ period: 'once', days: [] }); setSelection({ court, slot, date }); }} aria-label={`${court.name}, ${shortTime(slot.startTime)}–${shortTime(slot.endTime)}, ${SLOT_LABELS[slot.status]}`}><strong>{shortTime(slot.startTime)}–{shortTime(slot.endTime)}</strong><span>{SLOT_LABELS[slot.status]}</span></button>)}</div>
           {!slots.length && <p className="muted">Chưa có khung giờ cho ngày này.</p>}
         </article>)}
       </div>}
@@ -75,9 +86,11 @@ export function CourtBookingFeature() {
     {selection && <Modal title="Xác nhận đặt sân" busy={busy} onClose={() => setSelection(null)} returnFocusRef={gridHeading}>
       <p><strong>{selection.court.name}</strong> · {selection.court.disciplineName}</p>
       <p>{displayDate(selection.date)} · {shortTime(selection.slot.startTime)}–{shortTime(selection.slot.endTime)}</p>
-      <p className="muted">Không phát sinh phí. Tối đa 2 lượt/ngày; hủy trước giờ bắt đầu ít nhất 2 giờ.</p>
+      {outcome ? <RecurrenceSummary booked={outcome.booked} skipped={outcome.skipped} describe={item => `${displayDate(item.date)} · ${shortTime(item.startTime)}–${shortTime(item.endTime)}`} /> : <>
+      <RecurrenceFields startDate={selection.date} value={recurrence} onChange={setRecurrence} disabled={busy} hint="Đặt định kỳ được đặt trước tối đa 1 tháng; buổi trùng lịch hoặc ngoài thời hạn gói tập sẽ được bỏ qua và báo lại." />
+      <p className="muted">Không phát sinh phí. Tối đa 2 lượt/ngày; hủy trước giờ bắt đầu ít nhất 2 giờ.</p></>}
       {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{actionError}</p>{needsMembership && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">Xem / Đăng ký gói tập</Link></div>}</div>}
-      <div className="court-modal-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>Quay lại</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? 'Đang đặt…' : 'Xác nhận đặt'}</button></div>
+      <div className="court-modal-actions">{outcome ? <button type="button" className="btn-primary" onClick={() => setSelection(null)}>Đóng</button> : <><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>Quay lại</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? 'Đang đặt…' : recurrence.period === 'once' ? 'Xác nhận đặt' : 'Xác nhận đặt định kỳ'}</button></>}</div>
     </Modal>}
   </div>;
 }

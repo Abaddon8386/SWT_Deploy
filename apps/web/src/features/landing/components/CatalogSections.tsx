@@ -86,7 +86,7 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
           <span className="fit-schedule-spots">{Math.max(0, session.capacity - session.bookedCount)} chỗ trống</span></div>
         <h3>{session.className}</h3><p className="fit-schedule-meta">{session.disciplineName} · {session.roomName}</p>
         <Link to={`/trainers/${session.coachId}`} className="fit-text-link">HLV: {session.coachName}</Link>
-        <Link to={joinPath} className="fit-text-link">{session.bookedCount >= session.capacity ? 'Xem hàng chờ' : 'Đặt lớp'}<RoundArrow diagonal /></Link>
+        <Link to={joinPath} className="fit-text-link">{session.bookedCount >= session.capacity ? 'Đã đầy chỗ' : 'Đặt lớp'}<RoundArrow diagonal /></Link>
       </article>)}
     </div>
   </>;

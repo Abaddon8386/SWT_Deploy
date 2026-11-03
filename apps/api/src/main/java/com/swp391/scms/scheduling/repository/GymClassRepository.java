@@ -13,6 +13,10 @@ import java.util.Optional;
 
 @Repository
 public interface GymClassRepository extends JpaRepository<GymClass, Long> {
+    boolean existsByRoomId(Long roomId);
+
+    boolean existsByDisciplineId(Long disciplineId);
+
 
     List<GymClass> findAllByOrderByIdDesc();
 

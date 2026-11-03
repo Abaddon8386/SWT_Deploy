@@ -11,7 +11,6 @@ import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
-import com.swp391.scms.scheduling.repository.ClassWaitlistRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.scheduling.service.EnrollmentService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -57,7 +56,6 @@ class ConcurrencyBookingIntegrationTest {
 
     @Mock private ClassEnrollmentRepository enrollments;
     @Mock private ClassSessionRepository sessions;
-    @Mock private ClassWaitlistRepository waitlists;
     @Mock private GymClassRepository gymClasses;
     @Mock private MembershipSubscriptionRepository subscriptions;
     @Mock private MemberRepository members;
@@ -80,7 +78,7 @@ class ConcurrencyBookingIntegrationTest {
         executor = Executors.newFixedThreadPool(CONCURRENT_USERS);
 
         enrollmentService = new EnrollmentService(
-                enrollments, sessions, waitlists, gymClasses, subscriptions, members,
+                enrollments, sessions, gymClasses, subscriptions, members,
                 notifications, messageService, clock
         );
 
@@ -120,9 +118,6 @@ class ConcurrencyBookingIntegrationTest {
         // Count of booked seats reflects current state under lock
         when(enrollments.countByGymClassIdAndStatus(eq(10L), eq("booked")))
                 .thenAnswer(invocation -> (long) currentBookedCount.get());
-
-        when(waitlists.countLiveOffers(eq(10L), any(), any()))
-                .thenReturn(0L);
 
         when(members.findByUserIdForUpdate(any(Long.class))).thenAnswer(invocation -> {
             Long uid = invocation.getArgument(0);

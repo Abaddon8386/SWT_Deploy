@@ -68,4 +68,34 @@ class RoomServiceTest {
         tennis.setName("Gym");
         assertThrows(BadRequestException.class, () -> service.create(new RoomRequest("Gym", null, 2, null, 2L, LocalTime.of(6,0), LocalTime.of(22,0))));
     }
+
+    @Test void deleteRemovesRoomNobodyUses() {
+        Room room = new Room();
+        var classes = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.GymClassRepository.class);
+        var bookings = org.mockito.Mockito.mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "classes", classes);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "courtBookings", bookings);
+        when(rooms.findById(1L)).thenReturn(Optional.of(room));
+        service.delete(1L);
+        org.mockito.Mockito.verify(rooms).delete(room);
+    }
+
+    @Test void deleteBlockedWhenClassOrCourtBookingUsesRoom() {
+        var classes = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.GymClassRepository.class);
+        var bookings = org.mockito.Mockito.mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "classes", classes);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "courtBookings", bookings);
+        when(rooms.findById(1L)).thenReturn(Optional.of(new Room()));
+        when(classes.existsByRoomId(1L)).thenReturn(true);
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
+        when(classes.existsByRoomId(1L)).thenReturn(false);
+        when(bookings.existsByRoomId(1L)).thenReturn(true);
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
+        org.mockito.Mockito.verify(rooms, org.mockito.Mockito.never()).delete(any(Room.class));
+    }
+
+    @Test void deleteMissingRoomThrowsNotFound() {
+        when(rooms.findById(9L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(9L));
+    }
 }

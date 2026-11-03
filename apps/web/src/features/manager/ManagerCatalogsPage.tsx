@@ -109,6 +109,15 @@ export function ManagerCatalogsPage() {
   const openEditor = (value: { id: number | null; form: Form }) => {
     setFormError(''); setError(''); setEditing(value);
   };
+  const remove = async (what: string, name: string, action: () => Promise<unknown>) => {
+    const confirmed = await confirm({
+      title: `Xóa ${what}?`,
+      message: `"${name}" sẽ bị xóa vĩnh viễn. Nếu đã được sử dụng, hệ thống sẽ từ chối và bạn nên chuyển sang trạng thái ngừng dùng.`,
+      confirmLabel: 'Xóa',
+      danger: true,
+    });
+    if (confirmed) void run(action, `Đã xóa ${what} "${name}".`);
+  };
   const set = (key: string, value: string) => {
     setFormError('');
     if (editing) setEditing({ ...editing, form: { ...editing.form, [key]: value } });
@@ -385,7 +394,7 @@ export function ManagerCatalogsPage() {
                     <tr>
                       <th style={{ width: '25%' }}>Tên bộ môn</th>
                       <th>Mô tả</th>
-                      <th className="actions" style={{ width: '120px' }}>Thao tác</th>
+                      <th className="actions" style={{ width: '200px' }}>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -400,6 +409,14 @@ export function ManagerCatalogsPage() {
                             onClick={() => openEditor({ id: d.id, form: { name: d.name, description: d.description ?? '' } })}
                           >
                             Chỉnh sửa
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            disabled={isSubmitting}
+                            onClick={() => void remove('bộ môn', d.name, () => catalogApi.deleteDiscipline(d.id))}
+                          >
+                            Xóa
                           </button>
                         </td>
                       </tr>
@@ -442,6 +459,14 @@ export function ManagerCatalogsPage() {
                             }
                           >
                             Chỉnh sửa
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            disabled={isSubmitting}
+                            onClick={() => void remove('phòng tập', r.name, () => catalogApi.deleteRoom(r.id))}
+                          >
+                            Xóa
                           </button>
                         </td>
                       </tr>
@@ -520,6 +545,14 @@ export function ManagerCatalogsPage() {
                             }}
                           >
                             {p.status === 'active' ? 'Ngừng bán' : 'Mở bán'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            disabled={isSubmitting}
+                            onClick={() => void remove('gói tập', p.name, () => catalogApi.deletePackage(p.id))}
+                          >
+                            Xóa
                           </button>
                         </td>
                       </tr>

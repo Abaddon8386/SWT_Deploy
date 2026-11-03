@@ -67,4 +67,15 @@ public class CourtBookingController {
                                          @Valid @RequestBody(required = false) CancelRequest request) {
         return ApiResponse.ok(msg("success.courts.cancelled"), service.cancel(principal, id, request == null ? null : request.reason()));
     }
+
+    @PostMapping("/court-bookings/recurring")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<ApiResponse<RecurringResult>> bookRecurring(@AuthenticationPrincipal AuthenticatedPrincipal principal,
+                                                                    @Valid @RequestBody RecurringBookRequest request) {
+        RecurringResult result = service.bookRecurring(principal, request);
+        String message = msg("success.courts.recurring_booked");
+        return result.booked().isEmpty()
+                ? ResponseEntity.ok(ApiResponse.ok(message, result))
+                : ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(message, result));
+    }
 }

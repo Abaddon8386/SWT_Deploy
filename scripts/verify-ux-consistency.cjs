@@ -21,7 +21,7 @@ const fixtures = {
   '/profile': profile, '/packages': [pack],
   '/disciplines': [{ id: 1, name: 'Yoga', description: 'Bộ môn Yoga' }],
   '/rooms': [{ id: 1, name: 'Phòng 1', location: 'Tầng 1', capacity: 20, status: 'available' }],
-  '/classes': [gymClass], '/classes/sessions': [session], '/classes/enrollments/my': [enrollment], '/classes/waitlists/my': [],
+  '/classes': [gymClass], '/classes/sessions': [session], '/classes/enrollments/my': [enrollment],
   '/memberships/subscriptions/my': subscription, '/memberships/subscriptions/history': [subscription],
   '/memberships/subscriptions/my/dynamic-qr': { qrCode: 'review-qr', expiresInSeconds: 60, generatedAt: now },
   '/memberships/subscriptions/realtime-session': { enabled: false },

@@ -12,6 +12,8 @@ import java.util.List;
 
 @Repository
 public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long> {
+    boolean existsByDisciplineId(Long disciplineId);
+
 
     @Query("""
             select cb from CoachBooking cb

@@ -62,6 +62,19 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, status));
     }
 
+    @PostMapping("/recurring")
+    public ResponseEntity<ApiResponse<CoachRecurringResultDto>> createRecurringBooking(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @Valid @RequestBody CoachRecurringBookingDto request) {
+        CoachRecurringResultDto result = coachBookingService.createRecurringBooking(principal, request);
+        String msg = messageService != null
+                ? messageService.getMessage("message.coach_booking.recurring_success", "Đặt lịch HLV 1:1 định kỳ thành công")
+                : "Đặt lịch HLV 1:1 định kỳ thành công";
+        return result.booked().isEmpty()
+                ? ResponseEntity.ok(ApiResponse.ok(msg, result))
+                : ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(msg, result));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<CoachBookingDto>> createBooking(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,

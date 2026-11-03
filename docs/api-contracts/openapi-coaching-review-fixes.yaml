@@ -32,6 +32,38 @@ paths:
         '400': {description: Invalid slot, unavailable membership, exhausted quota or INVALID_PAYMENT_METHOD}
         '403': {description: Role denied or trigger rejects inactive membership}
         '409': {description: Schedule conflict, COACH_ON_LEAVE, COACH_BOOKING_UNPAID_LIMIT, or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
+  /coach-bookings/recurring:
+    post:
+      summary: Standing 1:1 booking for a week or a month (MEMBER)
+      description: >
+        Books the same one-hour slot with one coach on the chosen ISO weekdays (defaults to the weekday of startDate)
+        for a week (7 days) or a calendar month from startDate. Each date goes through the normal single-booking rules
+        (coach and member conflicts, membership covering the date, monthly package quota, two-unpaid cap); dates that
+        fail are returned in skipped with the error code and a localised reason while the rest are kept.
+        Status 201 when at least one booking was created, 200 when none was. Unknown coach fails immediately with 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [coachId, startDate, startTime, endTime, period]
+              properties:
+                coachId: { type: integer, format: int64 }
+                disciplineId: { type: integer, format: int64 }
+                startDate: { type: string, format: date }
+                startTime: { type: string, example: '18:00:00' }
+                endTime: { type: string, example: '19:00:00' }
+                period: { type: string, enum: [week, month] }
+                daysOfWeek: { type: array, maxItems: 7, items: { type: integer, minimum: 1, maximum: 7 } }
+                paymentMethod: { type: string }
+                notes: { type: string }
+      responses:
+        '201': { description: 'data = { booked: CoachBooking[], skipped: [{ date, code, message }] }' }
+        '200': { description: 'No date could be booked; data.skipped explains each one' }
+        '400': { description: Invalid period or weekdays }
+        '403': { description: MEMBER required }
+        '404': { description: Coach not found }
   /coach-bookings/unpaid:
     get:
       summary: Hourly PT sessions waiting for payment (RECEPTIONIST, CENTER_MANAGER)

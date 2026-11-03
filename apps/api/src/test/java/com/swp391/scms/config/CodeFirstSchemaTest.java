@@ -27,6 +27,10 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
  * databaseschema.sql on PostgreSQL, without a live connection or hand-written runtime DDL.
  */
 class CodeFirstSchemaTest {
+    /** Tables and checks of features that were dropped; the reference schema is historical and untouched. */
+    private static final Set<String> REMOVED_TABLES = Set.of("class_waitlists");
+    private static final Set<String> REMOVED_CHECKS = Set.of("ck_waitlist_status");
+
 
     private static final Path SCHEMA = Path.of("..", "..", "db", "databaseschema.sql");
     private static StandardServiceRegistry sharedRegistry;
@@ -91,11 +95,16 @@ class CodeFirstSchemaTest {
 
     @Test
     void entitiesGenerateEveryTableOfTheReferenceSchema() throws Exception {
+        // The historical reference schema still lists the removed waitlist feature.
+
         assertTrue(Files.exists(SCHEMA), "db/databaseschema.sql must be reachable from the test working dir");
         String ddl = generateDdl();
         Set<String> tables = schemaTables();
         assertTrue(tables.size() >= 30, "reference schema should list its tables");
         for (String table : tables) {
+            if (REMOVED_TABLES.contains(table)) {
+                continue;
+            }
             assertTrue(ddl.matches("(?s).*create table \"?" + table + "\\b.*"),
                     "No entity generates PostgreSQL table " + table);
         }
@@ -216,7 +225,7 @@ class CodeFirstSchemaTest {
                 .matcher(Files.readString(SCHEMA, StandardCharsets.UTF_8));
         while (checks.find()) {
             String name = checks.group(1).toLowerCase(Locale.ROOT);
-            if (!name.endsWith("_json")) {
+            if (!name.endsWith("_json") && !REMOVED_CHECKS.contains(name)) {
                 assertTrue(ddl.contains("constraint " + name + " check"), "Missing PostgreSQL CHECK: " + name);
             }
         }

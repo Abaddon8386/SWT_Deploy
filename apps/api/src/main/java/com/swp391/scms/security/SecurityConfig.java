@@ -137,13 +137,15 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/memberships/subscriptions/**", "/api/v1/memberships/subscriptions",
                             "/api/v1/subscriptions/**", "/api/v1/subscriptions").hasRole("MEMBER")
 
-                    // Scheduling, Enrollments & Waitlists (SCRUM-72, 73, 74, 131)
+                    // Scheduling & Enrollments (SCRUM-72, 73, 131)
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/enroll").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/enrollments/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/waitlist").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/waitlists/*").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/classes/waitlists/my").hasRole("MEMBER")
+                    // Per-session booking must precede the CENTER_MANAGER "/api/v1/classes/**" write matchers below.
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/bookings", "/api/v1/classes/session-bookings/bulk").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/classes/session-bookings/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/session-bookings/cancel").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/session-bookings/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/cancel").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST", "STAFF")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PUT, "/api/v1/classes/*/sessions/*", "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
@@ -153,7 +155,7 @@ public class SecurityConfig {
                     // Court booking roles are enforced here and at controller boundaries.
                     .requestMatchers(HttpMethod.GET, "/api/v1/courts", "/api/v1/courts/**").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings/my").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings", "/api/v1/court-bookings/recurring").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/cancel").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/court-bookings/**", "/api/v1/courts/**").denyAll()
@@ -165,7 +167,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coach-schedule").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/unpaid").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings/*/confirm-payment").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings", "/api/v1/coach-bookings/recurring").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/coach-bookings/*").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/members/me/favorite-disciplines/**", "/api/v1/members/me/favorite-disciplines").hasRole("MEMBER")

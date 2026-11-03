@@ -417,4 +417,45 @@ class CoachBookingServiceTest {
                 });
         verify(coachBookingRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("Đặt 1:1 định kỳ theo tuần: ngày trùng lịch bị bỏ qua kèm lý do, các ngày còn lại vẫn được đặt")
+    void createRecurringBooking_skipsConflictingDayAndKeepsTheRest() {
+        MembershipSubscription active = new MembershipSubscription();
+        active.setStartDate(LocalDate.of(2026, 10, 1));
+        active.setEndDate(LocalDate.of(2026, 11, 30));
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+        CoachBooking busy = new CoachBooking();
+        busy.setStartTime(LocalTime.of(14, 30));
+        busy.setEndTime(LocalTime.of(15, 30));
+        when(coachBookingRepository.findActiveByMemberAndDate(10L, LocalDate.of(2026, 11, 4))).thenReturn(List.of(busy));
+        when(coachBookingRepository.save(any(CoachBooking.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = service.createRecurringBooking(principal, new com.swp391.scms.coaching.dto.CoachRecurringBookingDto(
+                20L, null, LocalDate.of(2026, 11, 2), LocalTime.of(14, 0), LocalTime.of(15, 0),
+                "week", List.of(1, 3, 5), "bank_transfer", null));
+
+        assertThat(result.booked()).extracting(CoachBookingDto::bookingDate)
+                .containsExactly(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 6));
+        assertThat(result.skipped()).hasSize(1);
+        assertThat(result.skipped().get(0).date()).isEqualTo(LocalDate.of(2026, 11, 4));
+        assertThat(result.skipped().get(0).code()).isEqualTo("MEMBER_SCHEDULE_CONFLICT");
+    }
+
+    @Test
+    @DisplayName("Đặt 1:1 định kỳ: HLV không tồn tại thì báo lỗi ngay, không tạo lịch nào")
+    void createRecurringBooking_failsFastForUnknownCoach() {
+        when(coachRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.createRecurringBooking(principal,
+                new com.swp391.scms.coaching.dto.CoachRecurringBookingDto(99L, null, LocalDate.of(2026, 11, 2),
+                        LocalTime.of(14, 0), LocalTime.of(15, 0), "month", null, null, null)))
+                .isInstanceOf(com.swp391.scms.common.exception.ResourceNotFoundException.class);
+        verify(coachBookingRepository, never()).save(any());
+    }
 }

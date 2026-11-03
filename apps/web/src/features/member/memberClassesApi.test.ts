@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getClasses, getSessions, getMyWaitlists, enroll, cancelEnrollment, joinWaitlist, leaveWaitlist, filterSessions, currentWeek, type ClassSessionDto } from './memberClassesApi';
+import { bookSession, bookSessions, cancelBooking, cancelBookings, getMyBookings, getUpcomingSessions, upcomingRange, getClasses, getSessions, cancelEnrollment, filterSessions, currentWeek, type ClassSessionDto } from './memberClassesApi';
 
 const session: ClassSessionDto = {
   id: 8, classId: 3, className: 'Yoga Flow', disciplineId: 2, disciplineName: 'Yoga',
@@ -9,35 +9,25 @@ const session: ClassSessionDto = {
 };
 
 describe('memberClassesApi', () => {
-  it('identifies an explicit claim while leaving ordinary enrollment unchanged', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 201, json: async () => ({ data: {} }) });
-    vi.stubGlobal('fetch', fetchMock);
-    await enroll(8, 31);
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/classes/sessions/8/enroll?waitlistId=31');
-  });
   beforeEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
-  it('reads real class, session and waitlist DTOs through apiFetch', async () => {
+  it('reads real class and session DTOs through apiFetch', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [session] }) });
     vi.stubGlobal('fetch', fetchMock);
     expect((await getSessions())[0].bookedCount).toBe(12);
     await getClasses();
-    await getMyWaitlists();
     expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
-      expect.stringMatching(/^\/api\/v1\/classes\/sessions\?fromDate=/), '/api/v1/classes', '/api/v1/classes/waitlists/my',
+      expect.stringMatching(/^\/api\/v1\/classes\/sessions\?fromDate=/), '/api/v1/classes',
     ]);
   });
 
-  it('uses distinct session and enrollment IDs for write endpoints', async () => {
+  it('uses the enrollment ID to cancel a class-wide enrollment', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) });
     vi.stubGlobal('fetch', fetchMock);
-    await enroll(8); await cancelEnrollment(17); await joinWaitlist(8); await leaveWaitlist(23);
+    await cancelEnrollment(17);
     expect(fetchMock.mock.calls.map(([path, init]) => [path, init.method])).toEqual([
-      ['/api/v1/classes/sessions/8/enroll', 'POST'],
       ['/api/v1/classes/enrollments/17', 'DELETE'],
-      ['/api/v1/classes/sessions/8/waitlist', 'POST'],
-      ['/api/v1/classes/waitlists/23', 'DELETE'],
     ]);
   });
 
@@ -66,5 +56,35 @@ describe('memberClassesApi', () => {
     };
     expect(localDay(fromDate)).toBe(1);
     expect(localDay(toDate)).toBe(0);
+  });
+
+  it('talks to the per-session booking endpoints', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { booked: [], skipped: [], cancelled: [] } }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await bookSession(8);
+    await bookSessions([8, 9]);
+    await cancelBooking(41);
+    await cancelBookings([41, 42]);
+    await getMyBookings();
+    const calls = fetchMock.mock.calls;
+    expect(calls[0][0]).toBe('/api/v1/classes/sessions/8/bookings');
+    expect(calls[0][1]).toMatchObject({ method: 'POST' });
+    expect(calls[1][0]).toBe('/api/v1/classes/session-bookings/bulk');
+    expect(JSON.parse(calls[1][1].body)).toEqual({ sessionIds: [8, 9] });
+    expect(calls[2][0]).toBe('/api/v1/classes/session-bookings/41');
+    expect(calls[2][1]).toMatchObject({ method: 'DELETE' });
+    expect(calls[3][0]).toBe('/api/v1/classes/session-bookings/cancel');
+    expect(JSON.parse(calls[3][1].body)).toEqual({ bookingIds: [41, 42] });
+    expect(calls[4][0]).toMatch(/^\/api\/v1\/classes\/session-bookings\/my\?status=booked&from=\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('loads the next 30 days of sessions for monthly booking', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [session] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await getUpcomingSessions();
+    const { fromDate, toDate } = upcomingRange();
+    expect(fetchMock.mock.calls[0][0]).toBe(`/api/v1/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`);
+    const days = (new Date(`${toDate}T12:00:00`).getTime() - new Date(`${fromDate}T12:00:00`).getTime()) / 86_400_000;
+    expect(Math.round(days)).toBe(30);
   });
 });

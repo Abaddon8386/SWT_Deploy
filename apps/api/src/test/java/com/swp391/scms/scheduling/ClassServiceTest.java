@@ -16,7 +16,6 @@ import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.mapper.SchedulingMapper;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
-import com.swp391.scms.scheduling.repository.ClassWaitlistRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.scheduling.service.ClassService;
 import com.swp391.scms.users.CoachRepository;
@@ -51,8 +50,6 @@ class ClassServiceTest {
     @Mock
     private ClassEnrollmentRepository enrollments;
     @Mock
-    private ClassWaitlistRepository waitlists;
-    @Mock
     private DisciplineRepository disciplines;
     @Mock
     private CoachRepository coaches;
@@ -70,7 +67,7 @@ class ClassServiceTest {
     @Test
     void sessionCreationChecksCourtBookingsEvenWhenThereAreNoOtherClasses() {
         var courts = org.mockito.Mockito.mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
-        service = new ClassService(gymClasses, sessions, enrollments, waitlists, disciplines, coaches, rooms,
+        service = new ClassService(gymClasses, sessions, enrollments, disciplines, coaches, rooms,
                 mapper, clock, courts);
         Room room = new Room();
         org.springframework.test.util.ReflectionTestUtils.setField(room, "id", 4L);
@@ -90,7 +87,7 @@ class ClassServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ClassService(gymClasses, sessions, enrollments, waitlists, disciplines, coaches, rooms, mapper, clock);
+        service = new ClassService(gymClasses, sessions, enrollments, disciplines, coaches, rooms, mapper, clock);
 
         gymClass = new GymClass();
         gymClass.setName("Yoga Flow");
@@ -284,13 +281,12 @@ class ClassServiceTest {
     }
 
     @Test
-    @DisplayName("SCRUM-131: deleteClass removes child waitlists, enrollments, sessions and the class")
+    @DisplayName("SCRUM-131: deleteClass removes child enrollments, sessions and the class")
     void deleteClass_removesClassAndChildren() {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
 
         service.deleteClass(1L);
 
-        verify(waitlists).deleteByGymClassId(1L);
         verify(enrollments).deleteByGymClassId(1L);
         verify(sessions).deleteByGymClassId(1L);
         verify(gymClasses).delete(gymClass);
@@ -421,5 +417,37 @@ class ClassServiceTest {
         assertThat(options.get(0).fullName()).isEqualTo("Coach Active");
         verify(coaches).findActiveWithUser();
         verify(coaches, org.mockito.Mockito.never()).findAll();
+    }
+
+    @Test
+    void sessionStudentsMergeClassWideEnrollmentsWithPerSessionBookings() {
+        com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "sessionBookings", sessionBookings);
+        com.swp391.scms.scheduling.entity.GymClass cls = new com.swp391.scms.scheduling.entity.GymClass();
+        cls.setId(5L);
+        ClassSession session = new ClassSession();
+        session.setId(7L);
+        session.setGymClass(cls);
+        when(sessions.findById(7L)).thenReturn(java.util.Optional.of(session));
+        com.swp391.scms.users.entity.Member classWide = new com.swp391.scms.users.entity.Member();
+        classWide.setUserId(20L);
+        com.swp391.scms.scheduling.entity.ClassEnrollment enrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        enrollment.setMember(classWide);
+        enrollment.setStatus("booked");
+        when(enrollments.findByGymClassId(5L)).thenReturn(java.util.List.of(enrollment));
+        com.swp391.scms.users.entity.Member sessionOnly = new com.swp391.scms.users.entity.Member();
+        sessionOnly.setUserId(21L);
+        com.swp391.scms.scheduling.entity.SessionBooking booking = new com.swp391.scms.scheduling.entity.SessionBooking();
+        booking.setMember(sessionOnly);
+        booking.setStatus("booked");
+        com.swp391.scms.scheduling.entity.SessionBooking duplicate = new com.swp391.scms.scheduling.entity.SessionBooking();
+        duplicate.setMember(classWide);
+        duplicate.setStatus("booked");
+        when(sessionBookings.findBySessionIdAndStatus(7L, "booked")).thenReturn(java.util.List.of(booking, duplicate));
+
+        var students = service.getSessionStudents(7L);
+
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of(20L, 21L),
+                students.stream().map(s -> s.memberId()).toList());
     }
 }

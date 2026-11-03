@@ -55,5 +55,12 @@ public class RoomController {
     public ApiResponse<RoomDto> update(@PathVariable Long id, @Valid @RequestBody RoomRequest request) {
         return ApiResponse.ok(msg("catalog.updated"), service.update(id, request));
     }
-}
 
+    @Operation(summary = "Delete an unused room")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ApiResponse.ok(msg("catalog.deleted"), null);
+    }
+}

@@ -169,6 +169,42 @@ public class TrainingPlanService {
         return toDto(saved, items);
     }
 
+    public TrainingPlanDto updatePlan(Long planId, com.swp391.scms.coaching.dto.TrainingPlanUpdateDto dto,
+                                      Long currentUserId, String currentUserRole) {
+        TrainingPlan plan = trainingPlanRepository.findById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
+        verifyCoachOwnership(plan, currentUserId, currentUserRole);
+        if (!"draft".equalsIgnoreCase(plan.getStatus()) && !"active".equalsIgnoreCase(plan.getStatus())) {
+            throw new ConflictException("INVALID_PLAN_STATUS", "coaching.plan.cannot_modify_status",
+                    new Object[]{plan.getStatus()}, "Cannot modify training plan in status " + plan.getStatus());
+        }
+        java.time.LocalDate start = dto.getStartDate() != null ? dto.getStartDate() : plan.getStartDate();
+        java.time.LocalDate end = dto.getEndDate() != null ? dto.getEndDate() : plan.getEndDate();
+        if (start.isAfter(end)) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "coaching.plan.invalid_date_range", null,
+                    "Start date cannot be after end date");
+        }
+        plan.setStartDate(start);
+        plan.setEndDate(end);
+        if (dto.getGoal() != null) {
+            plan.setGoal(dto.getGoal().isBlank() ? null : dto.getGoal().trim());
+        }
+        TrainingPlan saved = trainingPlanRepository.save(plan);
+        return toDto(saved, trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId));
+    }
+
+    /** Only drafts are removed: an activated plan may already be followed by the member and is kept for history. */
+    public void deletePlan(Long planId, Long currentUserId, String currentUserRole) {
+        TrainingPlan plan = trainingPlanRepository.findById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
+        verifyCoachOwnership(plan, currentUserId, currentUserRole);
+        if (!"draft".equalsIgnoreCase(plan.getStatus())) {
+            throw new ConflictException("INVALID_PLAN_STATUS", "coaching.plan.cannot_delete_status",
+                    new Object[]{plan.getStatus()}, "Only draft training plans can be deleted");
+        }
+        trainingPlanRepository.delete(plan);
+    }
+
     @Transactional(readOnly = true)
     public List<TrainingPlanDto> getMyActivePlans(Long memberId) {
         return trainingPlanRepository.findByMemberUserIdAndStatusOrderByCreatedAtDesc(memberId, "active")

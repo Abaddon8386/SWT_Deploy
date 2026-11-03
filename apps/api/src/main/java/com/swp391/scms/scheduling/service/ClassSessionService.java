@@ -35,6 +35,9 @@ public class ClassSessionService {
 
     private final ClassSessionRepository sessionRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
     private final NotificationService notificationService;
     private final ApplicationEventPublisher eventPublisher;
     private final MessageService messageService;
@@ -113,6 +116,28 @@ public class ClassSessionService {
                 );
             }
         }
+        if (sessionBookings != null) {
+            for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(sessionId, "booked")) {
+                booking.setStatus("cancelled");
+                booking.setCancelledAt(java.time.LocalDateTime.now());
+                booking.setCancelReason(request.reason());
+                sessionBookings.save(booking);
+                Member member = booking.getMember();
+                if (member != null && member.getUserId() != null) {
+                    if (!affectedMemberUserIds.contains(member.getUserId())) {
+                        affectedMemberUserIds.add(member.getUserId());
+                    }
+                    notificationService.send(
+                            member.getUserId(),
+                            msg("notifications.session.cancelled.title"),
+                            msg("notifications.session.cancelled.body", className, sessionDateStr, request.reason()),
+                            "schedule_change",
+                            "class_session",
+                            sessionId
+                    );
+                }
+            }
+        }
         // Emit SessionCancelledEvent for decoupled listeners
         SessionCancelledEvent event = new SessionCancelledEvent(
                 sessionId,
@@ -164,6 +189,8 @@ public class ClassSessionService {
         Coach coach = gymClass != null ? gymClass.getCoach() : null;
         long booked = gymClass != null
                 ? enrollmentRepository.countByGymClassIdAndStatus(gymClass.getId(), "booked")
+                + (sessionBookings != null && session.getId() != null
+                    ? sessionBookings.countBySessionIdAndStatus(session.getId(), "booked") : 0)
                 : 0;
 
         return new ClassSessionDto(

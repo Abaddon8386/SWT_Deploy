@@ -49,6 +49,9 @@ public class SessionAttendanceService {
     private final SessionAttendanceRepository attendanceRepository;
     private final ClassSessionRepository sessionRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
     private final CoachRepository coachRepository;
     private final MemberRepository memberRepository;
     private final MessageService messageService;
@@ -86,6 +89,26 @@ public class SessionAttendanceService {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    private record RosterEntry(Member member, String status) {}
+
+    /** Everyone with a seat in this session: class-wide enrollments plus members who booked this session. */
+    private List<RosterEntry> rosterFor(ClassSession session) {
+        Map<Long, RosterEntry> roster = new java.util.LinkedHashMap<>();
+        for (ClassEnrollment e : enrollmentRepository.findByGymClassId(session.getGymClass().getId())) {
+            if ("booked".equalsIgnoreCase(e.getStatus()) && e.getMember() != null) {
+                roster.putIfAbsent(e.getMember().getUserId(), new RosterEntry(e.getMember(), e.getStatus()));
+            }
+        }
+        if (sessionBookings != null) {
+            for (com.swp391.scms.scheduling.entity.SessionBooking b : sessionBookings.findBySessionIdAndStatus(session.getId(), "booked")) {
+                if (b.getMember() != null) {
+                    roster.putIfAbsent(b.getMember().getUserId(), new RosterEntry(b.getMember(), b.getStatus()));
+                }
+            }
+        }
+        return new ArrayList<>(roster.values());
+    }
+
     /**
      * SCRUM-111 AC: GET /api/v1/attendance/sessions/{id}
      * Returns list of enrolled students for the session with their attendance records if recorded.
@@ -96,9 +119,7 @@ public class SessionAttendanceService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
 
         Long classId = session.getGymClass().getId();
-        List<ClassEnrollment> enrollments = enrollmentRepository.findByGymClassId(classId).stream()
-                .filter(e -> "booked".equalsIgnoreCase(e.getStatus()))
-                .toList();
+        List<RosterEntry> enrollments = rosterFor(session);
 
         List<SessionAttendance> attendances = attendanceRepository.findBySessionIdWithDetails(sessionId);
         Map<Long, SessionAttendance> attendanceMap = attendances.stream()
@@ -123,8 +144,8 @@ public class SessionAttendanceService {
         int lateCount = 0;
         int excusedCount = 0;
 
-        for (ClassEnrollment enrollment : enrollments) {
-            Member member = enrollment.getMember();
+        for (RosterEntry enrollment : enrollments) {
+            Member member = enrollment.member();
             if (member == null) {
                 continue;
             }
@@ -155,7 +176,7 @@ public class SessionAttendanceService {
                     user != null ? user.getEmail() : null,
                     user != null ? user.getPhone() : null,
                     user != null ? user.getAvatarUrl() : null,
-                    enrollment.getStatus(),
+                    enrollment.status(),
                     attStatus,
                     checkInTime,
                     coachId,
@@ -216,6 +237,13 @@ public class SessionAttendanceService {
             if (enrollment.getMember() != null && ("booked".equalsIgnoreCase(enrollment.getStatus())
                     || "completed".equalsIgnoreCase(enrollment.getStatus()))) {
                 enrollmentStatus.putIfAbsent(enrollment.getMember().getUserId(), enrollment.getStatus().toLowerCase());
+            }
+        }
+        if (sessionBookings != null) {
+            for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(sessionId, "booked")) {
+                if (booking.getMember() != null) {
+                    enrollmentStatus.putIfAbsent(booking.getMember().getUserId(), "booked");
+                }
             }
         }
 

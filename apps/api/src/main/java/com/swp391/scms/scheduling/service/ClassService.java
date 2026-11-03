@@ -23,7 +23,6 @@ import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.mapper.SchedulingMapper;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
-import com.swp391.scms.scheduling.repository.ClassWaitlistRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.entity.Coach;
@@ -59,7 +58,9 @@ public class ClassService {
     private final GymClassRepository gymClasses;
     private final ClassSessionRepository sessions;
     private final ClassEnrollmentRepository enrollments;
-    private final ClassWaitlistRepository waitlists;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
     private final DisciplineRepository disciplines;
     private final CoachRepository coaches;
     private final RoomRepository rooms;
@@ -75,26 +76,13 @@ public class ClassService {
                         RoomRepository rooms,
                         SchedulingMapper mapper,
                         Clock clock) {
-        this(gymClasses, sessions, enrollments, null, disciplines, coaches, rooms, mapper, clock);
-    }
-
-    public ClassService(GymClassRepository gymClasses,
-                        ClassSessionRepository sessions,
-                        ClassEnrollmentRepository enrollments,
-                        ClassWaitlistRepository waitlists,
-                        DisciplineRepository disciplines,
-                        CoachRepository coaches,
-                        RoomRepository rooms,
-                        SchedulingMapper mapper,
-                        Clock clock) {
-        this(gymClasses, sessions, enrollments, waitlists, disciplines, coaches, rooms, mapper, clock, null);
+        this(gymClasses, sessions, enrollments, disciplines, coaches, rooms, mapper, clock, null);
     }
 
     @Autowired
     public ClassService(GymClassRepository gymClasses,
                         ClassSessionRepository sessions,
                         ClassEnrollmentRepository enrollments,
-                        ClassWaitlistRepository waitlists,
                         DisciplineRepository disciplines,
                         CoachRepository coaches,
                         RoomRepository rooms,
@@ -104,7 +92,6 @@ public class ClassService {
         this.gymClasses = gymClasses;
         this.sessions = sessions;
         this.enrollments = enrollments;
-        this.waitlists = waitlists;
         this.disciplines = disciplines;
         this.coaches = coaches;
         this.rooms = rooms;
@@ -223,7 +210,7 @@ public class ClassService {
                     "Room is not available for scheduling");
         }
 
-        long bookedCount = enrollments.countByGymClassIdAndStatus(classId, ENROLLMENT_BOOKED);
+        long bookedCount = enrollments.countByGymClassIdAndStatus(classId, ENROLLMENT_BOOKED) + busiestSession(classId);
         if (request.capacity() < bookedCount) {
             throw new BadRequestException(
                     "SCHEDULING_CAPACITY_BELOW_BOOKED",
@@ -291,9 +278,6 @@ public class ClassService {
         GymClass gymClass = gymClasses.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
 
-        if (waitlists != null) {
-            waitlists.deleteByGymClassId(classId);
-        }
         enrollments.deleteByGymClassId(classId);
         sessions.deleteByGymClassId(classId);
         gymClasses.delete(gymClass);
@@ -553,17 +537,40 @@ public class ClassService {
         if (!gymClasses.existsById(classId)) {
             throw new ResourceNotFoundException("resource.gym_class", classId);
         }
-        return enrollments.findByGymClassId(classId).stream()
+        List<EnrolledStudentDto> students = new java.util.ArrayList<>(enrollments.findByGymClassId(classId).stream()
                 .filter(e -> !"cancelled".equalsIgnoreCase(e.getStatus()))
                 .map(this::toStudentDto)
-                .toList();
+                .toList());
+        if (sessionBookings != null) {
+            java.util.Set<Long> seen = new java.util.HashSet<>();
+            students.forEach(s -> seen.add(s.memberId()));
+            for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBookedByClassId(classId)) {
+                if (booking.getMember() != null && seen.add(booking.getMember().getUserId())) {
+                    students.add(toStudentDto(booking));
+                }
+            }
+        }
+        return students;
     }
 
     @Transactional(readOnly = true)
     public List<EnrolledStudentDto> getSessionStudents(Long sessionId) {
         ClassSession session = sessions.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
-        return getClassStudents(session.getGymClass().getId());
+        List<EnrolledStudentDto> students = new java.util.ArrayList<>(enrollments.findByGymClassId(session.getGymClass().getId()).stream()
+                .filter(e -> !"cancelled".equalsIgnoreCase(e.getStatus()))
+                .map(this::toStudentDto)
+                .toList());
+        if (sessionBookings != null) {
+            java.util.Set<Long> seen = new java.util.HashSet<>();
+            students.forEach(s -> seen.add(s.memberId()));
+            for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(sessionId, "booked")) {
+                if (booking.getMember() != null && seen.add(booking.getMember().getUserId())) {
+                    students.add(toStudentDto(booking));
+                }
+            }
+        }
+        return students;
     }
 
     private EnrolledStudentDto toStudentDto(ClassEnrollment enrollment) {
@@ -587,7 +594,38 @@ public class ClassService {
         );
     }
 
+    /** Seats taken in one session: class-wide enrollments plus the members who booked this session. */
     private long countBooked(ClassSession session) {
-        return enrollments.countByGymClassIdAndStatus(session.getGymClass().getId(), ENROLLMENT_BOOKED);
+        long classWide = enrollments.countByGymClassIdAndStatus(session.getGymClass().getId(), ENROLLMENT_BOOKED);
+        return classWide + (sessionBookings != null && session.getId() != null
+                ? sessionBookings.countBySessionIdAndStatus(session.getId(), ENROLLMENT_BOOKED) : 0);
+    }
+
+    /** Highest number of per-session bookings in any session of the class. */
+    private long busiestSession(Long classId) {
+        if (sessionBookings == null) return 0;
+        return sessionBookings.countBookedGroupedBySession(classId).stream()
+                .mapToLong(com.swp391.scms.scheduling.dto.SessionBookingCount::bookedCount).max().orElse(0);
+    }
+
+    private EnrolledStudentDto toStudentDto(com.swp391.scms.scheduling.entity.SessionBooking booking) {
+        Member member = booking.getMember();
+        User user = member != null ? member.getUser() : null;
+        return new EnrolledStudentDto(
+                booking.getId(),
+                member != null ? member.getUserId() : null,
+                member != null ? member.getMembershipCode() : null,
+                user != null ? user.getFullName() : null,
+                user != null ? user.getEmail() : null,
+                user != null ? user.getPhone() : null,
+                user != null ? user.getAvatarUrl() : null,
+                member != null && member.getFitnessGoal() != null ? member.getFitnessGoal() : "",
+                member != null && member.getHealthNotes() != null ? member.getHealthNotes() : "",
+                member != null && member.getFitnessLevel() != null ? member.getFitnessLevel() : "beginner",
+                member != null ? member.getEmergencyContactName() : null,
+                member != null ? member.getEmergencyContactPhone() : null,
+                booking.getBookedAt(),
+                booking.getStatus()
+        );
     }
 }

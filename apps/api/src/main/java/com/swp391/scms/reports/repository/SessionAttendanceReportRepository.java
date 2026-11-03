@@ -35,7 +35,12 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
                     WHERE e.gymClass.id = c.id
                       AND LOWER(e.status) IN ('booked', 'completed')
                       AND (:startTs IS NULL OR e.enrolledAt IS NULL OR e.enrolledAt >= :startTs)
-                      AND (:endTs IS NULL OR e.enrolledAt IS NULL OR e.enrolledAt < :endTs)) AS enrolledCount,
+                      AND (:endTs IS NULL OR e.enrolledAt IS NULL OR e.enrolledAt < :endTs))
+                   + (SELECT COUNT(b) FROM SessionBooking b
+                    WHERE b.session.gymClass.id = c.id
+                      AND LOWER(b.status) IN ('booked', 'completed')
+                      AND (:startTs IS NULL OR b.bookedAt >= :startTs)
+                      AND (:endTs IS NULL OR b.bookedAt < :endTs)) AS enrolledCount,
                    (SELECT COUNT(a) FROM SessionAttendance a JOIN a.session s
                     WHERE s.gymClass.id = c.id
                       AND LOWER(a.status) IN ('present', 'late')

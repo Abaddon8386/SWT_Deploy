@@ -2,9 +2,9 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { StaffAccountsPage } from './StaffAccountsPage';
-import { createStaffAccount, listStaffAccounts } from './staffAccountsApi';
+import { createStaffAccount, listStaffAccounts, setStaffAccountLocked } from './staffAccountsApi';
 
-vi.mock('./staffAccountsApi', () => ({ createStaffAccount: vi.fn(), listStaffAccounts: vi.fn() }));
+vi.mock('./staffAccountsApi', () => ({ createStaffAccount: vi.fn(), listStaffAccounts: vi.fn(), setStaffAccountLocked: vi.fn() }));
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
@@ -53,4 +53,21 @@ it('shows a load failure with retry and never treats it as an empty list', async
   expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
   await act(async () => [...host.querySelectorAll('button')].find(button => button.textContent === 'Thử lại')!.click());
   expect(host.textContent).toContain('Chưa có tài khoản nhân sự');
+});
+
+it('locks and unlocks a staff account from the list and reports a failed change', async () => {
+  const coach = { id: 8, fullName: 'Coach A', email: 'a@gmail.com', roleCode: 'COACH' as const, status: 'active' };
+  vi.mocked(listStaffAccounts).mockResolvedValue([coach]);
+  vi.mocked(setStaffAccountLocked).mockResolvedValueOnce({ ...coach, status: 'locked' });
+  await act(async () => root.render(<StaffAccountsPage />));
+  const rowButton = () => host.querySelector<HTMLButtonElement>('tbody button')!;
+  expect(rowButton().textContent).toBe('Khóa');
+  await act(async () => rowButton().click());
+  expect(setStaffAccountLocked).toHaveBeenLastCalledWith(8, true);
+  expect(host.querySelector('tbody')?.textContent).toContain('Đã khóa');
+  expect(rowButton().textContent).toBe('Mở khóa');
+  vi.mocked(setStaffAccountLocked).mockRejectedValueOnce(new Error('Không thể mở khóa'));
+  await act(async () => rowButton().click());
+  expect(setStaffAccountLocked).toHaveBeenLastCalledWith(8, false);
+  expect(host.querySelector('tbody')?.textContent).toContain('Đã khóa');
 });

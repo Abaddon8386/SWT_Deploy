@@ -223,4 +223,31 @@ class SessionAttendanceServiceTest {
         assertEquals("ATTENDANCE_SESSION_NOT_STARTED", error.getErrorCode());
         verify(attendanceRepository, never()).saveAndFlush(any());
     }
+
+    @Test
+    void getSessionAttendanceRoster_includesMembersWhoBookedOnlyThisSession() {
+        com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
+        ReflectionTestUtils.setField(service, "sessionBookings", sessionBookings);
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        ClassEnrollment classWide = new ClassEnrollment();
+        classWide.setGymClass(gymClass);
+        classWide.setMember(member);
+        classWide.setStatus("booked");
+        when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(classWide));
+        Member sessionOnly = new Member();
+        sessionOnly.setUserId(21L);
+        com.swp391.scms.scheduling.entity.SessionBooking booking = new com.swp391.scms.scheduling.entity.SessionBooking();
+        booking.setMember(sessionOnly);
+        booking.setStatus("booked");
+        com.swp391.scms.scheduling.entity.SessionBooking duplicate = new com.swp391.scms.scheduling.entity.SessionBooking();
+        duplicate.setMember(member);
+        duplicate.setStatus("booked");
+        when(sessionBookings.findBySessionIdAndStatus(100L, "booked")).thenReturn(List.of(booking, duplicate));
+        when(attendanceRepository.findBySessionIdWithDetails(100L)).thenReturn(List.of());
+
+        SessionAttendanceResponse response = service.getSessionAttendanceRoster(100L);
+
+        assertEquals(2, response.totalBooked());
+        assertEquals(List.of(20L, 21L), response.members().stream().map(m -> m.memberId()).toList());
+    }
 }

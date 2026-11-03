@@ -18,6 +18,8 @@ export interface StaffAccountInput {
 }
 
 export const listStaffAccounts = () => apiFetch<StaffAccount[]>('/staff-accounts');
-export const createStaffAccount = (input: StaffAccountInput) => apiFetch<StaffAccount>('/staff-accounts', {
+export const setStaffAccountLocked = (id: number, locked: boolean) =>
+  apiFetch<StaffAccount>(`/staff-accounts/${id}/${locked ? 'lock' : 'unlock'}`, { method: 'PATCH' });
+export const createStaffAccount =(input: StaffAccountInput) => apiFetch<StaffAccount>('/staff-accounts', {
   method: 'POST', body: JSON.stringify(input),
 });

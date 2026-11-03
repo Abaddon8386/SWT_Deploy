@@ -14,6 +14,8 @@ import java.util.Optional;
 
 @Repository
 public interface MembershipSubscriptionRepository extends JpaRepository<MembershipSubscription, Long> {
+    boolean existsByMembershipPackageId(Long packageId);
+
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from MembershipSubscription s where s.id = :id")

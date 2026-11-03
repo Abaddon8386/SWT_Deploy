@@ -31,6 +31,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/manager/cancellations', label: 'Yêu cầu hủy gói', icon: 'package', roles: ['MANAGER'] },
   { to: '/manager/support', label: 'Khiếu nại chuyển lên', icon: 'inbox', roles: ['MANAGER'] },
+  { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'users', roles: ['MANAGER'] },
   { to: '/manager/requests', label: 'Duyệt đơn nội bộ', icon: 'file', roles: ['MANAGER'] },
   { to: '/manager/coach-reviews', label: 'Xếp hạng & Đánh giá HLV', icon: 'star', roles: ['MANAGER'] },
   { to: '/manager/audit-logs', label: 'Nhật ký kiểm toán & Lấp đầy', icon: 'history', roles: ['MANAGER'] },

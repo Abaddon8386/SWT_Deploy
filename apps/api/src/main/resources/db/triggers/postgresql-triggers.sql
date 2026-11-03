@@ -251,6 +251,54 @@ CREATE TRIGGER trg_enrollments_check_membership
 BEFORE INSERT OR UPDATE OF member_id, status ON class_enrollments
 FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_enrollment();
 
+-- Per-session bookings: each session has its own seats. Class-wide enrollments (legacy rows) also occupy a seat in
+-- every session of their class, so both are counted against the class capacity.
+CREATE OR REPLACE FUNCTION scms_check_session_booking_capacity()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    target_class_id BIGINT;
+    class_capacity INTEGER;
+    class_wide_count BIGINT;
+    booked_count BIGINT;
+BEGIN
+    IF NEW.status <> 'booked' THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT class_id INTO target_class_id FROM class_sessions WHERE id = NEW.session_id;
+    SELECT capacity INTO class_capacity FROM classes WHERE id = target_class_id FOR UPDATE;
+
+    SELECT COUNT(*) INTO class_wide_count
+    FROM class_enrollments
+    WHERE class_id = target_class_id AND status = 'booked';
+
+    SELECT COUNT(*) INTO booked_count
+    FROM session_bookings
+    WHERE session_id = NEW.session_id AND status = 'booked';
+
+    IF class_wide_count + booked_count > class_capacity THEN
+        RAISE EXCEPTION 'Buổi học đã đầy chỗ (vượt quá capacity cho phép).'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_session_bookings_check_capacity';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_session_bookings_check_capacity ON session_bookings;
+CREATE TRIGGER trg_session_bookings_check_capacity
+AFTER INSERT OR UPDATE OF session_id, status ON session_bookings
+FOR EACH ROW EXECUTE FUNCTION scms_check_session_booking_capacity();
+
+DROP TRIGGER IF EXISTS trg_session_bookings_check_membership ON session_bookings;
+CREATE TRIGGER trg_session_bookings_check_membership
+BEFORE INSERT OR UPDATE OF member_id, status ON session_bookings
+FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_enrollment();
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_session_booking_active ON session_bookings (session_id, member_id) WHERE status = 'booked';
+
 CREATE OR REPLACE FUNCTION scms_require_active_membership_for_checkin()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -284,7 +332,6 @@ FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_checkin();
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users (username) WHERE username IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone ON users (phone) WHERE phone IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_enrollment_active ON class_enrollments (class_id, member_id) WHERE status = 'booked';
-CREATE UNIQUE INDEX IF NOT EXISTS uq_waitlist_active ON class_waitlists (class_id, member_id) WHERE status = 'waiting';
 
 DO $$
 BEGIN

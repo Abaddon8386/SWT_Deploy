@@ -21,10 +21,18 @@ export interface EnrollmentDto {
   cancelledAt: string | null; cancelReason: string | null;
 }
 
-export interface WaitlistDto {
-  id: number; classId: number; className: string; memberId: number;
-  status: string; requestedAt: string;
+/** One seat in one session (the per-session booking feature, as opposed to a class-wide enrollment). */
+export interface SessionBookingDto {
+  id: number; sessionId: number; classId: number; className: string; memberId: number;
+  sessionDate: string; startTime: string; endTime: string; roomName: string | null;
+  coachName: string | null; status: string; bookedAt: string; cancelledAt: string | null;
+  cancelReason: string | null; batchId: string | null;
 }
+
+/** An id a bulk request could not process, with the API error code and a localised reason. */
+export interface BulkSkipped { id: number; date: string | null; code: string; message: string }
+export interface BulkBookResult { booked: SessionBookingDto[]; skipped: BulkSkipped[] }
+export interface BulkCancelResult { cancelled: SessionBookingDto[]; skipped: BulkSkipped[] }
 
 export const getClasses = () => apiFetch<GymClassDto[]>('/classes')
   .then((classes) => classes.filter((item) => isStandardDiscipline(item.disciplineName)));
@@ -44,15 +52,32 @@ export const getSessions = (weekOffset = 0) => {
   return apiFetch<ClassSessionDto[]>(`/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`)
     .then((sessions) => sessions.filter((item) => isStandardDiscipline(item.disciplineName)));
 };
+export const UPCOMING_DAYS = 30;
+const isoDate = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+/** Today through the next 30 days, in local calendar dates. */
+export function upcomingRange(days = UPCOMING_DAYS): { fromDate: string; toDate: string } {
+  const start = new Date();
+  start.setHours(12, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + days);
+  return { fromDate: isoDate(start), toDate: isoDate(end) };
+}
+export const getUpcomingSessions = () => {
+  const { fromDate, toDate } = upcomingRange();
+  return apiFetch<ClassSessionDto[]>(`/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`)
+    .then((sessions) => sessions.filter((item) => isStandardDiscipline(item.disciplineName)));
+};
+export const getMyBookings = () => apiFetch<SessionBookingDto[]>(`/classes/session-bookings/my?status=booked&from=${upcomingRange(0).fromDate}`);
+export const bookSession = (sessionId: number) => apiFetch<SessionBookingDto>(`/classes/sessions/${sessionId}/bookings`, { method: 'POST' });
+export const bookSessions = (sessionIds: number[]) => apiFetch<BulkBookResult>('/classes/session-bookings/bulk', {
+  method: 'POST', body: JSON.stringify({ sessionIds }),
+});
+export const cancelBooking = (bookingId: number) => apiFetch<SessionBookingDto>(`/classes/session-bookings/${bookingId}`, { method: 'DELETE' });
+export const cancelBookings = (bookingIds: number[]) => apiFetch<BulkCancelResult>('/classes/session-bookings/cancel', {
+  method: 'POST', body: JSON.stringify({ bookingIds }),
+});
 export const getMyEnrollments = () => apiFetch<EnrollmentDto[]>('/classes/enrollments/my');
-export const getMyWaitlists = () => apiFetch<WaitlistDto[]>('/classes/waitlists/my');
-export const enroll = (sessionId: number, waitlistId?: number) => apiFetch<EnrollmentDto>(
-  `/classes/sessions/${sessionId}/enroll${waitlistId === undefined ? '' : `?waitlistId=${waitlistId}`}`,
-  { method: 'POST' },
-);
 export const cancelEnrollment = (enrollmentId: number) => apiFetch<EnrollmentDto>(`/classes/enrollments/${enrollmentId}`, { method: 'DELETE' });
-export const joinWaitlist = (sessionId: number) => apiFetch<WaitlistDto>(`/classes/sessions/${sessionId}/waitlist`, { method: 'POST' });
-export const leaveWaitlist = (waitlistId: number) => apiFetch<WaitlistDto>(`/classes/waitlists/${waitlistId}`, { method: 'DELETE' });
 
 // Parse YYYY-MM-DD as a calendar date. new Date('YYYY-MM-DD') can shift days by timezone.
 export function weekday(date: string): number {

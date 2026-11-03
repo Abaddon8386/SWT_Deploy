@@ -8,10 +8,8 @@ import com.swp391.scms.membership.MembershipSubscriptionController;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
 import com.swp391.scms.scheduling.ClassController;
 import com.swp391.scms.scheduling.EnrollmentController;
-import com.swp391.scms.scheduling.WaitlistController;
 import com.swp391.scms.scheduling.service.ClassService;
 import com.swp391.scms.scheduling.service.EnrollmentService;
-import com.swp391.scms.scheduling.service.WaitlistService;
 import com.swp391.scms.users.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Exercises the merged SCRUM-71..75 matchers with the real security filter chain. */
-@WebMvcTest({ClassController.class, EnrollmentController.class, WaitlistController.class,
+@WebMvcTest({ClassController.class, EnrollmentController.class,
         CenterCheckinController.class, MembershipSubscriptionController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
@@ -42,7 +40,6 @@ class OperationsSecurityRegressionTest {
     @Autowired MockMvc mvc;
     @MockitoBean ClassService classes;
     @MockitoBean EnrollmentService enrollments;
-    @MockitoBean WaitlistService waitlists;
     @MockitoBean CenterCheckinService checkins;
     @MockitoBean MembershipSubscriptionService subscriptions;
     @MockitoBean JwtService jwt;
@@ -75,11 +72,9 @@ class OperationsSecurityRegressionTest {
     }
 
     @Test
-    void staffAndCoachCannotUseMemberOnlyBookingsWaitlistsOrSubscriptions() throws Exception {
+    void staffAndCoachCannotUseMemberOnlyBookingsOrSubscriptions() throws Exception {
         for (String role : List.of("RECEPTIONIST", "COACH", "CENTER_MANAGER")) {
             mvc.perform(post("/api/v1/classes/sessions/1/enroll").with(authentication(actor(role))))
-                    .andExpect(status().isForbidden());
-            mvc.perform(post("/api/v1/classes/sessions/1/waitlist").with(authentication(actor(role))))
                     .andExpect(status().isForbidden());
             mvc.perform(get("/api/v1/classes/enrollments/my").with(authentication(actor(role))))
                     .andExpect(status().isForbidden());
@@ -89,7 +84,7 @@ class OperationsSecurityRegressionTest {
                             .contentType(MediaType.APPLICATION_JSON).content("{\"packageId\":1}"))
                     .andExpect(status().isForbidden());
         }
-        verifyNoInteractions(enrollments, waitlists, subscriptions);
+        verifyNoInteractions(enrollments, subscriptions);
     }
 
     @Test
@@ -113,8 +108,6 @@ class OperationsSecurityRegressionTest {
         when(checkins.scan(any(), any())).thenReturn(new CheckinDto(1L, 10L, "Member",
                 LocalDateTime.of(2026, 10, 17, 10, 0), null, "qr", null, "GRANTED"));
         mvc.perform(post("/api/v1/classes/sessions/1/enroll").with(authentication(actor("MEMBER"))))
-                .andExpect(status().isCreated());
-        mvc.perform(post("/api/v1/classes/sessions/1/waitlist").with(authentication(actor("MEMBER"))))
                 .andExpect(status().isCreated());
         mvc.perform(get("/api/v1/classes/enrollments/my").with(authentication(actor("MEMBER"))))
                 .andExpect(status().isOk());

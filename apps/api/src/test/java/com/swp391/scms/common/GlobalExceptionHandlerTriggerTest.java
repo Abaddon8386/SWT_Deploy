@@ -32,8 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class GlobalExceptionHandlerTriggerTest {
 
     private static final String DB_CAPACITY_VI = "Lớp học đã đầy chỗ (vượt quá capacity cho phép).";
-    private static final String CAPACITY_VI = "Lớp học đã đầy chỗ; vui lòng tham gia danh sách chờ";
-    private static final String CAPACITY_EN = "Class is full; consider joining the waitlist";
+    private static final String CAPACITY_VI = "Lớp học đã đầy chỗ";
+    private static final String CAPACITY_EN = "Class is full";
     private static final String SCHEDULE_VI = "Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này";
     private static final String SCHEDULE_EN = "Schedule conflict: Coach or room is already booked during this time slot";
     private static final String MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch";

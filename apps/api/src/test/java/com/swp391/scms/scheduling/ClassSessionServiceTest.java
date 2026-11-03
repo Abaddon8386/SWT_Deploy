@@ -166,4 +166,32 @@ class ClassSessionServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> sessionService.cancelSession(999L, request, managerPrincipal));
     }
+
+    @Test
+    void cancelSession_alsoReleasesPerSessionBookingsWithoutNotifyingAMemberTwice() {
+        com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
+        ReflectionTestUtils.setField(sessionService, "sessionBookings", sessionBookings);
+        Member other = new Member();
+        other.setUserId(30L);
+        com.swp391.scms.scheduling.entity.SessionBooking byOther = new com.swp391.scms.scheduling.entity.SessionBooking();
+        byOther.setMember(other);
+        byOther.setStatus("booked");
+        com.swp391.scms.scheduling.entity.SessionBooking bySameMember = new com.swp391.scms.scheduling.entity.SessionBooking();
+        bySameMember.setMember(member);
+        bySameMember.setStatus("booked");
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        when(sessionRepository.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
+        when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(enrollment));
+        when(sessionBookings.findBySessionIdAndStatus(100L, "booked")).thenReturn(List.of(byOther, bySameMember));
+
+        sessionService.cancelSession(100L, new CancelSessionRequest("Mưa bão"), coachPrincipal);
+
+        assertEquals("cancelled", byOther.getStatus());
+        assertEquals("cancelled", bySameMember.getStatus());
+        assertEquals("Mưa bão", byOther.getCancelReason());
+        verify(sessionBookings, times(2)).save(any(com.swp391.scms.scheduling.entity.SessionBooking.class));
+        ArgumentCaptor<SessionCancelledEvent> captor = ArgumentCaptor.forClass(SessionCancelledEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertEquals(List.of(20L, 30L), captor.getValue().affectedMemberUserIds());
+    }
 }

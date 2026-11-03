@@ -38,14 +38,17 @@ export const catalogApi = {
     .then((items) => items.filter((item) => isStandardDiscipline(item.name))),
   saveDiscipline: (id: number | null, b: Body<Discipline>) =>
     apiFetch<Discipline>(id ? `/disciplines/${id}` : '/disciplines', json(id ? 'PUT' : 'POST', b)),
+  deleteDiscipline: (id: number) => apiFetch<void>(`/disciplines/${id}`, { method: 'DELETE' }),
 
   rooms: () => apiFetch<Room[]>('/rooms'),
   saveRoom: (id: number | null, b: Omit<Body<Room>, 'disciplineName'>) =>
     apiFetch<Room>(id ? `/rooms/${id}` : '/rooms', json(id ? 'PUT' : 'POST', b)),
+  deleteRoom: (id: number) => apiFetch<void>(`/rooms/${id}`, { method: 'DELETE' }),
 
   packages: () => apiFetch<MembershipPackage[]>('/packages'),
   savePackage: (id: number | null, b: Body<MembershipPackage>) =>
     apiFetch<MembershipPackage>(id ? `/packages/${id}` : '/packages', json(id ? 'PUT' : 'POST', b)),
+  deletePackage: (id: number) => apiFetch<void>(`/packages/${id}`, { method: 'DELETE' }),
   setPackageStatus: (id: number, status: MembershipPackage['status']) =>
     apiFetch<MembershipPackage>(`/packages/${id}/status`, json('PATCH', { status })),
 };

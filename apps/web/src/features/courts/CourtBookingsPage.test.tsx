@@ -7,7 +7,7 @@ import { courtsApi } from './courtsApi';
 import { MemberCourtsPage, StaffCourtsPage } from './CourtBookingsPage';
 
 vi.mock('./courtsApi', async original => ({ ...(await original<typeof import('./courtsApi')>()), courtsApi: {
-  courts: vi.fn(), availability: vi.fn(), my: vi.fn(), list: vi.fn(), book: vi.fn(), cancel: vi.fn(),
+  courts: vi.fn(), availability: vi.fn(), my: vi.fn(), list: vi.fn(), book: vi.fn(), bookRecurring: vi.fn(), cancel: vi.fn(),
 } }));
 vi.mock('../manager/catalogApi', () => ({ catalogApi: { rooms: vi.fn().mockResolvedValue([]) } }));
 vi.mock('../../shared/lib/portalNotices', () => ({ notify: vi.fn() }));
@@ -74,4 +74,21 @@ it('shows staff daily empty state and queries the paginated daily endpoint', asy
   await render(true);
   expect(courtsApi.list).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), '', 0);
   expect(host.textContent).toContain('Chưa có lượt đặt trong ngày này');
+});
+
+it('books a standing week on the chosen weekdays and reports the skipped day with its reason', async () => {
+  const booking = { id: 1, roomId: 5, roomName: 'Sân A', disciplineName: 'Tennis', memberId: 1, memberName: 'M', date: '2099-01-05', startTime: '09:00', endTime: '10:00', status: 'booked' as const, createdAt: '', cancelledAt: null, cancelReason: null, canCancel: true };
+  vi.mocked(courtsApi.bookRecurring).mockResolvedValue({ booked: [booking], skipped: [{ date: '2099-01-07', code: 'COURT_BOOKING_SLOT_TAKEN', message: 'Khung giờ đã có lượt đặt' }] });
+  await render();
+  await click('Trống');
+  expect(host.querySelector('[role="status"]')).toBeNull();
+  await click('Cả tuần');
+  expect(host.textContent).toContain('Sẽ đặt 1 buổi');
+  await click('Xác nhận đặt định kỳ');
+  expect(courtsApi.book).not.toHaveBeenCalled();
+  expect(courtsApi.bookRecurring).toHaveBeenCalledWith(expect.objectContaining({ roomId: 5, startTime: '09:00', period: 'week', daysOfWeek: [expect.any(Number)] }));
+  expect(host.textContent).toContain('Đã đặt 1 buổi, bỏ qua 1 buổi');
+  expect(host.textContent).toContain('07/01: Khung giờ đã có lượt đặt');
+  await click('Đóng');
+  expect(host.querySelector('[role="dialog"]')).toBeNull();
 });

@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: SCMS per-session class booking
+  version: 1.0.0
+  description: >
+    A member books, and cancels, individual class sessions instead of a whole class. A single session, any
+    hand-picked set, a week or a month are all the same operation: the client resolves the sessions it wants into
+    ids (for example the sessions shown for "Tuần này" or "30 ngày tới", filtered by discipline and weekday) and
+    sends them to the bulk endpoint. Each session is checked on its own, so sessions that fail are reported in
+    skipped while the others are kept. Seats are counted per session: members who booked the session plus any
+    class-wide enrollment of the class. Database triggers repeat the capacity and membership checks and a unique
+    index forbids booking a session twice. There is no waitlist: a full session is simply full.
+servers:
+  - url: /api/v1
+paths:
+  /classes/sessions/{id}/bookings:
+    post:
+      summary: Book one session (MEMBER)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '201': { description: 'ApiResponse.data = SessionBooking' }
+        '400': { description: SCHEDULING_PAST_SESSION / SCHEDULING_SESSION_CANCELLED / SCHEDULING_CLASS_INACTIVE }
+        '403': { description: SCHEDULING_MEMBERSHIP_INVALID / SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION }
+        '404': { description: Session or member not found }
+        '409': { description: SCHEDULING_SESSION_ALREADY_BOOKED / SCHEDULING_ALREADY_ENROLLED / SCHEDULING_MEMBER_TIME_OVERLAP / SCHEDULING_SESSION_FULL }
+  /classes/session-bookings/bulk:
+    post:
+      summary: Book many sessions at once (MEMBER)
+      description: >
+        Up to 62 distinct session ids. Sessions are processed in class/date order. Status 201 when at least one
+        booking was created, 200 when none was. Bookings created by one request share a batchId.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionIds]
+              properties:
+                sessionIds: { type: array, minItems: 1, maxItems: 62, items: { type: integer, format: int64 } }
+      responses:
+        '201':
+          description: At least one session booked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      booked: { type: array, items: { $ref: '#/components/schemas/SessionBooking' } }
+                      skipped: { type: array, items: { $ref: '#/components/schemas/Skipped' } }
+        '200': { description: 'Nothing could be booked; data.skipped explains each session' }
+        '400': { description: Empty list or more than 62 ids }
+        '403': { description: MEMBER required }
+  /classes/session-bookings/my:
+    get:
+      summary: The member's session bookings (MEMBER)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [booked, cancelled, completed] } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: 'data = SessionBooking[] ordered by session date and time' }
+  /classes/session-bookings/{id}:
+    delete:
+      summary: Cancel one booking (owner, CENTER_MANAGER or RECEPTIONIST)
+      description: Allowed until the session starts; the seat is released immediately.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: 'data = SessionBooking with status cancelled' }
+        '400': { description: SCHEDULING_BOOKING_NOT_BOOKED / SCHEDULING_BOOKING_TOO_LATE }
+        '403': { description: SCHEDULING_BOOKING_NOT_OWNER }
+        '404': { description: Booking not found }
+  /classes/session-bookings/cancel:
+    post:
+      summary: Cancel many bookings at once (owner, CENTER_MANAGER or RECEPTIONIST)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingIds]
+              properties:
+                bookingIds: { type: array, minItems: 1, maxItems: 62, items: { type: integer, format: int64 } }
+      responses:
+        '200': { description: 'data = { cancelled: SessionBooking[], skipped: Skipped[] }' }
+        '400': { description: Empty list or more than 62 ids }
+components:
+  schemas:
+    SessionBooking:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        sessionId: { type: integer, format: int64 }
+        classId: { type: integer, format: int64 }
+        className: { type: string }
+        memberId: { type: integer, format: int64 }
+        sessionDate: { type: string, format: date }
+        startTime: { type: string }
+        endTime: { type: string }
+        roomName: { type: string, nullable: true }
+        coachName: { type: string, nullable: true }
+        status: { type: string, enum: [booked, cancelled, completed] }
+        bookedAt: { type: string, format: date-time }
+        cancelledAt: { type: string, format: date-time, nullable: true }
+        cancelReason: { type: string, nullable: true }
+        batchId: { type: string, nullable: true }
+    Skipped:
+      type: object
+      properties:
+        id: { type: integer, format: int64, description: Session id when booking, booking id when cancelling }
+        date: { type: string, format: date, nullable: true }
+        code: { type: string }
+        message: { type: string }

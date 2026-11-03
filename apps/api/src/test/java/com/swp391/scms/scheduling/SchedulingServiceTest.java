@@ -10,16 +10,13 @@ import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
-import com.swp391.scms.scheduling.entity.ClassWaitlist;
 import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.mapper.SchedulingMapper;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
-import com.swp391.scms.scheduling.repository.ClassWaitlistRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.scheduling.service.ClassService;
 import com.swp391.scms.scheduling.service.EnrollmentService;
-import com.swp391.scms.scheduling.service.WaitlistService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.MemberRepository;
@@ -70,7 +67,6 @@ class SchedulingServiceTest {
 
     @Mock private ClassEnrollmentRepository enrollments;
     @Mock private ClassSessionRepository sessions;
-    @Mock private ClassWaitlistRepository waitlists;
     @Mock private GymClassRepository gymClasses;
     @Mock private MembershipSubscriptionRepository subscriptions;
     @Mock private MemberRepository members;
@@ -81,7 +77,6 @@ class SchedulingServiceTest {
     @Spy private SchedulingMapper mapper = new SchedulingMapper();
     @Mock private Clock clock;
     @InjectMocks private EnrollmentService enrollmentService;
-    private WaitlistService waitlistService;
     @InjectMocks private ClassService classService;
 
     private GymClass gymClass;
@@ -89,8 +84,6 @@ class SchedulingServiceTest {
 
     @BeforeEach
     void setUp() {
-        waitlistService = new WaitlistService(waitlists, enrollments, sessions, subscriptions, members, gymClasses,
-                clock, enrollmentService);
         // Noon at the center, independently of the UTC Clock zone.
         lenient().when(clock.instant()).thenReturn(Instant.parse("2026-10-17T05:00:00Z"));
         lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
@@ -115,36 +108,7 @@ class SchedulingServiceTest {
         lenient().when(subscriptions.hasActiveMembershipCoveringSession(eq(MEMBER.id()), eq(TODAY), any()))
                 .thenReturn(true);
         lenient().when(enrollments.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
-        lenient().when(waitlists.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
         lenient().when(sessions.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"cancelled", "completed"})
-    void waitlistRejectsClosedSessions(String status) {
-        session.setStatus(status);
-        lenient().when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(1L);
-
-        assertThrows(BadRequestException.class, () -> waitlistService.join(MEMBER, 9L));
-        verify(waitlists, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void waitlistRejectsPastDate() {
-        session.setSessionDate(TODAY.minusDays(1));
-        lenient().when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(1L);
-
-        assertThrows(BadRequestException.class, () -> waitlistService.join(MEMBER, 9L));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {9, 12})
-    void waitlistRejectsSessionsThatAlreadyStartedToday(int hour) {
-        session.setSessionDate(TODAY);
-        session.setStartTime(LocalTime.of(hour, 0));
-        lenient().when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(1L);
-
-        assertThrows(BadRequestException.class, () -> waitlistService.join(MEMBER, 9L));
     }
 
     @ParameterizedTest
@@ -167,35 +131,20 @@ class SchedulingServiceTest {
     }
 
     @Test
-    void bookingClosesExistingWaitlistEntry() {
-        ClassWaitlist waiting = waitingEntry();
-        lenient().when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "waiting"))
-                .thenReturn(Optional.of(waiting));
-
-        var result = enrollmentService.enroll(MEMBER, 9L);
-
-        assertEquals("booked", result.status());
-        assertEquals("expired", waiting.getStatus());
-    }
-
-    @Test
-    void rejectedBookingPreservesWaitlistEntry() {
-        ClassWaitlist waiting = waitingEntry();
+    void fullClassRejectsBooking() {
         when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(1L);
 
-        assertThrows(ConflictException.class, () -> enrollmentService.enroll(MEMBER, 9L));
-
-        assertEquals("waiting", waiting.getStatus());
-        verify(waitlists, never()).saveAndFlush(any());
+        ConflictException ex = assertThrows(ConflictException.class, () -> enrollmentService.enroll(MEMBER, 9L));
+        assertEquals("SCHEDULING_CLASS_FULL", ex.getErrorCode());
+        verify(enrollments, never()).saveAndFlush(any());
     }
 
     @Test
-    void futureSubscriptionCannotJoinWaitlist() {
+    void memberWithoutActiveMembershipCannotBook() {
         when(subscriptions.hasActiveMembership(MEMBER.id(), TODAY)).thenReturn(false);
-        lenient().when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(1L);
 
-        assertThrows(ForbiddenException.class, () -> waitlistService.join(MEMBER, 9L));
-        verify(waitlists, never()).saveAndFlush(any());
+        assertThrows(ForbiddenException.class, () -> enrollmentService.enroll(MEMBER, 9L));
+        verify(enrollments, never()).saveAndFlush(any());
     }
 
     @Test
@@ -212,25 +161,15 @@ class SchedulingServiceTest {
         assertEquals(TODAY, classService.createSession(5L, request).sessionDate());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"enroll", "waitlist"})
-    void lockWaitCannotAdmitMemberAfterSessionHasStarted(String action) {
+    @Test
+    void lockWaitCannotAdmitMemberAfterSessionHasStarted() {
         session.setSessionDate(TODAY);
         when(gymClasses.findByIdForUpdate(5L)).thenAnswer(call -> {
             when(clock.instant()).thenReturn(Instant.parse("2026-10-17T14:00:00Z"));
             return Optional.of(gymClass);
         });
-        if ("waitlist".equals(action)) {
-            lenient().when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(1L);
-        }
 
-        assertThrows(BadRequestException.class, () -> {
-            if ("enroll".equals(action)) {
-                enrollmentService.enroll(MEMBER, 9L);
-            } else {
-                waitlistService.join(MEMBER, 9L);
-            }
-        });
+        assertThrows(BadRequestException.class, () -> enrollmentService.enroll(MEMBER, 9L));
     }
 
     @Test
@@ -265,94 +204,6 @@ class SchedulingServiceTest {
         verify(enrollments).findByMemberUserId(MEMBER.id());
     }
 
-    private ClassWaitlist waitingEntry() {
-        ClassWaitlist waiting = new ClassWaitlist();
-        waiting.setGymClass(gymClass);
-        waiting.setStatus("waiting");
-        return waiting;
-    }
-
-    @Test
-    void cancellationGrants24HourReservationWindowToNextWaitlistMember() {
-        ClassEnrollment enrollment = new ClassEnrollment();
-        ReflectionTestUtils.setField(enrollment, "id", 101L);
-        enrollment.setGymClass(gymClass);
-        enrollment.setStatus("booked");
-        Member owner = new Member();
-        owner.setUserId(MEMBER.id());
-        enrollment.setMember(owner);
-
-        ClassWaitlist waiting = waitingEntry();
-        Member waitlistMember = new Member();
-        waitlistMember.setUserId(99L);
-        waiting.setMember(waitlistMember);
-
-        when(enrollments.findClassIdById(101L)).thenReturn(Optional.of(5L));
-        when(enrollments.findByIdForUpdate(101L)).thenReturn(Optional.of(enrollment));
-        when(waitlists.findFirstByGymClassIdAndStatusOrderByRequestedAtAscIdAsc(5L, "waiting"))
-                .thenReturn(Optional.of(waiting));
-
-        enrollmentService.cancel(MEMBER, 101L);
-
-        assertEquals("cancelled", enrollment.getStatus());
-        assertEquals("notified", waiting.getStatus());
-        assertNotNull(waiting.getNotifiedAt());
-        assertNotNull(waiting.getReservationExpiresAt());
-        assertEquals(waiting.getNotifiedAt().plusHours(24), waiting.getReservationExpiresAt());
-        verify(waitlists).saveAndFlush(waiting);
-    }
-
-    @Test
-    void withdrawingReservationNotifiesTheNextMember() {
-        ClassWaitlist reserved = waitingEntry();
-        reserved.setStatus("notified");
-        Member owner = new Member();
-        owner.setUserId(MEMBER.id());
-        reserved.setMember(owner);
-        ClassWaitlist next = waitingEntry();
-        Member nextMember = new Member();
-        nextMember.setUserId(99L);
-        next.setMember(nextMember);
-        when(waitlists.findClassIdById(30L)).thenReturn(Optional.of(5L));
-        when(waitlists.findByIdForUpdate(30L)).thenReturn(Optional.of(reserved));
-        when(waitlists.findFirstByGymClassIdAndStatusOrderByRequestedAtAscIdAsc(5L, "waiting")).thenReturn(Optional.of(next));
-
-        waitlistService.withdraw(MEMBER, 30L);
-
-        assertEquals("notified", next.getStatus());
-        verify(notifications).send(eq(99L), any(), any(), eq("schedule_change"), eq("class_session"), any());
-    }
-
-    @Test
-    void outsiderBlockedFromBookingWhenActiveWaitlistReservationHoldsVirtualSeat() {
-        // Lớp capacity = 1, booked = 0 nhưng có 1 slot ảo đang giữ (active reservation = 1)
-        when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(0L);
-        when(waitlists.countLiveOffers(eq(5L), any(), any()))
-                .thenReturn(1L);
-        when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "notified"))
-                .thenReturn(Optional.empty());
-
-        assertThrows(ConflictException.class, () -> enrollmentService.enroll(MEMBER, 9L));
-    }
-
-    @Test
-    void notifiedMemberCanClaimReservedSeat() {
-        ClassWaitlist holdingReservation = waitingEntry();
-        holdingReservation.setStatus("notified");
-        holdingReservation.setReservationExpiresAt(LocalDateTime.of(2026, 10, 17, 12, 15));
-
-        when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(0L);
-        when(waitlists.countLiveOffers(eq(5L), any(), any()))
-                .thenReturn(1L);
-        when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "notified"))
-                .thenReturn(Optional.of(holdingReservation));
-
-        var result = enrollmentService.enroll(MEMBER, 9L);
-
-        assertEquals("booked", result.status());
-        assertEquals("expired", holdingReservation.getStatus());
-    }
-
     @Test
     void enrollRejectsWhenMemberAlreadyBookedOverlappingSession() {
         GymClass otherClass = new GymClass();
@@ -377,33 +228,6 @@ class SchedulingServiceTest {
                 .thenReturn(List.of(otherSession));
 
         ConflictException ex = assertThrows(ConflictException.class, () -> enrollmentService.enroll(MEMBER, 9L));
-        assertEquals("SCHEDULING_MEMBER_TIME_OVERLAP", ex.getErrorCode());
-    }
-
-    @Test
-    void waitlistJoinRejectsWhenMemberAlreadyBookedOverlappingSession() {
-        GymClass otherClass = new GymClass();
-        ReflectionTestUtils.setField(otherClass, "id", 88L);
-        otherClass.setName("Pilates Core");
-
-        ClassSession otherSession = new ClassSession();
-        ReflectionTestUtils.setField(otherSession, "id", 99L);
-        otherSession.setGymClass(otherClass);
-        otherSession.setSessionDate(TODAY.plusDays(1));
-        otherSession.setStartTime(LocalTime.of(12, 30));
-        otherSession.setEndTime(LocalTime.of(13, 30));
-        otherSession.setStatus("scheduled");
-
-        ClassEnrollment existingBooked = new ClassEnrollment();
-        existingBooked.setGymClass(otherClass);
-        existingBooked.setStatus("booked");
-
-        when(enrollments.findByMemberUserId(MEMBER.id()))
-                .thenReturn(List.of(existingBooked));
-        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(88L))
-                .thenReturn(List.of(otherSession));
-
-        ConflictException ex = assertThrows(ConflictException.class, () -> waitlistService.join(MEMBER, 9L));
         assertEquals("SCHEDULING_MEMBER_TIME_OVERLAP", ex.getErrorCode());
     }
 }

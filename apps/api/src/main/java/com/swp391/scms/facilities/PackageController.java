@@ -63,5 +63,12 @@ public class PackageController {
     public ApiResponse<PackageDto> updateStatus(@PathVariable Long id, @Valid @RequestBody PackageStatusRequest request) {
         return ApiResponse.ok(msg("catalog.updated"), service.updateStatus(id, request.status()));
     }
-}
 
+    @Operation(summary = "Delete a package that was never sold")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ApiResponse.ok(msg("catalog.deleted"), null);
+    }
+}

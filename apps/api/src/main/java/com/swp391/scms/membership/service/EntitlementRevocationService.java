@@ -38,6 +38,9 @@ public class EntitlementRevocationService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollments;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
+
     public EntitlementRevocationService(MembershipSubscriptionRepository subscriptions,
                                         EnrollmentService enrollmentService,
                                         CoachBookingRepository coachBookings,
@@ -99,6 +102,7 @@ public class EntitlementRevocationService {
         LocalDate today = LocalDate.now(clock);
         java.util.Set<Long> ids = new java.util.TreeSet<>();
         if (classEnrollments != null) ids.addAll(classEnrollments.findMemberIdsWithBookedEnrollments());
+        if (sessionBookings != null) ids.addAll(sessionBookings.findMemberIdsWithBooked());
         ids.addAll(coachBookings.findMemberIdsWithUpcomingSessions(today));
         ids.addAll(courtBookings.findMemberIdsWithUpcomingBookings(today));
         ids.remove(null);

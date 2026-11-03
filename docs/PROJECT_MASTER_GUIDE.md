@@ -34,7 +34,7 @@ Dự án **Sports Center Management System** xây dựng một nền tảng số
 
 Hệ thống giải quyết các bài toán lớn:
 - **Tự động hóa thẻ thành viên & Check-in:** Xóa bỏ thẻ nhựa vật lý, sử dụng mã QR Code động trên ứng dụng di động để quét qua cổng và đối soát thời hạn gói tập tức thì.
-- **Tối ưu hóa công suất lớp học (Class Utilization):** Quản lý thời khóa biểu trực quan, đặt chỗ giữ chỗ trước, cơ chế hàng chờ thông minh (**Class Waitlists**) tự động giải phóng chỗ trống khi có học viên hủy lịch.
+- **Tối ưu hóa công suất lớp học (Class Utilization):** Quản lý thời khóa biểu trực quan, đặt chỗ giữ chỗ trước theo từng buổi (có thể đặt cả tuần hoặc cả tháng một lượt), tự động giải phóng chỗ trống khi có học viên hủy lịch. Tính năng hàng chờ (Waitlist) đã được bỏ.
 - **Minh bạch tài chính & Báo cáo quản trị:** Đa dạng kênh thanh toán (POS, Chuyển khoản, Tiền mặt, Cổng trực tuyến), tự động phát hành hóa đơn điện tử, cập nhật công nợ và báo cáo doanh thu đa chiều theo thời gian thực.
 - **Tích hợp Trí Tuệ Nhân Tạo (AI Engine):**
   - **AI Coaching:** Phân tích thể trạng, chỉ số BMI, lịch sử chấn thương và mục tiêu thể lực của hội viên để gợi ý giáo án bài tập cá nhân hóa cho Huấn luyện viên (Coach).
@@ -112,7 +112,7 @@ Mô hình dữ liệu được triển khai bằng **JPA Entity trên Supabase P
 | **A** | **Định danh & Phân quyền (Identity & RBAC)** | 8 | `roles`, `permissions`, `role_permissions`, `users`, `members`, `coaches`, `receptionists`, `center_managers` |
 | **B** | **Danh mục & Cơ sở vật chất (Master Facilities)** | 3 | `disciplines`, `rooms`, `membership_packages` |
 | **C** | **Gói thành viên (Subscriptions)** | 1 | `membership_subscriptions` |
-| **D** | **Lớp học & Lịch học (Classes & Scheduling)** | 4 | `classes`, `class_sessions`, `class_enrollments`, `class_waitlists` |
+| **D** | **Lớp học & Lịch học (Classes & Scheduling)** | 4 | `classes`, `class_sessions`, `class_enrollments`, `session_bookings` |
 | **E** | **Check-in & Điểm danh (Checkin & Attendance)** | 2 | `center_checkins`, `session_attendance` |
 | **F** | **Thanh toán & Báo cáo (Billing & Reporting)** | 4 | `payments`, `invoices`, `invoice_items`, `report_snapshots` |
 | **G** | **Huấn luyện & Đánh giá (Coaching & Evaluation)** | 4 | `training_plans`, `training_plan_items`, `session_evaluations`, `member_progress_logs` |
@@ -148,7 +148,7 @@ Mô hình dữ liệu được triển khai bằng **JPA Entity trên Supabase P
 13. `classes`: Lớp học (`id`, `name`, `discipline_id` -> `disciplines`, `coach_id` -> `coaches`, `room_id` -> `rooms`, `capacity`, `level` CHECK `beginner/intermediate/advanced/all`, `status` CHECK `active/inactive/archived`).
 14. `class_sessions`: Buổi học cụ thể theo lịch (`id`, `class_id` -> `classes.id ON DELETE CASCADE`, `session_date`, `start_time`, `end_time`, `status` CHECK `scheduled/completed/cancelled`, `cancel_reason`).
 15. `class_enrollments`: Học viên đặt chỗ lớp (`id`, `class_id` -> `classes`, `member_id` -> `members`, `status` CHECK `booked/cancelled/completed`, `enrolled_at`, `cancelled_at`, `cancelled_by`, `cancel_reason`).
-16. `class_waitlists`: Hàng chờ đặt chỗ khi lớp đầy (`id`, `class_id`, `member_id`, `requested_at`, `status` CHECK `waiting/notified/expired`).
+16. `session_bookings`: Chỗ của hội viên ở **một buổi học** (`id`, `session_id` -> `class_sessions`, `member_id` -> `members`, `status` CHECK `booked/cancelled/completed`, `booked_at`, `batch_id` gom các buổi đặt hàng loạt, `cancelled_at`, `cancelled_by`, `cancel_reason`). Sức chứa tính theo từng buổi (số người đặt buổi đó cộng người ghi danh cả lớp). Bảng `class_waitlists` đã bỏ cùng tính năng hàng chờ.
 
 #### Module E: Check-in & Điểm danh
 17. `center_checkins`: Lịch sử ra vào trung tâm (`id`, `member_id`, `check_in_time`, `check_out_time`, `method` CHECK `qr/manual`, `recorded_by` -> `users.id`, `gate`).
@@ -195,13 +195,13 @@ SQL examples below describe PostgreSQL constraints installed by `PostgreSqlTrigg
   WHERE status = 'booked';
   ```
   *Ý nghĩa:* Không bao giờ có 2 dòng `booked` cùng lúc cho 1 hội viên trong 1 lớp, nhưng **cho phép lưu vô số dòng `cancelled` và `completed`**. Nhờ đó học viên có thể hủy rồi đăng ký lại thoải mái mà lịch sử booking không bị ghi đè hay mất mát.
-- **Hàng chờ đặt chỗ (`uq_waitlist_active`):**
+- **Đặt chỗ theo buổi (`uq_session_booking_active`):**
   ```sql
-  CREATE UNIQUE INDEX uq_waitlist_active
-  ON class_waitlists (class_id, member_id)
-  WHERE status = 'waiting';
+  CREATE UNIQUE INDEX uq_session_booking_active
+  ON session_bookings (session_id, member_id)
+  WHERE status = 'booked';
   ```
-  *Ý nghĩa:* Index ngăn trùng trạng thái `waiting`. SCRUM-74 bổ sung kiểm tra service dưới khóa class: `waiting` hoặc `notified` còn hạn đều chặn đăng ký lại. Offer đã hết hạn/đã rút có thể vào lại cuối hàng khi lớp vẫn đầy. Legacy vẫn chỉ có `waiting/notified/expired`; không có trạng thái `claimed/withdrawn` riêng. Index hiện tại chưa bảo vệ `notified` khỏi các đường ghi ngoài protocol service.
+  *Ý nghĩa:* Một hội viên chỉ giữ một chỗ `booked` cho mỗi buổi, nhưng vẫn lưu được lịch sử `cancelled`.
 
 #### 2. Trigger kiểm tra sĩ số lớp học ([P2 — Class Capacity])
 - **`trg_enrollments_check_capacity`** kích hoạt `AFTER INSERT, UPDATE` trên `class_enrollments`:
@@ -243,7 +243,7 @@ Mô hình quy trình nghiệp vụ được chuẩn hóa qua sơ đồ Swimlane 
 | Xem thời khóa biểu lớp học & lịch dạy HLV | Flow 2 | **X** | **X** | **X** | **X** | | **X** |
 | Đăng ký lớp học & Giữ chỗ trước | Flow 2 | **X** | **X** | | | | **X** |
 | Đối soát điều kiện gói & sĩ số còn trống | Flow 2 | | | | | | **X** |
-| Cơ chế hàng chờ Waitlist khi lớp đầy | Flow 2 | **X** | | | | | **X** |
+| Đặt lịch nhiều buổi một lượt (cả tuần / cả tháng) | Flow 2 | **X** | | | | | **X** |
 | Học viên chủ động Hủy đăng ký lớp trên App | Flow 2 | **X** | | | | | **X** |
 | Lễ tân hỗ trợ Hủy đăng ký lớp giúp hội viên | Flow 2 | | **X** | | | | **X** |
 | Tự động hoàn lại lượt học & cập nhật sĩ số | Flow 2 | | | | | | **X** |
@@ -290,15 +290,15 @@ Mô hình quy trình nghiệp vụ được chuẩn hóa qua sơ đồ Swimlane 
   5. *Hệ thống* xác thực thanh toán: Nếu hợp lệ -> sinh bản ghi `membership_subscriptions` mới (hoặc kế thừa `previous_subscription_id`), sinh chuỗi mã `qr_code` duy nhất và gửi thẻ điện tử về ứng dụng di động của Hội viên.
 
 #### Flow 2: Đăng Ký Lớp Học & Quản Lý Lịch Tập (Class Booking & Schedule Management)
-- **Mục tiêu:** Quản lý thời khóa biểu, cho phép hội viên đăng ký giữ chỗ lớp học, giải quyết xung đột sĩ số qua hàng chờ Waitlist và xử lý hủy lớp linh hoạt.
+- **Mục tiêu:** Quản lý thời khóa biểu, cho phép hội viên đăng ký giữ chỗ lớp học, kiểm soát sĩ số theo từng buổi và xử lý hủy lớp linh hoạt.
 - **Tiến trình:**
   1. *Hội viên* xem lịch học tuần, thông tin HLV phụ trách, phòng học và số chỗ còn lại.
   2. Bấm "Đăng ký lớp": *Hệ thống* chạy Trigger kiểm tra:
      - Gói tập của hội viên còn active và hạn dùng `>=` ngày học?
      - Sĩ số lớp hiện tại có `< capacity`?
   3. **Trường hợp còn chỗ:** Xác nhận đặt chỗ (`status = 'booked'`), ghi nhận vào `class_enrollments`, gửi thông báo xác nhận và đồng bộ vào lịch cá nhân trên App.
-  4. **Trường hợp hết chỗ (Full Slot):** Chuyển hướng hội viên vào **Hàng chờ Waitlist** (`class_waitlists.status = 'waiting'`).
-  5. **Quy trình Hủy lớp:** Hội viên tự bấm hủy trên App (trước giờ học quy định) hoặc Lễ tân hỗ trợ hủy tại quầy -> Chuyển trạng thái booking sang `cancelled` -> Hệ thống hoàn lại lượt học -> Bắn thông báo mời người đầu tiên trong Waitlist xác nhận nhận chỗ trong vòng 24 giờ.
+  4. **Trường hợp hết chỗ (Full Slot):** Buổi học hiển thị "Buổi đã đầy"; hội viên chọn buổi khác. Hội viên có thể bật "Đặt nhiều buổi" để chọn nhiều buổi (cả tuần, 30 ngày tới) và đặt một lượt; buổi đầy hoặc trùng giờ được bỏ qua và báo lại.
+  5. **Quy trình Hủy lớp:** Hội viên tự bấm hủy trên App (trước giờ học quy định) hoặc Lễ tân hỗ trợ hủy tại quầy -> Chuyển trạng thái booking sang `cancelled` -> Hệ thống giải phóng chỗ ngay lập tức.
 
 #### Flow 3: Quản Lý Thanh Toán & Báo Cáo Thống Kê (Payment & Report Management)
 - **Mục tiêu:** Tiếp nhận thanh toán đa phương thức, tự động phát hành hóa đơn và cung cấp hệ thống báo cáo quản trị toàn diện cho Ban Quản lý.
@@ -379,8 +379,8 @@ Hệ thống được mô hình hóa trạng thái nghiêm ngặt bằng 12 bi�
 |    |                            |                                 | -> delivered -> read (is_read=1|
 | 11 | Phiên trò chuyện AI        | ai_chat_sessions                | opened -> asking -> processing |
 |    |                            |                                 | -> replied -> rated -> ended   |
-| 12 | Hàng chờ lớp học           | class_waitlists.status          | waiting, notified, expired,    |
-|    |                            |                                 | booked                         |
+| 12 | Chỗ đặt theo buổi học      | session_bookings.status         | booked, cancelled, completed   |
+|    |                            |                                 |                                |
 +----+----------------------------+---------------------------------+--------------------------------+
 ```
 
@@ -465,11 +465,10 @@ Hệ thống được mô hình hóa trạng thái nghiêm ngặt bằng 12 bi�
   - `[AI đã phản hồi] -> [Hội viên đặt câu hỏi]`: Đặt câu hỏi kế tiếp.
 - `[Đang hoạt động] -> [Kết thúc phiên] -> [*]`: Người dùng đóng cửa sổ chat hoặc hết thời gian timeout (30 phút không hoạt động), lưu toàn bộ hội thoại.
 
-#### 12. Hàng chờ lớp học (`class_waitlists.status`)
-- `[*] -> [Đang trong hàng chờ]`: Học viên xếp hàng khi lớp đã full chỗ (`waiting`).
-- `[Đang trong hàng chờ] -> [Đã báo có chỗ]`: Có người hủy lớp, hệ thống gửi thông báo ưu tiên cho người đầu hàng chờ (`notified`).
-- `[Đã báo có chỗ] -> [Đã vào lớp]`: Hội viên bấm xác nhận giữ chỗ trong vòng 24 giờ -> Chuyển sang `class_enrollments (booked)`.
-- `[Đã báo có chỗ] -> [Đã hết hạn chờ]`: Quá 24 giờ không phản hồi -> Chuyển sang `expired`, suất trống chuyển tiếp cho người sau.
+#### 12. Chỗ đặt theo buổi học (`session_bookings.status`)
+- `[*] -> [Đã đặt chỗ]`: Hội viên đặt một buổi, hoặc nhiều buổi một lượt (`booked`).
+- `[Đã đặt chỗ] -> [Đã hủy]`: Hội viên hoặc lễ tân/quản lý hủy trước giờ bắt đầu, hoặc buổi học bị hủy, hoặc gói tập tạm hoãn/hết hạn (`cancelled`); chỗ được giải phóng ngay.
+- `[Đã đặt chỗ] -> [Hoàn thành]`: Buổi học đã diễn ra (`completed`).
 
 ---
 
@@ -553,7 +552,7 @@ MODULE                      METHOD   ENDPOINT                                  M
                             GET      /api/v1/classes/schedule                  Xem thời khóa biểu theo tuần
                             POST     /api/v1/classes/{id}/book                 Đăng ký giữ chỗ vào lớp học
                             POST     /api/v1/classes/{id}/cancel               Hủy đăng ký lớp học
-                            GET      /api/v1/classes/{id}/waitlist             Xem vị trí trong hàng chờ Waitlist
+                            POST     /api/v1/classes/session-bookings/bulk     Đặt nhiều buổi học một lượt
 -----------------------------------------------------------------------------------
 4. Check-in & Điểm danh     POST     /api/v1/checkin/scan-qr                   Quét mã QR vào cổng trung tâm
                             POST     /api/v1/sessions/{id}/attendance          HLV điểm danh học viên lớp học

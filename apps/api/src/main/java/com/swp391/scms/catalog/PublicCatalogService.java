@@ -29,6 +29,9 @@ public class PublicCatalogService {
     private final CoachRepository coaches;
     private final ClassSessionRepository sessions;
     private final ClassEnrollmentRepository enrollments;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
     private final SchedulingMapper mapper;
     private final Clock clock;
 
@@ -55,8 +58,13 @@ public class PublicCatalogService {
         var bookedCounts = classIds.isEmpty() ? Map.<Long, Long>of()
                 : enrollments.countByClassIdsAndStatus(classIds, "booked").stream()
                         .collect(Collectors.toMap(ClassBookingCount::classId, ClassBookingCount::bookedCount));
+        var sessionCounts = sessionBookings == null || visibleSessions.isEmpty() ? Map.<Long, Long>of()
+                : sessionBookings.countBookedBySessionIds(visibleSessions.stream().map(s -> s.getId()).toList()).stream()
+                        .collect(Collectors.toMap(com.swp391.scms.scheduling.dto.SessionBookingCount::sessionId,
+                                com.swp391.scms.scheduling.dto.SessionBookingCount::bookedCount));
         var publicSessions = visibleSessions.stream()
-                .map(s -> mapper.toDto(s, bookedCounts.getOrDefault(s.getGymClass().getId(), 0L))).toList();
+                .map(s -> mapper.toDto(s, bookedCounts.getOrDefault(s.getGymClass().getId(), 0L)
+                        + sessionCounts.getOrDefault(s.getId(), 0L))).toList();
         return new CatalogDto(publicPackages, publicCoaches, publicSessions);
     }
 }
