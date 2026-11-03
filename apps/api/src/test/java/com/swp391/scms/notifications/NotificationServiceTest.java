@@ -70,6 +70,24 @@ class NotificationServiceTest {
         }
     }
 
+    @Test
+    void durableDispatcherEnqueuesBeforeCommitAndDoesNotSwallowFailures() {
+        var dispatcher = mock(com.swp391.scms.notifications.port.TransactionalNotificationDispatcher.class);
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);
+        var user = new User(); user.setId(101L);
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+        doThrow(new IllegalStateException("outbox unavailable")).when(dispatcher)
+                .dispatch(eq(101L), eq("Title"), eq("Message"), eq("system"), isNull(), isNull(), any());
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertThatThrownBy(() -> service.send(101L, "Title", "Message", "system", null, null))
+                    .hasMessage("outbox unavailable");
+            assertThat(org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
     @Mock
     private NotificationRepository notificationRepository;
 

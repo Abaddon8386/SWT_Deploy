@@ -15,5 +15,10 @@ public interface NotificationChannelAdapter {
      * Deliver the notification payload via this adapter's channel.
      */
     void send(NotificationPayload payload);
+
+    /** Durable transport supplies a stable key. Real providers should use it for their idempotency API. */
+    default void send(NotificationPayload payload, String deliveryKey) {
+        send(payload);
+    }
 }
 

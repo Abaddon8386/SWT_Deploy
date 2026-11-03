@@ -4,13 +4,14 @@ import java.util.Set;
 
 /**
  * Port interface for multi-channel notification dispatching (SCRUM-108).
- * Provides asynchronous, non-blocking dispatch across in-app, simulated email, push, and webhook.
+ * Submits in-app, simulated email, push and webhook delivery to the selected transport.
+ * The Kafka adapter durably enqueues in the caller transaction; the legacy adapter schedules in RAM.
  */
 public interface NotificationDispatcher {
 
     /**
      * Dispatches notification across channels specified in the payload.
-     * Non-blocking and executed asynchronously.
+     * Delivery is asynchronous; a durable adapter returns only after the job has been persisted.
      */
     void dispatch(NotificationPayload payload);
 
