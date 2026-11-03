@@ -4,6 +4,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { errorMessage } from '../../shared/lib/errorMessage';
+import { toast } from '../../shared/ui/toast';
 import { getVnpayStatus, type VnpayStatus } from './vnpayApi';
 
 const destinations = new Set(['/member/packages', '/member/courts', '/member/classes?tab=pt', '/member/invoices']);
@@ -16,7 +17,7 @@ export function VnpayReturnPage() {
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
-    let active = true; let timer: ReturnType<typeof setTimeout> | undefined; let attempts = 0;
+    let active = true; let timer: ReturnType<typeof setTimeout> | undefined; let attempts = 0; let notified = false;
     setData(null); setError(''); setLoading(true);
     if (!valid) { setLoading(false); return; }
     async function load() {
@@ -24,6 +25,11 @@ export function VnpayReturnPage() {
         const status = await getVnpayStatus(reference);
         if (!active) return;
         setData(status); setError('');
+        if (!notified && status.status !== 'pending') {
+          notified = true;
+          if (status.status === 'success') { toast.success('Thanh toán VNPay thành công'); window.dispatchEvent(new Event('member-notifications-changed')); }
+          else if (status.status === 'failed') toast.error('Thanh toán VNPay chưa thành công');
+        }
         if (status.status === 'pending' && ++attempts < 12) timer = setTimeout(() => void load(), 2500);
       } catch (reason) { if (active) setError(errorMessage(reason, 'Không thể kiểm tra giao dịch. Vui lòng thử lại.')); }
       finally { if (active) setLoading(false); }

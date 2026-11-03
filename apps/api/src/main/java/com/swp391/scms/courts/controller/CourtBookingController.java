@@ -75,6 +75,12 @@ public class CourtBookingController {
         return ApiResponse.ok(msg("success.courts.cancelled"), service.cancel(principal, id, request == null ? null : request.reason()));
     }
 
+    @PatchMapping("/court-bookings/{id}/confirm-payment")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','STAFF','CENTER_MANAGER')")
+    public ApiResponse<BookingDto> confirmPayment(@AuthenticationPrincipal AuthenticatedPrincipal principal, @PathVariable Long id) {
+        return ApiResponse.ok(msg("success.courts.payment_confirmed"), service.confirmPayment(principal, id));
+    }
+
     @PostMapping("/court-bookings/recurring")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<RecurringResult>> bookRecurring(@AuthenticationPrincipal AuthenticatedPrincipal principal,

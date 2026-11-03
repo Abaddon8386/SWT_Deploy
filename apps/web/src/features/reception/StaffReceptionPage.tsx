@@ -67,7 +67,7 @@ export function StaffReceptionPage() {
   const [processingPtId, setProcessingPtId] = useState<number | null>(null);
 
   // Form thanh toán
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('pos');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('cash');
   const [paymentNotes, setPaymentNotes] = useState('Thanh toán gói tập tại quầy Lễ tân');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const paymentInFlight = useRef(false);
@@ -308,7 +308,7 @@ export function StaffReceptionPage() {
     if (isSearching) return;
 
     const invalid = !selectedMember || (!selectedPending && !selectedPackage) ? 'Vui lòng chọn hội viên và gói tập cần thanh toán.'
-      : !paymentMethod ? 'Vui lòng chọn hình thức thanh toán (Tiền mặt / POS / Chuyển khoản QR).' : null;
+      : !paymentMethod ? 'Vui lòng chọn hình thức thanh toán (Tiền mặt).' : null;
     setPaymentError(invalid);
     if (invalid || !selectedMember || !paymentMethod) return;
 
@@ -725,10 +725,7 @@ export function StaffReceptionPage() {
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                   disabled={isSubmittingPayment}
                 >
-                  <option value="pos">POS Quẹt thẻ ngân hàng</option>
                   <option value="cash">Tiền mặt tại quầy</option>
-                  <option value="bank_transfer">Chuyển khoản VietQR tức thì</option>
-                  <option value="online_wallet">Ví điện tử MoMo / ZaloPay</option>
                 </Select>
               </div>
             </div>
@@ -911,7 +908,7 @@ export function StaffReceptionPage() {
           <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
             {unpaidPt.map((item) => {
               const isBusy = processingPtId === item.id;
-              const paidWith = item.paymentMethod === 'package_quota' ? 'cash' : item.paymentMethod;
+              const paidWith = 'cash';
               return (
                 <div
                   key={item.id}
@@ -941,23 +938,13 @@ export function StaffReceptionPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    {paidWith !== 'cash' && (
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        disabled={processingPtId !== null}
-                        onClick={() => void handleConfirmPt(item, 'cash')}
-                      >
-                        {isBusy ? 'Đang xử lý...' : 'Thu tiền mặt'}
-                      </button>
-                    )}
                     <button
                       type="button"
                       className="btn-primary btn-sm"
                       disabled={processingPtId !== null}
                       onClick={() => void handleConfirmPt(item, paidWith)}
                     >
-                      {isBusy ? 'Đang xử lý...' : paidWith === 'cash' ? 'Đã thu tiền mặt' : 'Đã nhận chuyển khoản'}
+                      {isBusy ? 'Đang xử lý...' : 'Đã thu tiền mặt'}
                     </button>
                   </div>
                 </div>

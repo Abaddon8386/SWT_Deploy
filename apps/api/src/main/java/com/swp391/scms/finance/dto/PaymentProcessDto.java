@@ -33,7 +33,7 @@ public class PaymentProcessDto {
     private BigDecimal amount;
 
     @NotBlank(message = "{validation.payment.method.not_blank}")
-    @Pattern(regexp = "(?i)^(cash|pos|bank_transfer|online_wallet)$", message = "{validation.payment.method.pattern}")
+    @Pattern(regexp = "(?i)^cash$", message = "{validation.payment.method.pattern}")
     @Schema(description = "Phương thức thanh toán", example = "cash")
     private String method;
 
