@@ -207,3 +207,7 @@ SWP391/
 <div align="center">
   <sub>© 2026 <b>Agile4Life — SWP391 Team</b>. Built with ❤️ using Spring Boot 3, React, and Supabase PostgreSQL.</sub>
 </div>
+
+### Kafka và Redis (tùy chọn)
+
+Redis cache phần catalog công khai; Kafka xử lý notification qua transactional outbox. Cả hai mặc định tắt, giữ Supabase PostgreSQL làm nguồn dữ liệu chính. Xem [cấu hình và vận hành](docs/setup/kafka-redis.md) cùng [kế hoạch kiểm thử](docs/qa/kafka-redis-test-plan.md). Chưa chạy test/benchmark phần mới theo yêu cầu hiện tại.
