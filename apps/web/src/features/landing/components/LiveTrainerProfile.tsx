@@ -23,8 +23,8 @@ export function LiveTrainerProfile() {
           <div className="fit-trainer-switcher" aria-label="Chọn huấn luyện viên">{catalog.coaches.map(item => <Link key={item.id} to={`/trainers/${item.id}`} className={`fit-trainer-switch-pill ${item.id === coach.id ? 'is-active' : ''}`} aria-current={item.id === coach.id ? 'page' : undefined}>{item.name}</Link>)}</div>
           <div className="fit-trainer-hero-grid" key={coach.id}>
             <div className="fit-trainer-portrait-card" data-reveal="image">
-              <LoadingImage src={coach.avatarUrl || coachIllustration(coach.specialization)} alt={coach.avatarUrl ? coach.name : 'Ảnh minh họa huấn luyện viên theo bộ môn'} />
-              {!coach.avatarUrl && <span className="fit-image-caption">Ảnh minh họa</span>}
+              <LoadingImage src={coach.avatarUrl || coachIllustration(coach.specialization, coach.name)} alt={coach.avatarUrl ? coach.name : 'Ảnh minh họa huấn luyện viên theo bộ môn'} />
+
             </div>
             <div className="fit-trainer-hero-copy" data-reveal="soft">
               <span className="fit-kicker">HUẤN LUYỆN VIÊN SÖL</span>

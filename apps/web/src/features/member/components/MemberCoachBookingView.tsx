@@ -500,7 +500,7 @@ export function MemberCoachBookingView({
                 }}
               >
                 <img
-                  src={c.avatarUrl || coachIllustration(c.specialization)}
+                  src={c.avatarUrl || coachIllustration(c.specialization, c.fullName)}
                   alt={c.fullName}
                   loading="lazy"
                   decoding="async"

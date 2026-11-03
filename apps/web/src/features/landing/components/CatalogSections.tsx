@@ -102,8 +102,8 @@ export function CatalogTrainers({ catalog }: { catalog: PublicCatalog }) {
     <div className="fit-trainer-grid" key={currentPage}>
       {catalog.coaches.slice(currentPage * 2, currentPage * 2 + 2).map(coach => <article className="fit-trainer-card" data-reveal="lift" key={coach.id}>
         <Link to={`/trainers/${coach.id}`} className="fit-trainer-card-link" aria-label={`Xem hồ sơ của ${coach.name}`}>
-          <LoadingImage src={coach.avatarUrl || coachIllustration(coach.specialization)} alt={coach.avatarUrl ? coach.name : 'Ảnh minh họa huấn luyện viên theo bộ môn'} loading="lazy" />
-          {!coach.avatarUrl && <span className="fit-image-caption">Ảnh minh họa</span>}
+          <LoadingImage src={coach.avatarUrl || coachIllustration(coach.specialization, coach.name)} alt={coach.avatarUrl ? coach.name : 'Ảnh minh họa huấn luyện viên theo bộ môn'} loading="lazy" />
+
           <div className="fit-trainer-card-info"><span className="fit-trainer-vn-name">Huấn luyện viên</span><h3>{coach.name}</h3><p>{coach.specialization || 'Huấn luyện thể thao'}</p><span className="fit-trainer-story-cta">Xem hồ sơ & lịch lớp →</span></div>
           <RoundArrow diagonal />
         </Link>
