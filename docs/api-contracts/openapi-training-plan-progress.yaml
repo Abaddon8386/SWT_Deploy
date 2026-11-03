@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Coach training completion read API
+  version: 1.0.0
+paths:
+  /api/v1/coaching/training-plans/{id}/completions:
+    get:
+      summary: Read persisted completion for an assigned member and scheduled date
+      description: COACH must satisfy CurrentCoachMembers; CENTER_MANAGER may read. Member identity comes from the plan, never the request. Asia/Ho_Chi_Minh date must not be in the future. No writes.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+        - { name: exerciseDate, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: ApiResponse with scheduled items; absent completion means unfinished, outside date range returns empty items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [planId, exerciseDate, items]
+                    properties:
+                      planId: { type: integer, format: int64 }
+                      exerciseDate: { type: string, format: date }
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          required: [itemId, exerciseName, completed]
+                          properties:
+                            itemId: { type: integer, format: int64 }
+                            exerciseName: { type: string }
+                            completed: { type: boolean }
+        '400': { description: INVALID_EXERCISE_DATE }
+        '401': { description: Authentication required }
+        '403': { description: Role denied or COACH_MEMBER_NOT_ASSIGNED }
+        '404': { description: Plan/member not found }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

@@ -19,7 +19,7 @@ beforeEach(() => {
   vi.mocked(api.getMyCompletedItemIds).mockResolvedValue([]);
   vi.mocked(api.setTrainingItemCompleted).mockResolvedValue({ itemId: 5, exerciseDate: '2026-10-25', completed: true });
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.clearAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 async function render() { await act(async () => root.render(<MemoryRouter><MemberProgressPage /></MemoryRouter>)); }
 
 it('renders persisted weekly measurements without derived BMI', async () => {
@@ -33,7 +33,7 @@ it('renders persisted weekly measurements without derived BMI', async () => {
 
 it('shows an honest homework blocker without a fake completion checkbox', async () => {
   await render();
-  expect(host.textContent).toContain('Chưa có bài tập trong hôm nay');
+  expect(host.textContent).toContain('Chưa có giáo án đang hoạt động được giao.');
   expect(host.querySelector('input[type="checkbox"]')).toBeNull();
 });
 
@@ -123,4 +123,44 @@ it('shows persisted coach score and feedback, and retries evaluation failures', 
   expect(host.querySelector('#coach-evaluations')?.textContent).toContain('92/100');
   expect(host.querySelector('#coach-evaluations')?.textContent).toContain('Giữ đúng tư thế');
   expect(host.querySelector('#coach-evaluations')?.textContent).toContain('Tiếp tục phát huy');
+});
+
+it('distinguishes a rest day from a missing assigned plan', async () => {
+ const {plan}=todayPlan();plan.items=[];
+ vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
+ await render();
+ expect(host.textContent).toContain('Hôm nay là ngày nghỉ hoặc chưa có bài tập được lên lịch.');
+ expect(host.textContent).not.toContain('Chưa có giáo án đang hoạt động được giao.');
+});
+
+it('rejects double submit while completion save is pending', async () => {
+ const {plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
+ let finish!:(value:api.TrainingCompletion)=>void;
+ vi.mocked(api.setTrainingItemCompleted).mockImplementation(()=>new Promise(r=>{finish=r;}));
+ await render();const input=host.querySelector('input[type="checkbox"]') as HTMLInputElement;
+ await act(async()=>{input.click();input.click();});
+ expect(api.setTrainingItemCompleted).toHaveBeenCalledTimes(1);
+ await act(async()=>finish({itemId:5,exerciseDate:todayPlan().date,completed:true}));
+});
+it('refetches persisted completion after remount instead of keeping local state', async () => {
+ const {plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
+ vi.mocked(api.getMyCompletedItemIds).mockResolvedValue([5]);await render();
+ expect((host.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true);
+ await act(async()=>root.render(null));await render();
+ expect(api.getMyCompletedItemIds).toHaveBeenCalledTimes(2);
+ expect((host.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true);
+});
+it('switches Vietnamese exercise day on focus across midnight without applying old completion', async () => {
+ vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-10-25T16:59:59Z'));
+ const {plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);await render();
+ expect(api.getMyCompletedItemIds).toHaveBeenLastCalledWith('2026-10-25');
+ vi.setSystemTime(new Date('2026-10-25T17:00:00Z'));
+ await act(async()=>window.dispatchEvent(new Event('focus')));
+ expect(api.getMyCompletedItemIds).toHaveBeenLastCalledWith('2026-10-26');
+ expect(host.textContent).not.toContain('Squat');
+});
+it('distinguishes a future or expired active plan from a rest day', async () => {
+ const {date,plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([{...plan,startDate:'2099-01-01',endDate:'2099-01-31'}]);
+ await render();expect(host.textContent).toContain('Chưa có giáo án có hiệu lực trong hôm nay.');
+ expect(api.getMyCompletedItemIds).toHaveBeenCalledWith(date);
 });

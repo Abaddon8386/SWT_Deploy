@@ -1,3 +1,4 @@
+import { TrainingPlanResults } from './TrainingPlanResults';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise } from './trainingExercise';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
@@ -20,6 +21,7 @@ const formatDate = (iso: string) => iso.split('-').reverse().join('/');
 
 /** Chỉnh sửa giáo án và bài tập trên server; giữ ID bài tập và lịch sử tập của hội viên. */
 export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) {
+  const [resultPlan, setResultPlan] = useState<SavedTrainingPlan | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const [plans, setPlans] = useState<SavedTrainingPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,6 +140,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                       </span>
                     </td>
                     <td className="actions">
+                      <button type="button" className="btn-secondary btn-sm" onClick={() => setResultPlan(plan)}>Kết quả</button>
                       {editable && (
                         <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => openEditor(plan)}>
                           Sửa
@@ -207,6 +210,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
           </form>
         </Modal>
       )}
+      {resultPlan && <Modal title={'Kết quả · ' + (resultPlan.memberName ?? '#' + resultPlan.memberId)} onClose={() => setResultPlan(null)}><TrainingPlanResults key={resultPlan.id} planId={resultPlan.id} /></Modal>}
       {confirmDialog}
     </section>
   );
