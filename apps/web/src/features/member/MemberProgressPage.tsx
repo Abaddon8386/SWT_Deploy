@@ -4,16 +4,10 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getMyCompletedItemIds, getMyProgressMetrics, getMyTrainingPlans, setTrainingItemCompleted, type ProgressMetric, type TrainingPlan } from './memberProgressApi';
 import { dailyExercises, weeklyMeasurements, type WeeklyPoint } from './progressPresentation';
 import './member-progress.css';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { CoachEvaluations } from './CoachEvaluations';
 
 type LoadState<T> = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: T };
-const todayKey = () => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date());
-  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  return `${value('year')}-${value('month')}-${value('day')}`;
-};
 
 function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; metric: 'weight' | 'bmi'; label: string; unit: string }) {
   const values = points.map((point) => point[metric]);
@@ -43,6 +37,16 @@ function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; m
 }
 
 export function MemberProgressPage() {
+ const [date, setDate] = useState(() => centerNowParts().date);
+ useEffect(() => {
+  const update = () => setDate(centerNowParts().date);
+  const timer = window.setInterval(update, 30000);
+  window.addEventListener('focus', update);
+  return () => { window.clearInterval(timer); window.removeEventListener('focus', update); };
+ }, []);
+ return <DailyProgress key={date} today={date} />;
+}
+function DailyProgress({ today }: { today: string }) {
   const [metrics, setMetrics] = useState<LoadState<ProgressMetric[]>>({ kind: 'loading' });
   const [plans, setPlans] = useState<LoadState<TrainingPlan[]>>({ kind: 'loading' });
   const [completions, setCompletions] = useState<LoadState<number[]>>({ kind: 'loading' });
@@ -52,7 +56,6 @@ export function MemberProgressPage() {
   const [metricRetry, setMetricRetry] = useState(0);
   const [planRetry, setPlanRetry] = useState(0);
   const [completionRetry, setCompletionRetry] = useState(0);
-  const today = todayKey();
 
   useEffect(() => {
     let active = true;
@@ -106,10 +109,11 @@ export function MemberProgressPage() {
     </section>
     <section className="portal-card" aria-labelledby="progress-plan-title">
       <div className="portal-card-header"><h2 id="progress-plan-title" className="portal-card-title">Bài tập hôm nay</h2></div>
-      {plans.kind === 'loading' ? <LoadingSkeleton label="Đang tải giáo án…" count={3} /> : plans.kind === 'error' ? <div role="alert">Không thể tải giáo án. <button type="button" className="member-progress-link" onClick={() => { setPlans({ kind: 'loading' }); setPlanRetry((value) => value + 1); }}>Thử lại</button></div> : exercises.length === 0 ? <p className="portal-empty">Chưa có bài tập trong hôm nay.</p> : <>
+      {plans.kind === 'loading' ? <LoadingSkeleton label="Đang tải giáo án…" count={3} /> : plans.kind === 'error' ? <div role="alert">Không thể tải giáo án. <button type="button" className="member-progress-link" onClick={() => { setPlans({ kind: 'loading' }); setPlanRetry((value) => value + 1); }}>Thử lại</button></div> : exercises.length === 0 ? <p className="portal-empty">{plans.data.length === 0 ? 'Chưa có giáo án đang hoạt động được giao.' : plans.data.some(plan => plan.status === 'active' && plan.startDate <= today && plan.endDate >= today) ? 'Hôm nay là ngày nghỉ hoặc chưa có bài tập được lên lịch.' : 'Chưa có giáo án có hiệu lực trong hôm nay.'}</p> : <>
         {completions.kind === 'loading' && <LoadingSkeleton label="Đang tải trạng thái hoàn thành…" count={1} />}
         {completions.kind === 'error' && <div role="alert">Không thể tải trạng thái hoàn thành. <button type="button" className="member-progress-link" onClick={() => { setCompletions({ kind: 'loading' }); setCompletionRetry((value) => value + 1); }}>Thử lại</button></div>}
         {completionError && <p role="alert">{completionError}</p>}
+        {completions.kind === 'ready' && <p className="muted">Đã hoàn thành {exercises.filter(({item}) => completions.data.includes(item.id)).length}/{exercises.length} bài tập</p>}
         <ol className="member-progress-exercises">{exercises.map(({ plan, item }) => <li key={`${plan.id}-${item.id}`}>
         {completions.kind === 'ready' && <label className="member-progress-check"><input type="checkbox" aria-label={`Hoàn thành ${item.exerciseName}`} checked={completions.data.includes(item.id)} disabled={savingItemId != null} onChange={(event) => void updateCompletion(item.id, event.target.checked)} />{savingItemId === item.id && <span>Đang lưu…</span>}</label>}
         <div><span className="member-progress-day">{plan.coachName || 'Huấn luyện viên'}</span><h3>{item.exerciseName}</h3>{item.description && <p>{item.description}</p>}</div>
