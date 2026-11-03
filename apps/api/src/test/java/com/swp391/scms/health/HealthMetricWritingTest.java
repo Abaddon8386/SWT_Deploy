@@ -25,4 +25,11 @@ class HealthMetricWritingTest {
  @Test void coachMustHaveAuthoritativeAccessChecker(){ReflectionTestUtils.setField(service,"currentCoachMembers",null);assertThatThrownBy(()->service.addMetric(10L,metric("weight","70","kg"),20L,"COACH")).isInstanceOf(ForbiddenException.class);}
  @Test void invalidUnitAndValueAreRejected(){for(var m:List.of(metric("weight","70","lb"),metric("height","170","kg"),metric("body_fat","101","%"),metric("weight","-1","kg")))assertThatThrownBy(()->service.addMetric(10L,m,20L,"COACH")).isInstanceOf(BadRequestException.class);verifyNoInteractions(logs);}
  @Test void assignedCoachAppendsWithoutTrustingClientAuditFields(){ReflectionTestUtils.setField(service,"clock",Clock.fixed(Instant.parse("2026-10-25T17:05:00Z"),ZoneOffset.UTC));Member member=new Member();member.setUserId(10L);User recorder=new User();recorder.setId(20L);when(members.findById(10L)).thenReturn(Optional.of(member));when(users.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(recorder));when(logs.save(any())).thenAnswer(i->i.getArgument(0));var dto=service.addMetric(10L,metric("weight","70","kg"),20L,"COACH");assertThat(dto.recordedBy()).isEqualTo(20L);assertThat(dto.recordedAt()).isEqualTo(LocalDateTime.of(2026,10,26,0,5));verify(access).requireCoachOf(20L,10L);verify(logs).save(any());verify(logs,never()).delete(any());}
+ @Test void updateFromWeightToBmiClearsThePreviousUnit(){
+  Member member=new Member(); member.setUserId(10L);
+  MemberProgressLog row=new MemberProgressLog(); row.setMember(member); row.setMetricName("weight"); row.setMetricValue(new BigDecimal("70")); row.setUnit("kg");
+  when(logs.findById(3L)).thenReturn(Optional.of(row)); when(logs.save(any())).thenAnswer(i->i.getArgument(0));
+  var result=service.updateMetric(10L,3L,metric("bmi","23",null),20L,"COACH");
+  assertThat(result.metricName()).isEqualTo("bmi"); assertThat(result.unit()).isNull();
+ }
 }

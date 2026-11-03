@@ -107,7 +107,7 @@ public class HealthMetricService {
         if (request.metricValue() != null) {
             log.setMetricValue(request.metricValue());
         }
-        if (request.unit() != null) {
+        if (request.unit() != null || "bmi".equals(log.getMetricName())) {
             log.setUnit(request.unit());
         }
         log.setUnit(validatedUnit(log.getMetricName(), log.getMetricValue(), log.getUnit()));
