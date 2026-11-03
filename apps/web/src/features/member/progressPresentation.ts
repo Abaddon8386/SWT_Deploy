@@ -13,12 +13,15 @@ export function weeklyMeasurements(metrics: ProgressMetric[]): WeeklyPoint[] {
   const weeks = new Map<string, WeeklyPoint>();
   const sorted = [...metrics].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
   for (const metric of sorted) {
+    const isWeight = metric.metricName.toLowerCase() === 'weight' && metric.unit?.toLowerCase() === 'kg';
+    const isBmi = metric.metricName.toLowerCase() === 'bmi';
+    if (!isWeight && !isBmi) continue;
     const key = mondayOf(metric.recordedAt);
     const value = Number(metric.metricValue);
     if (!key || !Number.isFinite(value) || value <= 0) continue;
     const point = weeks.get(key) ?? { weekStart: key, weight: null, bmi: null };
-    if (metric.metricName.toLowerCase() === 'weight' && metric.unit?.toLowerCase() === 'kg') point.weight = value;
-    if (metric.metricName.toLowerCase() === 'bmi') point.bmi = value;
+    if (isWeight) point.weight = value;
+    if (isBmi) point.bmi = value;
     weeks.set(key, point);
   }
   if (weeks.size === 0) return [];
