@@ -33,3 +33,9 @@ export function matchesDiscipline(name: string, selected: string): boolean {
   if (known) return ALIASES[known.id].test(value);
   return value.includes(filter);
 }
+
+/** Bộ môn thuộc danh mục chuẩn của SÖL; bộ môn cũ còn sót trong CSDL (ví dụ Pilates) bị loại khỏi giao diện. */
+export function isStandardDiscipline(name: string | null | undefined): boolean {
+  const value = (name ?? '').toLocaleLowerCase('vi');
+  return DISCIPLINES.some((discipline) => ALIASES[discipline.id].test(value));
+}

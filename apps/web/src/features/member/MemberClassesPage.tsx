@@ -372,7 +372,7 @@ export function MemberClassesPage() {
   }
 
   const weekRange = currentWeek(weekOffset);
-  const disciplines = [...new Set([...DISCIPLINES.map(item => item.name), ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
+  const disciplines = DISCIPLINES.map(item => item.name);
   const disciplineNameToId: Record<string, number> = {};
   for (const item of sessions) {
     if (item.disciplineName && item.disciplineId) disciplineNameToId[item.disciplineName] = item.disciplineId;

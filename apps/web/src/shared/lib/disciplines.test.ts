@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DISCIPLINES, MAIN_DISCIPLINE, SECONDARY_DISCIPLINES, matchesDiscipline } from './disciplines';
+import { DISCIPLINES, MAIN_DISCIPLINE, SECONDARY_DISCIPLINES, isStandardDiscipline, matchesDiscipline } from './disciplines';
 
 describe('disciplines', () => {
   it('has Gym as the only main discipline followed by the four secondary ones', () => {
@@ -22,5 +22,18 @@ describe('disciplines', () => {
     ['Bơi lội', 'Boxing', false],
   ])('matches catalog name "%s" against filter "%s" -> %s', (name, filter, expected) => {
     expect(matchesDiscipline(name, filter)).toBe(expected);
+  });
+
+  it.each([
+    ['Gym', true],
+    ['Olympic Strength', true],
+    ['Mindful Yoga', true],
+    ['Boxing & Kickfit', true],
+    ['Pilates', false],
+    ['Zumba', false],
+    ['', false],
+    [null, false],
+  ])('treats "%s" as standard discipline -> %s', (name, expected) => {
+    expect(isStandardDiscipline(name)).toBe(expected);
   });
 });

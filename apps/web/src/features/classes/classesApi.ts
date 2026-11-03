@@ -1,5 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 import type { Discipline, Room } from '../manager/catalogApi';
+import { isStandardDiscipline } from '../../shared/lib/disciplines';
 
 export interface ClassSessionDto {
   id: number;
@@ -155,5 +156,6 @@ export const classesApi = {
   /**
    * Lấy danh sách bộ môn thể thao
    */
-  getDisciplines: () => apiFetch<Discipline[]>('/disciplines'),
+  getDisciplines: () => apiFetch<Discipline[]>('/disciplines')
+    .then((items) => items.filter((item) => isStandardDiscipline(item.name))),
 };

@@ -1,4 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
+import { isStandardDiscipline } from '../../shared/lib/disciplines';
 
 export interface Discipline {
   id: number;
@@ -33,7 +34,8 @@ type Body<T> = Omit<T, 'id'>;
 const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
 
 export const catalogApi = {
-  disciplines: () => apiFetch<Discipline[]>('/disciplines'),
+  disciplines: () => apiFetch<Discipline[]>('/disciplines')
+    .then((items) => items.filter((item) => isStandardDiscipline(item.name))),
   saveDiscipline: (id: number | null, b: Body<Discipline>) =>
     apiFetch<Discipline>(id ? `/disciplines/${id}` : '/disciplines', json(id ? 'PUT' : 'POST', b)),
 

@@ -1,5 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
-import { matchesDiscipline } from '../../shared/lib/disciplines';
+import { isStandardDiscipline, matchesDiscipline } from '../../shared/lib/disciplines';
 
 export interface GymClassDto {
   id: number; name: string; disciplineId: number; disciplineName: string;
@@ -26,7 +26,8 @@ export interface WaitlistDto {
   status: string; requestedAt: string;
 }
 
-export const getClasses = () => apiFetch<GymClassDto[]>('/classes');
+export const getClasses = () => apiFetch<GymClassDto[]>('/classes')
+  .then((classes) => classes.filter((item) => isStandardDiscipline(item.disciplineName)));
 // Current local calendar week, Monday through Sunday. Date strings have no UTC conversion.
 export function currentWeek(weekOffset = 0): { fromDate: string; toDate: string } {
   const monday = new Date();
@@ -40,7 +41,8 @@ export function currentWeek(weekOffset = 0): { fromDate: string; toDate: string 
 
 export const getSessions = (weekOffset = 0) => {
   const { fromDate, toDate } = currentWeek(weekOffset);
-  return apiFetch<ClassSessionDto[]>(`/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`);
+  return apiFetch<ClassSessionDto[]>(`/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`)
+    .then((sessions) => sessions.filter((item) => isStandardDiscipline(item.disciplineName)));
 };
 export const getMyEnrollments = () => apiFetch<EnrollmentDto[]>('/classes/enrollments/my');
 export const getMyWaitlists = () => apiFetch<WaitlistDto[]>('/classes/waitlists/my');

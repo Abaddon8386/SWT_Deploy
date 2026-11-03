@@ -7,7 +7,8 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
   });
 
   it('handles disciplines list and create/update', async () => {
-    const mockList = [{ id: 1, name: 'Pilates', description: 'Core strength' }];
+    const yoga = { id: 1, name: 'Yoga', description: 'Mindfulness' };
+    const mockList = [yoga, { id: 5, name: 'Pilates', description: 'Core strength' }];
     const mockCreated = { id: 2, name: 'Yoga', description: 'Mindfulness' };
 
     const mockFetch = vi
@@ -30,7 +31,8 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
     vi.stubGlobal('fetch', mockFetch);
 
     const list = await catalogApi.disciplines();
-    expect(list).toEqual(mockList);
+    // Bộ môn cũ ngoài danh mục chuẩn (Pilates) không được hiển thị.
+    expect(list).toEqual([yoga]);
 
     const created = await catalogApi.saveDiscipline(null, { name: 'Yoga', description: 'Mindfulness' });
     expect(created.id).toBe(2);

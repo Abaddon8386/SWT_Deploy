@@ -2,6 +2,7 @@
 
 ## Behavior
 
+- (Lỗi thời — xem DESIGN.md 03/11/2026: danh mục chuẩn hiện là Gym, Bơi lội, Boxing, Tennis, Cầu lông, Yoga; Pilates và bộ môn ngoài danh mục bị ẩn khỏi portal.)
 - Landing and Member Classes share the SCRUM-88 main disciplines: **Gym, Yoga,
   Pilates, Boxing**, in that order. Gym remains the main discipline. Extra discipline
   names from actual portal schedules remain available. The Gym filter includes the
