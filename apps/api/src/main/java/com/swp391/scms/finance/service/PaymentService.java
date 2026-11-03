@@ -44,7 +44,6 @@ public class PaymentService {
 
     private static final java.util.regex.Pattern RECEIPT_DATA_URL =
             java.util.regex.Pattern.compile("^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$");
-    private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
     private static final Set<String> VALID_STATUSES = Set.of("success", "pending", "failed", "refunded");
 
