@@ -89,7 +89,7 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     });
   }
 
-  it('renders health metrics section and member fields for MEMBER role', async () => {
+  it('shows a single personal profile without loading health metrics for MEMBER role', async () => {
     localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({ id: '10', name: 'Nguyen Van Test', identifier: 'member1', role: 'MEMBER' })
@@ -98,84 +98,39 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).toHaveBeenCalledWith(10);
+    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     // Should display health metrics column
-    expect(host.textContent).toContain('Chỉ số sức khỏe');
-    expect(host.textContent).toContain('Cân nặng (kg)');
+    expect(host.textContent).not.toContain('Chỉ số sức khỏe');
+    expect(host.querySelector('h1')?.textContent).toBe('Hồ sơ cá nhân');
+    expect(host.querySelector('.profile-grid--single')).not.toBeNull();
+    expect(host.querySelectorAll('.portal-card')).toHaveLength(1);
+    expect(host.querySelector('#health-metric-type')).toBeNull();
+    expect(host.querySelector('.profile-metric-form')).toBeNull();
     expect(host.textContent).toContain('Mã hội viên');
     expect(host.textContent).toContain('Trình độ thể lực');
     expect(host.textContent).toContain('Mục tiêu thể lực');
     expect(host.textContent).toContain('Ghi chú sức khỏe & chấn thương');
   });
 
-  it('allows editing a health metric and saving update', async () => {
-    localStorage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify({ id: '10', name: 'Nguyen Van Test', identifier: 'member1', role: 'MEMBER' })
-    );
-    mockApi.updateHealthMetric.mockResolvedValue({
-      id: 1,
-      metricName: 'weight',
-      metricValue: 70,
-      unit: 'kg',
-      recordedAt: '2026-10-01T08:00:00Z',
-    });
-
+  it('saves the personal profile without mutating health measurements', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' }));
+    mockApi.updateProfile.mockResolvedValue(sampleProfile);
     await renderPage();
-
-    const editBtn = host.querySelector('.btn-metric-edit') as HTMLButtonElement | null;
-    expect(editBtn).not.toBeNull();
-    expect(editBtn?.textContent).toBe('Sửa');
-
-    await act(async () => {
-      editBtn?.click();
-    });
-
-    // Should display editing state
-    expect(host.textContent).toContain('Đang sửa chỉ số');
-    expect(host.textContent).toContain('Lưu cập nhật');
-
-    const form = host.querySelector('.profile-metric-form') as HTMLFormElement | null;
-    expect(form).not.toBeNull();
-
-    await act(async () => {
-      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    });
-
-    expect(mockApi.updateHealthMetric).toHaveBeenCalledWith(10, 1, {
-      metricName: 'weight',
-      metricValue: 70,
-      unit: 'kg',
-    });
+    await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(mockApi.updateProfile).toHaveBeenCalledWith(sampleProfile);
+    expect(mockApi.addHealthMetric).not.toHaveBeenCalled();
+    expect(mockApi.updateHealthMetric).not.toHaveBeenCalled();
+    expect(mockApi.deleteHealthMetric).not.toHaveBeenCalled();
   });
 
-  it('allows deleting a health metric when confirmed', async () => {
-    localStorage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify({ id: '10', name: 'Nguyen Van Test', identifier: 'member1', role: 'MEMBER' })
-    );
-    mockApi.deleteHealthMetric.mockResolvedValue(null);
-
+  it('retains profile form and reports save failure', async () => {
+    mockApi.updateProfile.mockRejectedValue(new Error('Cannot save'));
     await renderPage();
-
-    const deleteBtn = host.querySelector('.btn-metric-delete') as HTMLButtonElement | null;
-    expect(deleteBtn).not.toBeNull();
-    expect(deleteBtn?.textContent).toBe('Xóa');
-
-    await act(async () => {
-      deleteBtn?.click();
-    });
-
-    // Hộp xác nhận của portal thay cho window.confirm; chưa xóa khi chưa xác nhận
-    const dialog = host.querySelector('dialog');
-    expect(dialog?.textContent).toContain('Xóa chỉ số sức khỏe?');
-    expect(mockApi.deleteHealthMetric).not.toHaveBeenCalled();
-    const confirmBtn = Array.from(dialog!.querySelectorAll('button')).find((b) => b.textContent === 'Xóa chỉ số')!;
-    await act(async () => {
-      confirmBtn.click();
-    });
-    expect(mockApi.deleteHealthMetric).toHaveBeenCalledWith(10, 1);
+    await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(host.querySelector('[role="alert"]')).not.toBeNull();
+    expect((host.querySelector('#fullName') as HTMLInputElement).value).toBe(sampleProfile.fullName);
+    expect((host.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('hides health metrics section and member fitness fields for COACH role', async () => {
