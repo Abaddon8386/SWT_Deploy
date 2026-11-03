@@ -37,6 +37,14 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
     @Query("select b from CourtBooking b where b.room.id = :roomId and b.bookingDate = :date and b.status = 'booked'")
     List<CourtBooking> findRoomBookings(@Param("roomId") Long roomId, @Param("date") LocalDate date);
 
+    @Query("select b from CourtBooking b where b.status = 'booked' and b.paymentStatus = 'pending' "
+            + "and b.paymentMethod = 'vnpay' and b.createdAt < :cutoff")
+    List<CourtBooking> findUnpaidOnlineBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    @Query("select b from CourtBooking b where b.status = 'booked' and b.paymentStatus = 'pending' "
+            + "and b.paymentMethod = 'cash' and (b.bookingDate < :date or (b.bookingDate = :date and b.startTime <= :time))")
+    List<CourtBooking> findUnpaidCashStarted(@Param("date") LocalDate date, @Param("time") LocalTime time);
+
     long countByMemberIdAndBookingDateAndStatus(Long memberId, LocalDate bookingDate, String status);
 
     @Query("select count(b) from CourtBooking b where b.member.id = :memberId and b.status = 'booked' "

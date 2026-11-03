@@ -98,7 +98,7 @@ class PaymentMemberAccessTest {
         mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"bank_transfer"}
+                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"online_wallet"}
                                 """))
                 .andExpect(status().isCreated());
         org.junit.jupiter.api.Assertions.assertEquals("pending", saved.getStatus());
@@ -170,7 +170,7 @@ class PaymentMemberAccessTest {
         mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId":3,"subscriptionId":10,"amount":500000,"method":"bank_transfer"}
+                                {"memberId":3,"subscriptionId":10,"amount":500000,"method":"online_wallet"}
                                 """))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(payments);
@@ -182,7 +182,7 @@ class PaymentMemberAccessTest {
                 ",\"status\":\"success\"", ",\"receivedById\":1", ",\"paidAt\":\"2026-10-15T10:00:00\"")) {
             mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"memberId\":2,\"subscriptionId\":10,\"amount\":500000,\"method\":\"bank_transfer\"" + extra + "}"))
+                            .content("{\"memberId\":2,\"subscriptionId\":10,\"amount\":500000,\"method\":\"online_wallet\"" + extra + "}"))
                     .andExpect(status().isForbidden());
         }
         verifyNoInteractions(payments);
@@ -198,7 +198,7 @@ class PaymentMemberAccessTest {
         mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"bank_transfer"}
+                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"online_wallet"}
                                 """))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(payments);
@@ -209,7 +209,7 @@ class PaymentMemberAccessTest {
         mvc.perform(post("/api/v1/payments/process").with(authentication(actor("MEMBER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"bank_transfer"}
+                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"online_wallet"}
                                 """))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/payments/99").with(authentication(actor("MEMBER"))))

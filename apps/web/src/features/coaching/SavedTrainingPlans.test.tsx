@@ -47,7 +47,9 @@ it('shows loaded plans with Sửa for draft/active, Xóa for draft/active, and n
   expect(buttonIn(r1, 'Xóa')).toBeTruthy();
   expect(buttonIn(r2, 'Sửa')).toBeTruthy();
   expect(buttonIn(r2, 'Xóa')).toBeTruthy();
-  expect(r3.querySelectorAll('button')).toHaveLength(0);
+  expect(buttonIn(r3, 'Sửa')).toBeFalsy();
+  expect(buttonIn(r3, 'Xóa')).toBeFalsy();
+  expect(buttonIn(r3, 'Kết quả')).toBeTruthy();
 });
 
 it('shows an empty state and a retryable error instead of an empty list on failure', async () => {
