@@ -23,6 +23,9 @@ spring:
     default: supabase
   application:
     name: scms-api
+  autoconfigure:
+    # Xác thực bằng JWT; không dùng UserDetailsService nên bỏ tài khoản "user" với mật khẩu sinh ngẫu nhiên trong log.
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   messages:
     basename: i18n/messages
     encoding: UTF-8
