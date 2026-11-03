@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
-import { createStaffAccount, listStaffAccounts, type StaffAccount, type StaffAccountInput } from './staffAccountsApi';
+import { createStaffAccount, listStaffAccounts, setStaffAccountLocked, type StaffAccount, type StaffAccountInput } from './staffAccountsApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { errorMessage } from '../../shared/lib/errorMessage';
 
@@ -28,6 +28,23 @@ export function StaffAccountsPage() {
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [reload]);
+
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  async function toggleLock(account: StaffAccount) {
+    if (busyId !== null) return;
+    const lock = account.status === 'active';
+    setBusyId(account.id);
+    try {
+      const updated = await setStaffAccountLocked(account.id, lock);
+      setAccounts(current => current.map(item => item.id === updated.id ? updated : item));
+      notify(lock ? `Đã khóa tài khoản ${account.email}.` : `Đã mở khóa tài khoản ${account.email}.`, 'success');
+    } catch (err) {
+      notify(errorMessage(err, 'Không thể đổi trạng thái tài khoản.'), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,11 +108,15 @@ export function StaffAccountsPage() {
         {loadError} <button className="btn-secondary" type="button" onClick={() => { setLoading(true); setReload(current => current + 1); }}>Thử lại</button>
       </div> : accounts.length === 0 ? <p>Chưa có tài khoản nhân sự.</p> : <div className="portal-table-wrapper">
         <table className="portal-table">
-          <thead><tr><th scope="col">Họ và tên</th><th scope="col">Email</th><th scope="col">Vai trò</th><th scope="col">Trạng thái</th></tr></thead>
+          <thead><tr><th scope="col">Họ và tên</th><th scope="col">Email</th><th scope="col">Vai trò</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead>
           <tbody>{accounts.map(account => <tr key={account.id}>
             <td>{account.fullName}</td><td>{account.email}</td>
             <td>{account.roleCode === 'COACH' ? 'Huấn luyện viên' : 'Lễ tân'}</td>
             <td>{account.status === 'active' ? 'Hoạt động' : account.status === 'locked' ? 'Đã khóa' : 'Chưa kích hoạt'}</td>
+            <td>{account.status === 'active' || account.status === 'locked' ? <button className="btn-secondary btn-sm" type="button"
+              disabled={busyId !== null} onClick={() => void toggleLock(account)}>
+              {account.status === 'active' ? 'Khóa' : 'Mở khóa'}
+            </button> : null}</td>
           </tr>)}</tbody>
         </table>
       </div>}

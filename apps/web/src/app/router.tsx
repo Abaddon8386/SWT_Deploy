@@ -198,8 +198,12 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/manager/ManagerCatalogsPage')).ManagerCatalogsPage }),
           },
           {
+            path: '/manager/staff-accounts',
+            lazy: async () => ({ Component: (await import('../features/manager/StaffAccountsPage')).StaffAccountsPage }),
+          },
+          {
             path: '/manager/users',
-            element: <Navigate to="/manager/reports" replace />,
+            element: <Navigate to="/manager/staff-accounts" replace />,
           },
           {
             path: '/manager/reports',

@@ -332,4 +332,34 @@ class UserServiceTest {
         org.junit.jupiter.api.Assertions.assertNull(coach.getDeletedAt());
         verify(userRepository, never()).save(any());
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"ADMIN", "CENTER_MANAGER", "MEMBER"})
+    void managerStatusChangeRejectsNonStaffTargets(String code) {
+        var role = new com.swp391.scms.users.entity.Role();
+        role.setCode(code);
+        var target = new User();
+        target.setRole(role);
+        target.setStatus("active");
+        when(userRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(target));
+        assertThrows(BadRequestException.class, () -> service.setStaffStatus(7L, "locked"));
+        assertEquals("active", target.getStatus());
+        verify(userRepository, never()).save(any());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
+    void managerCanLockAndUnlockStaff(String code) {
+        var role = new com.swp391.scms.users.entity.Role();
+        role.setCode(code);
+        var target = new User();
+        target.setRole(role);
+        target.setStatus("active");
+        when(userRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(target));
+        when(userRepository.save(any())).thenAnswer(call -> call.getArgument(0));
+        service.setStaffStatus(7L, "locked");
+        assertEquals("locked", target.getStatus());
+        service.setStaffStatus(7L, "active");
+        assertEquals("active", target.getStatus());
+    }
 }

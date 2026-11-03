@@ -1,6 +1,7 @@
 import { apiFetch, ApiError } from '../../shared/api/client';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { DISCIPLINES } from '../../shared/lib/disciplines';
+import type { SkippedOccurrence } from '../../shared/lib/recurrence';
 
 export const COURT_DISCIPLINES = DISCIPLINES.filter(item => ['tennis', 'badminton', 'swimming'].includes(item.id));
 // Backend accepts only the canonical names, so aliases ("Tennis nâng cao") must not be offered as bookable.
@@ -17,11 +18,14 @@ export interface CourtBooking {
 }
 export interface BookingPage { content: CourtBooking[]; number: number; totalPages: number; totalElements: number }
 export interface BookCourtRequest { roomId: number; date: string; startTime: string }
+export interface RecurringCourtRequest { roomId: number; startDate: string; startTime: string; period: 'week' | 'month'; daysOfWeek: number[] }
+export interface RecurringCourtResult { booked: CourtBooking[]; skipped: SkippedOccurrence[] }
 const json = (method: string, body: unknown) => ({ method, body: JSON.stringify(body) });
 export const courtsApi = {
   courts: (discipline = '') => apiFetch<Court[]>(`/courts${discipline ? `?discipline=${encodeURIComponent(discipline)}` : ''}`),
   availability: (id: number, date: string) => apiFetch<CourtSlot[]>(`/courts/${id}/availability?date=${date}`),
   book: (body: BookCourtRequest) => apiFetch<CourtBooking>('/court-bookings', json('POST', body)),
+  bookRecurring: (body: RecurringCourtRequest) => apiFetch<RecurringCourtResult>('/court-bookings/recurring', json('POST', body)),
   my: (page = 0) => apiFetch<BookingPage>(`/court-bookings/my?page=${page}&size=20`),
   list: (date: string, roomId = '', page = 0) => apiFetch<BookingPage>(`/court-bookings?date=${date}&page=${page}&size=20${roomId ? `&roomId=${encodeURIComponent(roomId)}` : ''}`),
   cancel: (id: number, reason = '') => apiFetch<CourtBooking>(`/court-bookings/${id}/cancel`, json('PATCH', { reason: reason.trim() || null })),
@@ -49,7 +53,7 @@ export function courtError(error: unknown): string {
     COURT_BOOKING_SLOT_TAKEN: 'Khung giờ vừa được đặt hoặc đang có lớp. Vui lòng chọn khung khác.',
     COURT_BOOKING_MEMBERSHIP_INVALID: 'Bạn chưa đăng ký gói tập hoặc gói tập không còn hiệu lực đến ngày đặt sân. Vui lòng đăng ký gói tập trước khi đặt sân.',
     COURT_BOOKING_PAST_SLOT: 'Khung giờ đã qua. Vui lòng chọn khung khác.',
-    COURT_BOOKING_TOO_FAR: 'Bạn chỉ có thể đặt trước tối đa 7 ngày.',
+    COURT_BOOKING_TOO_FAR: 'Bạn chỉ có thể đặt trước tối đa 7 ngày (đặt định kỳ: tối đa 1 tháng).',
     COURT_BOOKING_LIMIT_REACHED: 'Bạn đã có đủ 2 lượt đặt trong ngày này.',
     COURT_BOOKING_COURT_UNAVAILABLE: 'Sân hiện không hoạt động. Vui lòng chọn sân khác.',
     COURT_BOOKING_CANCEL_TOO_LATE: 'Chỉ có thể hủy trước giờ bắt đầu ít nhất 2 giờ.',

@@ -90,6 +90,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     vi.spyOn(aiApi, 'generateWorkoutPlan').mockResolvedValue(mockAiResponse);
     vi.spyOn(aiApi, 'saveTrainingPlan').mockResolvedValue({ id: 101, status: 'active' });
+    vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([]);
     vi.spyOn(aiApi, 'getCoachMembers').mockResolvedValue(MEMBERS);
     vi.spyOn(aiApi, 'getActiveCoaches').mockResolvedValue([{ id: 31, fullName: 'HLV Marcus Vance' }, { id: 32, fullName: 'HLV Elena Cruz' }]);
   });

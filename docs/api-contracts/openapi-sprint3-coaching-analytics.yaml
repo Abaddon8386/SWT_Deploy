@@ -51,6 +51,43 @@ paths:
       responses:
         '201':
           description: Exercise item added successfully
+  /api/v1/coaching/training-plans/{id}:
+    put:
+      summary: Update goal and dates of a draft or active plan (owner Coach or CENTER_MANAGER)
+      tags: [Coaching]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                goal: { type: string, maxLength: 255 }
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date }
+      responses:
+        '200': { description: Training plan updated successfully }
+        '400': { description: INVALID_DATE_RANGE }
+        '403': { description: Plan belongs to another Coach }
+        '409': { description: INVALID_PLAN_STATUS - completed or cancelled plan }
+    delete:
+      summary: Delete a draft plan; activated plans are kept (owner Coach or CENTER_MANAGER)
+      tags: [Coaching]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200': { description: Training plan deleted successfully }
+        '403': { description: Plan belongs to another Coach }
+        '404': { description: Plan not found }
+        '409': { description: INVALID_PLAN_STATUS - only draft plans can be deleted }
   /api/v1/coaching/training-plans/{id}/activate:
     put:
       summary: Activate a draft training plan and archive older active plans (SCRUM-116)

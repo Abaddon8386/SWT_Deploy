@@ -50,4 +50,24 @@ class PackageServiceTest {
         assertThrows(ResourceNotFoundException.class,
                 () -> service.update(9L, new PackageRequest("A", null, BigDecimal.ONE, 1, null, null)));
     }
+
+    @Test
+    void deleteRemovesPackageThatWasNeverSold() {
+        MembershipPackage pkg = new MembershipPackage();
+        var subscriptions = org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "subscriptions", subscriptions);
+        when(packages.findById(1L)).thenReturn(Optional.of(pkg));
+        service.delete(1L);
+        org.mockito.Mockito.verify(packages).delete(pkg);
+    }
+
+    @Test
+    void deleteBlockedWhenPackageWasSold() {
+        var subscriptions = org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "subscriptions", subscriptions);
+        when(packages.findById(1L)).thenReturn(Optional.of(new MembershipPackage()));
+        when(subscriptions.existsByMembershipPackageId(1L)).thenReturn(true);
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
+        org.mockito.Mockito.verify(packages, org.mockito.Mockito.never()).delete(any(MembershipPackage.class));
+    }
 }

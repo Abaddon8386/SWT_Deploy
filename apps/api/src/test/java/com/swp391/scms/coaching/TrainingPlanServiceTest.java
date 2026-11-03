@@ -270,5 +270,62 @@ class TrainingPlanServiceTest {
 
         assertThrows(ForbiddenException.class, () -> service.activatePlan(101L, 20L, "COACH"));
     }
-}
 
+    private TrainingPlan ownedPlan(String status) {
+        Coach coach = new Coach();
+        coach.setUserId(20L);
+        Member member = new Member();
+        member.setUserId(10L);
+        TrainingPlan plan = new TrainingPlan();
+        ReflectionTestUtils.setField(plan, "id", 100L);
+        plan.setCoach(coach);
+        plan.setMember(member);
+        plan.setStatus(status);
+        plan.setStartDate(LocalDate.of(2026, 11, 1));
+        plan.setEndDate(LocalDate.of(2026, 11, 30));
+        return plan;
+    }
+
+    @Test
+    @DisplayName("Should update goal and dates of an owned plan")
+    void shouldUpdateOwnedPlan() {
+        TrainingPlan plan = ownedPlan("active");
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+        when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(100L)).thenReturn(List.of());
+        var dto = new com.swp391.scms.coaching.dto.TrainingPlanUpdateDto();
+        dto.setGoal("  Giảm mỡ  ");
+        dto.setEndDate(LocalDate.of(2026, 12, 15));
+        TrainingPlanDto updated = service.updatePlan(100L, dto, 20L, "COACH");
+        assertEquals("Giảm mỡ", updated.getGoal());
+        assertEquals(LocalDate.of(2026, 12, 15), updated.getEndDate());
+        assertEquals(LocalDate.of(2026, 11, 1), updated.getStartDate());
+    }
+
+    @Test
+    @DisplayName("Should reject update with start after end and update of completed plan")
+    void shouldRejectInvalidUpdates() {
+        TrainingPlan plan = ownedPlan("draft");
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+        var dto = new com.swp391.scms.coaching.dto.TrainingPlanUpdateDto();
+        dto.setStartDate(LocalDate.of(2026, 12, 31));
+        assertThrows(BadRequestException.class, () -> service.updatePlan(100L, dto, 20L, "COACH"));
+        plan.setStatus("completed");
+        assertThrows(ConflictException.class, () -> service.updatePlan(100L, new com.swp391.scms.coaching.dto.TrainingPlanUpdateDto(), 20L, "COACH"));
+        verify(trainingPlanRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should delete only draft plans owned by the caller")
+    void shouldDeleteDraftPlanOnly() {
+        TrainingPlan plan = ownedPlan("draft");
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+        assertThrows(ForbiddenException.class, () -> service.deletePlan(100L, 99L, "COACH"));
+        verify(trainingPlanRepository, never()).delete(any());
+        service.deletePlan(100L, 20L, "COACH");
+        verify(trainingPlanRepository).delete(plan);
+        plan.setStatus("active");
+        assertThrows(ConflictException.class, () -> service.deletePlan(100L, 20L, "COACH"));
+        verify(trainingPlanRepository, times(1)).delete(any());
+    }
+}

@@ -32,4 +32,14 @@ public class StaffAccountController {
     public ApiResponse<UserDto> create(@Valid @RequestBody StaffAccountCreateDto request) {
         return ApiResponse.created(messages.getMessage("users.created.success"), users.createStaffAccount(request));
     }
+
+    @PatchMapping("/{id}/lock")
+    public ApiResponse<UserDto> lock(@PathVariable Long id) {
+        return ApiResponse.ok(messages.getMessage("users.locked.success"), users.setStaffStatus(id, "locked"));
+    }
+
+    @PatchMapping("/{id}/unlock")
+    public ApiResponse<UserDto> unlock(@PathVariable Long id) {
+        return ApiResponse.ok(messages.getMessage("users.unlocked.success"), users.setStaffStatus(id, "active"));
+    }
 }

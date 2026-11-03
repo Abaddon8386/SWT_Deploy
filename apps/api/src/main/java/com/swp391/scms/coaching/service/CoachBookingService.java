@@ -400,6 +400,34 @@ public class CoachBookingService {
         return mapToDto(saved);
     }
 
+    /**
+     * Books the same 1:1 slot on every chosen weekday of a week or month. Every date goes through the normal
+     * single-booking rules (coach/member conflicts, membership, monthly quota, unpaid cap), so dates that fail are
+     * reported in {@code skipped} while the rest are kept.
+     */
+    @Transactional
+    public com.swp391.scms.coaching.dto.CoachRecurringResultDto createRecurringBooking(
+            AuthenticatedPrincipal principal, com.swp391.scms.coaching.dto.CoachRecurringBookingDto request) {
+        List<LocalDate> dates = com.swp391.scms.common.RecurrenceDates.expand(
+                request.startDate(), request.period(), request.daysOfWeek());
+        coachRepository.findById(request.coachId())
+                .orElseThrow(() -> new ResourceNotFoundException("Coach", request.coachId()));
+        List<CoachBookingDto> booked = new java.util.ArrayList<>();
+        List<com.swp391.scms.common.RecurrenceDates.Skipped> skipped = new java.util.ArrayList<>();
+        for (LocalDate date : dates) {
+            try {
+                booked.add(createBooking(principal, new CoachBookingCreateDto(request.coachId(), request.disciplineId(),
+                        date, request.startTime(), request.endTime(), request.paymentMethod(), request.notes())));
+            } catch (com.swp391.scms.common.exception.AppException e) {
+                String reason = e.getMessageKey() != null
+                        ? msg(e.getMessageKey(), e.getMessageArgs() == null ? new Object[0] : e.getMessageArgs())
+                        : e.getErrorCode();
+                skipped.add(new com.swp391.scms.common.RecurrenceDates.Skipped(date, e.getErrorCode(), reason));
+            }
+        }
+        return new com.swp391.scms.coaching.dto.CoachRecurringResultDto(booked, skipped);
+    }
+
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getMemberBookings(Long memberId) {
         return coachBookingRepository.findByMemberId(memberId).stream()

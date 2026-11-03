@@ -113,5 +113,29 @@ public class TrainingPlanController {
         TrainingPlanDto plan = trainingPlanService.getPlanById(id, userId, role);
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.detail"), plan));
     }
-}
 
+    @Operation(summary = "Cập nhật giáo án", description = "Sửa mục tiêu và thời gian của giáo án nháp hoặc đang hoạt động")
+    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<TrainingPlanDto>> updatePlan(
+            @PathVariable Long id,
+            @Valid @RequestBody com.swp391.scms.coaching.dto.TrainingPlanUpdateDto dto,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        Long userId = principal != null ? principal.id() : null;
+        String role = principal != null ? principal.role() : "COACH";
+        return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.updated"),
+                trainingPlanService.updatePlan(id, dto, userId, role)));
+    }
+
+    @Operation(summary = "Xóa giáo án nháp", description = "Chỉ xóa được giáo án ở trạng thái draft")
+    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deletePlan(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        Long userId = principal != null ? principal.id() : null;
+        String role = principal != null ? principal.role() : "COACH";
+        trainingPlanService.deletePlan(id, userId, role);
+        return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.deleted"), null));
+    }
+}

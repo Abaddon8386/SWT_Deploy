@@ -288,6 +288,24 @@ paths:
         '401': { description: Authentication required }
         '403': { description: CENTER_MANAGER or ADMIN required }
         '409': { description: EMAIL_EXISTS / PHONE_EXISTS }
+  /staff-accounts/{id}/lock:
+    patch:
+      summary: Lock a Coach or Receptionist account (CENTER_MANAGER or ADMIN)
+      parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: 'ApiResponse.data = UserDto with status locked' }
+        '400': { description: INVALID_STAFF_ROLE - target is not a Coach or Receptionist }
+        '403': { description: CENTER_MANAGER or ADMIN required }
+        '404': { description: User not found or deleted }
+  /staff-accounts/{id}/unlock:
+    patch:
+      summary: Unlock a Coach or Receptionist account (CENTER_MANAGER or ADMIN)
+      parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: 'ApiResponse.data = UserDto with status active' }
+        '400': { description: INVALID_STAFF_ROLE }
+        '403': { description: CENTER_MANAGER or ADMIN required }
+        '404': { description: User not found or deleted }
   /users:
     get: { summary: List users (non deleted, ADMIN only), responses: { '200': { description: OK }, '403': { description: ADMIN required } } }
     post:
@@ -387,16 +405,19 @@ paths:
     post: { summary: Create discipline (CENTER_MANAGER), responses: { '201': { description: Created }, '409': { description: Name exists } } }
   /disciplines/{id}:
     put: { summary: Update discipline (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
+    delete: { summary: "Delete a discipline no class/room/1:1 booking uses; member favourites are cleared (CENTER_MANAGER)", parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: Deleted }, '404': { description: Not found }, '409': { description: DISCIPLINE_IN_USE } } }
   /rooms:
     get: { summary: List rooms, responses: { '200': { description: "data = Room[]" } } }
     post: { summary: Create room (CENTER_MANAGER), responses: { '201': { description: Created } } }
   /rooms/{id}:
     put: { summary: Update room incl. status (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
+    delete: { summary: "Delete a room never used by a class or court booking; otherwise set status closed (CENTER_MANAGER)", parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: Deleted }, '404': { description: Not found }, '409': { description: ROOM_IN_USE } } }
   /packages:
     get: { summary: List membership packages, responses: { '200': { description: "data = MembershipPackage[]" } } }
     post: { summary: Create package (audited; CENTER_MANAGER), responses: { '201': { description: Created } } }
   /packages/{id}:
     put: { summary: Update package (audited; CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
+    delete: { summary: "Delete a package never sold; otherwise set status inactive (audited; CENTER_MANAGER)", parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: Deleted }, '404': { description: Not found }, '409': { description: PACKAGE_IN_USE } } }
   /packages/{id}/status:
     patch:
       summary: Activate/deactivate package (audited; CENTER_MANAGER). Body { status }

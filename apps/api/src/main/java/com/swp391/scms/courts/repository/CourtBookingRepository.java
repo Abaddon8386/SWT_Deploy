@@ -10,6 +10,8 @@ import java.time.*;
 import java.util.*;
 
 public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long> {
+    boolean existsByRoomId(Long roomId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from CourtBooking b where b.id = :id")
     Optional<CourtBooking> findByIdForUpdate(@Param("id") Long id);

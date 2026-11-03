@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   getAvailableSlots: vi.fn(),
   getMyCoachBookings: vi.fn(),
   createCoachBooking: vi.fn(),
+  createRecurringCoachBooking: vi.fn(),
   cancelCoachBooking: vi.fn(),
   getMemberQuotaStatus: vi.fn(),
   createCoachReview: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('../coachBookingApi', () => ({
   getAvailableSlots: mocks.getAvailableSlots,
   getMyCoachBookings: mocks.getMyCoachBookings,
   createCoachBooking: mocks.createCoachBooking,
+  createRecurringCoachBooking: mocks.createRecurringCoachBooking,
   cancelCoachBooking: mocks.cancelCoachBooking,
   getMemberQuotaStatus: mocks.getMemberQuotaStatus,
 }));

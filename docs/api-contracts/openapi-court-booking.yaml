@@ -80,6 +80,53 @@ paths:
         '200': {$ref: '#/components/responses/BookingPage'}
         '400': {$ref: '#/components/responses/BadRequest'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /court-bookings/recurring:
+    post:
+      summary: Standing court booking for a week or a month (MEMBER)
+      description: >
+        Books the same one-hour slot on the chosen ISO weekdays (1 = Monday ... 7 = Sunday; defaults to the weekday of
+        startDate). period week covers 7 days from startDate, month covers one calendar month. Standing bookings may
+        reach 31 days ahead instead of 7. Every date is checked on its own (court overlap, class overlap, member
+        overlap, 2 bookings per day, membership covering that date); dates that fail are returned in skipped and the
+        rest are kept. Status 201 when at least one booking was created, 200 when none was.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, startDate, startTime, period]
+              properties:
+                roomId: { type: integer, format: int64 }
+                startDate: { type: string, format: date }
+                startTime: { type: string, example: '18:00:00' }
+                period: { type: string, enum: [week, month] }
+                daysOfWeek: { type: array, maxItems: 7, items: { type: integer, minimum: 1, maximum: 7 } }
+      responses:
+        '201':
+          description: At least one booking created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      booked: { type: array, items: { type: object } }
+                    skipped:
+                      type: array
+                      description: Dates that could not be booked, each with the API error code and a localised reason
+                      items:
+                        type: object
+                        properties:
+                          date: { type: string, format: date }
+                          code: { type: string }
+                          message: { type: string }
+        '200': { description: 'No date could be booked; data.skipped explains each one' }
+        '400': { description: Invalid period, weekdays, court or time }
+        '403': { description: MEMBER required }
+        '409': { description: COURT_BOOKING_COURT_UNAVAILABLE }
   /court-bookings/my:
     get:
       description: MEMBER only. Own bookings, newest date first, including cancelled/past reservations.

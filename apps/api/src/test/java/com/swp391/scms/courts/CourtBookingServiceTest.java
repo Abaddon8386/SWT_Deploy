@@ -154,4 +154,56 @@ class CourtBookingServiceTest {
         assertEquals(2, service.daily(staff, date, 10L, 0, 20).getTotalElements());
         verify(bookings, never()).findDailyByRoom(eq(date), isNull(), any());
     }
+
+    com.swp391.scms.courts.dto.CourtBookingRequests.RecurringBookRequest recurring(LocalDate start, String period, List<Integer> days) {
+        return new com.swp391.scms.courts.dto.CourtBookingRequests.RecurringBookRequest(10L, start, LocalTime.NOON, period, days);
+    }
+
+    @Test void weeklyStandingBookingCreatesEveryChosenDay() {
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
+        var result = service.bookRecurring(member, recurring(date, "week", List.of(1, 3, 5)));
+        assertEquals(3, result.booked().size());
+        assertTrue(result.skipped().isEmpty());
+        assertEquals(List.of(date, date.plusDays(2), date.plusDays(4)), result.booked().stream().map(b -> b.date()).toList());
+        verify(bookings, times(3)).saveAndFlush(any());
+    }
+
+    @Test void takenDayIsSkippedWithReasonWhileOthersAreKept() {
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
+        when(bookings.existsRoomOverlap(10L, date.plusDays(2), LocalTime.NOON, LocalTime.of(13, 0))).thenReturn(true);
+        var result = service.bookRecurring(member, recurring(date, "week", List.of(1, 3, 5)));
+        assertEquals(2, result.booked().size());
+        assertEquals(1, result.skipped().size());
+        assertEquals(date.plusDays(2), result.skipped().get(0).date());
+        assertEquals("COURT_BOOKING_SLOT_TAKEN", result.skipped().get(0).code());
+    }
+
+    @Test void monthlyStandingBookingReachesPastTheSevenDayWindow() {
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
+        var result = service.bookRecurring(member, recurring(date, "month", null));
+        assertEquals(5, result.booked().size());
+        assertEquals(date.plusDays(28), result.booked().get(4).date());
+    }
+
+    @Test void standingBookingStopsAtOneMonthAhead() {
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
+        var result = service.bookRecurring(member, recurring(date.plusDays(30), "month", null));
+        assertEquals(1, result.booked().size());
+        assertEquals(4, result.skipped().size());
+        assertTrue(result.skipped().stream().allMatch(s -> "COURT_BOOKING_TOO_FAR".equals(s.code())));
+    }
+
+    @Test void membershipThatEndsMidRangeSkipsLaterDays() {
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenAnswer(i -> !((LocalDate) i.getArgument(2)).isAfter(date.plusDays(3)));
+        var result = service.bookRecurring(member, recurring(date, "week", List.of(1, 3, 5)));
+        assertEquals(2, result.booked().size());
+        assertEquals("COURT_BOOKING_MEMBERSHIP_INVALID", result.skipped().get(0).code());
+    }
+
+    @Test void standingBookingFailsFastWhenCourtIsUnavailableOrCallerIsNotAMember() {
+        room.setStatus("maintenance");
+        error("COURT_BOOKING_COURT_UNAVAILABLE", () -> service.bookRecurring(member, recurring(date, "week", null)));
+        verify(bookings, never()).saveAndFlush(any());
+        error("COURT_BOOKING_FORBIDDEN", () -> service.bookRecurring(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), recurring(date, "week", null)));
+    }
 }

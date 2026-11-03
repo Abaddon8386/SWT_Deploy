@@ -63,4 +63,18 @@ public class PackageService {
             pkg.setStatus(request.status());
         }
     }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptions;
+
+    /** A package that was ever sold is kept for history (set status to inactive instead). */
+    @Transactional
+    @Audited(action = "PACKAGE_DELETE", entity = "membership_packages")
+    public void delete(Long id) {
+        MembershipPackage pkg = find(id);
+        if (subscriptions != null && subscriptions.existsByMembershipPackageId(id)) {
+            throw new com.swp391.scms.common.exception.ConflictException("PACKAGE_IN_USE", "catalog.package.in_use", null, null);
+        }
+        packages.delete(pkg);
+    }
 }

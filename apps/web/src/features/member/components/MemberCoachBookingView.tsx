@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
+import { RecurrenceFields, RecurrenceSummary } from '../../../shared/ui/RecurrenceFields';
+import { recurrenceRequest, type RecurrenceChoice } from '../../../shared/lib/recurrence';
 import {
   getCoaches,
   getAvailableSlots,
   createCoachBooking,
+  createRecurringCoachBooking,
   getMyCoachBookings,
   cancelCoachBooking,
   getMemberQuotaStatus,
@@ -12,6 +15,7 @@ import {
   type CoachAvailableSlotDto,
   type CoachBookingDto,
   type CoachQuotaStatusDto,
+  type CoachRecurringResult,
 } from '../coachBookingApi';
 import {
   createCoachReview,
@@ -93,6 +97,8 @@ export function MemberCoachBookingView({
   const [modalSlot, setModalSlot] = useState<CoachAvailableSlotDto | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'package_quota' | 'hourly_pay'>('package_quota');
   const [notes, setNotes] = useState('');
+  const [recurrence, setRecurrence] = useState<RecurrenceChoice>({ period: 'once', days: [] });
+  const [recurringOutcome, setRecurringOutcome] = useState<CoachRecurringResult | null>(null);
 
   // Payment Checkout Modal State
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
@@ -167,6 +173,7 @@ export function MemberCoachBookingView({
   function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
     setModalSlot(slot);
     setError('');
+    setRecurrence({ period: 'once', days: [] });
     if (hasRemainingQuota) {
       setPaymentMethod('package_quota');
     } else {
@@ -180,6 +187,31 @@ export function MemberCoachBookingView({
     setError('');
     
     try {
+      const standing = recurrenceRequest(recurrence, selectedDate);
+      if (standing) {
+        const result = await createRecurringCoachBooking({
+          coachId: selectedCoach.id,
+          startDate: selectedDate,
+          startTime: modalSlot.startTime,
+          endTime: modalSlot.endTime,
+          ...standing,
+          paymentMethod: paymentMethod === 'package_quota' ? 'package_quota' : 'bank_transfer',
+          notes: notes.trim() || undefined,
+        });
+        setModalSlot(null);
+        setNotes('');
+        setRecurringOutcome(result);
+        const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
+          getAvailableSlots(selectedCoach.id, selectedDate),
+          getMyCoachBookings(),
+          getMemberQuotaStatus().catch(() => null),
+        ]);
+        setSlots(updatedSlots);
+        setMyBookings(updatedBookings);
+        if (updatedQuota) setQuotaStatus(updatedQuota);
+        if (result.booked.length) onBookingSuccess?.();
+        return;
+      }
       const created = await createCoachBooking({
         coachId: selectedCoach.id,
         bookingDate: selectedDate,
@@ -1070,6 +1102,14 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
+            <RecurrenceFields
+              startDate={selectedDate}
+              value={recurrence}
+              onChange={setRecurrence}
+              disabled={submitting}
+              hint="Mỗi buổi vẫn theo luật đặt 1:1: trùng lịch, hết hạn mức tháng hoặc quá giới hạn chưa thanh toán sẽ được bỏ qua và báo lại."
+            />
+
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
                 Ghi chú cho HLV (Mục tiêu, tình trạng sức khỏe...):
@@ -1100,9 +1140,25 @@ export function MemberCoachBookingView({
                 disabled={submitting}
                 onClick={() => void handleConfirmBooking()}
               >
-                {submitting ? 'Đang xử lý…' : paymentMethod === 'hourly_pay' ? 'Xác nhận & Đến thanh toán' : 'Xác nhận Đặt lịch (0 đ)'}
+                {submitting ? 'Đang xử lý…' : recurrence.period !== 'once' ? 'Xác nhận đặt định kỳ' : paymentMethod === 'hourly_pay' ? 'Xác nhận & Đến thanh toán' : 'Xác nhận Đặt lịch (0 đ)'}
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {recurringOutcome && (
+        <Modal title="Kết quả đặt lịch 1:1 định kỳ" onClose={() => setRecurringOutcome(null)}>
+          <RecurrenceSummary
+            booked={recurringOutcome.booked}
+            skipped={recurringOutcome.skipped}
+            describe={(b) => `${b.bookingDate} · ${b.startTime.slice(0, 5)}–${b.endTime.slice(0, 5)} · HLV ${formatCoachName(b.coachName)}`}
+          />
+          {recurringOutcome.booked.some((b) => b.paymentMethod !== 'package_quota') && (
+            <p className="muted">Các buổi trả phí theo giờ cần được thanh toán tại quầy lễ tân.</p>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+            <button type="button" className="btn-primary" onClick={() => setRecurringOutcome(null)}>Đóng</button>
           </div>
         </Modal>
       )}

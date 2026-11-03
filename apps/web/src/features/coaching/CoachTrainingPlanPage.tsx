@@ -15,6 +15,7 @@ import {
   type WorkoutExerciseItem,
   type AiWorkoutPlanResult,
 } from './aiApi';
+import { SavedTrainingPlans } from './SavedTrainingPlans';
 import './coach-training-plan.css';
 
 // Tạm ẩn các điểm vào AI cho đến khi có provider thực tế.
@@ -281,6 +282,7 @@ export function CoachTrainingPlanPage() {
 
   // Lưu & Kích hoạt giáo án
   const [isSaving, setIsSaving] = useState(false);
+  const [plansRefresh, setPlansRefresh] = useState(0);
   const handleSavePlan = async () => {
     const invalid =
       exercises.length === 0 ? 'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập trước khi lưu.'
@@ -335,6 +337,7 @@ export function CoachTrainingPlanPage() {
         // ignore storage error
       }
 
+      setPlansRefresh((value) => value + 1);
       notify(`Đã lưu và kích hoạt giáo án "${planTitle}" cho học viên ${selectedMember.fullName}.`, 'success');
     } catch {
       notify('Đã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại.', 'error');
@@ -889,6 +892,7 @@ export function CoachTrainingPlanPage() {
         </Modal>
       )}
 
+      <SavedTrainingPlans refreshKey={plansRefresh} />
     </div>
   );
 }

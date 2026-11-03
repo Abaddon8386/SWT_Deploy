@@ -28,4 +28,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             order by u.fullName
             """)
     List<Member> search(@Param("pattern") String pattern, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "delete from member_favorite_disciplines where discipline_id = :disciplineId", nativeQuery = true)
+    void removeFavoriteDiscipline(@Param("disciplineId") Long disciplineId);
 }

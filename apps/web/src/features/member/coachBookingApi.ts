@@ -1,4 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
+import type { SkippedOccurrence } from '../../shared/lib/recurrence';
 
 export interface CoachPublicDto {
   id: number;
@@ -52,6 +53,23 @@ export interface CoachBookingCreatePayload {
   notes?: string;
 }
 
+export interface CoachRecurringPayload {
+  coachId: number;
+  disciplineId?: number | null;
+  startDate: string;
+  startTime: string;
+  endTime: string;
+  period: 'week' | 'month';
+  daysOfWeek: number[];
+  paymentMethod?: string;
+  notes?: string;
+}
+
+export interface CoachRecurringResult {
+  booked: CoachBookingDto[];
+  skipped: SkippedOccurrence[];
+}
+
 export interface CoachQuotaStatusDto {
   packageName: string | null;
   monthlyQuota: number;
@@ -71,6 +89,13 @@ export async function getAvailableSlots(coachId: number, date: string): Promise<
 
 export async function createCoachBooking(payload: CoachBookingCreatePayload): Promise<CoachBookingDto> {
   return apiFetch<CoachBookingDto>('/coach-bookings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createRecurringCoachBooking(payload: CoachRecurringPayload): Promise<CoachRecurringResult> {
+  return apiFetch<CoachRecurringResult>('/coach-bookings/recurring', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

@@ -50,6 +50,19 @@ public class UserService {
         return createUser(dto);
     }
 
+    /** Manager-level lock/unlock, limited to the Coach and Receptionist accounts a manager provisions. */
+    @Transactional
+    @Audited(action = "STAFF_ACCOUNT_STATUS_CHANGE", entity = "users")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CENTER_MANAGER', 'ADMIN')")
+    public UserDto setStaffStatus(Long id, String status) {
+        User user = findActiveUser(id);
+        String code = user.getRole() == null ? "" : user.getRole().getCode().toUpperCase(Locale.ROOT);
+        if (!List.of("COACH", "RECEPTIONIST").contains(code)) {
+            throw new BadRequestException("INVALID_STAFF_ROLE", "validation.users.staff_role", null, null);
+        }
+        return setStatus(id, status);
+    }
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;

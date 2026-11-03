@@ -153,7 +153,7 @@ public class SecurityConfig {
                     // Court booking roles are enforced here and at controller boundaries.
                     .requestMatchers(HttpMethod.GET, "/api/v1/courts", "/api/v1/courts/**").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings/my").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings", "/api/v1/court-bookings/recurring").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/cancel").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/court-bookings/**", "/api/v1/courts/**").denyAll()
@@ -165,7 +165,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coach-schedule").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/unpaid").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings/*/confirm-payment").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings", "/api/v1/coach-bookings/recurring").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/coach-bookings/*").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/members/me/favorite-disciplines/**", "/api/v1/members/me/favorite-disciplines").hasRole("MEMBER")

@@ -1,7 +1,10 @@
 package com.swp391.scms.courts.service;
 
 import com.swp391.scms.common.exception.*;
+import com.swp391.scms.common.RecurrenceDates;
+import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.courts.dto.CourtBookingRequests.BookRequest;
+import com.swp391.scms.courts.dto.CourtBookingRequests.RecurringBookRequest;
 import com.swp391.scms.courts.dto.CourtBookingResponses.*;
 import com.swp391.scms.courts.entity.CourtBooking;
 import com.swp391.scms.courts.repository.CourtBookingRepository;
@@ -29,6 +32,10 @@ public class CourtBookingService {
     private final MembershipSubscriptionRepository subscriptions;
     private final MemberRepository members;
     private final Clock clock;
+    private static final int RECURRING_MAX_DAYS = 31;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private MessageService messages;
 
     public CourtBookingService(CourtBookingRepository bookings, RoomRepository rooms,
                                MembershipSubscriptionRepository subscriptions, MemberRepository members, Clock clock) {
@@ -56,10 +63,12 @@ public class CourtBookingService {
     private static AppException notFound() {
         return new AppException(HttpStatus.NOT_FOUND, "COURT_BOOKING_NOT_FOUND", "error.courts.not_found", null, null);
     }
-    private void dateWindow(LocalDate date) {
+    private void dateWindow(LocalDate date) { dateWindow(date, false); }
+    /** One-off bookings open 7 days ahead; a standing booking may reach one month ahead. */
+    private void dateWindow(LocalDate date, boolean recurring) {
         if (date == null) throw invalid("invalid_slot");
         if (date.isBefore(now().toLocalDate())) throw invalid("past_slot");
-        if (date.isAfter(now().toLocalDate().plusDays(7))) throw invalid("too_far");
+        if (date.isAfter(now().toLocalDate().plusDays(recurring ? RECURRING_MAX_DAYS : 7))) throw invalid("too_far");
     }
     private Room court(Long id) {
         if (id == null) throw invalid("invalid_court");
@@ -100,12 +109,47 @@ public class CourtBookingService {
 
     @Transactional
     public BookingDto book(AuthenticatedPrincipal principal, BookRequest request) {
+        return bookOne(principal, request.roomId(), request.date(), request.startTime(), false);
+    }
+
+    /**
+     * Books the same slot on every chosen weekday of a week or month. Each date is checked independently so a
+     * full or conflicting day is reported in {@code skipped} instead of failing the whole standing booking.
+     */
+    @Transactional
+    public RecurringResult bookRecurring(AuthenticatedPrincipal principal, RecurringBookRequest request) {
         if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
-        LocalDate date = request.date(); LocalTime start = request.startTime();
-        dateWindow(date);
+        List<LocalDate> dates = RecurrenceDates.expand(request.startDate(), request.period(), request.daysOfWeek());
+        court(request.roomId()); // fail fast when the court itself cannot be booked
+        List<BookingDto> booked = new ArrayList<>();
+        List<RecurrenceDates.Skipped> skipped = new ArrayList<>();
+        for (LocalDate date : dates) {
+            try {
+                booked.add(bookOne(principal, request.roomId(), date, request.startTime(), true));
+            } catch (AppException e) {
+                skipped.add(new RecurrenceDates.Skipped(date, e.getErrorCode(), reason(e)));
+            }
+        }
+        return new RecurringResult(booked, skipped);
+    }
+
+    private String reason(AppException e) {
+        if (messages != null && e.getMessageKey() != null) {
+            try {
+                return messages.getMessage(e.getMessageKey(), e.getMessageArgs() == null ? new Object[0] : e.getMessageArgs());
+            } catch (RuntimeException ignored) {
+                // fall through to the error code
+            }
+        }
+        return e.getErrorCode();
+    }
+
+    private BookingDto bookOne(AuthenticatedPrincipal principal, Long roomId, LocalDate date, LocalTime start, boolean recurring) {
+        if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
+        dateWindow(date, recurring);
         if (!wholeHour(start)) throw invalid("invalid_slot");
         if (!date.atTime(start).isAfter(now())) throw invalid("past_slot");
-        Room room = court(request.roomId());
+        Room room = court(roomId);
         LocalTime end = start.plusHours(1);
         if (start.isBefore(room.getOpenTime()) || !end.isAfter(start) || end.isAfter(room.getCloseTime())) throw invalid("invalid_slot");
         Member member = members.findByUserIdForUpdate(principal.id()).orElseThrow(() -> forbidden("membership_invalid"));
