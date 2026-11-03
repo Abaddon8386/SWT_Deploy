@@ -7,6 +7,8 @@ import com.swp391.scms.finance.repository.*;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.courts.repository.CourtBookingRepository;
+import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import jakarta.persistence.EntityManager;
@@ -30,13 +32,16 @@ public class VnpayPaymentService {
     private final EntityManager entities;
     private final CoachBookingRepository coaches;
     private final CourtBookingRepository courts;
+    private final NotificationService notifications;
+    private final MessageService messages;
 
     public VnpayPaymentService(VnpayTransactionRepository transactions, PaymentRepository payments, MemberRepository members,
             MembershipSubscriptionRepository subscriptions, PaymentService settlement, InvoiceService invoices,
-            VnpayGateway gateway, Clock clock, EntityManager entities, CoachBookingRepository coaches, CourtBookingRepository courts) {
+            VnpayGateway gateway, Clock clock, EntityManager entities, CoachBookingRepository coaches, CourtBookingRepository courts,
+            NotificationService notifications, MessageService messages) {
         this.transactions=transactions; this.payments=payments; this.members=members; this.subscriptions=subscriptions;
         this.settlement=settlement; this.invoices=invoices; this.gateway=gateway; this.clock=clock; this.entities=entities;
-        this.coaches=coaches; this.courts=courts;
+        this.coaches=coaches; this.courts=courts; this.notifications=notifications; this.messages=messages;
     }
     public boolean enabled() { return gateway.enabled(); }
     private LocalDateTime now() { return LocalDateTime.ofInstant(clock.instant(), ZoneId.of("Asia/Ho_Chi_Minh")); }
@@ -145,6 +150,9 @@ public class VnpayPaymentService {
             settlement.updatePaymentStatus(p.getId(),"success");
             markBookingPaid(p);
             invoices.autoIssueInvoiceForPayment(p.getId());
+            notifications.send(p.getMember().getUserId(), messages.getMessage("notifications.payment.vnpay_success.title"),
+                    messages.getMessage("notifications.payment.vnpay_success.body", t.getAmount().toPlainString(), reference),
+                    "payment", "payment", p.getId());
         } else {
             // A provisional/unknown status is not proof of a failed debit; keep it blocked for reconciliation.
             if (!Set.of("02", "04", "07").contains(status)) return "99";
