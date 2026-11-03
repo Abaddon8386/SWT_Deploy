@@ -525,6 +525,7 @@ export function MemberClassesPage() {
                         className="btn-favorite-star"
                         title={isFav ? `Bỏ yêu thích ${value}` : `Yêu thích ${value}`}
                         aria-label={`Yêu thích ${value}`}
+                        aria-pressed={isFav}
                         onClick={(e) => {
                           e.stopPropagation();
                           void handleToggleFavorite(discId);
@@ -534,8 +535,8 @@ export function MemberClassesPage() {
                           border: 'none',
                           cursor: 'pointer',
                           fontSize: 15,
-                          minWidth: 32,
-                          minHeight: 32,
+                          minWidth: 44,
+                          minHeight: 44,
                           padding: '2px 4px',
                           marginLeft: -4,
                           color: isFav ? 'var(--portal-star)' : 'var(--portal-muted, #9ca3af)',

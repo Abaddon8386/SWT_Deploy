@@ -4,7 +4,9 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, type MemberNotification, type NotificationPage } from './notificationsApi';
 import './notifications.css';
 import { getCurrentUser } from '../../shared/api/client';
+import { errorMessage as safeMessage } from '../../shared/lib/errorMessage';
 import { markNoticesRead, usePortalNotices } from '../../shared/lib/portalNotices';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 const category: Record<string, { icon: string; label: string }> = {
   schedule_change: { icon: '◷', label: 'Lịch học' },
@@ -18,7 +20,7 @@ const category: Record<string, { icon: string; label: string }> = {
 };
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Không thể tải thông báo. Vui lòng thử lại.';
+  return safeMessage(error, 'Không thể tải thông báo. Vui lòng thử lại.');
 }
 
 export function MemberNotificationsPage() {
@@ -98,7 +100,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
     {notices.length > 0 && <ul className="notification-activity" aria-label="Thông báo vừa phát sinh">
       {notices.map((notice) => <li key={notice.id} className={`notification-activity__item notification-activity__item--${notice.type}`}>
         <span className="notification-icon" aria-hidden="true">{notice.type === 'success' ? '✓' : notice.type === 'error' ? '!' : '✦'}</span>
-        <span className="notification-copy"><span>{notice.message}</span><small>{new Date(notice.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small></span>
+        <span className="notification-copy"><span>{notice.message}</span><small>{formatCenterDateTime(new Date(notice.createdAt).toISOString())}</small></span>
         {notice.action && <button type="button" className="notification-action" onClick={notice.action.run}>{notice.action.label}</button>}
       </li>)}
     </ul>}
@@ -108,7 +110,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
       <div className="notification-list" aria-label="Danh sách thông báo">
         {data?.content.map((item) => <button key={item.id} type="button" className={`notification-item${item.isRead ? '' : ' notification-item--unread'}`} disabled={busy} onClick={() => void open(item)}>
           <span className="notification-icon" aria-hidden="true">{category[item.type]?.icon ?? '✦'}</span>
-          <span className="notification-copy"><small className="notification-category">{category[item.type]?.label ?? 'Hệ thống'}</small><strong>{item.title}</strong><span>{item.message}</span><small>{new Date(item.createdAt).toLocaleString('vi-VN')}</small></span>
+          <span className="notification-copy"><small className="notification-category">{category[item.type?.toLowerCase()]?.label ?? 'Hệ thống'}</small><strong>{item.title}</strong><span>{item.message}</span><small>{formatCenterDateTime(item.createdAt)}</small></span>
           {!item.isRead && <span className="notification-dot" aria-label="Chưa đọc" />}
         </button>)}
       </div>}

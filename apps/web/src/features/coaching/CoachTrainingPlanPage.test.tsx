@@ -238,8 +238,8 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     });
 
     expect(aiApi.saveTrainingPlan).toHaveBeenCalled();
-    expect(host.querySelector('.center-toast-card')).not.toBeNull();
-    expect(host.textContent).toContain('Đã lưu & kích hoạt giáo án');
+    expect(host.querySelector('.center-toast-card')).toBeNull();
+    expect(document.querySelector('.sol-toast--success')?.textContent).toContain('Đã lưu và kích hoạt giáo án');
     expect(host.querySelector('.plan-saved-badge')).not.toBeNull();
   });
 

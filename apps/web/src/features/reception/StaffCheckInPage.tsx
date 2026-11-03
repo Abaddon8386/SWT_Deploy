@@ -1,16 +1,18 @@
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
 import { formatCenterTimeSeconds } from '../../shared/lib/centerTime';
 import { checkinApi, type CheckinDto } from './checkinApi';
 import './staff-check-in.css';
 import { GateQrPanel } from './GateQrPanel';
 import { QrCameraScanner } from '../checkin/QrCameraScanner';
+import { Link } from 'react-router-dom';
 
 const formatTime = (iso?: string | null): string => formatCenterTimeSeconds(iso, iso ?? '—');
 
@@ -30,6 +32,7 @@ export function StaffCheckInPage() {
   }, [currentUser]);
 
   const [scanCode, setScanCode] = useState('');
+  const [scanError, setScanError] = useState<string | null>(null);
   const [selectedGate, setSelectedGate] = useState('Turnstile A1 - Sảnh Chính');
   const [isScanning, setIsScanning] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -49,7 +52,7 @@ export function StaffCheckInPage() {
       const list = await checkinApi.getHistory();
       setRecentCheckins(list);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể tải lịch sử ra vào cổng.';
+      const msg = errorMessage(err, 'Không thể tải lịch sử ra vào cổng.');
       setHistoryError(msg);
     } finally {
       setLoadingHistory(false);
@@ -76,9 +79,9 @@ export function StaffCheckInPage() {
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền vận hành cổng kiểm soát QR Check-in.
             </p>
-            <a href="/portal" className="btn-secondary">
+            <Link to="/portal" className="btn-secondary">
               Về trang chủ Portal
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -88,15 +91,16 @@ export function StaffCheckInPage() {
   const executeScan = async (codeToScan: string) => {
     const trimmed = codeToScan.trim();
     if (!trimmed) {
-      toast('Vui lòng nhập hoặc quét mã QR thẻ hội viên.', 'error');
+      setScanError('Vui lòng nhập hoặc quét mã QR thẻ hội viên.');
       return;
     }
     if (isScanning) return;
     // The gate QR is what members scan themselves; staff scan the member's own card.
     if (trimmed.startsWith('SOL:GATE:')) {
-      toast('Đây là mã QR cổng, không phải thẻ hội viên. Hãy quét mã QR trong thẻ hội viên của học viên.', 'error');
+      setScanError('Đây là mã QR cổng, không phải thẻ hội viên. Hãy quét mã QR trong thẻ hội viên của học viên.');
       return;
     }
+    setScanError(null);
 
     setIsScanning(true);
     try {
@@ -107,14 +111,8 @@ export function StaffCheckInPage() {
       setCurrentResult(res);
       setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)]);
       setScanCode('');
-
-      if (isCheckinGranted(res.status)) {
-        toast(`Check-in hợp lệ: ${res.memberName || 'Hội viên'}`, 'success');
-      } else {
-        toast(res.denialReason || 'Từ chối mở cổng: Thẻ không hợp lệ hoặc đã hết hạn.', 'error');
-      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể xác thực mã QR lúc này.';
+      const msg = errorMessage(err, 'Không thể xác thực mã QR lúc này.');
       const deniedRecord: CheckinDto = {
         id: Date.now(),
         memberId: null,
@@ -127,7 +125,6 @@ export function StaffCheckInPage() {
         denialReason: msg,
       };
       setCurrentResult(deniedRecord);
-      toast(msg, 'error');
     } finally {
       setIsScanning(false);
     }
@@ -148,10 +145,9 @@ export function StaffCheckInPage() {
       if (currentResult?.id === checkinId) {
         setCurrentResult(updated);
       }
-      toast('Đã ghi nhận hội viên checkout thành công!', 'success');
+      notify('Đã ghi nhận hội viên checkout thành công.', 'success');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Checkout thất bại.';
-      toast(msg, 'error');
+      notify(errorMessage(err, 'Checkout thất bại.'), 'error');
     } finally {
       checkoutBusy.current = false;
       setCheckingOutId(null);
@@ -208,8 +204,10 @@ export function StaffCheckInPage() {
                   className="portal-input"
                   placeholder="Nhập mã QR thẻ hội viên (ví dụ: SUB-10-ABCD1234)..."
                   value={scanCode}
-                  onChange={(e) => setScanCode(e.target.value)}
+                  onChange={(e) => { setScanCode(e.target.value); if (scanError) setScanError(null); }}
                   disabled={isScanning}
+                  aria-invalid={scanError ? true : undefined}
+                  aria-describedby={scanError ? 'checkin-qr-error' : undefined}
                   autoFocus
                 />
                 <button
@@ -221,6 +219,7 @@ export function StaffCheckInPage() {
                   {isScanning ? 'Đang quét...' : 'Check-in'}
                 </button>
               </div>
+              {scanError && <p id="checkin-qr-error" className="form-error" role="alert">{scanError}</p>}
             </div>
           </form>
 

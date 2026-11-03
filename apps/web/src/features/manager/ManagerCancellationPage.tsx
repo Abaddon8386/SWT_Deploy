@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../shared/api/client';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import type { MembershipCancellationRequest } from '../member/membershipApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { Modal } from '../../shared/ui/Modal';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 const loadRequests = () => apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations');
 const decideRequest = (id: number, action: 'approve' | 'reject', note: string) =>
@@ -28,7 +30,7 @@ export function ManagerCancellationPage() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try { setItems(await loadRequests()); setError(null); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Không thể tải yêu cầu hủy gói.'); }
+    catch (cause) { setError(errorMessage(cause, 'Không thể tải yêu cầu hủy gói.')); }
     finally { setLoading(false); }
   }, []);
 
@@ -48,7 +50,7 @@ export function ManagerCancellationPage() {
     } catch (cause) {
       await refresh();
       setDecision(null);
-      setError(cause instanceof Error ? cause.message : 'Không thể xử lý yêu cầu.');
+      setError(errorMessage(cause, 'Không thể xử lý yêu cầu.'));
     } finally { setBusy(false); busyRef.current = false; }
   }
 
@@ -60,7 +62,7 @@ export function ManagerCancellationPage() {
       <div className="portal-card portal-empty">Chưa có yêu cầu hủy gói tập.</div> :
       <div className="stack" style={{ gap: 16 }}>
         {items.map((item) => <article className="portal-card" key={item.id}>
-          <div className="meta-label">Yêu cầu #{item.id} • {new Date(item.requestedAt).toLocaleString('vi-VN')}</div>
+          <div className="meta-label">Yêu cầu #{item.id} • {formatCenterDateTime(item.requestedAt)}</div>
           <h2 className="portal-card-title" style={{ marginTop: 8 }}>{item.memberName ?? `Hội viên #${item.memberId}`} — {item.packageName}</h2>
           <p className="row-card__meta">Gói #{item.subscriptionId} • {statusLabel[item.status]}</p>
           <p style={{ whiteSpace: 'pre-wrap' }}>Lý do: {item.reason}</p>

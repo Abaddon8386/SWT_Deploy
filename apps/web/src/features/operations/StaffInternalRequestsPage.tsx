@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { Select } from '../../shared/ui/Select';
 import {
   getMyStaffRequests,
@@ -10,6 +11,8 @@ import {
   type RequestType,
 } from './staffRequestApi';
 import { notify } from '../../shared/lib/portalNotices';
+import { errorMessage } from '../../shared/lib/errorMessage';
+import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
   LEAVE: { label: 'Xin nghỉ phép', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
@@ -26,6 +29,7 @@ const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }
 };
 
 export function StaffInternalRequestsPage() {
+  const [confirm, confirmDialog] = useConfirm();
   const [requests, setRequests] = useState<StaffInternalRequestDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -54,7 +58,7 @@ export function StaffInternalRequestsPage() {
       const data = await getMyStaffRequests();
       setRequests(data);
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể tải danh sách đơn từ của bạn.'));
+      setError((errorMessage(err, 'Không thể tải danh sách đơn từ của bạn.')));
     } finally {
       setLoading(false);
     }
@@ -97,7 +101,7 @@ export function StaffInternalRequestsPage() {
       resetForm();
       await loadData();
     } catch (err: unknown) {
-      setFormError((err instanceof Error ? err.message : 'Không thể gửi đơn từ. Vui lòng kiểm tra lại.'));
+      setFormError((errorMessage(err, 'Không thể gửi đơn từ. Vui lòng kiểm tra lại.')));
     } finally {
       setSubmitting(false);
     }
@@ -114,14 +118,14 @@ export function StaffInternalRequestsPage() {
   }
 
   async function handleCancelRequest(id: number) {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn từ này?')) return;
+    if (!(await confirm({ title: 'Hủy đơn từ?', message: 'Đơn sẽ không còn được gửi tới quản lý để duyệt.', confirmLabel: 'Hủy đơn', cancelLabel: 'Giữ đơn', danger: true }))) return;
     setCancellingId(id);
     try {
       await cancelStaffRequest(id);
       notify('Đã hủy đơn thành công.', 'success');
       await loadData();
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể hủy đơn từ.'));
+      setError((errorMessage(err, 'Không thể hủy đơn từ.')));
     } finally {
       setCancellingId(null);
     }
@@ -160,7 +164,7 @@ export function StaffInternalRequestsPage() {
               type="button"
               onClick={() => setStatusFilter(tab.key)}
               style={{
-                minHeight: 38,
+                minHeight: 44,
                 padding: '8px 16px',
                 borderRadius: 99,
                 border: statusFilter === tab.key ? 'none' : '1px solid var(--portal-border)',
@@ -311,13 +315,7 @@ export function StaffInternalRequestsPage() {
                     </span>
                     <span style={{ fontSize: 12, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
                       Mã đơn #{req.id} • Ngày tạo:{' '}
-                      {new Date(req.createdAt).toLocaleDateString('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                      })}
+                      {formatCenterDateTime(req.createdAt)}
                     </span>
                   </div>
 
@@ -391,7 +389,7 @@ export function StaffInternalRequestsPage() {
                     <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
                       {req.status === 'APPROVED' ? '✓ Quản lý chấp thuận' : '✕ Quản lý từ chối'} •{' '}
                       Người duyệt: {req.reviewedByName || 'Ban Quản Lý'} (
-                      {new Date(req.reviewedAt).toLocaleDateString('vi-VN')})
+                      {formatCenterDate(req.reviewedAt)})
                     </div>
                     {req.managerNotes && (
                       <div style={{ marginTop: 4, color: 'var(--portal-paper)', fontStyle: 'italic' }}>
@@ -409,7 +407,7 @@ export function StaffInternalRequestsPage() {
                       disabled={cancellingId === req.id}
                       onClick={() => handleCancelRequest(req.id)}
                       style={{
-                        minHeight: 38,
+                        minHeight: 44,
                         padding: '6px 14px',
                         borderRadius: 10,
                         border: '1px solid color-mix(in srgb, var(--portal-danger) 40%, transparent)',
@@ -567,6 +565,7 @@ export function StaffInternalRequestsPage() {
           </form>
         </Modal>
       )}
+      {confirmDialog}
     </div>
   );
 }

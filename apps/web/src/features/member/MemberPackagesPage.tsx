@@ -28,6 +28,8 @@ import {
   type MembershipCancellationRequest,
   type Payment,
 } from './membershipApi';
+import { errorMessage } from '../../shared/lib/errorMessage';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 
 type LoadState<T> =
   | { status: 'loading' }
@@ -45,8 +47,7 @@ const LONG_TERM_DAYS = 60;
 const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại quầy lễ tân để nhân viên xác nhận và kích hoạt gói tập.';
 
 function formatDate(value: string): string {
-  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('vi-VN');
+  return formatCenterDate(value.slice(0, 10));
 }
 
 function todayKey(): string {
@@ -446,7 +447,7 @@ export function MemberPackagesPage() {
         : previous);
       notify('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.', 'success');
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Không thể mở lại gói tập. Vui lòng thử lại.');
+      setActionError(errorMessage(error, 'Không thể mở lại gói tập. Vui lòng thử lại.'));
     } finally {
       setIsResuming(false);
       requestBusy.current = false;
@@ -546,7 +547,7 @@ export function MemberPackagesPage() {
       setCancellationReason('');
       notify('Đã gửi yêu cầu hủy gói. Gói vẫn có hiệu lực cho đến khi quản lý duyệt.', 'success');
     } catch (error) {
-      setCancellationError(error instanceof Error ? error.message : 'Không thể gửi yêu cầu hủy. Vui lòng thử lại.'); await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
+      setCancellationError(errorMessage(error, 'Không thể gửi yêu cầu hủy. Vui lòng thử lại.')); await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
     } finally {
       setIsSubmittingCancellation(false);
       requestBusy.current = false;
@@ -634,12 +635,12 @@ export function MemberPackagesPage() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <a href="/member/card" className="btn-primary btn-sm">
+              <Link to="/member/card" className="btn-primary btn-sm">
                 Xem thẻ QR Check-in
-              </a>
-              <a href="/member/classes" className="btn-secondary btn-sm">
+              </Link>
+              <Link to="/member/classes" className="btn-secondary btn-sm">
                 Đặt lịch lớp học
-              </a>
+              </Link>
               <details className="package-manage">
                 <summary className="btn-secondary btn-sm">Quản lý gói</summary>
                 <div className="package-manage__menu">
@@ -685,7 +686,7 @@ export function MemberPackagesPage() {
       {frozenSubscription && (
         <section
           className="portal-card"
-          style={{ marginBottom: 24, border: '1px solid #93C5FD', background: 'var(--portal-info-surface, #263444)' }}
+          style={{ marginBottom: 24, border: '1px solid color-mix(in srgb, var(--portal-info) 55%, transparent)', background: 'color-mix(in srgb, var(--portal-info) 10%, var(--portal-surface))' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div className="meta-label">

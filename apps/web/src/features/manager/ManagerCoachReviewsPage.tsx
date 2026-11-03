@@ -13,6 +13,8 @@ import {
 import { getCoaches } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
+import { errorMessage } from '../../shared/lib/errorMessage';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 export function ManagerCoachReviewsPage() {
   const now = new Date();
@@ -54,7 +56,7 @@ export function ManagerCoachReviewsPage() {
         setMemberReviews(allReviewsArrays.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       }
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể tải dữ liệu bảng xếp hạng.'));
+      setError((errorMessage(err, 'Không thể tải dữ liệu bảng xếp hạng.')));
     } finally {
       setLoading(false);
     }
@@ -73,7 +75,7 @@ export function ManagerCoachReviewsPage() {
       setReviews(generated);
       notify(`Đã tự động tổng hợp đánh giá và tạo Bảng xếp hạng tháng ${selectedMonth}/${selectedYear} thành công!`, 'success');
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể tổng hợp đánh giá.'));
+      setError((errorMessage(err, 'Không thể tổng hợp đánh giá.')));
     } finally {
       setGenerating(false);
     }
@@ -103,7 +105,7 @@ export function ManagerCoachReviewsPage() {
       notify(`Đã cập nhật và gửi thông báo vinh danh cho HLV ${updated.coachName}!`, 'success');
       setEditingReview(null);
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể lưu bản đánh giá.'));
+      setError((errorMessage(err, 'Không thể lưu bản đánh giá.')));
     } finally {
       setSavingId(null);
     }
@@ -354,7 +356,7 @@ export function ManagerCoachReviewsPage() {
                   "{mr.comment || 'Không có nhận xét chi tiết.'}"
                 </p>
                 <span className="row-card__meta" style={{ display: 'block', marginTop: 6, fontSize: 11 }}>
-                  Gửi lúc: {new Date(mr.createdAt).toLocaleString('vi-VN')}
+                  Gửi lúc: {formatCenterDateTime(mr.createdAt)}
                 </span>
               </div>
             ))}

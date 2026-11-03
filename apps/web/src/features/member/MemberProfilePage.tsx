@@ -11,8 +11,11 @@ import {
   type Profile,
 } from './profileApi';
 import { getCurrentUser } from '../../shared/api/client';
-import { toast } from '../../shared/ui/toast';
+import { errorMessage } from '../../shared/lib/errorMessage';
+import { notify } from '../../shared/lib/portalNotices';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 
 // Mã chỉ số hợp lệ theo backend (HealthMetricService.ALLOWED_METRICS)
 const METRIC_LABELS: Record<string, string> = {
@@ -55,6 +58,7 @@ export function MemberProfilePage() {
   const [submittingMetric, setSubmittingMetric] = useState(false);
   const [deletingMetricId, setDeletingMetricId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [confirm, confirmDialog] = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,7 +72,7 @@ export function MemberProfilePage() {
         setMetrics([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải hồ sơ.');
+      setError(errorMessage(err, 'Không thể tải hồ sơ.'));
     } finally {
       setLoading(false);
     }
@@ -88,10 +92,9 @@ export function MemberProfilePage() {
     try {
       const updated = await updateProfile(profile);
       setProfile(updated);
-      toast('Đã cập nhật hồ sơ cá nhân thành công!', 'success');
+      notify('Đã cập nhật hồ sơ cá nhân.', 'success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể lưu hồ sơ.');
-      toast('Lưu hồ sơ thất bại. Vui lòng kiểm tra lại.', 'error');
+      setError(errorMessage(err, 'Không thể lưu hồ sơ.'));
     } finally {
       setSaving(false);
     }
@@ -115,9 +118,8 @@ export function MemberProfilePage() {
 
   const handleDeleteMetric = async (metricId: number) => {
     if (!profile) return;
-    if (!window.confirm('Bạn có chắc chắn muốn xóa chỉ số này không?')) {
-      return;
-    }
+    const confirmed = await confirm({ title: 'Xóa chỉ số sức khỏe?', message: 'Chỉ số này sẽ bị xóa khỏi lịch sử của bạn.', confirmLabel: 'Xóa chỉ số', danger: true });
+    if (!confirmed) return;
     setError('');
     setDeletingMetricId(metricId);
     try {
@@ -126,10 +128,9 @@ export function MemberProfilePage() {
         handleCancelEdit();
       }
       setMetrics(await listHealthMetrics(profile.userId));
-      toast('Đã xóa chỉ số sức khỏe thành công!', 'success');
+      notify('Đã xóa chỉ số sức khỏe.', 'success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể xóa chỉ số.');
-      toast('Xóa chỉ số thất bại.', 'error');
+      setError(errorMessage(err, 'Không thể xóa chỉ số.'));
     } finally {
       setDeletingMetricId(null);
     }
@@ -151,7 +152,7 @@ export function MemberProfilePage() {
           metricValue: Number(metric.metricValue),
           unit: metric.unit.trim() || null,
         });
-        toast('Đã cập nhật chỉ số sức khỏe thành công!', 'success');
+        notify('Đã cập nhật chỉ số sức khỏe.', 'success');
         setEditingMetricId(null);
       } else {
         await addHealthMetric(profile.userId, {
@@ -159,19 +160,12 @@ export function MemberProfilePage() {
           metricValue: Number(metric.metricValue),
           unit: metric.unit.trim() || null,
         });
-        toast('Đã ghi nhận chỉ số sức khỏe!', 'success');
+        notify('Đã ghi nhận chỉ số sức khỏe.', 'success');
       }
       setMetric(EMPTY_METRIC);
       setMetrics(await listHealthMetrics(profile.userId));
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : editingMetricId
-          ? 'Không thể cập nhật chỉ số.'
-          : 'Không thể ghi chỉ số.'
-      );
-      toast(editingMetricId ? 'Cập nhật chỉ số thất bại.' : 'Thêm chỉ số thất bại.', 'error');
+      setError(errorMessage(err, editingMetricId ? 'Không thể cập nhật chỉ số.' : 'Không thể ghi chỉ số.'));
     } finally {
       setSubmittingMetric(false);
     }
@@ -551,7 +545,7 @@ export function MemberProfilePage() {
                   <tbody>
                     {metrics.map((m) => (
                       <tr key={m.id}>
-                        <td style={{ fontWeight: 600 }}>{new Date(m.recordedAt).toLocaleDateString('vi-VN')}</td>
+                        <td style={{ fontWeight: 600 }}>{formatCenterDate(m.recordedAt)}</td>
                         <td>{METRIC_LABELS[m.metricName] ?? m.metricName}</td>
                         <td>
                           <strong>{m.metricValue}</strong> <span className="muted">{m.unit ?? ''}</span>
@@ -587,6 +581,7 @@ export function MemberProfilePage() {
           </div>
         )}
       </div>
+      {confirmDialog}
     </div>
   );
 }

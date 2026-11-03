@@ -1,4 +1,5 @@
 import { apiFetch, ApiError } from '../../shared/api/client';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import { DISCIPLINES } from '../../shared/lib/disciplines';
 
 export const COURT_DISCIPLINES = DISCIPLINES.filter(item => ['tennis', 'badminton', 'swimming'].includes(item.id));
@@ -58,5 +59,5 @@ export function courtError(error: unknown): string {
     COURT_BOOKING_INVALID_COURT: 'Phòng chưa được cấu hình để đặt sân.',
   };
   return error instanceof ApiError && error.code && messages[error.code] ? messages[error.code]
-    : error instanceof Error ? error.message : 'Không thể tải dữ liệu. Vui lòng thử lại.';
+    : errorMessage(error, 'Không thể tải dữ liệu. Vui lòng thử lại.');
 }

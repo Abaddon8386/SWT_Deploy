@@ -36,6 +36,15 @@ public class ChatController {
     public ApiResponse<ChatConversationDto> open(@AuthenticationPrincipal AuthenticatedPrincipal p, @Valid @RequestBody OpenChatConversation input) {
         return ApiResponse.ok(msg("chat.open.success"), service.open(p, input.contactId()));
     }
+    @GetMapping("/unread-count")
+    public ApiResponse<ChatUnreadCount> unread(@AuthenticationPrincipal AuthenticatedPrincipal p) {
+        return ApiResponse.ok(msg("chat.unread.success"), service.unreadCount(p));
+    }
+    @PostMapping("/conversations/{id}/read")
+    public ApiResponse<ChatUnreadCount> read(@AuthenticationPrincipal AuthenticatedPrincipal p, @PathVariable Long id,
+            @Valid @RequestBody MarkChatRead input) {
+        return ApiResponse.ok(msg("chat.read.success"), service.markRead(p, id, input));
+    }
     @GetMapping("/conversations/{id}/messages")
     public ApiResponse<ChatHistory> history(@AuthenticationPrincipal AuthenticatedPrincipal p, @PathVariable Long id,
             @RequestParam(required = false) Long beforeId, @RequestParam(required = false) Long afterId) {

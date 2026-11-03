@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { chatRoleLabel, getContacts, type ChatContact } from './chatApi';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatContact) => void; pending: number | null }) {
   const [query, setQuery] = useState('');
@@ -18,7 +19,7 @@ export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatCo
       const data = await getContacts(term, nextPage);
       if (request !== sequence.current.value) return;
       setContacts(data.content); setPage(nextPage); setTotal(data.totalPages);
-    } catch (e) { if (request === sequence.current.value) setError(e instanceof Error ? e.message : 'Không thể tải danh bạ.'); }
+    } catch (e) { if (request === sequence.current.value) setError(errorMessage(e, 'Không thể tải danh bạ.')); }
     finally { if (request === sequence.current.value) setLoading(false); }
   }, []);
   useEffect(() => { const requests = sequence.current; void search('', 0); return () => { requests.value++; }; }, [search]);

@@ -62,6 +62,23 @@ class ChatPostgreSqlTest {
         }
     }
 
+    @Test void unreadCountsFollowEachSidesReadMarker() {
+        long member = user("MEMBER"), coach = user("COACH");
+        var m = new AuthenticatedPrincipal(member, "fixture", "MEMBER");
+        var c = new AuthenticatedPrincipal(coach, "fixture", "COACH");
+        long id = service.open(m, coach).id();
+        service.send(m, id, new SendChatMessage(UUID.randomUUID(), "Chào HLV"));
+        long last = service.send(m, id, new SendChatMessage(UUID.randomUUID(), "Em muốn hỏi lịch")).id();
+        assertThat(service.unreadCount(m).count()).isZero();
+        assertThat(service.unreadCount(c).count()).isEqualTo(2);
+        var row = service.list(c, 0).getContent().getFirst();
+        assertThat(row.unreadCount()).isEqualTo(2);
+        assertThat(row.lastMessage()).isEqualTo("Em muốn hỏi lịch");
+        assertThat(service.markRead(c, id, new com.swp391.scms.chat.dto.MarkChatRead(last)).count()).isZero();
+        service.send(c, id, new SendChatMessage(UUID.randomUUID(), "Chào em"));
+        assertThat(service.unreadCount(m).count()).isEqualTo(1);
+    }
+
     @Test void databaseEnforcesUniquePairAndForeignKeys() {
         long member = user("MEMBER"), staff = user("RECEPTIONIST");
         var p = new AuthenticatedPrincipal(member, "fixture", "MEMBER");

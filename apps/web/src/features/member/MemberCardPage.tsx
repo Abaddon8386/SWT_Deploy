@@ -113,7 +113,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   return (
     <>
       <div ref={cardRef} className="pass-card" style={{ background: '#202020', color: '#faf9f6', border: `2px solid ${border}`, borderRadius: 16, padding: 32, maxWidth: 620 }}>
-        <div style={{ color: '#ce9180', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 24 }}>SÖL WELLNESS SANCTUARY</div>
+        <div style={{ color: '#ce9180', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 24 }}>SÖL FITNESS</div>
         <p style={{ fontSize: '0.75rem', letterSpacing: '0.16em', color: '#bcb8b5', marginTop: 4 }}>THẺ HỘI VIÊN ĐIỆN TỬ</p>
         <h2 style={{ margin: '14px 0 8px' }}>{profile.fullName}</h2>
         <p style={{ margin: '4px 0' }}>Mã hội viên: {profile.membershipCode || 'Chưa có mã hội viên'}</p>

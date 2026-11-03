@@ -21,7 +21,11 @@
 .direct-chat__person > span:nth-child(2) { min-width: 0; flex: 1; }
 .direct-chat__person strong { display: block; font-size: .9rem; font-weight: 600; overflow-wrap: anywhere; }
 .direct-chat__person small { display: block; color: var(--portal-muted); font-size: .75rem; line-height: 1.5; margin-top: 4px; }
-.direct-chat__person time { color: var(--portal-muted); font-size: .7rem; flex-shrink: 0; }
+.direct-chat__person time { color: var(--portal-muted); font-size: 11px; flex-shrink: 0; }
+.direct-chat__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.direct-chat__unread { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--portal-salmon); color: var(--portal-on-accent, #202020); font-size: 11px; font-weight: 700; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+.direct-chat__person small.direct-chat__preview { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-top: 2px; }
+.direct-chat__person small.direct-chat__preview.is-unread { color: var(--portal-paper); font-weight: 600; }
 .direct-chat__person-arrow { color: var(--portal-salmon); }
 .direct-chat__contacts { padding: 20px; border-bottom: 1px solid var(--portal-border); background: var(--portal-raised); }
 .direct-chat__contacts .direct-chat__person { padding: 12px 0; }
@@ -38,7 +42,7 @@
 .direct-chat__messages li.is-mine { justify-content: flex-end; }
 .direct-chat__bubble { max-width: min(85%, 640px); background: var(--portal-raised); padding: 14px 18px; border-radius: 14px 14px 14px 3px; border: 1px solid var(--portal-border); }
 .direct-chat__bubble p { margin: 6px 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9rem; line-height: 1.65; }
-.direct-chat__bubble time { display: block; text-align: right; font-size: .65rem; opacity: .75; }
+.direct-chat__bubble time { display: block; text-align: right; font-size: 11px; opacity: .75; }
 .direct-chat__sender { font-weight: 650; font-size: .75rem; }
 .direct-chat__messages .is-mine .direct-chat__bubble { border-radius: 14px 14px 3px 14px; background: #ce9180; color: #202020; border-color: transparent; }
 .direct-chat__older { display: block; margin: 0 auto 20px; }

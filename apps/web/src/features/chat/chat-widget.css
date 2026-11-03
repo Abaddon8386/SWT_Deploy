@@ -1,49 +1,61 @@
-.chat-widget { position: fixed; right: 24px; bottom: 24px; z-index: 100; color: var(--portal-paper); font-family: var(--font-sans); }
+.chat-widget { --chat-salmon: #ce9180; --chat-ink: #202020; position: fixed; right: 24px; bottom: 24px; z-index: 100; color: var(--portal-paper); font-family: var(--font-sans); }
 .fit-site .chat-widget { --portal-paper: var(--fit-paper); --portal-muted: var(--fit-muted); --portal-salmon: #ce9180; --portal-border: var(--color-border-subtle); --portal-surface: var(--color-bg-card); --portal-raised: var(--color-bg-warm); --portal-tint: #ce91801f; --portal-border-strong: var(--color-border-medium); --portal-danger: #fca5a5; }
 :root[data-theme='light'] .fit-site .chat-widget { --portal-salmon: #a35b49; --portal-danger: #a33030; }
-.chat-widget__trigger { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; padding: 0 20px; border: 1px solid #ce9180; border-radius: 30px; background: #ce9180; color: #202020; font: inherit; font-weight: 650; cursor: pointer; box-shadow: 0 8px 28px #0002; }
+/* Nút tròn chỉ có icon ở mọi kích thước để che ít nội dung nhất; nhãn nằm trong aria-label và title. */
+.chat-widget__trigger { position: relative; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 1px solid var(--chat-salmon); border-radius: 50%; background: var(--chat-salmon); color: var(--chat-ink); font: inherit; cursor: pointer; box-shadow: 0 8px 28px #0002; transition: transform 160ms ease, background-color 160ms ease; }
+.chat-widget__trigger:hover { background: #e1aa98; }
+.chat-widget__trigger:active { transform: scale(.96); }
+.chat-widget__badge { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--portal-danger, #c0392b); color: var(--portal-on-accent, #fff); border: 2px solid var(--portal-ink, #202020); font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
 .chat-widget__panel { position: absolute; right: 0; bottom: 72px; width: min(480px, calc(100vw - 32px)); height: min(720px, calc(100dvh - 120px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--portal-border); border-radius: 24px; background: var(--portal-surface); box-shadow: 0 20px 70px #0004; }
 /* Giữ kích thước transcript để tin đến khi đóng không làm sai vị trí cuộn. */
 .chat-widget__panel[hidden] { display: flex; visibility: hidden; pointer-events: none; }
-.chat-widget__header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 20px; border-bottom: 1px solid var(--portal-border); flex-shrink: 0; }
+.chat-widget__header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 10px 10px 20px; border-bottom: 1px solid var(--portal-border); flex-shrink: 0; }
 .chat-widget__header strong { font-size: 1rem; }
-.chat-widget__header p { font-size: .75rem; color: var(--portal-muted); margin: 6px 0 0; }
-.chat-widget__close { min-width: 44px; min-height: 44px; background: transparent; border: 0; color: inherit; font: inherit; font-size: 1.5rem; cursor: pointer; }
+.chat-widget__status { display: flex; align-items: center; flex-wrap: wrap; gap: 0 8px; font-size: .75rem; color: var(--portal-muted); margin: 2px 0 0; }
+.chat-widget__status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chat-widget__status.is-connected i { background: var(--portal-success, #22c55e); }
+.chat-widget__status .direct-chat__link { min-height: 32px; padding: 0; font-size: .75rem; }
+.chat-widget__header-actions { display: flex; align-items: center; gap: 2px; }
+.chat-widget__close { min-width: 44px; min-height: 44px; background: transparent; border: 0; border-radius: 50%; color: inherit; font: inherit; font-size: 1.5rem; cursor: pointer; }
+.chat-widget__close:hover { background: var(--portal-tint); }
 .chat-widget :focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: -3px; }
+.chat-widget__trigger:focus-visible { outline-offset: 3px; }
 .chat-widget__login { padding: 24px; font-size: .9rem; line-height: 1.7; }
 .chat-widget__login a { display: inline-flex; margin-top: 12px; }
 .chat-widget :is(.btn-primary, .btn-secondary) { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border: 1px solid var(--portal-border-strong); border-radius: 24px; font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; background: var(--portal-raised); color: var(--portal-paper); }
-.chat-widget .btn-primary { background: #ce9180; border-color: #ce9180; color: #202020; }
+.chat-widget .btn-primary { background: var(--chat-salmon); border-color: var(--chat-salmon); color: var(--chat-ink); }
 .chat-widget .btn-primary:disabled { opacity: .5; cursor: default; }
 .chat-widget :is(.portal-input, .portal-textarea) { display: block; width: 100%; padding: 12px; border: 1px solid var(--portal-border-strong); border-radius: 14px; background: var(--portal-raised); color: var(--portal-paper); font: inherit; font-size: 16px; }
 .chat-widget .portal-label { display: block; font: inherit; font-size: .8rem; color: var(--portal-paper); }
 .chat-widget .direct-chat { padding: 0; margin: 0; width: 100%; max-width: none; min-height: 0; flex: 1; display: flex; flex-direction: column; }
 .chat-widget .direct-chat h2 { text-transform: none; letter-spacing: normal; }
-.chat-widget .direct-chat > .portal-header { padding: 12px 18px; margin: 0; flex-shrink: 0; }
-.chat-widget .direct-chat__connection { gap: 8px; width: 100%; }
-.chat-widget .direct-chat__connection-label { font-size: .7rem; flex: 1 1 190px; }
-.chat-widget .direct-chat__connection .btn-secondary { padding: 6px 10px; min-height: 36px; font-size: .75rem; }
 .chat-widget .direct-chat__workspace { display: flex; flex-direction: column; min-height: 0; flex: 1; border: 0; border-radius: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .chat-widget .direct-chat__inbox { min-height: 0; overflow-y: auto; overscroll-behavior: contain; border: 0; }
-.chat-widget .direct-chat__inbox-heading { padding: 16px 20px; }
-.chat-widget .direct-chat__person { padding: 16px 20px; }
+.chat-widget .direct-chat__inbox-heading { padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.chat-widget .direct-chat__person { padding: 14px 20px; }
 .chat-widget .direct-chat__placeholder { display: none; }
 .chat-widget .direct-chat__thread { display: none; min-height: 0; flex: 1; }
 .chat-widget .direct-chat--thread-open .direct-chat__thread { display: flex; }
 .chat-widget .direct-chat--thread-open .direct-chat__inbox { display: none; }
-.chat-widget .direct-chat__back { display: inline-block; flex-basis: 100%; }
-.chat-widget .direct-chat__thread-header { padding: 10px 18px; gap: 4px; flex-shrink: 0; }
-.chat-widget .direct-chat__transcript { min-height: 0; height: auto; flex: 1; padding: 18px; }
-.chat-widget .direct-chat__compose { padding: 12px 18px; flex-shrink: 0; }
-.chat-widget .direct-chat__compose textarea { min-height: 56px; max-height: 100px; font-size: 16px; }
+.chat-widget .direct-chat__back { display: inline-flex; align-items: center; flex: 0 0 auto; min-height: 44px; }
+/* Một hàng: ← Danh sách · tên người nhận, để vùng tin nhắn có nhiều chỗ nhất. */
+.chat-widget .direct-chat__thread-header { padding: 4px 18px; gap: 14px; flex-wrap: nowrap; justify-content: flex-start; flex-shrink: 0; }
+.chat-widget .direct-chat__thread-header > div { min-width: 0; }
+.chat-widget .direct-chat__thread-header h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-widget .direct-chat__thread-header p { margin-top: 0; }
+.chat-widget .direct-chat__transcript { min-height: 0; height: auto; flex: 1; padding: 16px 18px; }
+.chat-widget .direct-chat__compose { padding: 10px 18px 12px; flex-shrink: 0; }
+.chat-widget .direct-chat__compose .portal-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.chat-widget .direct-chat__compose textarea { min-height: 48px; max-height: 100px; margin-top: 0; resize: none; font-size: 16px; }
 .chat-widget .direct-chat__compose-footer { margin-top: 8px; }
 .chat-widget .direct-chat__compose-footer > span { flex-basis: auto; }
 @media (max-width: 767px) {
   .chat-widget { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
   .portal-v2 .chat-widget { bottom: calc(82px + env(safe-area-inset-bottom)); }
-  /* Nút tròn chỉ có icon để che ít nội dung trang; aria-label vẫn đọc “Mở tin nhắn” */
-  .portal-v2 .chat-widget__trigger { width: 52px; min-height: 52px; padding: 0; border-radius: 50%; }
-  .portal-v2 .chat-widget__trigger span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .chat-widget__panel { bottom: 68px; height: min(680px, calc(100dvh - 110px - env(safe-area-inset-bottom))); border-radius: 20px; }
-  .portal-v2 .chat-widget__panel { height: min(680px, calc(100dvh - 192px - env(safe-area-inset-bottom))); }
+  .portal-v2 .chat-widget__trigger { width: 52px; height: 52px; }
+  .chat-widget__panel { bottom: 64px; height: min(680px, calc(100dvh - 100px - env(safe-area-inset-bottom))); border-radius: 20px; }
+  /* Trên mobile, khung chat chiếm phần giữa thanh trên cùng và nút mở, phía trên thanh điều hướng. */
+  .portal-v2 .chat-widget__panel { height: min(720px, calc(100dvh - 82px - 64px - 12px - env(safe-area-inset-bottom) - env(safe-area-inset-top, 0px))); }
+  .chat-widget .direct-chat__compose-footer > span { display: none; }
 }
+@media (prefers-reduced-motion: reduce) { .chat-widget__trigger { transition: background-color 120ms linear; } .chat-widget__trigger:active { transform: none; } }

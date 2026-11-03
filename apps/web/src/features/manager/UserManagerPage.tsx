@@ -9,9 +9,12 @@ import {
   Permission,
 } from './userApi';
 import { Modal } from '../../shared/ui/Modal';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
+import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 export function UserManagerPage() {
   const [users, setUsers] = useState<UserAccount[]>([]);
@@ -27,6 +30,9 @@ export function UserManagerPage() {
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -85,7 +91,7 @@ export function UserManagerPage() {
       setRolePerms(r);
       setPermissions(p);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Không thể tải dữ liệu.');
+      setLoadError(errorMessage(err, 'Không thể tải dữ liệu.'));
     } finally {
       setLoading(false);
     }
@@ -105,21 +111,29 @@ export function UserManagerPage() {
   }, [users, searchTerm, roleFilter]);
 
   async function handleToggleLock(user: UserAccount) {
-    const actionName = user.status === 'ACTIVE' ? 'khóa tài khoản' : 'mở khóa tài khoản';
-    if (!window.confirm(`Bạn có chắc muốn ${actionName} "${user.name}"?`)) return;
+    const locking = user.status === 'ACTIVE';
+    const confirmed = await confirm({
+      title: locking ? 'Khóa tài khoản?' : 'Mở khóa tài khoản?',
+      message: locking
+        ? `"${user.name}" sẽ không thể đăng nhập cho tới khi được mở khóa.`
+        : `"${user.name}" sẽ đăng nhập lại được ngay.`,
+      confirmLabel: locking ? 'Khóa tài khoản' : 'Mở khóa',
+      danger: locking,
+    });
+    if (!confirmed) return;
 
     try {
       const updated = await userApi.toggleLockUser(user.id);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      toast(
+      notify(
         updated.status === 'ACTIVE'
           ? `Đã mở khóa tài khoản "${user.name}".`
           : `Đã khóa tài khoản "${user.name}".`,
         'success'
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Thao tác thất bại.';
-      toast(msg, 'error');
+      const msg = errorMessage(err, 'Thao tác thất bại.');
+      notify(msg, 'error');
     }
   }
 
@@ -129,11 +143,11 @@ export function UserManagerPage() {
     try {
       await userApi.deleteUser(deletingUser.id);
       setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
-      toast(`Đã xóa tài khoản "${deletingUser.name}" thành công!`, 'success');
+      notify(`Đã xóa tài khoản "${deletingUser.name}".`, 'success');
       setDeletingUser(null);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Không thể xóa tài khoản.';
-      toast(msg, 'error');
+      const msg = errorMessage(err, 'Không thể xóa tài khoản.');
+      notify(msg, 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -144,13 +158,13 @@ export function UserManagerPage() {
     try {
       const res = await userApi.cleanupInactiveUsers();
       setCleanupResult(res);
-      toast(res.message || `Đã dọn dẹp ${res.deletedCount} tài khoản không hoạt động.`, 'success');
+      notify(res.message || `Đã dọn dẹp ${res.deletedCount} tài khoản không hoạt động.`, 'success');
       // Refresh user list
       const u = await userApi.getUsers();
       setUsers(u);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Dọn dẹp tài khoản thất bại.';
-      toast(msg, 'error');
+      const msg = errorMessage(err, 'Dọn dẹp tài khoản thất bại.');
+      notify(msg, 'error');
     } finally {
       setIsCleaning(false);
     }
@@ -201,6 +215,7 @@ export function UserManagerPage() {
     }
 
     setFieldErrors({});
+    setCreateError(null);
     setIsCreating(true);
 
     try {
@@ -215,16 +230,16 @@ export function UserManagerPage() {
       setUsers((prev) => [created, ...prev]);
       setIsModalOpen(false);
       setFormData({ name: '', email: '', phone: '', password: '', role: 'COACH', gender: 'female' });
-      toast(`Đã tạo tài khoản "${created.name}" thành công!`, 'success');
+      notify(`Đã tạo tài khoản "${created.name}".`, 'success');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Không thể tạo người dùng.';
-      toast(msg, 'error');
+      setCreateError(errorMessage(err, 'Không thể tạo người dùng.'));
     } finally {
       setIsCreating(false);
     }
   }
 
   function handleOpenEdit(user: UserAccount) {
+    setEditError(null);
     setEditingUser(user);
     setEditFormData({
       name: user.name,
@@ -261,6 +276,7 @@ export function UserManagerPage() {
     }
 
     setEditFieldErrors({});
+    setEditError(null);
     setIsUpdating(true);
 
     try {
@@ -272,10 +288,9 @@ export function UserManagerPage() {
       });
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setEditingUser(null);
-      toast(`Đã cập nhật tài khoản "${updated.name}" thành công!`, 'success');
+      notify(`Đã cập nhật tài khoản "${updated.name}".`, 'success');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Không thể cập nhật tài khoản.';
-      toast(msg, 'error');
+      setEditError(errorMessage(err, 'Không thể cập nhật tài khoản.'));
     } finally {
       setIsUpdating(false);
     }
@@ -295,12 +310,12 @@ export function UserManagerPage() {
 
     try {
       await userApi.toggleRolePermission(role, permId);
-      toast('Đã cập nhật quyền thành công!', 'success');
+      notify('Đã cập nhật quyền.', 'success');
     } catch (err) {
       // Revert on error
       setRolePerms((prev) => ({ ...prev, [role]: previous }));
-      const msg = err instanceof Error ? err.message : 'Không thể cập nhật quyền.';
-      toast(msg, 'error');
+      const msg = errorMessage(err, 'Không thể cập nhật quyền.');
+      notify(msg, 'error');
     }
   }
 
@@ -322,7 +337,7 @@ export function UserManagerPage() {
   return (
     <div className="portal-container">
       <PageHeader
-        eyebrow="Quản lý"
+        eyebrow="Quản trị hệ thống"
         title="Tài khoản & phân quyền"
       />
 
@@ -390,6 +405,7 @@ export function UserManagerPage() {
               className="btn-primary"
               onClick={() => {
                 setFieldErrors({});
+                setCreateError(null);
                 setIsModalOpen(true);
               }}
             >
@@ -492,12 +508,12 @@ export function UserManagerPage() {
                         <td>
                           <div style={{ fontSize: '0.85rem' }}>
                             {u.last_login_at ? (
-                              <span>ĐN: {u.last_login_at.split('T')[0]}</span>
+                              <span>Đăng nhập: {formatCenterDateTime(u.last_login_at.replace(' ', 'T'))}</span>
                             ) : (
                               <span className="muted" style={{ fontStyle: 'italic' }}>Chưa đăng nhập</span>
                             )}
                           </div>
-                          <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>Tạo: {u.created_at || '—'}</div>
+                          <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>Tạo: {formatCenterDate(u.created_at)}</div>
                         </td>
                         <td className="actions">
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
@@ -637,7 +653,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.name && (
-                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
+                <div className="form-error">
                   {fieldErrors.name}
                 </div>
               )}
@@ -657,7 +673,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.email && (
-                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
+                <div className="form-error">
                   {fieldErrors.email}
                 </div>
               )}
@@ -679,7 +695,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.phone && (
-                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
+                <div className="form-error">
                   {fieldErrors.phone}
                 </div>
               )}
@@ -700,7 +716,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.password && (
-                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
+                <div className="form-error">
                   {fieldErrors.password}
                 </div>
               )}
@@ -722,7 +738,7 @@ export function UserManagerPage() {
                 <option value="other">Khác (Other)</option>
               </Select>
               {fieldErrors.gender && (
-                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
+                <div className="form-error">
                   {fieldErrors.gender}
                 </div>
               )}
@@ -746,6 +762,7 @@ export function UserManagerPage() {
               </Select>
             </div>
 
+            {createError && <p className="form-error" role="alert">{createError}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
               <button
                 type="button"
@@ -811,7 +828,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.name && (
-                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
+                <div className="form-error">
                   {editFieldErrors.name}
                 </div>
               )}
@@ -833,7 +850,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.phone && (
-                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
+                <div className="form-error">
                   {editFieldErrors.phone}
                 </div>
               )}
@@ -874,6 +891,7 @@ export function UserManagerPage() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
+              {editError && <p className="form-error" role="alert" style={{ flexBasis: '100%' }}>{editError}</p>}
               <button
                 type="button"
                 className="btn-secondary"
@@ -1030,6 +1048,7 @@ export function UserManagerPage() {
           </div>
         </Modal>
       )}
+      {confirmDialog}
     </div>
   );
 }

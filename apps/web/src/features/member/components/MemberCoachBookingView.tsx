@@ -24,6 +24,7 @@ import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { notify } from '../../../shared/lib/portalNotices';
 import { ApiError } from '../../../shared/api/client';
+import { errorMessage } from '../../../shared/lib/errorMessage';
 import { formatCoachName, isSessionCompleted } from '../coachBookingUtils';
 
 function coachBookingErrorMessage(err: unknown): string {
@@ -39,7 +40,7 @@ function coachBookingErrorMessage(err: unknown): string {
     }
     return err.message;
   }
-  return err instanceof Error ? err.message : 'Không thể đặt lịch. Vui lòng thử lại.';
+  return errorMessage(err, 'Không thể đặt lịch. Vui lòng thử lại.');
 }
 
 function localToday(): string {
@@ -131,7 +132,7 @@ export function MemberCoachBookingView({
         setMyReviews(reviews);
         setSelectedCoachId((current) => current ?? coachList[0]?.id ?? null);
       } catch (err: unknown) {
-        if (active) setError((err instanceof Error ? err.message : 'Không thể tải danh sách huấn luyện viên.'));
+        if (active) setError((errorMessage(err, 'Không thể tải danh sách huấn luyện viên.')));
       } finally {
         if (active) setLoadingCoaches(false);
       }
@@ -151,7 +152,7 @@ export function MemberCoachBookingView({
         const availableSlots = await getAvailableSlots(selectedCoachId!, selectedDate);
         if (active) setSlots(availableSlots);
       } catch (err: unknown) {
-        if (active) setError((err instanceof Error ? err.message : 'Không thể tải khung giờ trống.'));
+        if (active) setError((errorMessage(err, 'Không thể tải khung giờ trống.')));
       } finally {
         if (active) setLoadingSlots(false);
       }
@@ -240,7 +241,7 @@ export function MemberCoachBookingView({
       setReviewTargetBooking(null);
       setReviewComment('');
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'Không thể gửi đánh giá.';
+      const errMsg = errorMessage(err, 'Không thể gửi đánh giá.');
       setError(errMsg);
       notify(errMsg, 'error');
     } finally {
@@ -267,7 +268,7 @@ export function MemberCoachBookingView({
         if (updatedQuota) setQuotaStatus(updatedQuota);
       }
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể hủy lịch.'));
+      setError((errorMessage(err, 'Không thể hủy lịch.')));
     } finally {
       setCancelling(false);
     }
@@ -315,7 +316,7 @@ export function MemberCoachBookingView({
           className="portal-card"
           style={{
             padding: '16px 20px',
-            background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(206, 145, 128, 0.04) 100%)',
+            background: 'linear-gradient(135deg, color-mix(in srgb, var(--portal-warning) 12%, transparent) 0%, color-mix(in srgb, var(--portal-salmon) 4%, transparent) 100%)',
             borderColor: 'color-mix(in srgb, var(--portal-star) 35%, transparent)',
             display: 'flex',
             flexDirection: 'column',
@@ -387,7 +388,7 @@ export function MemberCoachBookingView({
         className="portal-card"
         style={{
           padding: '16px 20px',
-          background: 'linear-gradient(135deg, rgba(206, 145, 128, 0.12) 0%, rgba(206, 145, 128, 0.03) 100%)',
+          background: 'linear-gradient(135deg, color-mix(in srgb, var(--portal-salmon) 12%, transparent) 0%, color-mix(in srgb, var(--portal-salmon) 3%, transparent) 100%)',
           borderColor: 'color-mix(in srgb, var(--portal-salmon) 35%, transparent)',
           display: 'flex',
           flexWrap: 'wrap',
@@ -509,7 +510,7 @@ export function MemberCoachBookingView({
                     borderRadius: '50%',
                     objectFit: 'cover',
                     flexShrink: 0,
-                    border: '2px solid rgba(255,255,255,0.2)',
+                    border: '2px solid var(--portal-border-strong)',
                   }}
                 />
                 <div style={{ minWidth: 0, flex: 1 }}>

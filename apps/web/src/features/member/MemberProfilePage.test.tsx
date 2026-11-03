@@ -155,7 +155,6 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
       AUTH_STORAGE_KEY,
       JSON.stringify({ id: '10', name: 'Nguyen Van Test', identifier: 'member1', role: 'MEMBER' })
     );
-    window.confirm = vi.fn().mockReturnValue(true);
     mockApi.deleteHealthMetric.mockResolvedValue(null);
 
     await renderPage();
@@ -168,7 +167,14 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
       deleteBtn?.click();
     });
 
-    expect(window.confirm).toHaveBeenCalled();
+    // Hộp xác nhận của portal thay cho window.confirm; chưa xóa khi chưa xác nhận
+    const dialog = host.querySelector('dialog');
+    expect(dialog?.textContent).toContain('Xóa chỉ số sức khỏe?');
+    expect(mockApi.deleteHealthMetric).not.toHaveBeenCalled();
+    const confirmBtn = Array.from(dialog!.querySelectorAll('button')).find((b) => b.textContent === 'Xóa chỉ số')!;
+    await act(async () => {
+      confirmBtn.click();
+    });
     expect(mockApi.deleteHealthMetric).toHaveBeenCalledWith(10, 1);
   });
 

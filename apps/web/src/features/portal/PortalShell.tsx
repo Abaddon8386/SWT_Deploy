@@ -167,7 +167,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         <header className="app-topbar">
           <div className="portal-workspace">
             <button type="button" className="portal-icon-button portal-mobile-menu" aria-label="Mở điều hướng" onClick={() => openNavigation('menu')}><PortalIcon name="menu" /></button>
-            <Link to="/portal" className="portal-wordmark">SÖL<span>Wellness Sanctuary</span></Link>
+            <Link to="/portal" className="portal-wordmark" aria-label="SÖL Fitness · Trang đầu portal">SÖL<span>Fitness</span></Link>
             <span className="portal-workspace-divider" />
             <span className="portal-workspace-role"><PortalIcon name="building" size={15} />{ROLE_LABELS[user.role]}</span>
           </div>
@@ -191,7 +191,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           {navigating && <LoadingSkeleton label="Đang tải trang…" variant="cards" count={3} className="portal-route-loading" />}
           <div key={location.pathname} className="route-fade" hidden={navigating}><Outlet /></div>
         </main>
-        <footer className="portal-workspace-footer"><span>SÖL · Không gian của bạn</span><span>Chuyển động mỗi ngày. Cân bằng mỗi khoảnh khắc.</span></footer>
+        <footer className="portal-workspace-footer"><span>SÖL Fitness · Không gian của bạn</span></footer>
       </div>
 
       <nav className="portal-mobile-nav" aria-label="Điều hướng nhanh">

@@ -25,6 +25,7 @@ import {
   type CoachReviewDto,
 } from './coachReviewApi';
 import './coach-classes.css';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 
 interface StoredAttendanceStudent {
   id: number | string;
@@ -1246,7 +1247,7 @@ export function CoachClassesPage() {
                               {'☆'.repeat(5 - rev.rating)}
                             </span>
                             <span style={{ fontSize: 12, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                              {new Date(rev.createdAt).toLocaleDateString('vi-VN')}
+                              {formatCenterDate(rev.createdAt)}
                             </span>
                           </div>
                         </div>

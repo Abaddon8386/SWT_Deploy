@@ -5,7 +5,7 @@ import { ChatPage } from './ChatPage';
 import * as api from './chatApi';
 import { subscribeChat } from './chatRealtime';
 import { getCurrentUser } from '../../shared/api/client';
-vi.mock('./chatApi', async importOriginal => ({ ...await importOriginal<typeof api>(), getConversations: vi.fn(), getContacts: vi.fn(), openConversation: vi.fn(), getHistory: vi.fn(), sendMessage: vi.fn() }));
+vi.mock('./chatApi', async importOriginal => ({ ...await importOriginal<typeof api>(), getConversations: vi.fn(), getContacts: vi.fn(), openConversation: vi.fn(), getHistory: vi.fn(), sendMessage: vi.fn(), markConversationRead: vi.fn() }));
 vi.mock('./chatRealtime', () => ({ subscribeChat: vi.fn(() => vi.fn()) }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn(), apiFetch: vi.fn() }));
 let host: HTMLDivElement, root: Root;
@@ -15,6 +15,7 @@ beforeEach(() => {
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'member', identifier: 'member', name: 'Member', role: 'MEMBER' });
   vi.mocked(api.getConversations).mockResolvedValue({ content: [conversation], totalPages: 1, number: 0 });
   vi.mocked(api.getHistory).mockResolvedValue({ items: [], hasMore: false });
+  vi.mocked(api.markConversationRead).mockResolvedValue({ count: 0 });
   vi.mocked(api.getContacts).mockResolvedValue({ content: [conversation.peer], totalPages: 1, number: 0 });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });

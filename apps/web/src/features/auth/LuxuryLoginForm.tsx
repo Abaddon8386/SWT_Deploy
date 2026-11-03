@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, type UserSession } from '../../shared/api/client';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
 import { authDestination, purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
@@ -118,7 +119,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       setCountdown(30);
       toast(`Mã xác nhận đã được gửi đến ${verifiedEmail}`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Đăng nhập Google thất bại.';
+      const msg = errorMessage(err, 'Đăng nhập Google thất bại.');
       // BR-04 & BR-05: Chặn nhân sự (403) và tài khoản bị khóa
       if (msg.includes('nhân sự') || msg.toLowerCase().includes('staff') || msg.includes('403')) {
         fail('Vai trò này chưa hỗ trợ đăng nhập Google. Vui lòng đăng nhập bằng email và mật khẩu.');
@@ -138,7 +139,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     try {
       completeGoogleLogin(await googleRedeemHandoff(code));
     } catch (error) {
-      fail(error instanceof Error ? error.message : 'Đăng nhập Google thất bại.');
+      fail(errorMessage(error, 'Đăng nhập Google thất bại.'));
     } finally {
       setIsGoogleLoading(false);
     }
@@ -288,7 +289,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       setSuccess(true);
       navigate(authDestination(res.user.role, search), { viewTransition: true });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Đăng nhập không thành công.';
+      const msg = errorMessage(err, 'Đăng nhập không thành công.');
       fail(msg);
     } finally {
       setIsLoading(false);
@@ -321,7 +322,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       setCountdown(30);
       toast(`Mã xác nhận đã được gửi đến ${cleanEmail}`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể gửi mã xác nhận đến email.';
+      const msg = errorMessage(err, 'Không thể gửi mã xác nhận đến email.');
       fail(msg);
     } finally {
       setIsLoading(false);
@@ -344,7 +345,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       const res = await googleVerifyOtp(googleEmail.trim(), cleanOtp);
       completeGoogleLogin(res);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Mã xác nhận không chính xác hoặc đã hết hạn.';
+      const msg = errorMessage(err, 'Mã xác nhận không chính xác hoặc đã hết hạn.');
       fail(msg);
     } finally {
       setIsLoading(false);

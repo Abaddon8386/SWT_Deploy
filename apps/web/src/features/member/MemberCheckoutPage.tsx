@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { centerNowParts } from '../../shared/lib/centerTime';
 import {
@@ -11,6 +11,7 @@ import {
   MembershipPackage,
 } from './membershipApi';
 import './member-checkout.css';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 // Khung giờ gợi ý để hội viên chọn giờ dự kiến tới quầy
 const POPULAR_TIME_SLOTS = [
@@ -41,6 +42,7 @@ export function MemberCheckoutPage() {
   const [appointmentNotes, setAppointmentNotes] = useState<string>('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [completedResult, setCompletedResult] = useState<{
     subscriptionId: number;
     amount: number;
@@ -77,7 +79,7 @@ export function MemberCheckoutPage() {
           setError('Hiện tại chưa có gói tập nào trong hệ thống.');
         }
       } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : 'Không thể tải thông tin gói tập.');
+        if (active) setError(errorMessage(err, 'Không thể tải thông tin gói tập.'));
       } finally {
         if (active) setLoading(false);
       }
@@ -95,19 +97,13 @@ export function MemberCheckoutPage() {
     if (!selectedPackage || isSubmitting) return;
 
     const effectiveTime = customTime.trim() || appointmentTime;
-    if (!appointmentDate) {
-      toast('Vui lòng chọn ngày dự kiến tới quầy.', 'error');
-      return;
-    }
-    if (!effectiveTime) {
-      toast('Vui lòng chọn hoặc nhập giờ dự kiến.', 'error');
-      return;
-    }
     const now = centerNowParts();
-    if (appointmentDate < now.date || (appointmentDate === now.date && effectiveTime <= now.time)) {
-      toast('Thời gian dự kiến không thể ở trong quá khứ.', 'error');
-      return;
-    }
+    const invalid = !appointmentDate ? 'Vui lòng chọn ngày dự kiến tới quầy.'
+      : !effectiveTime ? 'Vui lòng chọn hoặc nhập giờ dự kiến.'
+        : appointmentDate < now.date || (appointmentDate === now.date && effectiveTime <= now.time) ? 'Thời gian dự kiến không thể ở trong quá khứ.'
+          : null;
+    setFormError(invalid);
+    if (invalid) return;
 
     setIsSubmitting(true);
     try {
@@ -122,9 +118,9 @@ export function MemberCheckoutPage() {
         amount,
         appointmentDateTime: `${effectiveTime} ngày ${appointmentDate.split('-').reverse().join('/')}`,
       });
-      toast('Đã ghi lịch dự kiến tới quầy. Yêu cầu của bạn đang chờ lễ tân xác nhận thanh toán.', 'success');
+      notify('Đã ghi lịch dự kiến tới quầy. Yêu cầu của bạn đang chờ lễ tân xác nhận thanh toán.', 'success');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Không thể tạo yêu cầu gói tập. Vui lòng thử lại.', 'error');
+      setFormError(errorMessage(err, 'Không thể tạo yêu cầu gói tập. Vui lòng thử lại.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -315,6 +311,7 @@ export function MemberCheckoutPage() {
                 />
               </div>
 
+              {formError && <p className="form-error" role="alert">{formError}</p>}
               <button
                 type="submit"
                 className="btn-primary"

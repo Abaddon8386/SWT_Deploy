@@ -241,7 +241,7 @@ describe('SCRUM-86 packages', () => {
     api.current.mockResolvedValue({ ...active, paidThroughDate: '2100-03-01' });
     api.history.mockResolvedValue([active]);
     await render();
-    expect(host.textContent).toContain('đến 1/3/2100');
+    expect(host.textContent).toContain('đến 01/03/2100');
   });
   it('resumes a frozen subscription without creating a purchase or payment', async () => {
     const frozen = { ...active, status: 'frozen', holdStatus: 'APPROVED' };

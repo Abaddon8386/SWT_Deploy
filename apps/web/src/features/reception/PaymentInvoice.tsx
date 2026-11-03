@@ -21,7 +21,7 @@ function InvoiceDocument({ payment, memberName, membershipCode, packageName, cas
   return <article className="invoice-document" aria-label="Hóa đơn thanh toán">
     <header className="invoice-document__header">
       <strong className="invoice-document__brand">SÖL</strong>
-      <span>Wellness Sanctuary</span>
+      <span>Fitness</span>
       <h3>HÓA ĐƠN THANH TOÁN</h3>
       <strong className="invoice-document__number">{payment.invoiceNumber || 'Chưa cấp số hóa đơn'}</strong>
       <span>{formatCenterDateTime(payment.paidAt, 'Chưa có thời gian thanh toán')}</span>

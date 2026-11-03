@@ -38,6 +38,14 @@ export function formatCenterDateTime(value: string | null | undefined, fallback 
   return time ? `${time} ${formatCenterDate(value)}` : fallback;
 }
 
+/** Giờ trong ngày "17:30:00" → "17:30" (giờ học từ API không kèm ngày). */
+export const formatClockTime = (value: string | null | undefined, fallback = '—') =>
+  value && /^\d{2}:\d{2}/.test(value) ? value.slice(0, 5) : fallback;
+
+/** "17:30–18:30" */
+export const formatTimeRange = (start: string | null | undefined, end: string | null | undefined) =>
+  `${formatClockTime(start)}–${formatClockTime(end)}`;
+
 /** Ngày "YYYY-MM-DD" và giờ "HH:mm" hiện tại theo múi giờ trung tâm; so sánh được trực tiếp dưới dạng chuỗi. */
 export function centerNowParts(now = new Date()): { date: string; time: string } {
   const parts = new Intl.DateTimeFormat('en-GB', {

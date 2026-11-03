@@ -9,6 +9,8 @@ import {
   type RequestType,
 } from './staffRequestApi';
 import { notify } from '../../shared/lib/portalNotices';
+import { errorMessage } from '../../shared/lib/errorMessage';
+import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
   LEAVE: { label: 'Xin nghỉ phép', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
@@ -53,7 +55,7 @@ export function ManagerInternalRequestsPage() {
       const data = await getAllStaffRequests();
       setRequests(data);
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Không thể tải danh sách đơn từ nhân sự.'));
+      setError((errorMessage(err, 'Không thể tải danh sách đơn từ nhân sự.')));
     } finally {
       setLoading(false);
     }
@@ -114,7 +116,7 @@ export function ManagerInternalRequestsPage() {
       setReviewTarget(null);
       await loadData();
     } catch (err: unknown) {
-      setModalError((err instanceof Error ? err.message : 'Không thể xử lý đơn từ. Vui lòng thử lại.'));
+      setModalError((errorMessage(err, 'Không thể xử lý đơn từ. Vui lòng thử lại.')));
     } finally {
       setSubmitting(false);
     }
@@ -158,7 +160,7 @@ export function ManagerInternalRequestsPage() {
                 type="button"
                 onClick={() => setStatusFilter(tab.key)}
                 style={{
-                  minHeight: 38,
+                  minHeight: 44,
                   padding: '8px 16px',
                   borderRadius: 99,
                   border: isActive ? 'none' : '1px solid transparent',
@@ -340,13 +342,7 @@ export function ManagerInternalRequestsPage() {
                       </div>
                       <span style={{ fontSize: 12, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
                         {req.userEmail} • Gửi lúc:{' '}
-                        {new Date(req.createdAt).toLocaleDateString('vi-VN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
+                        {formatCenterDateTime(req.createdAt)}
                       </span>
                     </div>
                   </div>
@@ -435,7 +431,7 @@ export function ManagerInternalRequestsPage() {
                     <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
                       {req.status === 'APPROVED' ? '✓ Đã phê duyệt' : '✕ Đã từ chối'} bởi{' '}
                       {req.reviewedByName || 'Ban Quản Lý'} (
-                      {new Date(req.reviewedAt).toLocaleDateString('vi-VN')})
+                      {formatCenterDate(req.reviewedAt)})
                     </div>
                     {req.managerNotes && (
                       <div style={{ marginTop: 4, color: 'var(--portal-paper)', fontStyle: 'italic' }}>

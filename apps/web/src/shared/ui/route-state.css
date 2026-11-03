@@ -8,6 +8,8 @@
 .route-content { display: contents; }
 .route-navigation-loading { position: fixed; inset: 0; z-index: 10000; overflow: auto; }
 .portal-route-loading { padding: 32px; }
+.portal-route-error { display: grid; justify-items: start; gap: 12px; padding-top: 32px; }
+.portal-route-error .portal-subtitle { max-width: 60ch; margin: 0; }
 
 @media (max-width: 767px) {
   .portal-route-loading { padding: 20px 16px; }

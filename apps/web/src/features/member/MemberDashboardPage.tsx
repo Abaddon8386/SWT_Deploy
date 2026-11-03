@@ -12,6 +12,7 @@ import {
   type BookedClass,
   type MemberSubscription,
 } from './memberDashboardApi';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 
 const DAY_MS = 86_400_000;
 
@@ -56,7 +57,7 @@ function membershipProgress(
 }
 
 function formatDate(value: string): string {
-  return localDate(value).toLocaleDateString('vi-VN');
+  return formatCenterDate(value.slice(0, 10));
 }
 
 type MembershipState =
@@ -229,7 +230,7 @@ export function MemberDashboardPage() {
                   aria-labelledby="membership-empty-title"
                 >
                   <PortalIcon name="package" size={28} />
-                  <div className="meta-label" style={{ marginTop: 16 }}>SÖL WELLNESS</div>
+                  <div className="meta-label" style={{ marginTop: 16 }}>SÖL FITNESS</div>
 
                   <h2
                     id="membership-empty-title"
@@ -330,7 +331,7 @@ export function MemberDashboardPage() {
           <div className="member-column-heading"><h2 id="board-card"><i />Thẻ & thanh toán</h2><Link to="/member/card" aria-label="Xem thẻ hội viên"><PortalIcon name="arrow" size={16} /></Link></div>
           <Link className="member-digital-card" to="/member/card">
             <div className="member-digital-card-top"><span>SÖL</span><PortalIcon name="scan" size={24} /></div>
-            <span className="member-digital-card-label">WELLNESS MEMBERSHIP</span>
+            <span className="member-digital-card-label">FITNESS MEMBERSHIP</span>
             <strong>{userName}</strong>
             <div className="member-digital-card-bottom"><span>Thẻ hội viên điện tử</span><PortalIcon name="arrow" size={17} /></div>
           </Link>

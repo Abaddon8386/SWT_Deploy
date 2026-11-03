@@ -6,6 +6,7 @@ import { QrCameraScanner } from '../checkin/QrCameraScanner';
 import { memberCheckinApi } from './memberCheckinApi';
 import type { CheckinDto } from '../reception/checkinApi';
 import { formatCenterDateTime, formatCenterTime } from '../../shared/lib/centerTime';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 export function MemberCheckInPage() {
   const [result, setResult] = useState<CheckinDto | null>(null);
@@ -43,7 +44,7 @@ export function MemberCheckInPage() {
       const response = await memberCheckinApi.scan(code);
       if (!mounted.current) return;
       setResult(response); void loadHistory();
-    } catch (reason) { if (mounted.current) setError(reason instanceof Error ? reason.message : 'Check-in chưa được xác nhận. Vui lòng thử lại.'); }
+    } catch (reason) { if (mounted.current) setError(errorMessage(reason, 'Check-in chưa được xác nhận. Vui lòng thử lại.')); }
     finally { busy.current = false; if (mounted.current) setPending(false); }
   }
   const granted = result?.status.toUpperCase() === 'GRANTED';

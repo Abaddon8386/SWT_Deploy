@@ -4,6 +4,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { createStaffAccount, listStaffAccounts, type StaffAccount, type StaffAccountInput } from './staffAccountsApi';
 import { notify } from '../../shared/lib/portalNotices';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 const initialForm: StaffAccountInput = {
   fullName: '', email: '', phone: '', password: '', gender: 'other', roleCode: 'COACH',
@@ -23,7 +24,7 @@ export function StaffAccountsPage() {
     listStaffAccounts().then(data => {
       if (active) { setAccounts(data); setLoadError(''); }
     }).catch((err: unknown) => {
-      if (active) setLoadError(err instanceof Error ? err.message : 'Không thể tải tài khoản nhân sự.');
+      if (active) setLoadError(errorMessage(err, 'Không thể tải tài khoản nhân sự.'));
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [reload]);
@@ -39,7 +40,7 @@ export function StaffAccountsPage() {
       setForm(initialForm);
       notify(`Đã tạo tài khoản ${created.email}. Nhân sự có thể đăng nhập bằng email hoặc Google với đúng email đã được cấp.`, 'success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tạo tài khoản. Vui lòng thử lại.');
+      setError(errorMessage(err, 'Không thể tạo tài khoản. Vui lòng thử lại.'));
     } finally {
       setSaving(false);
     }

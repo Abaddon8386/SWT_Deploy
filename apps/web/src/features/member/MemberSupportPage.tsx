@@ -10,6 +10,7 @@ import { subscribeSupport } from './supportRealtime';
 import type { ChatConnection } from '../chat/chatRealtime';
 import './member-support.css';
 import { notify } from '../../shared/lib/portalNotices';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 const categories = ['Gói tập', 'Thiết bị', 'Lịch học', 'Khác'] as const;
 type Category = typeof categories[number];
@@ -24,7 +25,7 @@ function displaySubject(subject: string): string {
   return subject.replace(/^\[(Gói tập|Thiết bị|Lịch học|Khác)\] /, '');
 }
 function dateTime(value: string): string {
-  return new Date(value).toLocaleString('vi-VN');
+  return formatCenterDateTime(value);
 }
 function failure(error: unknown): string {
   return error instanceof ApiError ? error.message : 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.';

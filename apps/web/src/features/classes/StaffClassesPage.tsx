@@ -5,13 +5,15 @@ import { Modal } from '../../shared/ui/Modal';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { TimePicker } from '../../shared/ui/TimePicker';
 import { Select } from '../../shared/ui/Select';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
 import { apiFetch, getCurrentUser } from '../../shared/api/client';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import {
   classesApi,
   type ClassItem,
   type ClassSessionDto as ClassSessionItem,
 } from './classesApi';
+import { Link } from 'react-router-dom';
 
 type DisciplineOption = Awaited<ReturnType<typeof classesApi.getDisciplines>>[number];
 type RoomOption = Awaited<ReturnType<typeof classesApi.getAvailableRooms>>[number];
@@ -255,7 +257,7 @@ export function StaffClassesPage() {
       setRooms(roomList);
       setCoaches(coachList);
     } catch (cause) {
-      setCatalogsError(cause instanceof Error ? cause.message : 'Không thể tải danh mục tạo lớp học.');
+      setCatalogsError(errorMessage(cause, 'Không thể tải danh mục tạo lớp học.'));
     } finally {
       setCatalogsLoading(false);
     }
@@ -273,7 +275,7 @@ export function StaffClassesPage() {
       setClasses(classList);
       setSessions(sessionList);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể tải danh sách lớp học.';
+      const msg = errorMessage(err, 'Không thể tải danh sách lớp học.');
       setError(msg);
     } finally {
       setLoading(false);
@@ -302,9 +304,9 @@ export function StaffClassesPage() {
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Quản lý trung tâm (Center Manager) và Nhân viên được cấp quyền mới có thể truy cập và xem lịch lớp học.
             </p>
-            <a href="/portal" className="btn-secondary">
+            <Link to="/portal" className="btn-secondary">
               Về trang chủ Portal
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -343,35 +345,30 @@ export function StaffClassesPage() {
     if (!formData.name.trim()) {
       const msg = 'Vui lòng nhập tên lớp học.';
       setModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (isDuplicateClassName) {
       const msg = `Tên lớp học "${formData.name.trim()}" đã tồn tại trong hệ thống. Vui lòng chọn tên khác.`;
       setModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (!formData.disciplineId) {
       const msg = 'Vui lòng chọn bộ môn thể thao.';
       setModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (!formData.coachId) {
       const msg = 'Vui lòng chọn huấn luyện viên phụ trách.';
       setModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (!formData.roomId) {
       const msg = 'Vui lòng chọn phòng tập.';
       setModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
@@ -379,7 +376,6 @@ export function StaffClassesPage() {
     if (isNaN(capacityNum) || capacityNum <= 0) {
       const msg = 'Sức chứa tối đa (capacity) phải lớn hơn 0.';
       setModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
@@ -387,20 +383,17 @@ export function StaffClassesPage() {
     if (formData.sessionDate < today) {
       const msg = 'Ngày học không được ở trong quá khứ.';
       setModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (formData.endTime <= formData.startTime) {
       const msg = 'Giờ kết thúc phải sau giờ bắt đầu.';
       setModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (createScheduleConflictWarning) {
       setModalError(createScheduleConflictWarning);
-      toast(createScheduleConflictWarning, 'error');
       return;
     }
 
@@ -448,7 +441,7 @@ export function StaffClassesPage() {
         });
       }
 
-      toast('Đã tạo lớp học và xếp lịch thành công!', 'success');
+      notify('Đã tạo lớp học và xếp lịch thành công!', 'success');
       setShowModal(false);
       setFormData(defaultFormData());
       setModalError(null);
@@ -480,7 +473,6 @@ export function StaffClassesPage() {
           : apiErr?.message || 'Có lỗi xảy ra khi tạo lớp học.';
 
       setModalError(errMessage);
-      toast(errMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -517,14 +509,12 @@ export function StaffClassesPage() {
     if (!editFormData.name.trim()) {
       const msg = 'Vui lòng nhập tên lớp học.';
       setEditModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (isDuplicateEditClassName) {
       const msg = `Tên lớp học "${editFormData.name.trim()}" đã tồn tại trong hệ thống.`;
       setEditModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
@@ -532,13 +522,11 @@ export function StaffClassesPage() {
     if (isNaN(capacityNum) || capacityNum <= 0) {
       const msg = 'Sức chứa tối đa phải lớn hơn 0.';
       setEditModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (editConflictWarning) {
       setEditModalError(editConflictWarning);
-      toast(editConflictWarning, 'error');
       return;
     }
 
@@ -557,7 +545,7 @@ export function StaffClassesPage() {
           status: editFormData.status,
         }),
       });
-      toast('Đã cập nhật thông tin lớp học thành công!', 'success');
+      notify('Đã cập nhật thông tin lớp học thành công!', 'success');
       setEditingClass(null);
       await loadData();
     } catch (err: unknown) {
@@ -578,7 +566,6 @@ export function StaffClassesPage() {
           ? 'Trùng lịch: Huấn luyện viên hoặc phòng tập mới đã có lịch dạy trùng với buổi học của lớp này.'
           : apiErr?.message || 'Không thể cập nhật thông tin lớp học.';
       setEditModalError(errMessage);
-      toast(errMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -616,20 +603,17 @@ export function StaffClassesPage() {
     if (rescheduleFormData.sessionDate < today) {
       const msg = 'Ngày học mới không được ở trong quá khứ.';
       setRescheduleModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (rescheduleFormData.endTime <= rescheduleFormData.startTime) {
       const msg = 'Giờ kết thúc phải sau giờ bắt đầu.';
       setRescheduleModalError(msg);
-      toast(msg, 'error');
       return;
     }
 
     if (rescheduleConflictWarning) {
       setRescheduleModalError(rescheduleConflictWarning);
-      toast(rescheduleConflictWarning, 'error');
       return;
     }
 
@@ -642,7 +626,7 @@ export function StaffClassesPage() {
           startTime: rescheduleFormData.startTime,
           endTime: rescheduleFormData.endTime,
         });
-        toast('Đã xếp lịch buổi học mới thành công!', 'success');
+        notify('Đã xếp lịch buổi học mới thành công!', 'success');
       } else {
         await apiFetch<ClassSessionItem>(
           `/classes/${reschedulingClass.id}/sessions/${rescheduleFormData.sessionId}`,
@@ -655,7 +639,7 @@ export function StaffClassesPage() {
             }),
           },
         );
-        toast('Đã đổi lịch buổi học thành công!', 'success');
+        notify('Đã đổi lịch buổi học thành công!', 'success');
       }
       setReschedulingClass(null);
       await loadData();
@@ -678,7 +662,6 @@ export function StaffClassesPage() {
           ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn giờ khác.'
           : apiErr?.message || 'Không thể đổi lịch buổi học.';
       setRescheduleModalError(errMessage);
-      toast(errMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -707,7 +690,7 @@ export function StaffClassesPage() {
       await apiFetch<void>(`/classes/${deletingClass.id}`, {
         method: 'DELETE',
       });
-      toast(`Đã xóa lớp học "${deletingClass.name}" thành công!`, 'success');
+      notify(`Đã xóa lớp học "${deletingClass.name}" thành công!`, 'success');
       setDeletingClass(null);
       setDeleteConfirmStep(1);
       if (selectedClassDetail?.id === deletingClass.id) {
@@ -718,7 +701,6 @@ export function StaffClassesPage() {
       const apiErr = err as { message?: string };
       const errMessage = apiErr?.message || 'Không thể xóa lớp học này.';
       setDeleteModalError(errMessage);
-      toast(errMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -826,7 +808,7 @@ export function StaffClassesPage() {
                     gap: '12px',
                     alignItems: 'center',
                     padding: '14px 0',
-                    borderBottom: '1px solid rgba(0,0,0,0.06)',
+                    borderBottom: '1px solid var(--portal-border)',
                   }}
                 >
                   <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />

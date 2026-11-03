@@ -9,6 +9,7 @@ import {
   type ClassOccupancyItem,
 } from './auditApi';
 import './manager-audit-logs.css';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 type ActiveTab = 'audit' | 'occupancy';
 
@@ -60,7 +61,7 @@ export function ManagerAuditLogsPage() {
         if (mounted) {
           setLogs([]);
           setTotalElements(0);
-          setLogsError(err instanceof Error ? err.message : 'Không thể tải nhật ký kiểm toán.');
+          setLogsError(errorMessage(err, 'Không thể tải nhật ký kiểm toán.'));
         }
       } finally {
         if (mounted) setLoadingLogs(false);
@@ -87,7 +88,7 @@ export function ManagerAuditLogsPage() {
       } catch (err) {
         if (mounted) {
           setOccupancyList([]);
-          setOccupancyError(err instanceof Error ? err.message : 'Không thể tải tỷ lệ lấp đầy lớp học.');
+          setOccupancyError(errorMessage(err, 'Không thể tải tỷ lệ lấp đầy lớp học.'));
         }
       } finally {
         if (mounted) setLoadingOccupancy(false);

@@ -14,6 +14,9 @@ public class ChatConversation {
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "staff_user_id", nullable = false) private User staff;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
     @Column(name = "last_activity_at", nullable = false) private Instant lastActivityAt;
+    /** Tin cuối cùng mỗi bên đã đọc; null nghĩa là chưa đọc tin nào. */
+    @Column(name = "member_last_read_message_id") private Long memberLastReadMessageId;
+    @Column(name = "staff_last_read_message_id") private Long staffLastReadMessageId;
 
     protected ChatConversation() { }
     public ChatConversation(User member, User staff, Instant now) {
@@ -26,4 +29,11 @@ public class ChatConversation {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getLastActivityAt() { return lastActivityAt; }
     public void touch(Instant now) { lastActivityAt = now; }
+    public Long lastReadBy(Long userId) { return member.getId().equals(userId) ? memberLastReadMessageId : staffLastReadMessageId; }
+    /** Chỉ tiến về phía trước: đọc lại tin cũ không làm tin mới thành chưa đọc. */
+    public void markRead(Long userId, long messageId) {
+        Long current = lastReadBy(userId);
+        if (current != null && current >= messageId) return;
+        if (member.getId().equals(userId)) memberLastReadMessageId = messageId; else staffLastReadMessageId = messageId;
+    }
 }

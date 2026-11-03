@@ -6,7 +6,8 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { StatusMark } from '../../shared/ui/StatusMark';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
+import { formatCenterTime } from '../../shared/lib/centerTime';
 import {
   aiApi,
   type CoachOption,
@@ -91,9 +92,10 @@ export function CoachTrainingPlanPage() {
   const handleEndDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     if (val && startDate && val < startDate) {
-      toast('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.', 'error');
+      setDateError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
       return;
     }
+    setDateError(null);
     setEndDate(val);
   };
 
@@ -129,6 +131,11 @@ export function CoachTrainingPlanPage() {
   const [newRestSeconds, setNewRestSeconds] = useState(60);
   const [newDuration, setNewDuration] = useState(15);
   const [newDescription, setNewDescription] = useState('');
+  // Lỗi nhập liệu hiển thị ngay dưới trường tương ứng
+  const [exerciseError, setExerciseError] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // AI Modal States
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -181,9 +188,11 @@ export function CoachTrainingPlanPage() {
   const handleAddExercise = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newExerciseName.trim()) {
-      toast('Vui lòng nhập tên động tác.', 'error');
+      setExerciseError('Vui lòng nhập tên động tác.');
+      document.getElementById('exercise-name-input')?.focus();
       return;
     }
+    setExerciseError(null);
 
     const item: WorkoutExerciseItem = {
       id: `ex-${Date.now()}`,
@@ -199,7 +208,6 @@ export function CoachTrainingPlanPage() {
     setExercises((prev) => [...prev, item]);
     setNewExerciseName('');
     setNewDescription('');
-    toast(`Đã thêm "${item.exerciseName}" vào ${DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name}`, 'success');
   };
 
   // Xóa bài tập
@@ -227,6 +235,7 @@ export function CoachTrainingPlanPage() {
     if (aiSelectedMemberId == null) return;
     setIsGeneratingAi(true);
     setAiResult(null);
+    setAiError(null);
     try {
       const res = await aiApi.generateWorkoutPlan({
         memberId: aiSelectedMemberId,
@@ -235,7 +244,7 @@ export function CoachTrainingPlanPage() {
       });
       setAiResult(res);
     } catch {
-      toast('Lỗi khi gọi AI gợi ý giáo án.', 'error');
+      setAiError('Không thể tạo gợi ý giáo án bằng AI lúc này. Vui lòng thử lại.');
     } finally {
       setIsGeneratingAi(false);
     }
@@ -265,59 +274,22 @@ export function CoachTrainingPlanPage() {
     }
 
     setIsAiModalOpen(false);
-    toast('Đã áp dụng giáo án từ AI! HLV có thể tinh chỉnh các thông số trước khi lưu.', 'success');
+    notify('Đã áp dụng giáo án từ AI. Bạn có thể tinh chỉnh trước khi lưu.', 'success');
   };
-
-  // Thông báo nổi bật chính giữa màn hình (Center Notification Toast)
-  const [centerNotification, setCenterNotification] = useState<{
-    message: string;
-    type: 'success' | 'error';
-    title: string;
-  } | null>(null);
 
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
-
-  const showCenterNotification = (message: string, type: 'success' | 'error' = 'success', title?: string) => {
-    const heading = title || (type === 'success' ? 'Lưu giáo án thành công' : 'Không thể lưu giáo án');
-    setCenterNotification({ message, type, title: heading });
-    if (type === 'success') {
-      toast.success(message);
-    } else {
-      toast.error(message);
-    }
-    setTimeout(() => {
-      setCenterNotification(null);
-    }, 3500);
-  };
 
   // Lưu & Kích hoạt giáo án
   const [isSaving, setIsSaving] = useState(false);
   const handleSavePlan = async () => {
-    if (exercises.length === 0) {
-      showCenterNotification(
-        'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập trước khi lưu.',
-        'error',
-        'Chưa có bài tập'
-      );
-      return;
-    }
-    if (startDate && endDate && endDate < startDate) {
-      showCenterNotification(
-        'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.',
-        'error',
-        'Thời gian không hợp lệ'
-      );
-      return;
-    }
-
-    if (!selectedMember) {
-      showCenterNotification('Chưa xác minh được học viên từ hệ thống. Vui lòng tải lại danh sách học viên.', 'error', 'Chưa chọn học viên');
-      return;
-    }
-    if (isManager && selectedCoachId == null) {
-      showCenterNotification('Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.', 'error', 'Chưa chọn huấn luyện viên');
-      return;
-    }
+    const invalid =
+      exercises.length === 0 ? 'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập trước khi lưu.'
+        : startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
+          : !selectedMember ? 'Chưa xác minh được học viên từ hệ thống. Vui lòng tải lại danh sách học viên.'
+            : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
+              : null;
+    setPlanError(invalid);
+    if (invalid || !selectedMember) return;
 
     setIsSaving(true);
     try {
@@ -337,7 +309,7 @@ export function CoachTrainingPlanPage() {
         true
       );
 
-      const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const nowTime = formatCenterTime(new Date().toISOString());
       setLastSavedTime(nowTime);
 
       // Lưu trữ đồng bộ vào localStorage
@@ -363,13 +335,9 @@ export function CoachTrainingPlanPage() {
         // ignore storage error
       }
 
-      showCenterNotification(
-        `Đã lưu & kích hoạt giáo án "${planTitle}" thành công cho học viên ${selectedMember.fullName}!`,
-        'success',
-        'Lưu giáo án thành công'
-      );
+      notify(`Đã lưu và kích hoạt giáo án "${planTitle}" cho học viên ${selectedMember.fullName}.`, 'success');
     } catch {
-      showCenterNotification('Đã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại.', 'error', 'Lưu thất bại');
+      notify('Đã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -443,6 +411,8 @@ export function CoachTrainingPlanPage() {
           </div>
         }
       />
+
+      {planError && <p className="form-error" role="alert">{planError}</p>}
 
       {/* Plan Meta Information Card */}
       <div className="plan-meta-card">
@@ -541,6 +511,7 @@ export function CoachTrainingPlanPage() {
               value={endDate}
               onChange={handleEndDateChange}
             />
+            {dateError && <p className="form-error" role="alert">{dateError}</p>}
           </div>
         </div>
 
@@ -610,8 +581,11 @@ export function CoachTrainingPlanPage() {
                 className="portal-input"
                 placeholder="Ví dụ: Barbell Back Squat, Dumbbell Row..."
                 value={newExerciseName}
-                onChange={(e) => setNewExerciseName(e.target.value)}
+                aria-invalid={exerciseError ? true : undefined}
+                aria-describedby={exerciseError ? 'exercise-name-error' : undefined}
+                onChange={(e) => { setNewExerciseName(e.target.value); if (exerciseError) setExerciseError(null); }}
               />
+              {exerciseError && <p id="exercise-name-error" className="form-error" role="alert">{exerciseError}</p>}
             </div>
 
             <div>
@@ -862,6 +836,8 @@ export function CoachTrainingPlanPage() {
               </button>
             </div>
 
+            {aiError && <p className="form-error" role="alert">{aiError}</p>}
+
             {/* Trạng thái Loading AI */}
             {isGeneratingAi && (
               <LoadingSkeleton label="Đang phân tích và tạo gợi ý giáo án…" count={4} />
@@ -913,42 +889,6 @@ export function CoachTrainingPlanPage() {
         </Modal>
       )}
 
-      {/* THÔNG BÁO NỔI BẬT CHÍNH GIỮA MÀN HÌNH (Center Toast Notification) */}
-      {centerNotification && (
-        <div className="center-toast-overlay" onClick={() => setCenterNotification(null)}>
-          <div
-            className={`center-toast-card ${centerNotification.type === 'error' ? 'is-error' : ''}`}
-            role="alert"
-            aria-live="assertive"
-          >
-            <div className="center-toast-icon-wrap">
-              {centerNotification.type === 'error' ? (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              )}
-            </div>
-            <div className="center-toast-body">
-              <h4 className="center-toast-title">{centerNotification.title}</h4>
-              <p className="center-toast-msg">{centerNotification.message}</p>
-            </div>
-            <button
-              type="button"
-              className="center-toast-close"
-              aria-label="Đóng thông báo"
-              onClick={() => setCenterNotification(null)}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

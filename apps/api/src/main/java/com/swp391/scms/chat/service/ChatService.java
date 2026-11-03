@@ -39,7 +39,31 @@ public class ChatService {
 
     public Page<ChatConversationDto> list(AuthenticatedPrincipal principal, int page) {
         requireActor(principal);
-        return conversations.forUser(principal.id(), page(page)).map(c -> conversation(c, principal.id()));
+        Long userId = principal.id();
+        Page<ChatConversation> rows = conversations.forUser(userId, page(page));
+        List<Long> ids = rows.getContent().stream().map(ChatConversation::getId).toList();
+        if (ids.isEmpty()) return rows.map(c -> conversation(c, userId));
+        Map<Long, ChatMessage> latest = new HashMap<>();
+        for (ChatMessage m : messages.latestIn(ids)) latest.put(m.getConversation().getId(), m);
+        Map<Long, Long> unread = new HashMap<>();
+        for (Object[] row : messages.unreadIn(userId, ids)) unread.put((Long) row[0], (Long) row[1]);
+        return rows.map(c -> conversation(c, userId, latest.get(c.getId()), unread.getOrDefault(c.getId(), 0L)));
+    }
+
+    public ChatUnreadCount unreadCount(AuthenticatedPrincipal principal) {
+        requireActor(principal);
+        return new ChatUnreadCount(messages.unreadTotal(principal.id()));
+    }
+
+    @Transactional
+    public ChatUnreadCount markRead(AuthenticatedPrincipal principal, Long id, MarkChatRead input) {
+        User actor = requireActor(principal);
+        if (input == null || input.lastMessageId() == null || input.lastMessageId() <= 0) throw invalid("validation.chat.cursor");
+        ChatConversation c = conversations.lockById(id).orElseThrow(() -> missing(id));
+        participant(c, actor);
+        // Không cho đánh dấu vượt quá tin thật sự có trong hội thoại.
+        messages.latestId(id).ifPresent(latestId -> c.markRead(actor.getId(), Math.min(latestId, input.lastMessageId())));
+        return new ChatUnreadCount(messages.unreadTotal(actor.getId()));
     }
 
     @Transactional
@@ -89,6 +113,8 @@ public class ChatService {
         Instant now = Instant.now();
         var saved = messages.save(new ChatMessage(c, actor, input.clientMessageId(), text, now));
         c.touch(now);
+        // Người gửi đã thấy toàn bộ hội thoại tới tin của chính mình.
+        if (saved.getId() != null) c.markRead(actor.getId(), saved.getId());
         return message(saved, actor.getId());
     }
 
@@ -110,9 +136,17 @@ public class ChatService {
     private static boolean availablePeer(ChatConversation c, User u) {
         return active(u) && (u.getId().equals(c.getMember().getId()) ? "MEMBER".equals(role(u)) : STAFF.contains(role(u)));
     }
-    private static ChatConversationDto conversation(ChatConversation c, Long userId) {
+    private static ChatConversationDto conversation(ChatConversation c, Long userId) { return conversation(c, userId, null, 0); }
+    private static ChatConversationDto conversation(ChatConversation c, Long userId, ChatMessage latest, long unread) {
         User other = peer(c, userId);
-        return new ChatConversationDto(c.getId(), contact(other, availablePeer(c, other)), c.getCreatedAt(), c.getLastActivityAt());
+        String preview = latest == null ? null : preview(latest.getMessage());
+        boolean mine = latest != null && latest.getSender().getId().equals(userId);
+        return new ChatConversationDto(c.getId(), contact(other, availablePeer(c, other)), c.getCreatedAt(), c.getLastActivityAt(),
+                preview, mine, unread);
+    }
+    private static String preview(String text) {
+        String flat = text.replaceAll("\\s+", " ").strip();
+        return flat.length() <= 120 ? flat : flat.substring(0, 119) + "…";
     }
     private static ChatContactDto contact(User u, boolean available) {
         return new ChatContactDto(u.getId(), u.getFullName(), role(u), available);

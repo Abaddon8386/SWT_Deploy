@@ -126,6 +126,47 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {description: Peer unavailable or UUID reused with different message text, content: {application/json: {schema: {$ref: '#/components/schemas/Envelope'}}}}
+  /chat/unread-count:
+    get:
+      summary: Total messages from peers that the caller has not read yet, across all conversations
+      responses:
+        '200':
+          description: Unread total for the bell badge on the floating chat button
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/Envelope'}
+                  - properties: {data: {$ref: '#/components/schemas/UnreadCount'}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /chat/conversations/{id}/read:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer, format: int64, minimum: 1}}
+    post:
+      summary: Mark messages up to lastMessageId as read by the caller
+      description: Only moves forward and is clamped to the newest message in the conversation. Sending a message also marks the sender's side read up to that message. Returns the caller's new unread total.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lastMessageId]
+              properties: {lastMessageId: {type: integer, format: int64, minimum: 1}}
+      responses:
+        '200':
+          description: Updated unread total
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/Envelope'}
+                  - properties: {data: {$ref: '#/components/schemas/UnreadCount'}}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /chat/realtime-session:
     post:
       summary: Obtain a short-lived receive-only Supabase JWT for caller's private inbox channel
@@ -197,6 +238,13 @@ components:
         peer: {$ref: '#/components/schemas/Contact'}
         createdAt: {type: string, format: date-time}
         lastActivityAt: {type: string, format: date-time}
+        lastMessage: {type: string, nullable: true, maxLength: 120, description: Whitespace-collapsed preview of the newest message; null when empty. Populated in the conversation list only.}
+        lastMessageMine: {type: boolean}
+        unreadCount: {type: integer, format: int64, minimum: 0, description: Peer messages after the caller's read marker. Populated in the conversation list only.}
+    UnreadCount:
+      type: object
+      required: [count]
+      properties: {count: {type: integer, format: int64, minimum: 0}}
     Message:
       type: object
       required: [id, conversationId, clientMessageId, senderId, mine, message, createdAt]

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
@@ -7,7 +8,8 @@ import { PaymentInvoice } from './PaymentInvoice';
 import { GateQrPanel } from './GateQrPanel';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 import {
   maskCitizenId,
   receptionApi,
@@ -20,6 +22,7 @@ import {
   type PendingSubscriptionItem,
   type RenewalCandidate,
 } from './receptionApi';
+import { Link } from 'react-router-dom';
 
 const vnd = (n: number) => `${n.toLocaleString('vi-VN')} đ`;
 
@@ -33,6 +36,8 @@ export function StaffReceptionPage() {
   }, [currentUser]);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchResults, setSearchResults] = useState<MemberLookupResult[]>([]);
@@ -111,7 +116,7 @@ export function StaffReceptionPage() {
       setUnpaidPt(await receptionApi.getUnpaidCoachBookings());
     } catch (err: unknown) {
       setUnpaidPt([]);
-      setPtError(err instanceof Error ? err.message : 'Không tải được danh sách buổi PT chưa thanh toán.');
+      setPtError(errorMessage(err, 'Không tải được danh sách buổi PT chưa thanh toán.'));
     } finally {
       setLoadingPt(false);
     }
@@ -165,11 +170,11 @@ export function StaffReceptionPage() {
     setCancellingPendingId(item.id);
     try {
       await receptionApi.cancelPendingSubscription(item.id);
-      toast(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, 'success');
+      notify(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, 'success');
       await loadPendingSubscriptions();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Hủy yêu cầu gói tập thất bại.'; await loadPendingSubscriptions();
-      toast(msg, 'error');
+      const msg = errorMessage(err, 'Hủy yêu cầu gói tập thất bại.'); await loadPendingSubscriptions();
+      notify(msg, 'error');
     } finally {
       setCancellingPendingId(null);
     }
@@ -180,14 +185,14 @@ export function StaffReceptionPage() {
     setProcessingHoldId(item.id);
     try {
       const res = await receptionApi.approveHoldRequest(item.id);
-      toast(
+      notify(
         `Đã xác nhận bảo lưu gói "${item.packageName}" cho ${item.memberName}. Đã tự động hủy ${res.cancelledEnrollmentsCount} lịch sắp tới.`,
         'success',
       );
       await loadPendingHolds();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Xác nhận bảo lưu thất bại.'; await loadPendingHolds();
-      toast(msg, 'error');
+      const msg = errorMessage(err, 'Xác nhận bảo lưu thất bại.'); await loadPendingHolds();
+      notify(msg, 'error');
     } finally {
       setProcessingHoldId(null);
     }
@@ -198,12 +203,12 @@ export function StaffReceptionPage() {
     setProcessingPtId(item.id);
     try {
       await receptionApi.confirmCoachBookingPayment(item.id, method);
-      toast(`Đã thu ${vnd(item.hourlyRate)} buổi PT của ${item.memberName} (${item.bookingDate}).`, 'success');
+      notify(`Đã thu ${vnd(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, 'success');
       await loadUnpaidPt();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Xác nhận thu tiền buổi PT thất bại.';
+      const msg = errorMessage(err, 'Xác nhận thu tiền buổi PT thất bại.');
       await loadUnpaidPt();
-      toast(msg, 'error');
+      notify(msg, 'error');
     } finally {
       setProcessingPtId(null);
     }
@@ -214,11 +219,11 @@ export function StaffReceptionPage() {
     setProcessingHoldId(item.id);
     try {
       await receptionApi.rejectHoldRequest(item.id);
-      toast(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, 'success');
+      notify(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, 'success');
       await loadPendingHolds();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Từ chối yêu cầu bảo lưu thất bại.'; await loadPendingHolds();
-      toast(msg, 'error');
+      const msg = errorMessage(err, 'Từ chối yêu cầu bảo lưu thất bại.'); await loadPendingHolds();
+      notify(msg, 'error');
     } finally {
       setProcessingHoldId(null);
     }
@@ -239,9 +244,9 @@ export function StaffReceptionPage() {
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền truy cập quầy lễ tân &amp; thu ngân.
             </p>
-            <a href="/portal" className="btn-secondary">
+            <Link to="/portal" className="btn-secondary">
               Về trang chủ Portal
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -257,14 +262,10 @@ export function StaffReceptionPage() {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
-    if (!q) {
-      toast('Vui lòng nhập SĐT, Mã hội viên hoặc CCCD để tra cứu.', 'error');
-      return;
-    }
-    if (q.length < 2) {
-      toast('Từ khóa tìm kiếm phải ít nhất 2 ký tự.', 'error');
-      return;
-    }
+    const invalid = !q ? 'Vui lòng nhập SĐT, Mã hội viên hoặc CCCD để tra cứu.'
+      : q.length < 2 ? 'Từ khóa tìm kiếm phải ít nhất 2 ký tự.' : null;
+    setSearchError(invalid);
+    if (invalid) return;
 
     setIsSearching(true);
     setHasSearched(true);
@@ -276,14 +277,12 @@ export function StaffReceptionPage() {
         setSelectedMember(member);
         const matchedPending = pendingList.find((p) => p.memberId === member.userId) ?? null;
         setSelectedPending(matchedPending);
-        toast(`Đã tìm thấy ${results.length} kết quả phù hợp.`, 'success');
       } else {
         setSelectedMember(null);
         setSelectedPending(null);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Tra cứu thất bại.';
-      toast(msg, 'error');
+      setSearchError(errorMessage(err, 'Tra cứu thất bại.'));
       setSearchResults([]);
       setSelectedMember(null);
       setSelectedPending(null);
@@ -297,15 +296,10 @@ export function StaffReceptionPage() {
     e.preventDefault();
     if (isSearching) return;
 
-    if (!selectedMember || (!selectedPending && !selectedPackage)) {
-      toast('Vui lòng chọn hội viên và gói tập cần thanh toán.', 'error');
-      return;
-    }
-
-    if (!paymentMethod) {
-      toast('Vui lòng chọn hình thức thanh toán (Tiền mặt / POS / Chuyển khoản QR).', 'error');
-      return;
-    }
+    const invalid = !selectedMember || (!selectedPending && !selectedPackage) ? 'Vui lòng chọn hội viên và gói tập cần thanh toán.'
+      : !paymentMethod ? 'Vui lòng chọn hình thức thanh toán (Tiền mặt / POS / Chuyển khoản QR).' : null;
+    setPaymentError(invalid);
+    if (invalid || !selectedMember || !paymentMethod) return;
 
     // BR-03: Khóa nút khi đang xử lý để tránh thu trùng
     if (paymentInFlight.current) return;
@@ -340,13 +334,12 @@ export function StaffReceptionPage() {
       setCompletedMemberName(selectedMember.fullName);
       setCompletedMembershipCode(selectedMember.membershipCode);
       setCompletedPayment(result);
-      toast(result.invoiceNumber ? `Đã xác nhận thu tiền thành công! Hóa đơn: ${result.invoiceNumber}` : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success');
+      notify(result.invoiceNumber ? `Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}` : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success');
       setSelectedMember(null);
       setSelectedPending(null);
       await loadPendingSubscriptions();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Giao dịch thanh toán thất bại.'; await loadPendingSubscriptions();
-      toast(msg, 'error');
+      setPaymentError(errorMessage(err, 'Giao dịch thanh toán thất bại.')); await loadPendingSubscriptions();
     } finally {
       paymentInFlight.current = false;
       setIsSubmittingPayment(false);
@@ -374,9 +367,12 @@ export function StaffReceptionPage() {
                   type="text"
                   placeholder="Nhập Số điện thoại, Mã hội viên (MB-...) hoặc CCCD để tra cứu..."
                   className="portal-input"
+                  aria-label="Tra cứu hội viên theo số điện thoại, mã hội viên hoặc CCCD"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); if (searchError) setSearchError(null); }}
                   disabled={isSearching}
+                  aria-invalid={searchError ? true : undefined}
+                  aria-describedby={searchError ? 'reception-search-error' : undefined}
                   autoFocus
                 />
               </div>
@@ -391,6 +387,7 @@ export function StaffReceptionPage() {
                 )}
               </button>
             </form>
+            {searchError && <p id="reception-search-error" className="form-error" role="alert">{searchError}</p>}
 
             {/* Danh sách kết quả nếu có nhiều hơn 1 người */}
             {searchResults.length > 1 && (
@@ -727,6 +724,7 @@ export function StaffReceptionPage() {
               />
             </div>
 
+            {paymentError && <p className="form-error" role="alert">{paymentError}</p>}
             <button
               type="submit"
               className="btn-primary"

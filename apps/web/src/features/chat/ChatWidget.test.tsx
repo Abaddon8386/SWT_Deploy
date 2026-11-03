@@ -7,7 +7,7 @@ import * as api from './chatApi';
 import { subscribeChat } from './chatRealtime';
 import { getCurrentUser } from '../../shared/api/client';
 
-vi.mock('./chatApi', async original => ({ ...await original<typeof api>(), getConversations: vi.fn(), getHistory: vi.fn(), sendMessage: vi.fn() }));
+vi.mock('./chatApi', async original => ({ ...await original<typeof api>(), getConversations: vi.fn(), getHistory: vi.fn(), sendMessage: vi.fn(), getChatUnreadCount: vi.fn(), markConversationRead: vi.fn() }));
 vi.mock('./chatRealtime', () => ({ subscribeChat: vi.fn(() => vi.fn()) }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn(), apiFetch: vi.fn() }));
 let host: HTMLDivElement, root: Root;
@@ -17,6 +17,8 @@ beforeEach(() => {
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'member', identifier: 'member', name: 'Member', role: 'MEMBER' });
   vi.mocked(api.getConversations).mockResolvedValue({ content: [conversation], totalPages: 1, number: 0 });
   vi.mocked(api.getHistory).mockResolvedValue({ items: [], hasMore: false });
+  vi.mocked(api.markConversationRead).mockResolvedValue({ count: 0 });
+  vi.mocked(api.getChatUnreadCount).mockResolvedValue({ count: 0 });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
@@ -52,6 +54,31 @@ it('refreshes the visible conversation when realtime reports a new message', asy
   vi.mocked(api.getHistory).mockResolvedValue({ items: [{ id: 1, conversationId: 7, clientMessageId: 'reply', senderId: 20, mine: false, message: 'Hẹn bạn lúc 18h', createdAt: '2026-11-02T10:00:00Z' }], hasMore: false });
   await act(async () => vi.mocked(subscribeChat).mock.calls[0][0]());
   expect(host.textContent).toContain('Hẹn bạn lúc 18h');
+});
+
+it('shows the unread badge and clears it after reading the conversation', async () => {
+  vi.mocked(api.getChatUnreadCount).mockResolvedValue({ count: 2 });
+  vi.mocked(api.getConversations).mockResolvedValue({ content: [{ ...conversation, unreadCount: 2, lastMessage: 'Hẹn bạn lúc 18h', lastMessageMine: false }], totalPages: 1, number: 0 });
+  vi.mocked(api.getHistory).mockResolvedValue({ items: [{ id: 5, conversationId: 7, clientMessageId: 'reply', senderId: 20, mine: false, message: 'Hẹn bạn lúc 18h', createdAt: '2026-11-02T10:00:00Z' }], hasMore: false });
+  await render();
+  expect(host.querySelector('.chat-widget__badge')?.textContent).toBe('2');
+  await act(async () => button('Mở tin nhắn · 2 chưa đọc').click());
+  expect(host.querySelector('.direct-chat__preview')?.textContent).toBe('Hẹn bạn lúc 18h');
+  expect(host.querySelector('.direct-chat__unread')?.textContent).toBe('2');
+  await act(async () => [...host.querySelectorAll('button')].find(node => node.textContent?.includes('Coach Linh'))!.click());
+  expect(api.markConversationRead).toHaveBeenCalledWith(7, 5);
+  expect(host.querySelector('.chat-widget__badge')).toBeNull();
+});
+
+it('does not mark messages read while the panel is closed', async () => {
+  await render();
+  await act(async () => button('Mở tin nhắn').click());
+  await act(async () => [...host.querySelectorAll('button')].find(node => node.textContent?.includes('Coach Linh'))!.click());
+  await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  vi.mocked(api.getHistory).mockResolvedValue({ items: [{ id: 9, conversationId: 7, clientMessageId: 'late', senderId: 20, mine: false, message: 'Tin mới', createdAt: '2026-11-02T10:00:00Z' }], hasMore: false });
+  await act(async () => vi.mocked(subscribeChat).mock.calls[0][0]());
+  expect(host.textContent).toContain('Tin mới');
+  expect(api.markConversationRead).not.toHaveBeenCalled();
 });
 
 it('closes on outside pointer without stealing focus', async () => {

@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RoleGuard } from '../shared/ui/RoleGuard';
 import { PortalHome } from '../shared/ui/PortalHome';
-import { RouteLoading, RouteLoadError } from '../shared/ui/RouteState';
+import { PortalRouteError, RouteLoading, RouteLoadError } from '../shared/ui/RouteState';
 
 export const router = createBrowserRouter([
   // Public Routes
@@ -227,7 +227,8 @@ export const router = createBrowserRouter([
           },
         ],
       },
-    ],
+    // Lỗi của từng màn hình hiển thị trong vỏ portal, không làm mất sidebar/topbar.
+    ].map(child => ({ ...child, ErrorBoundary: PortalRouteError })),
   },
 
   // Unknown route

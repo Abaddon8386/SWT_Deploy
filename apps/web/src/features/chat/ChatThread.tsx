@@ -1,12 +1,19 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
-import { chatRoleLabel, type ChatConversation } from './chatApi';
+import { announceChatUnread, chatRoleLabel, markConversationRead, type ChatConversation } from './chatApi';
 import type { useChatConversation } from './useChatConversation';
 
-const dateTime = (value: string) => new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 type ChatState = ReturnType<typeof useChatConversation>;
 
-export function ChatThread({ conversation, chat, onBack, active = true }: { conversation: ChatConversation; chat: ChatState; onBack: () => void; active?: boolean }) {
+/** Bàn phím vật lý: Enter gửi, Shift + Enter xuống dòng. Màn hình cảm ứng giữ Enter để xuống dòng. */
+const enterSends = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: fine)').matches;
+
+export function ChatThread({ conversation, chat, onBack, active = true, canMarkRead = active, onRead }: {
+  conversation: ChatConversation; chat: ChatState; onBack: () => void; active?: boolean; canMarkRead?: boolean; onRead?: (conversationId: number) => void;
+}) {
+  const [quickSend] = useState(enterSends);
+  const reported = useRef(0);
   const scroll = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const atBottom = useRef(true);
@@ -25,13 +32,21 @@ export function ChatThread({ conversation, chat, onBack, active = true }: { conv
     previous.current = { first, last, height: node.scrollHeight };
   }, [chat.messages]);
 
+  // Chỉ đánh dấu đã đọc khi người dùng đang thật sự nhìn thấy hội thoại.
+  const lastPeerId = chat.messages.reduce((latest, message) => message.mine ? latest : Math.max(latest, message.id), 0);
+  useEffect(() => {
+    if (!canMarkRead || chat.loading || lastPeerId <= reported.current || document.visibilityState === 'hidden') return;
+    reported.current = lastPeerId;
+    onRead?.(conversation.id);
+    void markConversationRead(conversation.id, lastPeerId).then(result => announceChatUnread(result.count)).catch(() => { reported.current = 0; });
+  }, [canMarkRead, chat.loading, lastPeerId, conversation.id, onRead]);
+
   const unavailable = !conversation.peer.available;
   return <section className="direct-chat__thread" aria-labelledby="chat-thread-title">
     <header className="direct-chat__thread-header">
       <button type="button" className="direct-chat__back direct-chat__link" onClick={onBack}>← Danh sách</button>
       <div><h2 id="chat-thread-title" data-thread-title tabIndex={-1} ref={title}>{conversation.peer.name}</h2>
         <p>{chatRoleLabel(conversation.peer.role)}{unavailable ? ' · Tài khoản không còn khả dụng' : ''}</p></div>
-      <button type="button" className="direct-chat__link" onClick={() => void chat.refresh()} disabled={chat.loading}>Làm mới hội thoại</button>
     </header>
     {chat.error && <div role="alert" className="direct-chat__error"><p>{chat.error}</p><button type="button" className="direct-chat__link" onClick={() => void chat.refresh()}>Thử lại tải tin nhắn</button></div>}
     <div className="direct-chat__transcript" ref={scroll} role="region" aria-label="Lịch sử tin nhắn" tabIndex={0} aria-busy={chat.loading || chat.olderLoading}
@@ -42,7 +57,7 @@ export function ChatThread({ conversation, chat, onBack, active = true }: { conv
         : chat.messages.length === 0 && !chat.error ? <p className="direct-chat__empty">Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.</p> : null}
       <ol className="direct-chat__messages">{chat.messages.map(message => <li key={message.id} className={message.mine ? 'is-mine' : undefined}>
         <div className="direct-chat__bubble"><span className="direct-chat__sender">{message.mine ? 'Bạn' : conversation.peer.name}</span><p>{message.message}</p>
-          <time dateTime={message.createdAt}>{dateTime(message.createdAt)}</time></div>
+          <time dateTime={message.createdAt}>{formatCenterDateTime(message.createdAt)}</time></div>
       </li>)}</ol>
     </div>
     {newBelow && <button className="direct-chat__new direct-chat__link" type="button" onClick={() => { if (scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight; atBottom.current = true; setNewBelow(false); }}>Có tin nhắn mới · Xem ↓</button>}
@@ -53,11 +68,11 @@ export function ChatThread({ conversation, chat, onBack, active = true }: { conv
       <textarea id="chat-message" className="portal-textarea" value={chat.draft} maxLength={2000} rows={3}
         disabled={unavailable || chat.loading} onChange={event => chat.setDraft(event.target.value)} placeholder="Nhập tin nhắn…"
         aria-describedby={chat.sendError ? 'chat-send-error' : 'chat-compose-hint'}
-        onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) {
+        onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && (event.ctrlKey || event.metaKey || (quickSend && !event.shiftKey))) {
           event.preventDefault(); if (!unavailable && !chat.loading) void chat.send();
         } }} />
       {chat.sendError && <p id="chat-send-error" role="alert" className="direct-chat__error">{chat.sendError} Nội dung đã được giữ lại; bạn có thể gửi lại.</p>}
-      <div className="direct-chat__compose-footer"><span id="chat-compose-hint">{chat.draft.length}/2000 · Ctrl + Enter để gửi</span>
+      <div className="direct-chat__compose-footer"><span id="chat-compose-hint">{chat.draft.length}/2000 · {quickSend ? 'Enter để gửi, Shift + Enter xuống dòng' : 'Ctrl + Enter để gửi'}</span>
         <button type="submit" className="btn-primary" disabled={unavailable || chat.loading || chat.sending || !chat.draft.trim()}>{chat.sending ? 'Đang gửi…' : chat.sendError ? 'Gửi lại' : 'Gửi tin nhắn'} <span aria-hidden="true">↗</span></button></div>
     </form>
   </section>;

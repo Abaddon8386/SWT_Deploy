@@ -1,10 +1,12 @@
 import { coachHistoryStorageKey } from './coachHistoryStorage';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
+import { formatTimeRange } from '../../shared/lib/centerTime';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
   attendanceApi,
   type AttendanceStudent,
@@ -72,15 +74,10 @@ export function CoachAttendancePage() {
   // Modal sửa đánh giá giữa màn hình (ở lại tab Lịch sử)
   const [editingEvalRecord, setEditingEvalRecord] = useState<EvaluationHistoryRecord | null>(null);
 
-  // Thông báo nổi bật giữa màn hình theo yêu cầu
-  const [centerNotification, setCenterNotification] = useState<string | null>(null);
-
-  const showCenterNotification = (msg: string = 'Cập nhật thành công') => {
-    setCenterNotification(msg);
-    setTimeout(() => {
-      setCenterNotification(null);
-    }, 2800);
-  };
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [sessionsAttempt, setSessionsAttempt] = useState(0);
+  const [confirm, confirmDialog] = useConfirm();
+  const showCenterNotification = useCallback((msg: string = 'Cập nhật thành công') => notify(msg, 'success'), []);
 
   // Lịch sử điểm danh (hỗ trợ lưu, sửa trong popup, xoá)
   const [history, setHistory] = useState<AttendanceHistoryRecord[]>(() => {
@@ -133,6 +130,7 @@ export function CoachAttendancePage() {
     let mounted = true;
     const fetchSessions = async () => {
       setLoading(true);
+      setSessionsError(null);
       try {
         const data = await attendanceApi.getCoachSessions();
         if (mounted) {
@@ -142,9 +140,7 @@ export function CoachAttendancePage() {
           }
         }
       } catch {
-        if (mounted) {
-          toast.error('Không thể tải danh sách buổi học của HLV.');
-        }
+        if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -154,7 +150,7 @@ export function CoachAttendancePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [sessionsAttempt]);
 
   // Load danh sách học viên khi chọn buổi học khác
   useEffect(() => {
@@ -182,7 +178,6 @@ export function CoachAttendancePage() {
       } catch {
         if (mounted) {
           setRosterError('Không thể tải danh sách học viên của buổi học. Vui lòng chọn lại buổi học.');
-          toast.error('Không thể tải danh sách học viên của buổi học.');
         }
       } finally {
         if (mounted) setLoading(false);
@@ -230,13 +225,12 @@ export function CoachAttendancePage() {
   // Điểm danh nhanh: Đặt tất cả thành Có mặt
   const handleMarkAllPresent = () => {
     setStudents((prev) => prev.map((s) => ({ ...s, status: 'present' })));
-    toast.success('Đã chọn nhanh trạng thái Có mặt cho toàn bộ học viên.');
   };
 
   // Lưu hoặc Cập nhật điểm danh (Tab Điểm danh)
   const handleSaveAttendance = async () => {
     if (!selectedSessionId || !activeSession || !rosterReady || saving || savingEvaluation) {
-      toast.error('Vui lòng chọn buổi học cần lưu điểm danh.');
+      notify('Vui lòng chọn buổi học cần lưu điểm danh.', 'error');
       return;
     }
 
@@ -286,7 +280,7 @@ export function CoachAttendancePage() {
           : 'Lưu điểm danh thành công!'
       );
     } catch {
-      toast.error('Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.');
+      notify('Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
     }
@@ -295,7 +289,7 @@ export function CoachAttendancePage() {
   // Lưu Đánh giá học viên (Tab Đánh giá riêng)
   const handleSaveEvaluations = async () => {
     if (!selectedSessionId || !activeSession || !rosterReady || saving || savingEvaluation) {
-      toast.error('Vui lòng chọn buổi học cần lưu đánh giá.');
+      notify('Vui lòng chọn buổi học cần lưu đánh giá.', 'error');
       return;
     }
 
@@ -340,24 +334,23 @@ export function CoachAttendancePage() {
 
       showCenterNotification('Đã lưu đánh giá tiến bộ học viên vào Lịch sử đánh giá!');
     } catch {
-      toast.error('Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.');
+      notify('Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.', 'error');
     } finally {
       setSavingEvaluation(false);
     }
   };
 
   // Xoá điểm danh buổi hiện tại
-  const handleDeleteCurrentAttendance = () => {
-    if (!selectedSessionId) return;
-    const confirmDelete = window.confirm(
-      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.'
-    );
-    if (!confirmDelete) return;
+  const confirmHide = () => confirm({
+    title: 'Ẩn bản ghi?',
+    message: 'Bản ghi chỉ bị ẩn trên trình duyệt này. Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.',
+    confirmLabel: 'Ẩn bản ghi',
+  });
 
+  const handleDeleteCurrentAttendance = async () => {
+    if (!selectedSessionId || !(await confirmHide())) return;
     const filtered = history.filter((h) => h.sessionId !== selectedSessionId);
     saveHistoryToStorage(filtered);
-
-    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
   };
 
   // Mở modal sửa điểm danh trực tiếp giữa màn hình (Không chuyển tab)
@@ -429,11 +422,9 @@ export function CoachAttendancePage() {
       }
 
       setEditingAttendanceRecord(null);
-      setTimeout(() => {
-        showCenterNotification('Cập nhật thành công');
-      }, 50);
+      showCenterNotification('Cập nhật thành công');
     } catch {
-      toast.error('Không thể lưu cập nhật. Vui lòng thử lại.');
+      notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
     }
@@ -517,38 +508,26 @@ export function CoachAttendancePage() {
       }
 
       setEditingEvalRecord(null);
-      setTimeout(() => {
-        showCenterNotification('Cập nhật thành công');
-      }, 50);
+      showCenterNotification('Cập nhật thành công');
     } catch {
-      toast.error('Không thể lưu cập nhật. Vui lòng thử lại.');
+      notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
     }
   };
 
   // Xoá bản ghi trong Lịch sử điểm danh
-  const handleDeleteFromHistory = (recordId: string) => {
-    const confirmDelete = window.confirm(
-      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu trên hệ thống vẫn được giữ nguyên.'
-    );
-    if (!confirmDelete) return;
-
+  const handleDeleteFromHistory = async (recordId: string) => {
+    if (!(await confirmHide())) return;
     const updated = history.filter((h) => h.id !== recordId);
     saveHistoryToStorage(updated);
-    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
   };
 
   // Xoá bản ghi trong Lịch sử đánh giá
-  const handleDeleteFromEvalHistory = (recordId: string) => {
-    const confirmDelete = window.confirm(
-      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu trên hệ thống vẫn được giữ nguyên.'
-    );
-    if (!confirmDelete) return;
-
+  const handleDeleteFromEvalHistory = async (recordId: string) => {
+    if (!(await confirmHide())) return;
     const updated = evalHistory.filter((h) => h.id !== recordId);
     saveEvalHistoryToStorage(updated);
-    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
   };
 
   // Thống kê nhanh trạng thái (chỉ Có mặt và Vắng mặt)
@@ -616,8 +595,15 @@ export function CoachAttendancePage() {
         </button>
       </div>
 
+      {sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
+        <div className="coach-error-box" role="alert">
+          {sessionsError}{' '}
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setSessionsAttempt((n) => n + 1)}>Thử lại</button>
+        </div>
+      )}
+
       {/* Header Selector & Session Info (Dùng cho tab Điểm danh & Đánh giá) */}
-      {(activeTab === 'attendance' || activeTab === 'evaluation') && (
+      {!sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
         <div className="attendance-header-card">
           <div className="attendance-session-meta">
             <div className="session-title-wrap">
@@ -639,7 +625,7 @@ export function CoachAttendancePage() {
                 Phòng: <strong>{activeSession?.roomName || 'Studio chính'}</strong>
               </span>
               <span>
-                Giờ: <strong>{activeSession?.startTime} - {activeSession?.endTime}</strong>
+                Giờ: <strong>{activeSession ? formatTimeRange(activeSession.startTime, activeSession.endTime) : '—'}</strong>
               </span>
               <span>
                 Đã đăng ký: <strong>{students.length} học viên</strong>
@@ -662,7 +648,7 @@ export function CoachAttendancePage() {
             >
               {sessions.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.className} ({s.startTime} - {s.endTime})
+                  {s.className} ({formatTimeRange(s.startTime, s.endTime)})
                 </option>
               ))}
             </Select>
@@ -682,11 +668,11 @@ export function CoachAttendancePage() {
           {/* Quick Summary: Chỉ giữ Có mặt và Vắng mặt */}
           <div className="attendance-quick-summary">
             <div className="summary-pill-card is-present">
-              <span className="pill-label">Có mặt (Xanh)</span>
+              <span className="pill-label">Có mặt</span>
               <span className="pill-value">{summaryCounts.present}</span>
             </div>
             <div className="summary-pill-card is-absent">
-              <span className="pill-label">Vắng mặt (Đỏ)</span>
+              <span className="pill-label">Vắng mặt</span>
               <span className="pill-value">{summaryCounts.absent}</span>
             </div>
             <div className="summary-pill-card">
@@ -942,7 +928,7 @@ export function CoachAttendancePage() {
                           <span>Phòng: {record.roomName}</span>
                           <span>•</span>
                           <span>
-                            {record.startTime} - {record.endTime}
+                            {formatTimeRange(record.startTime, record.endTime)}
                           </span>
                           <span>•</span>
                           <span>Ngày: {record.sessionDate}</span>
@@ -1024,7 +1010,7 @@ export function CoachAttendancePage() {
                           <span>Phòng: {record.roomName}</span>
                           <span>•</span>
                           <span>
-                            {record.startTime} - {record.endTime}
+                            {formatTimeRange(record.startTime, record.endTime)}
                           </span>
                           <span>•</span>
                           <span>Ngày: {record.sessionDate}</span>
@@ -1080,7 +1066,7 @@ export function CoachAttendancePage() {
           <div className="modal-edit-container">
             <div className="modal-record-meta-bar">
               <span>Phòng: <strong>{editingAttendanceRecord.roomName}</strong></span>
-              <span>Giờ: <strong>{editingAttendanceRecord.startTime} - {editingAttendanceRecord.endTime}</strong></span>
+              <span>Giờ: <strong>{formatTimeRange(editingAttendanceRecord.startTime, editingAttendanceRecord.endTime)}</strong></span>
               <span>Ngày: <strong>{editingAttendanceRecord.sessionDate}</strong></span>
             </div>
 
@@ -1167,7 +1153,7 @@ export function CoachAttendancePage() {
           <div className="modal-edit-container">
             <div className="modal-record-meta-bar">
               <span>Phòng: <strong>{editingEvalRecord.roomName}</strong></span>
-              <span>Giờ: <strong>{editingEvalRecord.startTime} - {editingEvalRecord.endTime}</strong></span>
+              <span>Giờ: <strong>{formatTimeRange(editingEvalRecord.startTime, editingEvalRecord.endTime)}</strong></span>
               <span>Ngày: <strong>{editingEvalRecord.sessionDate}</strong></span>
             </div>
 
@@ -1246,29 +1232,7 @@ export function CoachAttendancePage() {
         </Modal>
       )}
 
-      {/* THÔNG BÁO THÀNH CÔNG NỔI BẬT CHÍNH GIỮA MÀN HÌNH */}
-      {centerNotification && (
-        <div className="center-toast-overlay" onClick={() => setCenterNotification(null)}>
-          <div className="center-toast-card" role="alert" aria-live="assertive">
-            <div className="center-toast-icon-wrap">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div className="center-toast-body">
-              <h4 className="center-toast-title">{centerNotification}</h4>
-            </div>
-            <button
-              type="button"
-              className="center-toast-close"
-              aria-label="Đóng thông báo"
-              onClick={() => setCenterNotification(null)}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      {confirmDialog}
     </div>
   );
 }

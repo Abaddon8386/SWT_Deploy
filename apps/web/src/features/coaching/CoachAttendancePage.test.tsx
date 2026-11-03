@@ -5,7 +5,9 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoachAttendancePage } from './CoachAttendancePage';
 import { attendanceApi, type AttendanceStudent, type CoachClassSession } from './attendanceApi';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
+
+vi.mock('../../shared/lib/portalNotices', async (importOriginal) => ({ ...await importOriginal<typeof import('../../shared/lib/portalNotices')>(), notify: vi.fn() }));
 
 describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch sử sửa trực tiếp bằng Modal)', () => {
   let host: HTMLDivElement;
@@ -77,8 +79,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       updatedCount: 2,
       message: 'Đã lưu điểm danh & đánh giá thành công cho 2 học viên.',
     });
-    vi.spyOn(toast, 'success').mockImplementation(() => {});
-    vi.spyOn(toast, 'error').mockImplementation(() => {});
+    vi.mocked(notify).mockClear();
   });
 
   afterEach(async () => {
@@ -148,7 +149,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       await vi.advanceTimersByTimeAsync(50);
     });
 
-    expect(host.querySelector('.center-toast-card')).not.toBeNull();
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining('đánh giá'), 'success');
   });
 
   it('clicking Sửa điểm danh in History opens Modal directly in center without switching tabs', async () => {
@@ -193,10 +194,9 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       await vi.advanceTimersByTimeAsync(50);
     });
 
-    // Không hiện toast dưới góc
-    expect(toast.success).not.toHaveBeenCalled();
-    // Thông báo chính giữa màn hình chỉ hiển thị "Cập nhật thành công"
-    expect(host.querySelector('.center-toast-title')?.textContent).toBe('Cập nhật thành công');
+    // Kết quả đi vào chuông thông báo (kèm toast góc), không còn overlay giữa màn hình
+    expect(notify).toHaveBeenCalledWith('Cập nhật thành công', 'success');
+    expect(host.querySelector('.center-toast-card')).toBeNull();
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101 })]));
     // Modal is closed
     expect(host.querySelector('.modal-edit-container')).toBeNull();
@@ -237,10 +237,9 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       await vi.advanceTimersByTimeAsync(50);
     });
 
-    // Không hiện toast dưới góc
-    expect(toast.success).not.toHaveBeenCalled();
-    // Thông báo chính giữa màn hình chỉ hiển thị "Cập nhật thành công"
-    expect(host.querySelector('.center-toast-title')?.textContent).toBe('Cập nhật thành công');
+    // Kết quả đi vào chuông thông báo (kèm toast góc), không còn overlay giữa màn hình
+    expect(notify).toHaveBeenCalledWith('Cập nhật thành công', 'success');
+    expect(host.querySelector('.center-toast-card')).toBeNull();
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ progressScore: 85 })]));
   });
   it('keeps a failed history edit open and does not overwrite its stored record', async () => {
@@ -252,7 +251,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
     expect(localStorage.getItem(coachHistoryStorageKey('attendance'))).toBe(original);
-    expect(toast.error).toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
   it('does not fabricate history for a fresh browser', async () => {
@@ -273,7 +272,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
     expect(localStorage.getItem(coachHistoryStorageKey('evaluation'))).toBe(original);
-    expect(toast.error).toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
   it('preserves the latest attendance when updating an older evaluation snapshot', async () => {

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { DatePicker } from '../../shared/ui/DatePicker';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 import { reportsApi, type ReportSummary } from './reportsApi';
+import { Link } from 'react-router-dom';
 
 const vnd = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} đ`;
 const paymentMethods: Record<string, string> = {
@@ -76,7 +79,6 @@ export function ManagerReportsPage() {
   const handleEndDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     if (startDate && val && val < startDate) {
-      toast('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.', 'error');
       setEndDate(startDate);
       return;
     }
@@ -84,10 +86,7 @@ export function ManagerReportsPage() {
   };
 
   const fetchReports = useCallback(async (start: string, end: string) => {
-    if (start > end) {
-      toast('Ngày bắt đầu không được lớn hơn ngày kết thúc.', 'error');
-      return;
-    }
+    if (start > end) return;
     const requestId = ++latestRequest.current;
     setLoading(true);
     setError(null);
@@ -98,9 +97,8 @@ export function ManagerReportsPage() {
       setAppliedRange({ startDate: start, endDate: end });
     } catch (err: unknown) {
       if (requestId !== latestRequest.current) return;
-      const msg = err instanceof Error ? err.message : 'Không thể tải báo cáo doanh thu.';
+      const msg = errorMessage(err, 'Không thể tải báo cáo doanh thu.');
       setError(msg);
-      toast(msg, 'error');
     } finally {
       if (requestId === latestRequest.current) setLoading(false);
     }
@@ -113,10 +111,7 @@ export function ManagerReportsPage() {
 
   const handleApplyFilter = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isInvalidRange) {
-      toast('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.', 'error');
-      return;
-    }
+    if (isInvalidRange) return;
     void fetchReports(startDate, endDate);
   };
 
@@ -206,10 +201,10 @@ export function ManagerReportsPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast('Đã lưu báo cáo đối soát và xuất tệp CSV.', 'success');
+      notify('Đã lưu báo cáo đối soát và xuất tệp CSV.', 'success');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Xuất báo cáo thất bại.';
-      toast(msg, 'error');
+      const msg = errorMessage(err, 'Xuất báo cáo thất bại.');
+      notify(msg, 'error');
     } finally {
       setIsExporting(false);
     }
@@ -230,9 +225,9 @@ export function ManagerReportsPage() {
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Quản lý trung tâm (Center Manager) mới có quyền truy cập báo cáo tài chính &amp; doanh thu.
             </p>
-            <a href="/portal" className="btn-secondary">
+            <Link to="/portal" className="btn-secondary">
               Về trang chủ Portal
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -390,7 +385,7 @@ export function ManagerReportsPage() {
           <div className="metric-card">
             <div className="metric-label">Doanh thu trong kỳ</div>
             <div className="metric-value">{vnd(summary.periodRevenue)}</div>
-            <div className="metric-trend">Từ {appliedRange.startDate} đến {appliedRange.endDate}</div>
+            <div className="metric-trend">Từ {formatCenterDate(appliedRange.startDate)} đến {formatCenterDate(appliedRange.endDate)}</div>
           </div>
 
           <div className="metric-card">
@@ -431,7 +426,7 @@ export function ManagerReportsPage() {
                 <div style={{ minHeight: '28px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
                   {hoveredBar && (
                     <span style={{ color: 'var(--color-accent-gold)' }}>
-                      Ngày {hoveredBar.date}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} giao dịch)
+                      Ngày {formatCenterDate(hoveredBar.date)}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} giao dịch)
                     </span>
                   )}
                 </div>

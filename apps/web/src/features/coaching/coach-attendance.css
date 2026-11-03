@@ -3,14 +3,19 @@
 }
 
 /* Nav Tabs: Điểm danh buổi học vs Đánh giá học viên vs Lịch sử điểm danh */
+/* Một hàng tab; màn hẹp cuộn ngang thay vì xếp chồng thành danh sách dọc. */
 .attendance-nav-tabs {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 24px;
   border-bottom: 1px solid var(--portal-border);
   padding-bottom: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+
+.attendance-nav-tabs::-webkit-scrollbar { display: none; }
 
 .attendance-tab-btn {
   background: transparent;
@@ -18,7 +23,10 @@
   border: none;
   font-size: 0.95rem;
   font-weight: 700;
-  padding: 8px 18px;
+  padding: 8px 16px;
+  min-height: 44px;
+  flex-shrink: 0;
+  white-space: nowrap;
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
@@ -38,7 +46,7 @@
 .attendance-tab-btn.is-active::after {
   content: '';
   position: absolute;
-  bottom: -9px;
+  bottom: -8px;
   left: 0;
   right: 0;
   height: 2px;
@@ -134,8 +142,8 @@
 
 .summary-pill-card .pill-label {
   font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
   font-weight: 600;
   color: var(--portal-muted);
 }

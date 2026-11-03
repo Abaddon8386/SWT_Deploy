@@ -7,6 +7,7 @@ import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
 import { registrationSchema, otpSchema, type RegistrationFields } from './authValidation';
 import { readPendingRegistration, savePendingRegistration, type PendingRegistration } from './pendingRegistration';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 const RESEND_COOLDOWN = 30;
 
@@ -70,7 +71,7 @@ export function RegisterPage() {
       setForm(previous => ({ ...previous, password: '' }));
       await sendOtp(account);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đăng ký không thành công.');
+      setError(errorMessage(err, 'Đăng ký không thành công.'));
     } finally {
       requestBusy.current = false;
       setBusy(false);
@@ -85,7 +86,7 @@ export function RegisterPage() {
     try {
       await sendOtp();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể gửi lại mã OTP.');
+      setError(errorMessage(err, 'Không thể gửi lại mã OTP.'));
     } finally {
       requestBusy.current = false;
       setBusy(false);
@@ -112,7 +113,7 @@ export function RegisterPage() {
       toast('Tài khoản đã được kích hoạt thành công!', 'success');
       navigate(purchaseAuthPath('/login', search), { replace: true, viewTransition: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xác thực OTP thất bại.');
+      setError(errorMessage(err, 'Xác thực OTP thất bại.'));
     } finally {
       requestBusy.current = false;
       setBusy(false);

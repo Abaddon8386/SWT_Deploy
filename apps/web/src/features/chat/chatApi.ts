@@ -1,7 +1,11 @@
 import { apiFetch } from '../../shared/api/client';
 
 export interface ChatContact { id: number; name: string; role: string; available: boolean }
-export interface ChatConversation { id: number; peer: ChatContact; createdAt: string; lastActivityAt: string }
+export interface ChatConversation {
+  id: number; peer: ChatContact; createdAt: string; lastActivityAt: string;
+  /** Chỉ có trong danh sách hội thoại. */
+  lastMessage?: string | null; lastMessageMine?: boolean; unreadCount?: number;
+}
 export interface ChatMessage {
   id: number; conversationId: number; clientMessageId: string; senderId: number;
   mine: boolean; message: string; createdAt: string;
@@ -24,5 +28,14 @@ export function getHistory(id: number, cursor: { beforeId?: number; afterId?: nu
 export const sendMessage = (id: number, message: string, clientMessageId: string) => apiFetch<ChatMessage>(`/chat/conversations/${id}/messages`, {
   method: 'POST', body: JSON.stringify({ message, clientMessageId }),
 });
+
+export const getChatUnreadCount = () => apiFetch<{ count: number }>('/chat/unread-count');
+export const markConversationRead = (id: number, lastMessageId: number) => apiFetch<{ count: number }>(`/chat/conversations/${id}/read`, {
+  method: 'POST', body: JSON.stringify({ lastMessageId }),
+});
+
+/** Số tin chưa đọc được phát cho nút “Tin nhắn” mỗi khi thay đổi. */
+export const CHAT_UNREAD_EVENT = 'sol-chat-unread';
+export const announceChatUnread = (count: number) => window.dispatchEvent(new CustomEvent<number>(CHAT_UNREAD_EVENT, { detail: count }));
 
 export const chatRoleLabel = (role: string) => ({ MEMBER: 'Hội viên', RECEPTIONIST: 'Lễ tân', COACH: 'Huấn luyện viên' })[role] ?? 'Tài khoản';

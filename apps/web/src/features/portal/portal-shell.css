@@ -241,8 +241,8 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   z-index: auto;
 }
 .portal-workspace, .portal-topbar-actions, .portal-account { display: flex; align-items: center; gap: 16px; min-width: 0; }
-.portal-wordmark { flex-shrink: 0; font-weight: 800; font-size: 22px; letter-spacing: -.06em; line-height: 1.2; color: var(--portal-paper); }
-.portal-wordmark span { display: block; margin-top: 5px; font-size: 9px; font-weight: 500; letter-spacing: .04em; color: var(--portal-muted); }
+.portal-wordmark { flex-shrink: 0; display: inline-flex; flex-direction: column; justify-content: center; min-height: 44px; font-weight: 800; font-size: 22px; letter-spacing: -.06em; line-height: 1.2; color: var(--portal-paper); }
+.portal-wordmark span { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--portal-muted); }
 .portal-workspace-divider { width: 1px; height: 28px; background: var(--portal-border); }
 .portal-workspace-role { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--portal-border); border-radius: 24px; background: var(--portal-surface); font-size: 11px; font-weight: 600; white-space: nowrap; }
 .portal-search-trigger { display: inline-flex; align-items: center; gap: 10px; width: 205px; min-height: 42px; padding: 10px 15px; border: 1px solid transparent; border-radius: 24px; background: var(--portal-surface); color: var(--portal-muted); font: 400 12px var(--font-sans); text-align: left; cursor: pointer; transition: border-color 160ms ease; }
@@ -257,6 +257,9 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 /* Chừa chỗ cuối trang cho nút Tin nhắn (và AI của hội viên) nổi ở góc phải */
 .portal-v2 #portal-main { flex: 1; min-width: 0; outline: none; padding-bottom: 88px; }
 .portal-v2:has(.member-ai-chat) #portal-main { padding-bottom: 156px; }
+/* Khi khung Tin nhắn đang mở, ẩn nút AI nằm sau khung để không ló ra ở mép. */
+.portal-v2:has(.chat-widget__panel:not([hidden])) .member-ai-chat .liquid-glass-chat-trigger { visibility: hidden; }
+.portal-v2 .portal-wordmark { min-width: 44px; }
 .portal-v2 .portal-container { width: 100%; max-width: none; padding: 10px 24px 32px; }
 .portal-v2 .portal-header { align-items: center; margin-bottom: 30px; padding: 0; border: 0; gap: 16px; }
 .portal-v2 .portal-header::after, .portal-v2 .portal-eyebrow::before { display: none; }
@@ -330,6 +333,10 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-v2 .portal-hint, .portal-v2 .portal-table .muted { color: var(--portal-muted); }
 .portal-v2 .form-row { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
 .portal-v2 .form-actions { flex-wrap: wrap; }
+.confirm-dialog__message { line-height: 1.6; }
+.confirm-dialog__actions { margin-top: 24px; justify-content: flex-end; }
+/* Lỗi nhập liệu hiển thị ngay tại form, thay cho toast. */
+.portal-v2 .form-error { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--portal-danger); }
 .portal-v2 .profile-metric-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 12px; margin-bottom: 20px; }
 .portal-v2 .profile-metric-form__type, .portal-v2 .profile-metric-form > button { grid-column: 1 / -1; }
 .portal-v2 .reports-charts-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; margin-bottom: 24px; }
@@ -412,7 +419,7 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   .portal-workspace { gap: 10px; }
   .portal-workspace-divider, .portal-workspace-role { display: none; }
   .portal-wordmark { font-size: 20px; }
-  .portal-wordmark span { font-size: 8px; }
+  .portal-wordmark span { font-size: 11px; }
   .portal-topbar-actions { gap: 6px; }
   .portal-mobile-menu { display: inline-flex; }
   .portal-search-trigger { justify-content: center; width: 40px; min-height: 44px; padding: 8px; background: transparent; }
@@ -433,7 +440,8 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   .portal-v2 .portal-dialog__body { padding: 20px; }
   .portal-v2 .portal-dialog:has(.portal-menu-settings) { margin-bottom: max(12px, env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
   .portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, .luxury-timepicker-trigger, select:not(.ui-select__native)) { font-size: 16px; min-height: 44px; }
-  .portal-v2 :is(.btn-primary, .btn-secondary, .btn-danger, .btn-sm, .filter-chip, .seg-btn, .btn-metric-action, .profile-metric-editing-bar button, .theme-toggle, .portal-search-trigger) { min-height: 44px; }
+  .portal-v2 :is(.btn-primary, .btn-secondary, .btn-danger, .btn-sm, .filter-chip, .seg-btn, .btn-metric-action, .profile-metric-editing-bar button, .theme-toggle, .portal-search-trigger, .coach-tab-btn, .attendance-tab-btn, .btn-quick-present, .btn-batch-save) { min-height: 44px; }
+  .portal-v2 .btn-favorite-star { min-width: 44px; min-height: 44px; }
   .portal-v2 :is(.portal-icon-button, .theme-toggle, .portal-search-trigger) { min-width: 44px; flex-shrink: 0; }
   .portal-v2 .member-notification-bell { min-width: 44px; min-height: 44px; }
   .portal-v2 .portal-table-wrapper { overflow-x: auto; overscroll-behavior-x: contain; }
@@ -456,7 +464,6 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   .portal-mobile-nav__item.active svg { stroke-width: 2.2; }
   .portal-mobile-nav__item:is(:hover, :focus-visible) { background: var(--portal-tint); color: var(--portal-salmon); }
   .portal-workspace-footer { padding: 16px 8px 8px; }
-  .portal-workspace-footer > span:last-child { display: none; }
   .portal-v2 .grid-2, .portal-v2 .grid-3 { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -607,6 +614,7 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 
 /* Màn hình cảm ứng rộng hơn 767px (máy tính bảng): vùng chạm tối thiểu 44px */
 @media (pointer: coarse) and (min-width: 768px) {
-  .portal-v2 :is(.btn-primary, .btn-secondary, .btn-danger, .btn-sm, .filter-chip, .seg-btn, .btn-metric-action, .profile-metric-editing-bar button, .theme-toggle, .portal-search-trigger) { min-height: 44px; }
+  .portal-v2 :is(.btn-primary, .btn-secondary, .btn-danger, .btn-sm, .filter-chip, .seg-btn, .btn-metric-action, .profile-metric-editing-bar button, .theme-toggle, .portal-search-trigger, .coach-tab-btn, .attendance-tab-btn, .btn-quick-present, .btn-batch-save) { min-height: 44px; }
+  .portal-v2 .btn-favorite-star { min-width: 44px; min-height: 44px; }
   .portal-v2 :is(.portal-icon-button, .theme-toggle, .portal-search-trigger, .portal-dialog__close) { min-width: 44px; min-height: 44px; }
 }

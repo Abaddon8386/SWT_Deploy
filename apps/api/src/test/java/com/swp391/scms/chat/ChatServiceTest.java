@@ -162,6 +162,37 @@ class ChatServiceTest {
         assertThat(service.history(member, 7L, null, 0L).items().getFirst().id()).isEqualTo(1L);
     }
 
+    @Test void listShowsPreviewAndUnreadCountPerConversation() {
+        var latest = new ChatMessage(conversation, coach, UUID.randomUUID(), "Hẹn gặp\n  ở lớp " + "x".repeat(200), Instant.now()); latest.setId(42L);
+        when(conversations.forUser(eq(10L), any())).thenReturn(new PageImpl<>(List.of(conversation)));
+        when(messages.latestIn(List.of(7L))).thenReturn(List.of(latest));
+        when(messages.unreadIn(10L, List.of(7L))).thenReturn(List.<Object[]>of(new Object[]{7L, 3L}));
+        var row = service.list(member, 0).getContent().getFirst();
+        assertThat(row.unreadCount()).isEqualTo(3L);
+        assertThat(row.lastMessageMine()).isFalse();
+        assertThat(row.lastMessage()).startsWith("Hẹn gặp ở lớp").hasSize(120).endsWith("…");
+    }
+
+    @Test void markReadOnlyMovesForwardAndIsClampedToRealMessages() {
+        when(messages.latestId(7L)).thenReturn(Optional.of(50L));
+        when(messages.unreadTotal(10L)).thenReturn(0L);
+        assertThat(service.markRead(member, 7L, new MarkChatRead(999L)).count()).isZero();
+        assertThat(conversation.lastReadBy(10L)).isEqualTo(50L);
+        service.markRead(member, 7L, new MarkChatRead(20L));
+        assertThat(conversation.lastReadBy(10L)).isEqualTo(50L);
+        assertThat(conversation.lastReadBy(20L)).isNull();
+        assertThatThrownBy(() -> service.markRead(member, 7L, new MarkChatRead(0L))).isInstanceOf(BadRequestException.class);
+        var outsider = new AuthenticatedPrincipal(30L, "coach2", "COACH");
+        when(contacts.findUser(30L)).thenReturn(Optional.of(user(30, "COACH")));
+        assertThatThrownBy(() -> service.markRead(outsider, 7L, new MarkChatRead(10L))).isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test void sendingMarksTheSendersOwnMessageAsRead() {
+        service.send(member, 7L, new SendChatMessage(UUID.randomUUID(), "Xin chào"));
+        assertThat(conversation.lastReadBy(10L)).isEqualTo(100L);
+        assertThat(conversation.lastReadBy(20L)).isNull();
+    }
+
     @Test void pagesOlderAndNewerWithoutDroppingThe51stMessage() {
         var descending = new ArrayList<ChatMessage>();
         for (long id = 60; id >= 10; id--) {

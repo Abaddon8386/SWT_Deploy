@@ -2,9 +2,11 @@ import { Select } from '../../shared/ui/Select';
 import { useCallback, useEffect, useState } from 'react';
 import { catalogApi, type Discipline, type MembershipPackage, type Room } from './catalogApi';
 import { Modal } from '../../shared/ui/Modal';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { notify } from '../../shared/lib/portalNotices';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { isCourtDiscipline } from '../courts/courtsApi';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 type Tab = 'disciplines' | 'rooms' | 'packages';
 type Form = Record<string, string>;
@@ -13,6 +15,7 @@ const ROOM_STATUS_LABEL = { available: 'Đang hoạt động', maintenance: 'B�
 const vnd = (n: number) => `${n.toLocaleString('vi-VN')} đ`;
 
 export function ManagerCatalogsPage() {
+  const [confirm, confirmDialog] = useConfirm();
   const [tab, setTab] = useState<Tab>('disciplines');
   const [disciplines, setDisciplines] = useState<Discipline[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -32,7 +35,7 @@ export function ManagerCatalogsPage() {
       setRooms(r);
       setPackages(p);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải danh mục.');
+      setError(errorMessage(err, 'Không thể tải danh mục.'));
     } finally {
       setLoading(false);
     }
@@ -51,7 +54,7 @@ export function ManagerCatalogsPage() {
       await load();
       notify(successMsg, 'success');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Thao tác thất bại.';
+      const msg = errorMessage(err, 'Thao tác thất bại.');
       setError(msg);
       notify(msg, 'error');
     } finally {
@@ -497,13 +500,21 @@ export function ManagerCatalogsPage() {
                           <button
                             type="button"
                             className="btn-secondary btn-sm"
-                            onClick={() => {
+                            onClick={async () => {
                               const nextStatus = p.status === 'active' ? 'inactive' : 'active';
                               const label = nextStatus === 'active' ? 'mở bán' : 'ngừng bán';
-                              if (window.confirm(`Bạn có chắc muốn ${label} gói "${p.name}"?`)) {
+                              const confirmed = await confirm({
+                                title: nextStatus === 'active' ? 'Mở bán gói tập?' : 'Ngừng bán gói tập?',
+                                message: nextStatus === 'active'
+                                  ? `Gói "${p.name}" sẽ hiển thị lại cho hội viên đăng ký.`
+                                  : `Hội viên sẽ không đăng ký mới được gói "${p.name}". Gói đang dùng không bị ảnh hưởng.`,
+                                confirmLabel: nextStatus === 'active' ? 'Mở bán' : 'Ngừng bán',
+                                danger: nextStatus !== 'active',
+                              });
+                              if (confirmed) {
                                 void run(
                                   () => catalogApi.setPackageStatus(p.id, nextStatus),
-                                  `Đã chuyển gói "${p.name}" sang ${label}!`
+                                  `Đã chuyển gói "${p.name}" sang ${label}.`
                                 );
                               }
                             }}
@@ -520,6 +531,7 @@ export function ManagerCatalogsPage() {
           </div>
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }

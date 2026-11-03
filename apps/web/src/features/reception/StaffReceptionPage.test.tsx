@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { StaffReceptionPage } from './StaffReceptionPage';
 import { getCurrentUser } from '../../shared/api/client';
 import { checkinApi } from './checkinApi';
@@ -48,7 +49,7 @@ it.each(['STAFF', 'MANAGER'] as const)('shows a scannable gate QR on reception b
 
 it('keeps the gate QR hidden from members on reception', async () => {
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'member', name: 'Hội viên', identifier: 'member', role: 'MEMBER' });
-  await act(async () => root.render(<StaffReceptionPage />));
+  await act(async () => root.render(<MemoryRouter><StaffReceptionPage /></MemoryRouter>));
   expect(host.querySelector('[data-testid="reception-forbidden-guard"]')).not.toBeNull();
   expect(host.querySelector('img[alt="Mã QR cổng check-in"]')).toBeNull();
   expect(checkinApi.gateQr).not.toHaveBeenCalled();

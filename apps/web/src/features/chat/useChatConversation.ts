@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getHistory, sendMessage, type ChatMessage } from './chatApi';
+import { errorMessage } from '../../shared/lib/errorMessage';
 
 interface Thread {
   id: number; messages: ChatMessage[]; cursor: number | null; syncing: boolean; again: boolean;
 }
-const errorText = (error: unknown) => error instanceof Error ? error.message : 'Không thể tải tin nhắn. Vui lòng thử lại.';
+const errorText = (error: unknown) => errorMessage(error, 'Không thể tải tin nhắn. Vui lòng thử lại.');
 
 export function useChatConversation(onSent: () => void) {
   const thread = useRef<Thread | null>(null);

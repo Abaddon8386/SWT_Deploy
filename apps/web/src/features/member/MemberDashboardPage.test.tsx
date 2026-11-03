@@ -76,7 +76,7 @@ describe('SCRUM-85 dashboard', () => {
     const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     api.membership.mockResolvedValue({ ...membership, startDate: key(start), endDate: key(end), paidThroughDate: key(paid) });
     await renderDashboard();
-    expect(host.querySelector('.member-card-details-link')?.textContent).toContain(paid.toLocaleDateString('vi-VN'));
+    expect(host.querySelector('.member-card-details-link')?.textContent).toContain(paid.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }));
     expect(host.querySelector('.member-card-details-link')?.textContent).toContain('Còn 120 ngày');
   });
 
