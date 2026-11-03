@@ -20,7 +20,6 @@ import {
   renewMembershipSubscription,
   requestMembershipHold,
   resumeMembershipSubscription,
-  requestMembershipCancellation,
   upgradeMembershipSubscription,
   type MemberSubscription,
   type MembershipPackage,
@@ -102,10 +101,6 @@ export function MemberPackagesPage() {
   const [isResuming, setIsResuming] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
   const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
-  const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
-  const [cancellationReason, setCancellationReason] = useState('');
-  const [cancellationError, setCancellationError] = useState<string | null>(null);
-  const [isSubmittingCancellation, setIsSubmittingCancellation] = useState(false);
   const [isPeriodsOpen, setIsPeriodsOpen] = useState(false);
 
   const loadPackages = useCallback(async () => {
@@ -527,32 +522,6 @@ export function MemberPackagesPage() {
     }
   }
 
-  async function handleSubmitCancellation(e: React.FormEvent) {
-    e.preventDefault();
-    if (!current || isSubmittingCancellation || requestBusy.current) return;
-    const reason = cancellationReason.trim();
-    if (!reason) {
-      setCancellationError('Vui lòng nhập lý do hủy gói tập.');
-      return;
-    }
-    requestBusy.current = true;
-    setIsSubmittingCancellation(true);
-    syncVersion.current += 1;
-    setCancellationError(null);
-    try {
-      await requestMembershipCancellation(current.id, reason);
-      await loadCancellations();
-      setIsCancellationModalOpen(false);
-      setCancellationReason('');
-      notify('Đã gửi yêu cầu hủy gói. Gói vẫn có hiệu lực cho đến khi quản lý duyệt.', 'success');
-    } catch (error) {
-      setCancellationError(errorMessage(error, 'Không thể gửi yêu cầu hủy. Vui lòng thử lại.')); await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
-    } finally {
-      setIsSubmittingCancellation(false);
-      requestBusy.current = false;
-      if (refreshQueued.current) refreshNow.current();
-    }
-  }
 
   const activePackages = packages.filter((item) => item.status === 'active');
 
