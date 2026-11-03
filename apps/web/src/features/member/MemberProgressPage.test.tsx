@@ -102,3 +102,13 @@ it('hides checkboxes if completion loading fails and retries from the backend', 
   await act(async () => retry?.click());
   expect((host.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true);
 });
+
+it('shows the measurements empty state when only other health metrics exist', async () => {
+  vi.mocked(api.getMyProgressMetrics).mockResolvedValue([
+    { id: 1, metricName: 'height', metricValue: 170, unit: 'cm', recordedAt: '2026-10-19T08:00:00' },
+  ]);
+  await render();
+  expect(host.textContent).toContain('Chưa có số đo cân nặng hoặc BMI.');
+  expect(host.querySelector('.member-progress-values')).toBeNull();
+  expect(host.querySelector('svg.member-progress-chart')).toBeNull();
+});
