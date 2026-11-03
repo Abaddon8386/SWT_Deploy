@@ -31,7 +31,7 @@ export function CourtBookingFeature() {
   const [recurrence, setRecurrence] = useState<RecurrenceChoice>({ period: 'once', days: [] });
   const [outcome, setOutcome] = useState<RecurringCourtResult | null>(null);
   const [quota, setQuota] = useState<CourtQuota | null>(null);
-  const [method, setMethod] = useState<CourtPaymentMethod>('online_wallet');
+  const [method, setMethod] = useState<CourtPaymentMethod>('vnpay');
   const gridHeading = useRef<HTMLHeadingElement>(null);
   const today = centerDate();
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= today && date <= dateAfter(today, 7);
@@ -107,10 +107,11 @@ export function CourtBookingFeature() {
             <label className="portal-form-group" htmlFor="court-pay-method"><span className="portal-label">Phương thức thanh toán</span><Select id="court-pay-method" className="portal-select" value={method} disabled={busy} onChange={event => setMethod(event.target.value as CourtPaymentMethod)}>{PAYMENT_METHODS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></label>
           </>}
       </div>
-      {!covered && method === 'vnpay' && <p className="muted">Sau khi đặt, chọn “Thanh toán VNPay Sandbox” tại lượt đặt của bạn để hoàn tất. Mỗi buổi định kỳ được thanh toán riêng.</p>}
+      {!covered && method === 'vnpay' && <p className="muted">Sau khi đặt, chọn “Thanh toán VNPay Sandbox” tại lượt đặt của bạn để hoàn tất. Mỗi buổi định kỳ được thanh toán riêng. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.</p>}
+      {!covered && method === 'cash' && <p className="muted">Thanh toán tiền mặt tại quầy lễ tân. Lượt đặt chưa được xác nhận thu tiền khi đến giờ bắt đầu sẽ tự hủy.</p>}
       <p className="muted">Tối đa 4 lượt/ngày; hủy trước giờ bắt đầu ít nhất 2 giờ.</p></>}
       {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{actionError}</p>{needsMembership && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">Xem / Đăng ký gói tập</Link></div>}</div>}
-      <div className="court-modal-actions">{outcome ? <button type="button" className="btn-primary" onClick={() => setSelection(null)}>Đóng</button> : <><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>Quay lại</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? 'Đang đặt…' : recurrence.period !== 'once' ? 'Xác nhận đặt định kỳ' : covered ? 'Xác nhận đặt' : method === 'vnpay' ? 'Đặt sân & Thanh toán sau qua VNPay' : 'Thanh toán và đặt'}</button></>}</div>
+      <div className="court-modal-actions">{outcome ? <button type="button" className="btn-primary" onClick={() => setSelection(null)}>Đóng</button> : <><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>Quay lại</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? 'Đang đặt…' : recurrence.period !== 'once' ? 'Xác nhận đặt định kỳ' : covered ? 'Xác nhận đặt' : method === 'vnpay' ? 'Đặt sân & Thanh toán sau qua VNPay' : 'Đặt sân & thanh toán tại quầy'}</button></>}</div>
     </Modal>}
   </div>;
 }

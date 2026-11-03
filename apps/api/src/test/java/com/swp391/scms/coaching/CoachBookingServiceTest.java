@@ -125,7 +125,7 @@ class CoachBookingServiceTest {
                 LocalDate.of(2026, 10, 31),
                 LocalTime.of(14, 0),
                 LocalTime.of(15, 0),
-                "bank_transfer",
+                "cash",
                 "Mục tiêu tăng cơ giảm mỡ"
         );
 
@@ -133,7 +133,7 @@ class CoachBookingServiceTest {
 
         assertThat(result).isNotNull();
         assertThat(result.id()).isEqualTo(100L);
-        assertThat(result.paymentMethod()).isEqualTo("bank_transfer");
+        assertThat(result.paymentMethod()).isEqualTo("cash");
         assertThat(result.paymentStatus()).isEqualTo("pending");
         assertThat(result.status()).isEqualTo("confirmed");
     }
@@ -151,7 +151,7 @@ class CoachBookingServiceTest {
                 LocalDate.of(2026, 10, 31),
                 LocalTime.of(9, 0),
                 LocalTime.of(10, 0),
-                "bank_transfer",
+                "cash",
                 "Đặt gấp"
         );
 
@@ -182,7 +182,7 @@ class CoachBookingServiceTest {
                 LocalDate.of(2026, 10, 31),
                 LocalTime.of(14, 0),
                 LocalTime.of(15, 0),
-                "bank_transfer",
+                "cash",
                 "Tập riêng"
         );
 
@@ -305,7 +305,7 @@ class CoachBookingServiceTest {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
-                LocalTime.of(14, 0), LocalTime.of(15, 0), "bank_transfer", null);
+                LocalTime.of(14, 0), LocalTime.of(15, 0), "cash", null);
         assertThatThrownBy(() -> service.createBooking(principal, request))
                 .isInstanceOf(BadRequestException.class)
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("MEMBERSHIP_INACTIVE_OR_EXPIRED"));
@@ -375,7 +375,7 @@ class CoachBookingServiceTest {
         booking.setStartTime(LocalTime.of(14, 0));
         booking.setEndTime(LocalTime.of(15, 0));
         booking.setHourlyRate(new java.math.BigDecimal("200000.00"));
-        booking.setPaymentMethod("bank_transfer");
+        booking.setPaymentMethod("cash");
         booking.setPaymentStatus("pending");
         booking.setStatus("completed");
         when(coachBookingRepository.findByIdForUpdate(90L)).thenReturn(Optional.of(booking));
@@ -438,7 +438,7 @@ class CoachBookingServiceTest {
 
         var result = service.createRecurringBooking(principal, new com.swp391.scms.coaching.dto.CoachRecurringBookingDto(
                 20L, null, LocalDate.of(2026, 11, 2), LocalTime.of(14, 0), LocalTime.of(15, 0),
-                "week", List.of(1, 3, 5), "bank_transfer", null));
+                "week", List.of(1, 3, 5), "cash", null));
 
         assertThat(result.booked()).extracting(CoachBookingDto::bookingDate)
                 .containsExactly(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 6));

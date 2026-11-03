@@ -87,7 +87,7 @@ export const createPaymentRequest = (subscription: MemberSubscription, amount: n
       memberId: subscription.memberId,
       subscriptionId: subscription.id,
       amount,
-      method: 'bank_transfer',
+      method: 'online_wallet',
     }),
   });
 

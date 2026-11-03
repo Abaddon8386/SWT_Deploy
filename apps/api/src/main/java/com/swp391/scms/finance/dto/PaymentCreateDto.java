@@ -31,8 +31,8 @@ public class PaymentCreateDto {
     private BigDecimal amount;
 
     @NotBlank(message = "{validation.payment.method.not_blank}")
-    @Pattern(regexp = "(?i)^(cash|pos|bank_transfer|online_wallet)$", message = "{validation.payment.method.pattern}")
-    @Schema(description = "Phương thức thanh toán", example = "pos")
+    @Pattern(regexp = "(?i)^(cash|online_wallet)$", message = "{validation.payment.method.pattern}")
+    @Schema(description = "Phương thức thanh toán", example = "cash")
     private String method;
 
     @Pattern(regexp = "(?i)^(success|pending|failed|refunded)$", message = "{validation.payment.status.pattern}")

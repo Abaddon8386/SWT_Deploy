@@ -26,7 +26,7 @@ describe('SCRUM-86 payment API', () => {
     expect(url).toBe('/api/v1/payments');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({
-      memberId: 34, subscriptionId: 12, amount: 500000, method: 'bank_transfer',
+      memberId: 34, subscriptionId: 12, amount: 500000, method: 'online_wallet',
     });
   });
 
