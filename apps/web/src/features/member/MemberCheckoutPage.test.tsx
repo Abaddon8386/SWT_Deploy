@@ -9,6 +9,10 @@ vi.mock('./membershipApi', () => ({
   getMembershipPackages: vi.fn(),
   getMembershipHistory: vi.fn(),
   createMembershipSubscription: vi.fn(),
+  createCashReceiptPayment: vi.fn(),
+}));
+vi.mock('../../shared/lib/receiptImage', () => ({
+  readReceiptImage: vi.fn(async () => 'data:image/jpeg;base64,AAAA'),
 }));
 
 describe('MemberCheckoutPage Component', () => {
@@ -99,11 +103,15 @@ describe('MemberCheckoutPage Component', () => {
     });
   }
 
-  async function setDate(value: string) {
-    const input = host.querySelector('#appointment-date') as HTMLInputElement;
+  async function attachReceipt() {
+    const input = host.querySelector('#receipt-image') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'bill.jpg', { type: 'image/jpeg' })], configurable: true });
     await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
     });
   }
 
@@ -117,71 +125,53 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.textContent).toContain('650.000');
   });
 
-  it('offers only counter payment and invents no bank details or payment gateway', async () => {
+  it('has no counter appointment picker and asks for a receipt photo for cash payment', async () => {
     await renderCheckout('/member/packages/checkout?packageId=1');
 
-    expect(host.textContent).toContain('Thanh toán tại quầy lễ tân');
-    expect(host.textContent).not.toContain('VietQR');
-    expect(host.textContent).not.toContain('999988886666');
-    expect(host.textContent).not.toContain('VAT');
-    expect(host.querySelector('img')).toBeNull();
+    expect(host.querySelector('#appointment-date')).toBeNull();
+    expect(host.querySelector('.time-slot-btn')).toBeNull();
+    expect(host.textContent).not.toContain('tới quầy');
+    expect(host.querySelector('#receipt-image')).not.toBeNull();
+    expect(host.querySelector<HTMLButtonElement>('form button[type="submit"]')!.disabled).toBe(true);
   });
 
-  it('creates the request only when the page is opened without one, and shows its real number', async () => {
+  it('creates the request only when the page is opened without one, then sends the receipt', async () => {
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, id: 101, packageId: 1 }]);
     await renderCheckout('/member/packages/checkout?packageId=1');
 
-    const slot14 = Array.from(host.querySelectorAll('.time-slot-btn')).find(
-      (btn) => btn.textContent?.trim() === '14:00'
-    ) as HTMLButtonElement;
-    await act(async () => {
-      slot14.click();
-    });
-    expect(slot14.classList.contains('is-active')).toBe(true);
-    // A date far in the future is never "in the past", whatever time is picked.
-    await setDate('2099-01-02');
+    await attachReceipt();
     await submitForm();
 
     expect(membershipApi.createMembershipSubscription).toHaveBeenCalledExactlyOnceWith(1);
-    expect(host.textContent).toContain('Đã ghi lịch dự kiến tới quầy');
+    expect(membershipApi.createCashReceiptPayment).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ id: 101 }), 650000, 'data:image/jpeg;base64,AAAA');
+    expect(host.textContent).toContain('Đã gửi ảnh hóa đơn');
     expect(host.textContent).toContain('Đơn #101');
-    expect(host.textContent).toContain('14:00 ngày 02/01/2099');
-    expect(host.textContent).not.toContain('VOUCHER');
-    expect(host.textContent).toContain('không được gửi cho lễ tân');
   });
 
   it('reuses an existing request and charges the quoted upgrade amount, not the list price', async () => {
     await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
 
-    expect(membershipApi.getMembershipHistory).toHaveBeenCalled();
     expect(host.querySelector('.order-breakdown-row.total')?.textContent).toContain('1.150.000');
 
-    await setDate('2099-01-02');
+    await attachReceipt();
     await submitForm();
 
     expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
+    expect(membershipApi.createCashReceiptPayment).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ id: 55 }), 1150000, 'data:image/jpeg;base64,AAAA');
     expect(host.textContent).toContain('Đơn #55');
-    expect(host.textContent).toContain('1.150.000');
   });
 
-  it('rejects a time that has already passed instead of recording it', async () => {
-    await renderCheckout('/member/packages/checkout?packageId=1');
+  it('shows the error and does not claim success when the receipt cannot be sent', async () => {
+    vi.mocked(membershipApi.createCashReceiptPayment).mockRejectedValue(new Error('Đã có thanh toán cho yêu cầu này'));
+    await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
 
-    await setDate('2000-01-01');
+    await attachReceipt();
     await submitForm();
 
-    expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
-    expect(host.textContent).not.toContain('Đã ghi lịch dự kiến');
-  });
-
-  it('shows the error and does not claim success when the request cannot be created', async () => {
-    vi.mocked(membershipApi.createMembershipSubscription).mockRejectedValue(new Error('Bạn đã có gói tập đang hoạt động'));
-    await renderCheckout('/member/packages/checkout?packageId=1');
-
-    await setDate('2099-01-02');
-    await submitForm();
-
-    expect(host.textContent).not.toContain('Đã ghi lịch dự kiến');
-    expect(host.textContent).toContain('Tóm tắt đơn hàng');
+    expect(host.textContent).not.toContain('Đã gửi ảnh hóa đơn');
+    expect(host.textContent).toContain('Đã có thanh toán cho yêu cầu này');
   });
 
   it('displays error state when packageId is invalid', async () => {

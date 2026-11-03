@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -47,7 +48,19 @@ public class PaymentCreateDto {
     @Schema(description = "Ghi chú giao dịch", example = "Thanh toán gói Silver 3 tháng tại quầy")
     private String note;
 
+    @Size(max = 3_000_000, message = "{validation.payment.receipt.size}")
+    @Schema(description = "Ảnh hóa đơn thanh toán tiền mặt dạng data URL (jpeg/png/webp)")
+    private String receiptImage;
+
     public PaymentCreateDto() {}
+
+    public String getReceiptImage() {
+        return receiptImage;
+    }
+
+    public void setReceiptImage(String receiptImage) {
+        this.receiptImage = receiptImage;
+    }
 
     public Long getMemberId() {
         return memberId;

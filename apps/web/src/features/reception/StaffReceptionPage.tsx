@@ -80,6 +80,17 @@ export function StaffReceptionPage() {
   const [completedMembershipCode, setCompletedMembershipCode] = useState<string | null>(null);
   const selectedMemberId = selectedMember?.userId;
   const selectedPendingId = selectedPending?.id;
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReceiptImage(null);
+    if (!hasAccess || selectedMemberId == null || selectedPendingId == null) return;
+    let active = true;
+    receptionApi.getPendingReceipt(selectedMemberId, selectedPendingId)
+      .then((image) => { if (active) setReceiptImage(image); })
+      .catch(() => { if (active) setReceiptImage(null); });
+    return () => { active = false; };
+  }, [hasAccess, selectedMemberId, selectedPendingId]);
 
   const loadPendingSubscriptions = useCallback(async () => {
     if (!hasAccess) return;
@@ -612,6 +623,19 @@ export function StaffReceptionPage() {
                       : selectedMember.endDate || 'Chưa kích hoạt'}
                   </span>
                 </div>
+
+                {selectedPending && receiptImage && (
+                  <div className="kv-row" style={{ display: 'block' }}>
+                    <span>Ảnh hóa đơn hội viên đã gửi</span>
+                    <a href={receiptImage} target="_blank" rel="noreferrer">
+                      <img
+                        src={receiptImage}
+                        alt="Ảnh hóa đơn thanh toán tiền mặt"
+                        style={{ display: 'block', marginTop: 8, maxWidth: '100%', maxHeight: 280, borderRadius: 8 }}
+                      />
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

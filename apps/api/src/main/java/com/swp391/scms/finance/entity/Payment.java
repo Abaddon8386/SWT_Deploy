@@ -83,6 +83,10 @@ public class Payment {
     @Column(length = 255)
     private String note;
 
+    /** Receipt photo (data URL) a member attaches to a cash payment for the receptionist to verify. */
+    @Column(name = "receipt_image", columnDefinition = "text")
+    private String receiptImage;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -169,6 +173,14 @@ public class Payment {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getReceiptImage() {
+        return receiptImage;
+    }
+
+    public void setReceiptImage(String receiptImage) {
+        this.receiptImage = receiptImage;
     }
 
     public LocalDateTime getCreatedAt() {

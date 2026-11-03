@@ -91,6 +91,19 @@ export const createPaymentRequest = (subscription: MemberSubscription, amount: n
     }),
   });
 
+/** Thanh toán tiền mặt: gửi ảnh hóa đơn để lễ tân đối chiếu và xác nhận trên web. */
+export const createCashReceiptPayment = (subscription: MemberSubscription, amount: number, receiptImage: string) =>
+  apiFetch<Payment>('/payments', {
+    method: 'POST',
+    body: JSON.stringify({
+      memberId: subscription.memberId,
+      subscriptionId: subscription.id,
+      amount,
+      method: 'cash',
+      receiptImage,
+    }),
+  });
+
 export const createMembershipSubscription = (packageId: number) =>
   apiFetch<MemberSubscription>('/memberships/subscriptions', {
     method: 'POST',

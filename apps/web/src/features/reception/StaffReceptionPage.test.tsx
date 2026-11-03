@@ -8,7 +8,7 @@ import { checkinApi } from './checkinApi';
 
 const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), getPendingHoldRequests: vi.fn(),
-  getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(),
+  getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(), getPendingReceipt: vi.fn(),
   getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
 }));
 vi.mock('./receptionApi', () => ({ receptionApi: api, maskCitizenId: () => '—' }));
@@ -34,6 +34,7 @@ beforeEach(() => {
   api.getUnpaidCoachBookings.mockResolvedValue([]);
   api.getActivePackages.mockResolvedValue([pkg]);
   api.getRenewalCandidates.mockResolvedValue([]);
+  api.getPendingReceipt.mockResolvedValue(null);
   api.processPayment.mockResolvedValue({ id: 42, memberId: 10, amount: 200, method: 'pos', status: 'success', paidAt: '2026-10-01T10:00:00', invoiceNumber: 'INV-42' });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });

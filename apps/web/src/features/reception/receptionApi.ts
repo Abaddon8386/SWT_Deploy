@@ -85,6 +85,14 @@ export interface PaymentResponseDto {
   invoiceNumber?: string;
 }
 
+export interface PaymentReceiptSummary {
+  id: number;
+  subscriptionId: number | null;
+  status: string;
+  hasReceipt?: boolean;
+  receiptImage?: string | null;
+}
+
 export interface InvoiceDto {
   id: number;
   invoiceNumber: string;
@@ -211,6 +219,15 @@ export const receptionApi = {
   /** Ghi nhận đã thu tiền buổi PT 1:1; backend tạo payment để tính vào doanh thu. */
   confirmCoachBookingPayment: (bookingId: number, method: string): Promise<UnpaidCoachBooking> =>
     apiFetch(`/coach-bookings/${bookingId}/confirm-payment?method=${encodeURIComponent(method)}`, { method: 'POST' }),
+
+  /** Ảnh hóa đơn tiền mặt hội viên đã gửi cho yêu cầu gói tập đang chờ (null nếu chưa có). */
+  getPendingReceipt: async (memberId: number, subscriptionId: number): Promise<string | null> => {
+    const payments = await apiFetch<PaymentReceiptSummary[]>(`/payments/member/${memberId}`);
+    const match = payments.find((p) => p.subscriptionId === subscriptionId && p.status === 'pending' && p.hasReceipt);
+    if (!match) return null;
+    const detail = await apiFetch<PaymentReceiptSummary>(`/payments/${match.id}`);
+    return detail.receiptImage ?? null;
+  },
 
   /**
    * Xác nhận thu tiền qua Payment API (/payments/process) & tự động phát hành hóa đơn

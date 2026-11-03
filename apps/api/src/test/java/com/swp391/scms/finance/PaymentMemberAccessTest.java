@@ -107,6 +107,64 @@ class PaymentMemberAccessTest {
         verify(subscriptions, never()).save(any());
     }
 
+    private MembershipSubscription pendingSubscription() {
+        Member member = new Member();
+        member.setUserId(2L);
+        MembershipPackage membershipPackage = new MembershipPackage();
+        membershipPackage.setPrice(new BigDecimal("500000"));
+        MembershipSubscription subscription = new MembershipSubscription();
+        subscription.setMember(member);
+        subscription.setMembershipPackage(membershipPackage);
+        subscription.setId(10L);
+        subscription.setStatus("pending_payment");
+        when(members.findById(2L)).thenReturn(Optional.of(member));
+        when(members.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(subscriptions.findById(10L)).thenReturn(Optional.of(subscription));
+        return subscription;
+    }
+
+    @Test
+    void memberCashPaymentRequiresReceiptPhoto() throws Exception {
+        pendingSubscription();
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"cash"}
+                                """))
+                .andExpect(status().isBadRequest());
+        verify(payments, never()).save(any());
+    }
+
+    @Test
+    void memberCashPaymentRejectsNonImageReceipt() throws Exception {
+        pendingSubscription();
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"cash",
+                                 "receiptImage":"data:text/html;base64,PHNjcmlwdD4="}
+                                """))
+                .andExpect(status().isBadRequest());
+        verify(payments, never()).save(any());
+    }
+
+    @Test
+    void memberCashPaymentWithReceiptStaysPending() throws Exception {
+        pendingSubscription();
+        Payment saved = new Payment();
+        when(mapper.toEntity(any())).thenReturn(saved);
+        when(payments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.toDto(any())).thenReturn(new PaymentDto());
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"cash",
+                                 "receiptImage":"data:image/jpeg;base64,/9j/4AAQ"}
+                                """))
+                .andExpect(status().isCreated());
+        org.junit.jupiter.api.Assertions.assertEquals("pending", saved.getStatus());
+    }
+
     @Test
     void memberCannotCreatePaymentForAnotherMember() throws Exception {
         mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))

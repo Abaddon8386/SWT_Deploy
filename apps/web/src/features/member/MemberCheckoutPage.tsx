@@ -1,25 +1,19 @@
 import { VnpayPayButton } from '../payments/VnpayPayButton';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { notify } from '../../shared/lib/portalNotices';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
-import { centerNowParts } from '../../shared/lib/centerTime';
+import { readReceiptImage } from '../../shared/lib/receiptImage';
 import {
   getMembershipHistory,
   getMembershipPackages,
+  createCashReceiptPayment,
   createMembershipSubscription,
   MembershipPackage,
 } from './membershipApi';
 import './member-checkout.css';
 import { errorMessage } from '../../shared/lib/errorMessage';
-
-// Khung giờ gợi ý để hội viên chọn giờ dự kiến tới quầy
-const POPULAR_TIME_SLOTS = [
-  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00',
-  '18:00', '18:30', '19:00', '19:30', '20:00', '20:30',
-];
 
 export function MemberCheckoutPage() {
   const [searchParams] = useSearchParams();
@@ -36,19 +30,13 @@ export function MemberCheckoutPage() {
   // Số tiền thật phải thanh toán: yêu cầu nâng cấp đã được backend báo giá (bù chênh lệch hoặc đủ giá gói mới)
   const [quotedAmount, setQuotedAmount] = useState<number | null>(null);
 
-  // Ngày/giờ hiện tại theo múi giờ trung tâm, không dùng UTC của trình duyệt
-  const todayStr = useMemo(() => centerNowParts().date, []);
-  const [appointmentDate, setAppointmentDate] = useState<string>(todayStr);
-  const [appointmentTime, setAppointmentTime] = useState<string>('09:30');
-  const [customTime, setCustomTime] = useState<string>('');
-  const [appointmentNotes, setAppointmentNotes] = useState<string>('');
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [completedResult, setCompletedResult] = useState<{
     subscriptionId: number;
     amount: number;
-    appointmentDateTime: string;
   } | null>(null);
 
   useEffect(() => {
@@ -109,20 +97,29 @@ export function MemberCheckoutPage() {
     return { subscriptionId: preparedSubscriptionId.current };
   }
 
-  // Hẹn giờ chỉ để hội viên chủ động sắp xếp; lễ tân xác nhận thanh toán thật khi hội viên tới quầy.
+  async function handleReceiptChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setFormError(null);
+    try {
+      setReceiptImage(await readReceiptImage(file));
+    } catch (err) {
+      setReceiptImage(null);
+      setFormError(errorMessage(err, 'Không đọc được ảnh hóa đơn.'));
+    }
+  }
+
+  // Tiền mặt: hội viên gửi ảnh hóa đơn, lễ tân đối chiếu rồi xác nhận thanh toán trên web.
   async function handleConfirm(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedPackage || isSubmitting) return;
+    if (!receiptImage) {
+      setFormError('Vui lòng chụp hoặc chọn ảnh hóa đơn thanh toán.');
+      return;
+    }
 
-    const effectiveTime = customTime.trim() || appointmentTime;
-    const now = centerNowParts();
-    const invalid = !appointmentDate ? 'Vui lòng chọn ngày dự kiến tới quầy.'
-      : !effectiveTime ? 'Vui lòng chọn hoặc nhập giờ dự kiến.'
-        : appointmentDate < now.date || (appointmentDate === now.date && effectiveTime <= now.time) ? 'Thời gian dự kiến không thể ở trong quá khứ.'
-          : null;
-    setFormError(invalid);
-    if (invalid) return;
-
+    setFormError(null);
     setIsSubmitting(true);
     try {
       // Yêu cầu đăng ký/nâng cấp/gia hạn đã có từ trang gói tập; chỉ tạo mới khi vào thẳng trang này
@@ -131,15 +128,14 @@ export function MemberCheckoutPage() {
         subscriptionId = (await createMembershipSubscription(selectedPackage.id)).id;
         preparedSubscriptionId.current = subscriptionId;
       }
+      const subscription = (await getMembershipHistory()).find(item => item.id === subscriptionId);
+      if (!subscription) throw new Error('Không tìm thấy yêu cầu gói tập.');
+      await createCashReceiptPayment(subscription, amount, receiptImage);
 
-      setCompletedResult({
-        subscriptionId,
-        amount,
-        appointmentDateTime: `${effectiveTime} ngày ${appointmentDate.split('-').reverse().join('/')}`,
-      });
-      notify('Đã ghi lịch dự kiến tới quầy. Yêu cầu của bạn đang chờ lễ tân xác nhận thanh toán.', 'success');
+      setCompletedResult({ subscriptionId, amount });
+      notify('Đã gửi ảnh hóa đơn. Lễ tân sẽ xác nhận thanh toán trên hệ thống.', 'success');
     } catch (err) {
-      setFormError(errorMessage(err, 'Không thể tạo yêu cầu gói tập. Vui lòng thử lại.'));
+      setFormError(errorMessage(err, 'Không thể gửi hóa đơn. Vui lòng thử lại.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -177,11 +173,11 @@ export function MemberCheckoutPage() {
         <div className="checkout-success-view">
 
           <h2 style={{ fontSize: '1.45rem', color: 'var(--portal-paper, var(--color-text-main, #202020))', marginBottom: 8, fontWeight: 700 }}>
-            Đã ghi lịch dự kiến tới quầy
+            Đã gửi ảnh hóa đơn
           </h2>
 
           <p style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.95rem', margin: 0 }}>
-            Gói tập chỉ có hiệu lực sau khi lễ tân xác nhận thanh toán tại quầy.
+            Gói tập có hiệu lực sau khi lễ tân đối chiếu hóa đơn và xác nhận thanh toán trên hệ thống.
           </p>
 
           <div className="appointment-voucher">
@@ -200,16 +196,15 @@ export function MemberCheckoutPage() {
                   {formatPrice(completedResult.amount)}
                 </div>
                 <span className="badge badge-warning" style={{ marginTop: 4 }}>
-                  Chờ thanh toán tại quầy
+                  Chờ lễ tân xác nhận
                 </span>
               </div>
             </div>
 
             <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--portal-border, #e4e2de)', fontSize: '0.92rem', color: 'var(--portal-paper, var(--color-text-main, #202020))' }}>
               <div style={{ display: 'grid', gap: 6 }}>
-                <div><strong>Dự kiến tới quầy:</strong> {completedResult.appointmentDateTime}</div>
-                <div style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.84rem', marginTop: 4 }}>
-                  * Lịch này chỉ giúp bạn sắp xếp thời gian và không được gửi cho lễ tân. Khi tới quầy, đọc mã đơn #{completedResult.subscriptionId} hoặc tên của bạn để được phục vụ nhanh nhất.
+                <div style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.84rem' }}>
+                  Mã đơn #{completedResult.subscriptionId}. Bạn có thể theo dõi trạng thái ở trang Gói tập.
                 </div>
               </div>
             </div>
@@ -227,8 +222,6 @@ export function MemberCheckoutPage() {
       </div>
     );
   }
-
-  const displayTime = customTime.trim() || appointmentTime;
 
   return (
     <div className="portal-container checkout-container">
@@ -250,88 +243,34 @@ export function MemberCheckoutPage() {
             <p>Thanh toán thử nghiệm qua ngân hàng, thẻ hoặc QR trên VNPay. Gói tập được cập nhật khi hệ thống nhận xác nhận giao dịch.</p>
             <VnpayPayButton prepare={prepareVnpay} disabled={isSubmitting} />
           </section>
-          <div className="payment-methods">
-            <div className="payment-method-card is-selected">
-              <div className="payment-method-radio">
-                <div className="payment-method-radio-dot" />
-              </div>
-              <div className="payment-method-content">
-                <div className="payment-method-title">
-                  <span>Thanh toán tại quầy lễ tân</span>
-                </div>
-                <div className="payment-method-desc">
-                  Thanh toán bằng tiền mặt hoặc quẹt thẻ POS trực tiếp tại sảnh trung tâm. Lễ tân xác nhận thanh toán thì gói tập mới có hiệu lực.
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="appointment-form-box">
             <h3 className="appointment-form-title">
-              <span>Chọn thời gian dự kiến tới quầy</span>
+              <span>Thanh toán tiền mặt — gửi ảnh hóa đơn</span>
             </h3>
+            <p style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.9rem', margin: '0 0 12px' }}>
+              Sau khi thanh toán tiền mặt, chụp ảnh hóa đơn rồi gửi lên đây. Lễ tân đối chiếu và xác nhận thanh toán thì gói tập mới có hiệu lực.
+            </p>
 
             <form onSubmit={handleConfirm}>
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="appointment-date">
-                  Ngày bạn dự kiến tới quầy thanh toán *
+                <label className="portal-label" htmlFor="receipt-image">
+                  Ảnh hóa đơn *
                 </label>
                 <input
-                  id="appointment-date"
-                  type="date"
+                  id="receipt-image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  capture="environment"
                   className="portal-input"
-                  min={todayStr}
-                  value={appointmentDate}
-                  onChange={(e) => setAppointmentDate(e.target.value)}
-                  required
+                  onChange={(e) => void handleReceiptChange(e)}
                 />
-              </div>
-
-              <div className="portal-form-group">
-                <label className="portal-label">
-                  Khung giờ dự kiến * (Đang chọn: <strong>{displayTime}</strong>)
-                </label>
-                <div className="time-slot-grid">
-                  {POPULAR_TIME_SLOTS.map((slot) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      className={`time-slot-btn ${appointmentTime === slot && !customTime ? 'is-active' : ''}`}
-                      onClick={() => {
-                        setAppointmentTime(slot);
-                        setCustomTime('');
-                      }}
-                    >
-                      {slot}
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--portal-muted, #68645f)' }}>Hoặc nhập giờ tùy chọn:</span>
-                  <input
-                    type="time"
-                    className="portal-input"
-                    aria-label="Giờ tùy chọn"
-                    style={{ width: '130px', padding: '6px 10px' }}
-                    value={customTime}
-                    onChange={(e) => setCustomTime(e.target.value)}
+                {receiptImage && (
+                  <img
+                    src={receiptImage}
+                    alt="Xem trước ảnh hóa đơn"
+                    style={{ marginTop: 10, maxWidth: '100%', maxHeight: 320, borderRadius: 8, border: '1px solid var(--portal-border, #e4e2de)' }}
                   />
-                </div>
-              </div>
-
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="appointment-notes">
-                  Ghi chú cho bản thân (Tùy chọn)
-                </label>
-                <textarea
-                  id="appointment-notes"
-                  className="portal-input"
-                  rows={2}
-                  placeholder="Vd: Mang theo thẻ ngân hàng để quẹt POS."
-                  value={appointmentNotes}
-                  onChange={(e) => setAppointmentNotes(e.target.value)}
-                />
+                )}
               </div>
 
               {formError && <p className="form-error" role="alert">{formError}</p>}
@@ -339,9 +278,9 @@ export function MemberCheckoutPage() {
                 type="submit"
                 className="btn-primary"
                 style={{ width: '100%', marginTop: 12, padding: '14px' }}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !receiptImage}
               >
-                {isSubmitting ? 'Đang xử lý...' : 'Xác nhận và tới quầy thanh toán'}
+                {isSubmitting ? 'Đang gửi...' : 'Gửi hóa đơn và chờ xác nhận'}
               </button>
             </form>
           </div>

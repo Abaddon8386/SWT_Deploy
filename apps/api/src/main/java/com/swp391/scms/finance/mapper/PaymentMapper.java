@@ -21,6 +21,8 @@ public interface PaymentMapper {
     @Mapping(source = "receivedBy.id", target = "receivedById")
     @Mapping(source = "receivedBy.fullName", target = "receivedByName")
     @Mapping(source = "invoice.invoiceNumber", target = "invoiceNumber")
+    @Mapping(target = "hasReceipt", expression = "java(entity.getReceiptImage() != null && !entity.getReceiptImage().isBlank())")
+    @Mapping(target = "receiptImage", ignore = true)
     PaymentDto toDto(Payment entity);
 
     List<PaymentDto> toDtoList(List<Payment> entities);
@@ -39,5 +41,6 @@ public interface PaymentMapper {
     @Mapping(target = "invoice", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "refundedAmount", ignore = true)
+    @Mapping(target = "receiptImage", ignore = true)
     void updateEntityFromDto(PaymentDto dto, @MappingTarget Payment entity);
 }

@@ -24,8 +24,26 @@ public class PaymentDto {
     private String note;
     private LocalDateTime createdAt;
     private String invoiceNumber;
+    private boolean hasReceipt;
+    private String receiptImage; // chỉ trả ở API chi tiết dành cho nhân viên
 
     public PaymentDto() {}
+
+    public boolean isHasReceipt() {
+        return hasReceipt;
+    }
+
+    public void setHasReceipt(boolean hasReceipt) {
+        this.hasReceipt = hasReceipt;
+    }
+
+    public String getReceiptImage() {
+        return receiptImage;
+    }
+
+    public void setReceiptImage(String receiptImage) {
+        this.receiptImage = receiptImage;
+    }
 
     public Long getId() {
         return id;

@@ -42,6 +42,10 @@ import java.util.UUID;
 public class PaymentService {
     private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
+    private static final java.util.regex.Pattern RECEIPT_DATA_URL =
+            java.util.regex.Pattern.compile("^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$");
+    private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
+
     private static final Set<String> VALID_STATUSES = Set.of("success", "pending", "failed", "refunded");
 
     private final PaymentRepository paymentRepository;
@@ -120,6 +124,10 @@ public class PaymentService {
                 throw new ForbiddenException("PAYMENT_MEMBER_PENDING_ONLY", "finance.payment.member_pending_only", null, null);
             }
             validateMemberPaymentTarget(principal.id(), dto);
+            if ("cash".equalsIgnoreCase(dto.getMethod())
+                    && (dto.getReceiptImage() == null || dto.getReceiptImage().isBlank())) {
+                throw new BadRequestException("PAYMENT_RECEIPT_REQUIRED", "finance.payment.receipt_required", null, null);
+            }
         } else if (!"CENTER_MANAGER".equalsIgnoreCase(principal.role())
                 && !"RECEPTIONIST".equalsIgnoreCase(principal.role())) {
             throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, null);
@@ -157,6 +165,9 @@ public class PaymentService {
     }
 
     public PaymentDto createPayment(PaymentCreateDto dto) {
+        if (dto.getReceiptImage() != null && !RECEIPT_DATA_URL.matcher(dto.getReceiptImage()).matches()) {
+            throw new BadRequestException("PAYMENT_RECEIPT_INVALID", "finance.payment.receipt_invalid", null, null);
+        }
         Member member = memberRepository.findById(dto.getMemberId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.getMemberId()));
 
@@ -217,7 +228,9 @@ public class PaymentService {
     public PaymentDto getPaymentById(Long id) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", id));
-        return paymentMapper.toDto(payment);
+        PaymentDto dto = paymentMapper.toDto(payment);
+        dto.setReceiptImage(payment.getReceiptImage());
+        return dto;
     }
 
     @Transactional(readOnly = true)

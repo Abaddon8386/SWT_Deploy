@@ -49,7 +49,8 @@ components:
         A MEMBER must supply their own memberId and at least one owned subscriptionId or
         classEnrollmentId. Subscription payments must match the package price and target
         a pending_payment subscription. Member status must be pending or null; paidAt and
-        receivedById must be null. Staff may use the existing cashier workflow.
+        receivedById must be null. A MEMBER paying with method=cash must attach receiptImage;
+        staff confirm the payment on the web afterwards. Staff may use the existing cashier workflow.
       properties:
         memberId: {type: integer, format: int64}
         subscriptionId: {type: integer, format: int64, nullable: true}
@@ -60,6 +61,10 @@ components:
         paidAt: {type: string, format: date-time, nullable: true}
         receivedById: {type: integer, format: int64, nullable: true}
         note: {type: string, nullable: true}
+        receiptImage:
+          type: string
+          nullable: true
+          description: Receipt photo as a data URL (data:image/jpeg|png|webp;base64,...), max ~3M characters. Required for member cash payments.
     PaymentDto:
       type: object
       properties:
@@ -78,6 +83,8 @@ components:
         paidAt: {type: string, format: date-time, nullable: true}
         receivedById: {type: integer, format: int64, nullable: true}
         receivedByName: {type: string, nullable: true}
+        hasReceipt: {type: boolean, description: Whether the member attached a receipt photo}
+        receiptImage: {type: string, nullable: true, description: Data URL; only returned by GET /payments/{id} for staff}
         note: {type: string, nullable: true}
         createdAt: {type: string, format: date-time}
         invoiceNumber: {type: string, nullable: true}
