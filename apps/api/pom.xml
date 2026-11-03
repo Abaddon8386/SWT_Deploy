@@ -48,21 +48,6 @@
             <version>3.0.8</version>
         </dependency>
 
-        <!-- Optional Redis catalog cache and durable Kafka notification transport. -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <!-- Google API Client for Google ID Token Verification (SCRUM-89) -->
         <dependency>
             <groupId>com.google.api-client</groupId>

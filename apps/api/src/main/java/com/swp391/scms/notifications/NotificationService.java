@@ -4,7 +4,6 @@ import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.notifications.dto.NotificationDto;
 import com.swp391.scms.notifications.entity.Notification;
 import com.swp391.scms.notifications.port.NotificationDispatcher;
-import com.swp391.scms.notifications.port.TransactionalNotificationDispatcher;
 import com.swp391.scms.notifications.port.NotificationChannel;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
@@ -79,11 +78,7 @@ public class NotificationService {
         
         Notification notification = new Notification(user, title, message, type, relatedEntityType, relatedEntityId);
         notificationRepository.save(notification);
-        if (notificationDispatcher instanceof TransactionalNotificationDispatcher) {
-            // Must join the notification/business transaction; enqueue failure rolls back both.
-            notificationDispatcher.dispatch(userId, title, message, type, relatedEntityType, relatedEntityId,
-                    Set.of(NotificationChannel.EMAIL, NotificationChannel.PUSH));
-        } else if (notificationDispatcher != null) {
+        if (notificationDispatcher != null) {
             Runnable dispatch = () -> {
                 try {
                     notificationDispatcher.dispatch(userId, title, message, type,

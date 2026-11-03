@@ -74,20 +74,6 @@ class CodeFirstSchemaTest {
         }
     }
 
-    @Test
-    void notificationOutboxQueriesAndMappingAreCodeFirst() {
-        String ddl = generateDdl(factory -> {
-            try (var session = factory.openSession()) {
-                for (var method : com.swp391.scms.notifications.repository.NotificationOutboxRepository.class.getMethods()) {
-                    var query = method.getAnnotation(org.springframework.data.jpa.repository.Query.class);
-                    if (query != null) session.createQuery(query.value());
-                }
-            }
-        });
-        assertTrue(ddl.contains("notification_outbox"));
-        assertTrue(ddl.contains("ix_notification_outbox_pending"));
-    }
-
     private static String generateDdl() {
         return sharedDdl;
     }

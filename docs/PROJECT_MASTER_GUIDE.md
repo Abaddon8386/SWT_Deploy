@@ -57,7 +57,6 @@ Hệ thống giải quyết các bài toán lớn:
 SWP391/
 ├── README.md                        # Hướng dẫn tổng quan kho lưu trữ
 ├── AGENTS.md                        # Quy ước làm việc cho contributor và coding agent
-├── compose.yaml                     # Cấu hình Docker Compose môi trường local
 ├── package.json                     # Monorepo scripts (dev, build, test, db:init)
 │
 ├── apps/                            # Mã nguồn phần mềm (Codebase)

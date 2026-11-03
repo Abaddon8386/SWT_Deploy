@@ -19,44 +19,6 @@ server:
         same-site: lax
 
 spring:
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      username: ${REDIS_USERNAME:}
-      password: ${REDIS_PASSWORD:}
-      database: ${REDIS_DATABASE:0}
-      ssl:
-        enabled: ${REDIS_SSL_ENABLED:false}
-      connect-timeout: ${REDIS_CONNECT_TIMEOUT:300ms}
-      timeout: ${REDIS_COMMAND_TIMEOUT:200ms}
-      repositories:
-        enabled: false
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    security:
-      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
-    properties:
-      "[sasl.mechanism]": ${KAFKA_SASL_MECHANISM:PLAIN}
-      "[sasl.jaas.config]": ${KAFKA_SASL_JAAS_CONFIG:}
-    admin:
-      auto-create: ${APP_NOTIFICATIONS_KAFKA_CREATE_TOPIC:false}
-      fail-fast: false
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      acks: all
-      properties:
-        "[enable.idempotence]": true
-        "[max.block.ms]": 3000
-        "[delivery.timeout.ms]": 10000
-        "[request.timeout.ms]": 5000
-    consumer:
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      enable-auto-commit: false
-      auto-offset-reset: earliest
-      max-poll-records: 25
   profiles:
     default: supabase
   application:
@@ -102,26 +64,6 @@ springdoc:
     filter: true
 
 app:
-  performance:
-    catalog-cache:
-      enabled: ${APP_CATALOG_CACHE_ENABLED:false}
-      # Unique per deployment AND database schema; never share staging and production namespaces.
-      namespace: ${APP_CATALOG_CACHE_NAMESPACE:scms:local:public-catalog}
-      ttl: ${APP_CATALOG_CACHE_TTL:60s}
-      failure-backoff: ${APP_CATALOG_CACHE_FAILURE_BACKOFF:5s}
-  notifications:
-    kafka:
-      enabled: ${APP_NOTIFICATIONS_KAFKA_ENABLED:false}
-      topic: ${APP_NOTIFICATIONS_KAFKA_TOPIC:scms.local.notification-delivery.v1}
-      group-id: ${APP_NOTIFICATIONS_KAFKA_GROUP_ID:scms-local-notification-delivery-v1}
-      create-topic: ${APP_NOTIFICATIONS_KAFKA_CREATE_TOPIC:false}
-      topic-replicas: ${APP_NOTIFICATIONS_KAFKA_TOPIC_REPLICAS:1}
-      batch-size: 25
-      poll-delay: 1000
-      retry-delay: 60s
-      send-timeout: 5s
-      retention: 7d
-      cleanup-delay: 3600000
   supabase:
     url: ${SUPABASE_URL:}
     publishable-key: ${SUPABASE_PUBLISHABLE_KEY:}

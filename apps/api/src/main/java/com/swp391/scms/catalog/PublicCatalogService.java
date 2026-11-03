@@ -1,12 +1,8 @@
 package com.swp391.scms.catalog;
 
 import com.swp391.scms.facilities.dto.CatalogResponses.PackageDto;
-import com.swp391.scms.catalog.cache.PublicCatalogCache;
-import com.swp391.scms.catalog.cache.PublicCatalogCache.Snapshot;
 import com.swp391.scms.scheduling.repository.SessionBookingRepository;
 import com.swp391.scms.scheduling.dto.SessionBookingCount;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
 import com.swp391.scms.scheduling.dto.ClassBookingCount;
@@ -20,6 +16,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,28 +36,18 @@ public class PublicCatalogService {
     private final SessionBookingRepository sessionBookings;
     private final SchedulingMapper mapper;
     private final Clock clock;
-    private final PublicCatalogCache cache;
 
     public PublicCatalogService(MembershipPackageRepository packages, CoachRepository coaches,
             ClassSessionRepository sessions, ClassEnrollmentRepository enrollments,
             SchedulingMapper mapper, Clock clock) {
-        this(packages, coaches, sessions, enrollments, mapper, clock,
-                PublicCatalogCache.disabled());
-    }
-
-    public PublicCatalogService(MembershipPackageRepository packages, CoachRepository coaches,
-            ClassSessionRepository sessions, ClassEnrollmentRepository enrollments,
-            SchedulingMapper mapper, Clock clock, PublicCatalogCache cache) {
-        this(packages, coaches, sessions, enrollments, mapper, clock, cache, null);
+        this(packages, coaches, sessions, enrollments, mapper, clock, null);
     }
 
     @Autowired
     public PublicCatalogService(MembershipPackageRepository packages, CoachRepository coaches,
             ClassSessionRepository sessions, ClassEnrollmentRepository enrollments,
-            SchedulingMapper mapper, Clock clock, PublicCatalogCache cache,
-            SessionBookingRepository sessionBookings) {
+            SchedulingMapper mapper, Clock clock, SessionBookingRepository sessionBookings) {
         this.sessionBookings = sessionBookings;
-        this.cache = cache;
         this.packages = packages;
         this.coaches = coaches;
         this.sessions = sessions;
@@ -72,10 +59,10 @@ public class PublicCatalogService {
     @Transactional(readOnly = true)
     public CatalogDto getCatalog() {
         var today = LocalDate.now(clock);
-        // Existing write transactions bypass the shared cache: uncommitted state must never escape.
-        var snapshot = TransactionSynchronizationManager.isActualTransactionActive()
-                && !TransactionSynchronizationManager.isCurrentTransactionReadOnly()
-                ? loadSnapshot() : cache.getOrLoad(this::loadSnapshot);
+        var publicPackages = packages.findByStatusOrderByPriceAsc("active").stream().map(PackageDto::of).toList();
+        var publicCoaches = coaches.findPublicCoaches().stream().map(c -> new CoachDto(c.getUserId(),
+                c.getUser().getFullName(), c.getSpecialization(), c.getBio(), c.getCertification(),
+                c.getUser().getAvatarUrl())).toList();
         var visibleSessions = sessions.findPublicSessions(today, today.plusDays(6), LocalTime.now(clock));
         var classIds = visibleSessions.stream().map(s -> s.getGymClass().getId()).distinct().toList();
         var bookedCounts = classIds.isEmpty() ? Map.<Long, Long>of()
@@ -88,14 +75,6 @@ public class PublicCatalogService {
         var publicSessions = visibleSessions.stream()
                 .map(s -> mapper.toDto(s, bookedCounts.getOrDefault(s.getGymClass().getId(), 0L)
                         + sessionCounts.getOrDefault(s.getId(), 0L))).toList();
-        return new CatalogDto(snapshot.packages(), snapshot.coaches(), publicSessions);
-    }
-
-    private Snapshot loadSnapshot() {
-        var publicPackages = packages.findByStatusOrderByPriceAsc("active").stream().map(PackageDto::of).toList();
-        var publicCoaches = coaches.findPublicCoaches().stream().map(c -> new CoachDto(c.getUserId(),
-                c.getUser().getFullName(), c.getSpecialization(), c.getBio(), c.getCertification(),
-                c.getUser().getAvatarUrl())).toList();
-        return new Snapshot(publicPackages, publicCoaches);
+        return new CatalogDto(publicPackages, publicCoaches, publicSessions);
     }
 }

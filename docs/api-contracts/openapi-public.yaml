@@ -15,12 +15,7 @@ paths:
         the future within today through today+6 using the application clock, be scheduled,
         have an active class, an available room and an active, non-deleted coach.
         Booked counts include legacy booked class enrollments plus booked per-session reservations.
-        No writes are public. With APP_CATALOG_CACHE_ENABLED=true, packages and public coach DTOs
-        may be served from Redis for APP_CATALOG_CACHE_TTL (default 60 seconds, maximum 5 minutes).
-        Successful package, staff-account and coach-profile mutations invalidate the cache after commit.
-        Cache failures fall back to the database; if invalidation is unavailable, other instances can
-        serve the previous snapshot until its TTL expires. Session eligibility, times and booked counts
-        are queried on every request. Authorization, booking capacity and payment prices never use this cache.
+        No writes are public. Session eligibility, times and booked counts are queried on every request.
         HTTP Cache-Control remains no-store.
       security: []
       responses:

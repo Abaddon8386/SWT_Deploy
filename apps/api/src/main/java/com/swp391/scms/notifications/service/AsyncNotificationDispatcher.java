@@ -15,8 +15,6 @@ import java.util.Set;
  * Dispatches notifications concurrently across Port & Adapter channels without blocking main request threads.
  */
 @Service
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
-        name = "app.notifications.kafka.enabled", havingValue = "false", matchIfMissing = true)
 @Async("notificationTaskExecutor")
 public class AsyncNotificationDispatcher implements NotificationDispatcher {
 
