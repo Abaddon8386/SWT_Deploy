@@ -409,7 +409,7 @@ export function UserManagerPage() {
                 setIsModalOpen(true);
               }}
             >
-              + Thêm tài khoản
+              Thêm tài khoản
             </button>
             <ActionMenu label="Tùy chọn quản trị">
               <button
@@ -485,9 +485,9 @@ export function UserManagerPage() {
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                             {u.status === 'ACTIVE' ? (
-                              <span className="badge badge-success">● Đang hoạt động</span>
+                              <span className="badge badge-success">Đang hoạt động</span>
                             ) : (
-                              <span className="badge badge-warning">● Đã khóa</span>
+                              <span className="badge badge-warning">Đã khóa</span>
                             )}
                             {u.is_frozen && (
                               <span
@@ -500,7 +500,7 @@ export function UserManagerPage() {
                                 }}
                                 title="Hội viên đang có gói bảo lưu tập (được miễn trừ tự động xóa)"
                               >
-                                ❄️ Đang bảo lưu tập
+                                Đang bảo lưu tập
                               </span>
                             )}
                           </div>
@@ -941,7 +941,7 @@ export function UserManagerPage() {
                   color: 'var(--portal-info)',
                 }}
               >
-                ❄️ Tài khoản này hiện đang có gói tập bảo lưu. Vui lòng cân nhắc trước khi xóa thủ công.
+                Tài khoản này hiện đang có gói tập bảo lưu. Vui lòng cân nhắc trước khi xóa thủ công.
               </div>
             )}
             <div
@@ -954,7 +954,7 @@ export function UserManagerPage() {
                 color: 'var(--portal-danger)',
               }}
             >
-              ⚠️ Lưu ý: Thao tác này sẽ xóa mềm tài khoản khỏi hệ thống và vô hiệu hóa quyền truy cập vĩnh viễn.
+              Lưu ý: Thao tác này sẽ xóa mềm tài khoản khỏi hệ thống và vô hiệu hóa quyền truy cập vĩnh viễn.
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
@@ -1011,7 +1011,7 @@ export function UserManagerPage() {
                   color: 'var(--portal-success)',
                 }}
               >
-                ✅ {cleanupResult.message || `Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`}
+                {cleanupResult.message || `Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`}
               </div>
             )}
 

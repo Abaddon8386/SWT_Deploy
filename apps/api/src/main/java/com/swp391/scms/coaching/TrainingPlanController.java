@@ -114,7 +114,7 @@ public class TrainingPlanController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.detail"), plan));
     }
 
-    @Operation(summary = "Cập nhật giáo án", description = "Sửa mục tiêu và thời gian của giáo án nháp hoặc đang hoạt động")
+    @Operation(summary = "Cập nhật giáo án", description = "Sửa mục tiêu, thời gian và bài tập của giáo án nháp hoặc đang hoạt động")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> updatePlan(
@@ -127,7 +127,7 @@ public class TrainingPlanController {
                 trainingPlanService.updatePlan(id, dto, userId, role)));
     }
 
-    @Operation(summary = "Xóa giáo án nháp", description = "Chỉ xóa được giáo án ở trạng thái draft")
+    @Operation(summary = "Xóa hoặc ngừng áp dụng giáo án", description = "Bản nháp được xóa; giáo án active chuyển cancelled để giữ lịch sử tập")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deletePlan(

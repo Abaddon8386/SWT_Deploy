@@ -12,8 +12,8 @@ export interface Court {
 }
 export interface CourtSlot { startTime: string; endTime: string; status: 'free' | 'booked' | 'class' | 'past'; price: number | null }
 export interface CourtQuota { packageName: string | null; monthlyQuota: number; used: number; remaining: number }
-export type CourtPaymentMethod = 'online_wallet' | 'bank_transfer';
-export const PAYMENT_METHODS: { value: CourtPaymentMethod; label: string }[] = [{ value: 'online_wallet', label: 'Ví điện tử' }, { value: 'bank_transfer', label: 'Chuyển khoản' }];
+export type CourtPaymentMethod = 'online_wallet' | 'bank_transfer' | 'vnpay';
+export const PAYMENT_METHODS: { value: CourtPaymentMethod; label: string }[] = [{ value: 'vnpay', label: 'VNPay Sandbox' }, { value: 'online_wallet', label: 'Ví điện tử' }, { value: 'bank_transfer', label: 'Chuyển khoản' }];
 export const formatVnd = (amount: number) => `${new Intl.NumberFormat('vi-VN').format(amount)}đ`;
 export interface CourtBooking {
   id: number; roomId: number; roomName: string; disciplineName: string; memberId: number; memberName: string;

@@ -1,3 +1,5 @@
+import { TrainingExerciseFields } from './TrainingExerciseFields';
+import { validateExercise } from './trainingExercise';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -5,7 +7,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { notify } from '../../shared/lib/portalNotices';
 import { errorMessage } from '../../shared/lib/errorMessage';
-import { aiApi, type SavedTrainingPlan } from './aiApi';
+import { aiApi, type SavedTrainingPlan, type SavedTrainingPlanItem } from './aiApi';
 
 const STATUS_LABEL: Record<string, string> = {
   draft: 'Bản nháp',
@@ -16,7 +18,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const formatDate = (iso: string) => iso.split('-').reverse().join('/');
 
-/** Giáo án đã lưu trên server: Coach/Manager sửa mục tiêu, ngày; chỉ xóa được bản nháp. */
+/** Chỉnh sửa giáo án và bài tập trên server; giữ ID bài tập và lịch sử tập của hội viên. */
 export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) {
   const [confirm, confirmDialog] = useConfirm();
   const [plans, setPlans] = useState<SavedTrainingPlan[]>([]);
@@ -24,7 +26,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
   const [loadError, setLoadError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [editing, setEditing] = useState<{ plan: SavedTrainingPlan; goal: string; startDate: string; endDate: string } | null>(null);
+  const [editing, setEditing] = useState<{ plan: SavedTrainingPlan; goal: string; startDate: string; endDate: string; items: SavedTrainingPlanItem[] } | null>(null);
   const [formError, setFormError] = useState('');
 
   const load = useCallback(() => setAttempt((value) => value + 1), []);
@@ -34,7 +36,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
     setLoading(true);
     setLoadError('');
     aiApi.listTrainingPlans()
-      .then((data) => { if (active) setPlans(Array.isArray(data) ? data : []); })
+      .then((data) => { if (active) setPlans(Array.isArray(data) ? data.filter(plan => plan.status !== 'cancelled') : []); })
       .catch((err: unknown) => { if (active) setLoadError(errorMessage(err, 'Không thể tải danh sách giáo án.')); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -42,7 +44,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
 
   const openEditor = (plan: SavedTrainingPlan) => {
     setFormError('');
-    setEditing({ plan, goal: plan.goal ?? '', startDate: plan.startDate, endDate: plan.endDate });
+    setEditing({ plan, goal: plan.goal ?? '', startDate: plan.startDate, endDate: plan.endDate, items: (plan.items ?? []).map(item => ({ ...item })) });
   };
 
   const submitEdit = async (event: FormEvent) => {
@@ -52,12 +54,16 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
       setFormError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
       return;
     }
+    const invalidExercise = editing.items.map(item => validateExercise(item)).find(Boolean);
+    if (invalidExercise) { setFormError(invalidExercise); return; }
+    setFormError('');
     setBusyId(editing.plan.id);
     try {
       const updated = await aiApi.updateTrainingPlan(editing.plan.id, {
         goal: editing.goal.trim(),
         startDate: editing.startDate,
         endDate: editing.endDate,
+        items: editing.items,
       });
       setPlans((current) => current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)));
       setEditing(null);
@@ -72,8 +78,8 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
   const remove = async (plan: SavedTrainingPlan) => {
     if (busyId !== null) return;
     const confirmed = await confirm({
-      title: 'Xóa giáo án nháp?',
-      message: `Giáo án của ${plan.memberName ?? `hội viên #${plan.memberId}`} sẽ bị xóa cùng toàn bộ bài tập. Không thể hoàn tác.`,
+      title: plan.status === 'active' ? 'Ngừng áp dụng giáo án?' : 'Xóa giáo án nháp?',
+      message: plan.status === 'active' ? 'Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.' : `Giáo án của ${plan.memberName ?? `hội viên #${plan.memberId}`} sẽ bị xóa cùng toàn bộ bài tập. Không thể hoàn tác.`,
       confirmLabel: 'Xóa',
       danger: true,
     });
@@ -82,7 +88,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
     try {
       await aiApi.deleteTrainingPlan(plan.id);
       setPlans((current) => current.filter((item) => item.id !== plan.id));
-      notify('Đã xóa giáo án nháp.', 'success');
+      notify(plan.status === 'active' ? 'Đã ngừng áp dụng giáo án.' : 'Đã xóa giáo án nháp.', 'success');
     } catch (err) {
       notify(errorMessage(err, 'Không thể xóa giáo án.'), 'error');
     } finally {
@@ -137,8 +143,8 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                           Sửa
                         </button>
                       )}
-                      {plan.status === 'draft' && (
-                        <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void remove(plan)}>
+                      {editable && (
+                        <button type="button" className="btn-danger btn-sm" disabled={busyId !== null} onClick={() => void remove(plan)}>
                           Xóa
                         </button>
                       )}
@@ -158,6 +164,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
               <input
                 id="plan-edit-goal"
                 className="portal-input"
+                disabled={busyId !== null}
                 maxLength={255}
                 value={editing.goal}
                 onChange={(event) => { setFormError(''); setEditing({ ...editing, goal: event.target.value }); }}
@@ -167,6 +174,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
               <label className="portal-label" htmlFor="plan-edit-start">Ngày bắt đầu</label>
               <DatePicker
                 id="plan-edit-start"
+                disabled={busyId !== null}
                 value={editing.startDate}
                 onChange={(event) => { setFormError(''); setEditing({ ...editing, startDate: event.target.value }); }}
               />
@@ -175,12 +183,21 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
               <label className="portal-label" htmlFor="plan-edit-end">Ngày kết thúc</label>
               <DatePicker
                 id="plan-edit-end"
+                disabled={busyId !== null}
                 value={editing.endDate}
                 min={editing.startDate}
                 onChange={(event) => { setFormError(''); setEditing({ ...editing, endDate: event.target.value }); }}
               />
             </div>
-            {formError && <p role="alert" className="portal-alert">{formError}</p>}
+            <fieldset disabled={busyId !== null} className="plan-exercise-list">
+              <legend>Bài tập trong giáo án</legend>
+              {editing.items.length === 0 && <p className="muted">Giáo án chưa có bài tập.</p>}
+              {editing.items.map((item, index) => <fieldset key={item.id} className="plan-exercise-editor">
+                <legend>Bài {index + 1}: {item.exerciseName}</legend>
+                <TrainingExerciseFields prefix={`plan-item-${item.id}`} value={item} onChange={value => { setFormError(''); setEditing({ ...editing, items: editing.items.map(current => current.id === item.id ? { ...current, ...value } : current) }); }} />
+              </fieldset>)}
+            </fieldset>
+            {formError && <p role="alert" className="form-error">{formError}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => setEditing(null)}>Hủy</button>
               <button type="submit" className="btn-primary" disabled={busyId !== null} aria-busy={busyId !== null}>

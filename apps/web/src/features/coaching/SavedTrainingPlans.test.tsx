@@ -37,7 +37,7 @@ const buttonIn = (row: Element, label: string) =>
   [...row.querySelectorAll('button')].find((b) => b.textContent === label);
 const click = (el: Element | null | undefined) => act(async () => (el as HTMLElement).click());
 
-it('shows loaded plans with Sửa for draft/active, Xóa for draft only, and nothing for finished plans', async () => {
+it('shows loaded plans with Sửa for draft/active, Xóa for draft/active, and nothing for finished plans', async () => {
   vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([draft, active, completed]);
   await render();
   const [r1, r2, r3] = rows();
@@ -46,7 +46,7 @@ it('shows loaded plans with Sửa for draft/active, Xóa for draft only, and not
   expect(buttonIn(r1, 'Sửa')).toBeTruthy();
   expect(buttonIn(r1, 'Xóa')).toBeTruthy();
   expect(buttonIn(r2, 'Sửa')).toBeTruthy();
-  expect(buttonIn(r2, 'Xóa')).toBeUndefined();
+  expect(buttonIn(r2, 'Xóa')).toBeTruthy();
   expect(r3.querySelectorAll('button')).toHaveLength(0);
 });
 
@@ -73,7 +73,7 @@ it('edits goal and dates through the API and refreshes the row', async () => {
     goal.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await act(async () => host.ownerDocument.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  expect(update).toHaveBeenCalledWith(1, { goal: 'Giảm mỡ', startDate: '2026-11-04', endDate: '2026-12-02' });
+  expect(update).toHaveBeenCalledWith(1, { goal: 'Giảm mỡ', startDate: '2026-11-04', endDate: '2026-12-02', items: draft.items });
   expect(rows()[0].textContent).toContain('Giảm mỡ');
 });
 
@@ -90,4 +90,18 @@ it('deletes a draft only after confirmation and keeps it when the server refuses
   await click(confirmButton());
   expect(del).toHaveBeenCalledTimes(2);
   expect(host.textContent).toContain('Chưa có giáo án nào được lưu');
+});
+
+it('edits saved exercise sets, reps and rest time with its existing server ID', async () => {
+  const plan = { ...draft, items: [{ id: 501, exerciseName: 'Squat', dayOfWeek: 1, sets: 3, reps: 10, durationMinutes: 15, restSeconds: 60 }] };
+  vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([plan]);
+  const update = vi.spyOn(aiApi, 'updateTrainingPlan').mockResolvedValue(plan);
+  await render();await click(buttonIn(rows()[0], 'Sửa'));
+  for (const [id, value] of [['plan-item-501-sets','5'],['plan-item-501-reps','8'],['plan-item-501-rest','90']]) {
+    const input=document.getElementById(id) as HTMLInputElement;
+    expect(input).not.toBeNull();
+    await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
+  }
+  await act(async()=>document.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  expect(update).toHaveBeenCalledWith(1,expect.objectContaining({items:[expect.objectContaining({id:501,sets:5,reps:8,restSeconds:90})]}));
 });

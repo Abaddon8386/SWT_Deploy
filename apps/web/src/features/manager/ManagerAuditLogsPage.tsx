@@ -367,7 +367,7 @@ export function ManagerAuditLogsPage() {
                   onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
                   aria-label="Trang trước"
                 >
-                  ← Trang trước
+                  Trang trước
                 </button>
                 <button
                   type="button"

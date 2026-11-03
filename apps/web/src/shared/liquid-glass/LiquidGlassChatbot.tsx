@@ -156,7 +156,7 @@ export function LiquidGlassChatbot() {
       <LiquidGlassButton shape="circle" size={18} title={open ? 'Đóng trợ lý AI' : 'Mở trợ lý AI'} onClick={() => {
         if (!open) announceFloatingPanel('ai');
         setOpen(!open); if (!open && !initialized) void loadSessions();
-      }} style={{ width: 56, height: 56 }}><span aria-hidden="true">✦ AI</span></LiquidGlassButton>
+      }} style={{ width: 56, height: 56 }}><span aria-hidden="true">AI</span></LiquidGlassButton>
     </div>
     {open && <section className="liquid-glass-chat-window" aria-label="Trợ lý AI SÖL" onKeyDown={(event) => { if (event.key === 'Escape') setOpen(false); }}>
       <LiquidGlassContainer shape="rounded" borderRadius={22} tintOpacity={0.28} className="liquid-glass-chat-container">

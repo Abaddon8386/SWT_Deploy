@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import type QrScanner from 'qr-scanner';
-import { PortalIcon } from '../portal/PortalIcon';
 import './qr-checkin.css';
 
 const DEFAULT_HINT = 'Quét mã QR cổng trên màn hình lễ tân. Camera chỉ dùng để đọc mã và không lưu hình ảnh.';
@@ -76,7 +75,7 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
     <div className={`qr-camera__preview ${phase === 'scanning' ? 'qr-camera__preview--active' : ''}`}>
       <div ref={videoHost} className="qr-camera__video-host" />
       <div className="qr-camera__frame" aria-hidden="true" />
-      {phase !== 'scanning' && <div className="qr-camera__placeholder"><PortalIcon name="scan" size={48} /><span>{phase === 'starting' ? 'Đang mở camera…' : phase === 'done' ? 'Đã đọc mã QR' : 'Đưa mã QR vào khung'}</span></div>}
+      {phase !== 'scanning' && <div className="qr-camera__placeholder"><span>{phase === 'starting' ? 'Đang mở camera…' : phase === 'done' ? 'Đã đọc mã QR' : 'Đưa mã QR vào khung'}</span></div>}
     </div>
     <p className="qr-checkin-hint">{hint}</p>
     {error && <p role="alert" className="qr-checkin-error">{error}</p>}

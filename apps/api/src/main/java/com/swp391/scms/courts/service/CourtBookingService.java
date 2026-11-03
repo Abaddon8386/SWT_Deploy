@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class CourtBookingService {
+    private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
     private static final ZoneId CENTER_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final Set<String> COURT_DISCIPLINES = Set.of("Tennis", "Cầu lông", "Bơi lội");
     private static final Set<String> STAFF_ROLES = Set.of("CENTER_MANAGER", "RECEPTIONIST", "STAFF");
@@ -46,10 +47,18 @@ public class CourtBookingService {
     /** Optional so the service stays constructible in unit tests; without it no revenue row is written. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository payments;
-    private static final Set<String> PAYMENT_METHODS = Set.of("online_wallet", "bank_transfer");
+    private static final Set<String> PAYMENT_METHODS = Set.of("online_wallet", "bank_transfer", "vnpay");
 
     public CourtBookingService(CourtBookingRepository bookings, RoomRepository rooms,
                                MembershipSubscriptionRepository subscriptions, MemberRepository members, Clock clock) {
+        this(bookings, rooms, subscriptions, members, clock, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public CourtBookingService(CourtBookingRepository bookings, RoomRepository rooms,
+                               MembershipSubscriptionRepository subscriptions, MemberRepository members, Clock clock,
+                               com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard) {
+        this.vnpayGuard = vnpayGuard;
         this.bookings = bookings; this.rooms = rooms; this.subscriptions = subscriptions;
         this.members = members; this.clock = clock;
     }
@@ -184,12 +193,13 @@ public class CourtBookingService {
         booking.setBookingDate(date); booking.setStartTime(start); booking.setEndTime(end); booking.setCreatedAt(now());
         booking.setPrice(covered ? BigDecimal.ZERO : price);
         booking.setPaymentMethod(covered ? CourtPricing.PACKAGE_QUOTA : method);
-        booking.setPaymentStatus(covered ? "covered" : "paid");
+        booking.setPaymentStatus(covered ? "covered" : "vnpay".equals(method) ? "pending" : "paid");
         CourtBooking saved = bookings.saveAndFlush(booking);
         if (!covered && payments != null) {
             Payment payment = new Payment();
-            payment.setMember(member); payment.setAmount(price); payment.setMethod(method); payment.setStatus("success");
-            payment.setPaidAt(now()); payment.setNote("Court #" + saved.getId());
+            payment.setMember(member); payment.setAmount(price); payment.setMethod("vnpay".equals(method) ? "online_wallet" : method); payment.setStatus("vnpay".equals(method) ? "pending" : "success");
+            payment.setCourtBookingId(saved.getId());
+            if (!"vnpay".equals(method)) payment.setPaidAt(now()); payment.setNote("Court #" + saved.getId());
             payments.save(payment);
         }
         return dto(saved, principal);
@@ -248,6 +258,12 @@ public class CourtBookingService {
         if ("cancelled".equals(booking.getStatus())) return dto(booking, principal);
         if (!canCancel(booking, principal)) throw invalid("cancel_too_late");
         if (reason != null && reason.length() > 255) throw invalid("invalid_slot");
+        if (vnpayGuard != null) vnpayGuard.court(booking.getId());
+        if (payments != null) {
+            payments.findAllByCourtBookingId(booking.getId()).stream()
+                    .filter(payment -> "pending".equals(payment.getStatus()))
+                    .forEach(payment -> payment.setStatus("failed"));
+        }
         booking.setStatus("cancelled"); booking.setCancelledAt(now());
         booking.setCancelReason(reason == null || reason.isBlank() ? null : reason.trim());
         return dto(bookings.saveAndFlush(booking), principal);

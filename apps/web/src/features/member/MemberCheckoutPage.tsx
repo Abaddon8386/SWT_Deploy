@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { VnpayPayButton } from '../payments/VnpayPayButton';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { notify } from '../../shared/lib/portalNotices';
@@ -28,6 +29,7 @@ export function MemberCheckoutPage() {
   const subscriptionIdParam = searchParams.get('subscriptionId');
   const existingSubscriptionId = subscriptionIdParam ? parseInt(subscriptionIdParam, 10) : null;
 
+  const preparedSubscriptionId = useRef<number | null>(existingSubscriptionId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<MembershipPackage | null>(null);
@@ -51,18 +53,24 @@ export function MemberCheckoutPage() {
 
   useEffect(() => {
     let active = true;
+    preparedSubscriptionId.current = existingSubscriptionId;
     async function initCheckout() {
       setLoading(true);
       setError(null);
       try {
         const [packages, history] = await Promise.all([
           getMembershipPackages(),
-          existingSubscriptionId ? getMembershipHistory().catch(() => []) : Promise.resolve([]),
+          existingSubscriptionId ? getMembershipHistory() : Promise.resolve([]),
         ]);
         if (!active) return;
 
         if (existingSubscriptionId) {
-          const quoted = history.find((item) => item.id === existingSubscriptionId)?.upgradeCharge;
+          const subscription = history.find(item => item.id === existingSubscriptionId);
+          if (!subscription || subscription.status !== 'pending_payment' || (parsedPackageId && subscription.packageId !== parsedPackageId)) {
+            setError('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.');
+            return;
+          }
+          const quoted = subscription.upgradeCharge;
           setQuotedAmount(typeof quoted === 'number' ? quoted : null);
         }
 
@@ -91,6 +99,16 @@ export function MemberCheckoutPage() {
 
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
 
+  async function prepareVnpay() {
+    if (!selectedPackage) throw new Error('Không tìm thấy gói tập.');
+    if (!preparedSubscriptionId.current) {
+      const history = await getMembershipHistory();
+      const pending = history.find(item => item.packageId === selectedPackage.id && item.status === 'pending_payment');
+      preparedSubscriptionId.current = pending?.id ?? (await createMembershipSubscription(selectedPackage.id)).id;
+    }
+    return { subscriptionId: preparedSubscriptionId.current };
+  }
+
   // Hẹn giờ chỉ để hội viên chủ động sắp xếp; lễ tân xác nhận thanh toán thật khi hội viên tới quầy.
   async function handleConfirm(e: React.FormEvent) {
     e.preventDefault();
@@ -108,9 +126,10 @@ export function MemberCheckoutPage() {
     setIsSubmitting(true);
     try {
       // Yêu cầu đăng ký/nâng cấp/gia hạn đã có từ trang gói tập; chỉ tạo mới khi vào thẳng trang này
-      let subscriptionId = existingSubscriptionId;
+      let subscriptionId = preparedSubscriptionId.current;
       if (!subscriptionId) {
         subscriptionId = (await createMembershipSubscription(selectedPackage.id)).id;
+        preparedSubscriptionId.current = subscriptionId;
       }
 
       setCompletedResult({
@@ -156,7 +175,6 @@ export function MemberCheckoutPage() {
     return (
       <div className="portal-container checkout-container">
         <div className="checkout-success-view">
-          <div className="checkout-success-icon">✓</div>
 
           <h2 style={{ fontSize: '1.45rem', color: 'var(--portal-paper, var(--color-text-main, #202020))', marginBottom: 8, fontWeight: 700 }}>
             Đã ghi lịch dự kiến tới quầy
@@ -182,14 +200,14 @@ export function MemberCheckoutPage() {
                   {formatPrice(completedResult.amount)}
                 </div>
                 <span className="badge badge-warning" style={{ marginTop: 4 }}>
-                  ● Chờ thanh toán tại quầy
+                  Chờ thanh toán tại quầy
                 </span>
               </div>
             </div>
 
             <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--portal-border, #e4e2de)', fontSize: '0.92rem', color: 'var(--portal-paper, var(--color-text-main, #202020))' }}>
               <div style={{ display: 'grid', gap: 6 }}>
-                <div><strong>🕒 Dự kiến tới quầy:</strong> {completedResult.appointmentDateTime}</div>
+                <div><strong>Dự kiến tới quầy:</strong> {completedResult.appointmentDateTime}</div>
                 <div style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.84rem', marginTop: 4 }}>
                   * Lịch này chỉ giúp bạn sắp xếp thời gian và không được gửi cho lễ tân. Khi tới quầy, đọc mã đơn #{completedResult.subscriptionId} hoặc tên của bạn để được phục vụ nhanh nhất.
                 </div>
@@ -217,16 +235,21 @@ export function MemberCheckoutPage() {
       <div className="checkout-breadcrumb">
         <Link to="/member/packages">Gói tập hội viên</Link>
         <span>/</span>
-        <span style={{ color: 'var(--portal-paper, var(--color-text-main, #202020))', fontWeight: 600 }}>Thanh toán tại quầy</span>
+        <span style={{ color: 'var(--portal-paper, var(--color-text-main, #202020))', fontWeight: 600 }}>Thanh toán</span>
       </div>
 
       <PageHeader
         eyebrow="Thanh toán"
-        title="Thanh toán gói tập tại quầy"
+        title="Thanh toán gói tập"
       />
 
       <div className="checkout-layout">
         <div>
+          <section className="portal-card stack" aria-label="Thanh toán VNPay Sandbox">
+            <h2 className="portal-card-title">VNPay Sandbox</h2>
+            <p>Thanh toán thử nghiệm qua ngân hàng, thẻ hoặc QR trên VNPay. Gói tập được cập nhật khi hệ thống nhận xác nhận giao dịch.</p>
+            <VnpayPayButton prepare={prepareVnpay} disabled={isSubmitting} />
+          </section>
           <div className="payment-methods">
             <div className="payment-method-card is-selected">
               <div className="payment-method-radio">
@@ -234,7 +257,7 @@ export function MemberCheckoutPage() {
               </div>
               <div className="payment-method-content">
                 <div className="payment-method-title">
-                  <span>🏢 Thanh toán tại quầy lễ tân</span>
+                  <span>Thanh toán tại quầy lễ tân</span>
                 </div>
                 <div className="payment-method-desc">
                   Thanh toán bằng tiền mặt hoặc quẹt thẻ POS trực tiếp tại sảnh trung tâm. Lễ tân xác nhận thanh toán thì gói tập mới có hiệu lực.
@@ -245,7 +268,7 @@ export function MemberCheckoutPage() {
 
           <div className="appointment-form-box">
             <h3 className="appointment-form-title">
-              <span>🗓️ Chọn thời gian dự kiến tới quầy</span>
+              <span>Chọn thời gian dự kiến tới quầy</span>
             </h3>
 
             <form onSubmit={handleConfirm}>
@@ -331,11 +354,11 @@ export function MemberCheckoutPage() {
             <div className="order-package-info">
               <div className="order-package-name">{selectedPackage.name}</div>
               <div className="order-package-term">
-                <span>⏱️ Thời hạn: {selectedPackage.durationDays} ngày tập</span>
+                <span>Thời hạn: {selectedPackage.durationDays} ngày tập</span>
               </div>
               {selectedPackage.classCreditLimit !== null && (
                 <div className="order-package-term" style={{ marginTop: 4 }}>
-                  <span>🎯 Lớp học: Tối đa {selectedPackage.classCreditLimit} buổi</span>
+                  <span>Lớp học: Tối đa {selectedPackage.classCreditLimit} buổi</span>
                 </div>
               )}
             </div>

@@ -29,6 +29,9 @@ public class TrainingPlanItem {
     @Column(name = "description", length = Length.LONG32)
     private String description;
 
+    @Column(name = "rest_seconds")
+    private Integer restSeconds;
+
     @Column(name = "sets")
     private Integer sets;
 
@@ -50,6 +53,8 @@ public class TrainingPlanItem {
     public void setExerciseName(String exerciseName) { this.exerciseName = exerciseName; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public Integer getRestSeconds() { return restSeconds; }
+    public void setRestSeconds(Integer restSeconds) { this.restSeconds = restSeconds; }
     public Integer getSets() { return sets; }
     public void setSets(Integer sets) { this.sets = sets; }
     public Integer getReps() { return reps; }

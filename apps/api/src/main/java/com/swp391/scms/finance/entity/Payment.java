@@ -36,6 +36,22 @@ public class Payment {
     @JoinColumn(name = "subscription_id", insertable = false, updatable = false)
     private MembershipSubscription subscription;
 
+    @Column(name = "coach_booking_id")
+    private Long coachBookingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coach_booking_id", insertable = false, updatable = false)
+    private com.swp391.scms.coaching.entity.CoachBooking coachBooking;
+    @Column(name = "court_booking_id")
+    private Long courtBookingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "court_booking_id", insertable = false, updatable = false)
+    private com.swp391.scms.courts.entity.CourtBooking courtBooking;
+
+    public Long getCoachBookingId() { return coachBookingId; }
+    public void setCoachBookingId(Long id) { coachBookingId = id; }
+    public Long getCourtBookingId() { return courtBookingId; }
+    public void setCourtBookingId(Long id) { courtBookingId = id; }
+
     @Column(name = "class_enrollment_id")
     private Long classEnrollmentId;
 

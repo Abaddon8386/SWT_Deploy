@@ -93,7 +93,7 @@ function ChatWorkspace({ member, embedded, visible, realtime }: { member: boolea
     {/* Trong widget, tiêu đề, trạng thái kết nối và nút làm mới nằm ở header của widget. */}
     {!embedded && <header className="portal-header"><div><p className="portal-eyebrow">Kết nối tại SÖL</p><h1 className="portal-title">Tin nhắn</h1>
       <p className="direct-chat__intro">{member ? 'Trao đổi riêng với lễ tân và huấn luyện viên.' : 'Trao đổi riêng với hội viên của bạn.'}</p></div>
-      <div className="direct-chat__connection"><span role="status" className={`direct-chat__connection-label is-${connection}`}><i aria-hidden="true" />{connectionLabel[connection]}</span>
+      <div className="direct-chat__connection"><span role="status" className={`direct-chat__connection-label is-${connection}`}>{connectionLabel[connection]}</span>
         {connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={() => setConnectionAttempt(n => n + 1)}>Thử kết nối lại</button>}
         <RefreshButton label="Làm mới tin nhắn" onClick={() => { void loadInbox(pageRef.current); void refresh(); }} disabled={loading} /></div>
     </header>}
@@ -118,7 +118,7 @@ function ChatWorkspace({ member, embedded, visible, realtime }: { member: boolea
         </nav>}
       </aside>
       {selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} canMarkRead={visible && mobileThread} onRead={onRead} onBack={() => { setMobileThread(false); requestAnimationFrame(() => listTitle.current?.focus({ preventScroll: true })); }} />
-        : <section className="direct-chat__placeholder"><span aria-hidden="true">↗</span><h2>Chọn một cuộc trò chuyện</h2><p>Tin nhắn riêng của bạn được lưu tại đây.</p></section>}
+        : <section className="direct-chat__placeholder"><h2>Chọn một cuộc trò chuyện</h2><p>Tin nhắn riêng của bạn được lưu tại đây.</p></section>}
     </div>
   </div>;
 }

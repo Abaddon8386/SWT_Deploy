@@ -20,7 +20,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     memberId: 1,
     memberCode: 'MB-2026-001',
     memberName: 'Lê Hoàng Long',
-    modelName: 'OpenAI GPT-4o / SÖL AI Intelligence',
+    modelName: 'Gemini 3 Flash',
     goal: 'Tăng cơ nạc và phục hồi cơ lưng',
     analysis: 'Hội viên có tiền sử thoát vị đĩa đệm nhẹ, cần bài tập an toàn cho lưng dưới.',
     items: [
@@ -211,6 +211,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     // Verify AI analysis result appears
     expect(host.textContent).toContain('Assisted Pull-up & Face Pull');
     expect(host.textContent).toContain('Goblet Box Squat');
+    expect(host.textContent).not.toContain('Gemini 3 Flash');
 
     // 3. Click "Áp dụng vào giáo án"
     const applyBtn = Array.from(host.querySelectorAll('button')).find((b) =>
@@ -298,4 +299,17 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(endInput).not.toBeNull();
     expect(endInput.getAttribute('min')).toBe(startInput.value);
   });
+  it('edits draft exercise reps and sets before saving the plan', async () => {
+    await renderComponent();
+    await act(async()=>host.querySelector<HTMLButtonElement>('button[aria-label="Sửa bài tập Kéo xà trợ lực (Assisted Pull-up)"]')!.click());
+    for (const [id,value] of [['draft-exercise-sets','5'],['draft-exercise-reps','8'],['draft-exercise-rest','90']]) {
+      const input=document.getElementById(id) as HTMLInputElement;
+      await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
+    }
+    const form=document.querySelector('#draft-exercise-sets')!.closest('form')!;
+    await act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    const card=[...host.querySelectorAll('.exercise-item-card')].find(item=>item.textContent?.includes('Assisted Pull-up'))!;
+    expect(card.textContent).toContain('Hiệp: 5');expect(card.textContent).toContain('8 reps');expect(card.textContent).toContain('90s');
+  });
+
 });

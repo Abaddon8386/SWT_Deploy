@@ -70,9 +70,10 @@ describe('mobile portal navigation', () => {
     expect(document.activeElement).toBe(bell);
   });
 
-  it('opens the same panel from the rail and closes on outside pointerdown', async () => {
+  it('keeps notifications out of the rail and closes the topbar panel on outside pointerdown', async () => {
     const router = await renderPortal('MEMBER', '/member/dashboard');
-    const trigger = host.querySelector<HTMLButtonElement>('.portal-rail-nav button[aria-label="Thông báo"]');
+    expect(host.querySelector('.portal-rail-nav [aria-label="Thông báo"]')).toBeNull();
+    const trigger = host.querySelector<HTMLButtonElement>('button.member-notification-bell');
     expect(trigger).not.toBeNull();
     await act(async () => trigger!.click());
     expect(host.querySelector('.notification-popover')).not.toBeNull();

@@ -1,3 +1,4 @@
+import { VnpayPayButton } from '../payments/VnpayPayButton';
 import { useEffect, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -11,6 +12,7 @@ import './member-invoices.css';
 
 
 export function MemberInvoicesPage() {
+  const [pending, setPending] = useState<Payment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -26,6 +28,7 @@ export function MemberInvoicesPage() {
     let active = true;
     getMyPayments().then((data) => {
       if (!active) return;
+      setPending(data.filter(payment => payment.status === 'pending'));
       setPayments(data.filter((payment) => payment.status.toLowerCase() === 'success')
         .sort((a, b) => (b.paidAt ?? '').localeCompare(a.paidAt ?? '') || b.id - a.id));
       setError(false);
@@ -71,7 +74,11 @@ export function MemberInvoicesPage() {
 
   return (
     <div className="portal-container member-invoices">
-      <PageHeader eyebrow="Hội viên" title="Giao dịch & hóa đơn" subtitle="Các khoản thanh toán đã hoàn tất của bạn." />
+      <PageHeader eyebrow="Hội viên" title="Giao dịch & hóa đơn" subtitle="Theo dõi khoản chờ thanh toán và hóa đơn của bạn." />
+      {!loading && !error && pending.length > 0 && <section className="portal-card stack" aria-label="Khoản chờ thanh toán">
+        <h2 className="portal-card-title">Khoản chờ thanh toán</h2>
+        {pending.map(payment => <div className="row-card" key={payment.id}><span>Giao dịch #{payment.id} · {formatPrice(payment.amount)}</span><VnpayPayButton target={{ paymentId: payment.id }} /></div>)}
+      </section>}
       <section className="portal-card member-invoices__card" aria-label="Lịch sử giao dịch">
         {loading ? <LoadingSkeleton label="Đang tải giao dịch…" variant="table" count={4} /> : error ? (
           <div role="alert"><p>Không tải được giao dịch. Vui lòng thử lại.</p><button type="button" className="btn-secondary btn-sm" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>Thử lại</button></div>

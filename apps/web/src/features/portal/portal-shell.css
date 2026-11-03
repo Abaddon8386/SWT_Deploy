@@ -246,6 +246,8 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-workspace-divider { width: 1px; height: 28px; background: var(--portal-border); }
 .portal-workspace-role { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--portal-border); border-radius: 24px; background: var(--portal-surface); font-size: 11px; font-weight: 600; white-space: nowrap; }
 .portal-search-trigger { display: inline-flex; align-items: center; gap: 10px; width: 205px; min-height: 42px; padding: 10px 15px; border: 1px solid transparent; border-radius: 24px; background: var(--portal-surface); color: var(--portal-muted); font: 400 12px var(--font-sans); text-align: left; cursor: pointer; transition: border-color 160ms ease; }
+.portal-search-icon { display: none; }
+body:has(.portal-backdrop) .sol-toast__icon { display: none; }
 .portal-search-trigger:hover { border-color: var(--portal-border-strong); }
 .portal-topbar-actions { flex-shrink: 0; }
 .portal-account { gap: 9px; border-radius: 10px; }
@@ -302,12 +304,11 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .membership-periods__row:last-child { border-bottom: 0; padding-bottom: 0; }
 .membership-periods__package { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 180px; color: var(--portal-paper); font-size: 13px; overflow-wrap: anywhere; }
 .membership-periods__package strong { min-width: 0; font-weight: 600; }
-.membership-periods__icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border-radius: 10px; background: var(--portal-tint); color: var(--portal-salmon); }
 .membership-periods__dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 0; font-size: 12px; }
 .membership-periods__dates dt { margin-bottom: 5px; color: var(--portal-muted); font-size: 11px; }
 .membership-periods__dates dd { margin: 0; color: var(--portal-paper); font-weight: 500; font-variant-numeric: tabular-nums; }
 @media (max-width: 767px) {
-  .membership-periods__dates { flex: 1 1 100%; gap: 16px; padding-left: 48px; }
+  .membership-periods__dates { flex: 1 1 100%; gap: 16px; }
 }
 .portal-v2 .portal-card--list { flex-wrap: wrap; gap: 16px; margin-bottom: 0; }
 .portal-v2 .portal-card--list > div:first-child { min-width: 0; flex: 1 1 240px; }
@@ -423,7 +424,8 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   .portal-topbar-actions { gap: 6px; }
   .portal-mobile-menu { display: inline-flex; }
   .portal-search-trigger { justify-content: center; width: 40px; min-height: 44px; padding: 8px; background: transparent; }
-  .portal-search-trigger span { display: none; }
+  .portal-search-trigger > span { display: none; }
+  .portal-search-trigger > .portal-search-icon { display: inline-flex; }
   .portal-account { display: none; }
   .portal-v2 .portal-container { padding: 8px 8px 24px; }
   .portal-v2 .portal-header { margin-bottom: 24px; }

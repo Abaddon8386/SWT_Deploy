@@ -557,7 +557,7 @@ export function CoachClassesPage() {
             </div>
 
             <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-              📌 Bảng xếp hạng và mức thưởng được Ban Quản Lý phê duyệt và công bố định kỳ.
+              Bảng xếp hạng và mức thưởng được Ban Quản Lý phê duyệt và công bố định kỳ.
             </span>
           </div>
 
@@ -607,15 +607,6 @@ export function CoachClassesPage() {
                   >
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 28 }}>
-                          {currentMonthReview.rankPosition === 1
-                            ? '🥇'
-                            : currentMonthReview.rankPosition === 2
-                            ? '🥈'
-                            : currentMonthReview.rankPosition === 3
-                            ? '🥉'
-                            : '🏅'}
-                        </span>
                         <div>
                           <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--portal-paper)' }}>
                             Hạng #{currentMonthReview.rankPosition} •{' '}
@@ -643,8 +634,8 @@ export function CoachClassesPage() {
                       }}
                     >
                       {currentMonthReview.status === 'published'
-                        ? '✓ Đã công bố chính thức'
-                        : '⏳ Đang tổng hợp / Dự thảo'}
+                        ? 'Đã công bố chính thức'
+                        : 'Đang tổng hợp / Dự thảo'}
                     </span>
                   </div>
 
@@ -679,7 +670,7 @@ export function CoachClassesPage() {
                           fontVariantNumeric: 'tabular-nums',
                         }}
                       >
-                        ⭐ {currentMonthReview.averageRating.toFixed(1)}
+                        {currentMonthReview.averageRating.toFixed(1)}
                         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--portal-muted)' }}>/ 5.0</span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
@@ -753,7 +744,7 @@ export function CoachClassesPage() {
                           marginBottom: 6,
                         }}
                       >
-                        💬 Lời nhận xét & Đánh giá từ Ban Quản Lý Trung Tâm:
+                        Lời nhận xét & Đánh giá từ Ban Quản Lý Trung Tâm:
                       </span>
                       <p
                         style={{
@@ -797,7 +788,7 @@ export function CoachClassesPage() {
               >
                 <div style={{ marginBottom: 18 }}>
                   <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--portal-paper)' }}>
-                    🏆 Bảng vinh danh top huấn luyện viên tháng {reviewMonth}/{reviewYear}
+                    Bảng vinh danh top huấn luyện viên tháng {reviewMonth}/{reviewYear}
                   </h3>
                   <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
                     Danh sách các HLV có điểm đánh giá xuất sắc nhất toàn hệ thống
@@ -853,13 +844,7 @@ export function CoachClassesPage() {
                                 color: 'var(--portal-paper)',
                               }}
                             >
-                              {item.rankPosition === 1
-                                ? '🥇'
-                                : item.rankPosition === 2
-                                ? '🥈'
-                                : item.rankPosition === 3
-                                ? '🥉'
-                                : `#${item.rankPosition}`}
+                              {`#${item.rankPosition}`}
                             </span>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -883,7 +868,7 @@ export function CoachClassesPage() {
                               </div>
                               <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
                                 {item.coachSpecialization || 'Huấn luyện viên cá nhân'}
-                                {item.badge && ` • 🎖️ ${item.badge}`}
+                                {item.badge && ` • ${item.badge}`}
                               </span>
                             </div>
                           </div>
@@ -898,7 +883,7 @@ export function CoachClassesPage() {
                           >
                             <div>
                               <div style={{ fontWeight: 800, color: 'var(--portal-star)', fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>
-                                ⭐ {item.averageRating.toFixed(1)}
+                                {item.averageRating.toFixed(1)}
                               </div>
                               <div style={{ fontSize: 11, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
                                 {item.totalReviews} đánh giá
@@ -936,7 +921,7 @@ export function CoachClassesPage() {
               >
                 <div style={{ marginBottom: 18 }}>
                   <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--portal-paper)' }}>
-                    💬 Đánh giá & nhận xét trực tiếp từ học viên
+                    Đánh giá & nhận xét trực tiếp từ học viên
                   </h3>
                   <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
                     Phản hồi thực tế từ hội viên sau các buổi học và buổi kèm riêng PT 1:1
@@ -969,7 +954,7 @@ export function CoachClassesPage() {
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontWeight: 750, fontSize: 14, color: 'var(--portal-paper)' }}>
-                              {rev.isAnonymous ? '👤 Hội viên ẩn danh' : rev.memberName}
+                              {rev.isAnonymous ? 'Hội viên ẩn danh' : rev.memberName}
                             </span>
                             <span
                               style={{

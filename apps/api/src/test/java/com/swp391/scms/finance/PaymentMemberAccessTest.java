@@ -44,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         JsonAccessDeniedHandler.class, PaymentService.class})
 class PaymentMemberAccessTest {
     @Autowired MockMvc mvc;
+    @MockBean com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
     @MockBean PaymentRepository payments;
     @MockBean MemberRepository members;
     @MockBean UserRepository users;

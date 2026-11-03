@@ -158,11 +158,15 @@
 
 .exercise-item-specs {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: 8px;
   align-items: center;
 }
 
 .exercise-spec-pill {
+  flex: 0 0 auto;
+  white-space: nowrap;
   background: var(--portal-raised);
   border: 1px solid var(--portal-border);
   border-radius: 6px;
@@ -360,3 +364,11 @@
   }
 }
 
+
+/* Flat exercise forms shared by the local draft and saved-plan editor. */
+.plan-exercise-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.plan-exercise-fields__wide { grid-column: 1 / -1; }
+.plan-exercise-fields > * { min-width: 0; }
+.plan-exercise-list { min-width: 0; padding: 0; border: 0; margin: 18px 0; }
+.plan-exercise-editor { min-width: 0; padding: 16px 0; margin: 12px 0; border: 0; border-top: 1px solid var(--portal-border); }
+.plan-exercise-editor legend { max-width: 100%; overflow-wrap: anywhere; font-weight: 600; }

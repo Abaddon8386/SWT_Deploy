@@ -20,9 +20,9 @@ const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: strin
 };
 
 const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }> = {
-  PENDING: { label: '⏳ Chờ duyệt', bg: 'color-mix(in srgb, var(--portal-warning) 14%, transparent)', color: 'var(--portal-warning)' },
-  APPROVED: { label: '✓ Đã duyệt', bg: 'color-mix(in srgb, var(--portal-success) 12%, transparent)', color: 'var(--portal-success)' },
-  REJECTED: { label: '✕ Từ chối', bg: 'color-mix(in srgb, var(--portal-danger) 14%, transparent)', color: 'var(--portal-danger)' },
+  PENDING: { label: 'Chờ duyệt', bg: 'color-mix(in srgb, var(--portal-warning) 14%, transparent)', color: 'var(--portal-warning)' },
+  APPROVED: { label: 'Đã duyệt', bg: 'color-mix(in srgb, var(--portal-success) 12%, transparent)', color: 'var(--portal-success)' },
+  REJECTED: { label: 'Từ chối', bg: 'color-mix(in srgb, var(--portal-danger) 14%, transparent)', color: 'var(--portal-danger)' },
   CANCELLED: { label: 'Đã hủy', bg: 'color-mix(in srgb, var(--portal-muted) 15%, transparent)', color: 'var(--portal-muted)' },
 };
 
@@ -148,9 +148,9 @@ export function ManagerInternalRequestsPage() {
         {/* Status tabs */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
-            { key: 'PENDING', label: '⏳ Chờ duyệt', count: pendingCount },
-            { key: 'APPROVED', label: '✓ Đã duyệt' },
-            { key: 'REJECTED', label: '✕ Từ chối' },
+            { key: 'PENDING', label: 'Chờ duyệt', count: pendingCount },
+            { key: 'APPROVED', label: 'Đã duyệt' },
+            { key: 'REJECTED', label: 'Từ chối' },
             { key: 'ALL', label: 'Tất cả' },
           ].map((tab) => {
             const isActive = statusFilter === tab.key;
@@ -230,7 +230,7 @@ export function ManagerInternalRequestsPage() {
             fontWeight: 600,
           }}
         >
-          <span>✕ {error}</span>
+          <span>{error}</span>
           <button
             type="button"
             onClick={() => setError('')}
@@ -429,7 +429,7 @@ export function ManagerInternalRequestsPage() {
                     }}
                   >
                     <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
-                      {req.status === 'APPROVED' ? '✓ Đã phê duyệt' : '✕ Đã từ chối'} bởi{' '}
+                      {req.status === 'APPROVED' ? 'Đã phê duyệt' : 'Đã từ chối'} bởi{' '}
                       {req.reviewedByName || 'Ban Quản Lý'} (
                       {formatCenterDate(req.reviewedAt)})
                     </div>
@@ -468,7 +468,7 @@ export function ManagerInternalRequestsPage() {
                         transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
                       }}
                     >
-                      ✕ Từ chối đơn
+                      Từ chối đơn
                     </button>
                     <button
                       type="button"
@@ -487,7 +487,7 @@ export function ManagerInternalRequestsPage() {
                         transition: 'background-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease',
                       }}
                     >
-                      ✓ Phê duyệt đơn
+                      Phê duyệt đơn
                     </button>
                   </div>
                 )}
@@ -520,7 +520,7 @@ export function ManagerInternalRequestsPage() {
                   fontWeight: 600,
                 }}
               >
-                ✕ {modalError}
+                {modalError}
               </div>
             )}
 

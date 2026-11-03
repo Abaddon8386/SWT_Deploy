@@ -64,4 +64,12 @@ describe('aiApi errors', () => {
     expect(bodies[0].coach_id).toBe(12);
     expect(bodies[1]).not.toHaveProperty('coach_id');
   });
+  it('persists rest seconds when creating a plan and keeps exercise IDs on edit', async () => {
+    const fetch=vi.fn(()=>Promise.resolve(new Response(JSON.stringify({data:{id:5,status:'active'}}))));vi.stubGlobal('fetch',fetch);
+    await aiApi.saveTrainingPlan({memberId:8,title:'Plan',goal:'Goal',startDate:'2026-11-03',endDate:'2026-11-30',items:[{dayOfWeek:1,exerciseName:'Squat',sets:3,reps:10,restSeconds:0}]});
+    await aiApi.updateTrainingPlan(5,{goal:'Goal',startDate:'2026-11-03',endDate:'2026-11-30',items:[{id:501,exerciseName:'Squat',sets:5,reps:8,restSeconds:90}]});
+    const bodies=(fetch.mock.calls as unknown as Array<[string,RequestInit]>).map(([,init])=>JSON.parse(String(init.body)));
+    expect(bodies[0].items[0].rest_seconds).toBe(0);expect(bodies[1].items[0]).toMatchObject({id:501,sets:5,reps:8,restSeconds:90});
+  });
+
 });

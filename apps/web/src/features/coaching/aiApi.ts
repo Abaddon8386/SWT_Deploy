@@ -1,3 +1,4 @@
+import type { ExerciseValues } from './trainingExercise';
 import { apiFetch } from '../../shared/api/client';
 
 export interface WorkoutExerciseItem {
@@ -63,6 +64,8 @@ export interface CoachOption {
   email?: string;
 }
 
+export interface SavedTrainingPlanItem extends ExerciseValues { id: number }
+
 export interface SavedTrainingPlan {
   id: number;
   memberId: number;
@@ -74,20 +77,20 @@ export interface SavedTrainingPlan {
   endDate: string;
   status: 'draft' | 'active' | 'completed' | 'cancelled' | string;
   aiGenerated?: boolean;
-  items?: Array<{ id: number; exerciseName: string }>;
+  items?: SavedTrainingPlanItem[];
 }
 
 export const aiApi = {
   /** Giáo án đã lưu trên server: Coach thấy của mình, Manager thấy tất cả. */
   listTrainingPlans: () => apiFetch<SavedTrainingPlan[]>('/coaching/training-plans'),
 
-  updateTrainingPlan: (id: number, input: { goal: string; startDate: string; endDate: string }) =>
+  updateTrainingPlan: (id: number, input: { goal: string; startDate: string; endDate: string; items?: SavedTrainingPlanItem[] }) =>
     apiFetch<SavedTrainingPlan>(`/coaching/training-plans/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ goal: input.goal, start_date: input.startDate, end_date: input.endDate }),
+      body: JSON.stringify({ goal: input.goal, start_date: input.startDate, end_date: input.endDate, items: input.items }),
     }),
 
-  /** Chỉ xóa được giáo án nháp; giáo án đã kích hoạt trả 409. */
+  /** Xóa bản nháp; ngừng áp dụng giáo án active và giữ lịch sử tập. */
   deleteTrainingPlan: (id: number) => apiFetch<void>(`/coaching/training-plans/${id}`, { method: 'DELETE' }),
 
   /**
@@ -179,6 +182,7 @@ export const aiApi = {
           description: item.description,
           sets: item.sets,
           reps: item.reps,
+          rest_seconds: item.restSeconds,
           duration_minutes: item.durationMinutes || 15,
           order_index: item.orderIndex || idx + 1,
         })),

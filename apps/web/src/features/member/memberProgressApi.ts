@@ -16,6 +16,7 @@ export interface TrainingItem {
   sets: number | null;
   reps: number | null;
   durationMinutes: number | null;
+  restSeconds?: number | null;
   orderIndex: number;
 }
 

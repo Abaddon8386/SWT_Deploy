@@ -7,6 +7,8 @@ public class TrainingPlanItemDto {
     private Integer dayOfWeek;
     private String exerciseName;
     private String description;
+    private Integer restSeconds;
+
     private Integer sets;
     private Integer reps;
     private Integer durationMinutes;
@@ -37,6 +39,8 @@ public class TrainingPlanItemDto {
     public void setExerciseName(String exerciseName) { this.exerciseName = exerciseName; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public Integer getRestSeconds() { return restSeconds; }
+    public void setRestSeconds(Integer restSeconds) { this.restSeconds = restSeconds; }
     public Integer getSets() { return sets; }
     public void setSets(Integer sets) { this.sets = sets; }
     public Integer getReps() { return reps; }

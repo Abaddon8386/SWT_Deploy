@@ -1,6 +1,5 @@
 .member-board-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-bottom: 22px; margin-bottom: 22px; border-bottom: 1px solid var(--portal-border); }
 .member-board-view { display: inline-flex; align-items: center; gap: 9px; padding: 8px 13px; border-radius: 20px; background: var(--portal-surface); font-size: 11px; font-weight: 600; }
-.member-board-view svg { color: var(--portal-salmon); }
 .member-board-date { font-size: 11px; color: var(--portal-muted); }
 .member-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; align-items: start; }
 .member-board-column { min-width: 0; --column-color: var(--portal-salmon); }
@@ -9,7 +8,6 @@
 .member-board-column--green { --column-color: #8c9f87; }
 .member-column-heading { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 44px; margin-bottom: 12px; }
 .member-column-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; font-weight: 650; line-height: 1.5; }
-.member-column-heading i { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 3px; background: var(--column-color); }
 .member-column-heading > a { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 36px; line-height: 1; color: var(--portal-salmon); border-radius: 10px; transition: color 160ms ease, background-color 160ms ease; }
 .member-column-heading > a:hover { color: var(--portal-salmon); background: var(--portal-surface); }
 .portal-v2 .member-board .portal-card { margin-bottom: 14px; padding: 18px; border: 0; border-radius: 18px; }
@@ -35,7 +33,6 @@
 .portal-v2 .member-board .member-booking-row { justify-content: flex-start; padding: 12px; gap: 9px; flex-wrap: nowrap; align-items: flex-start; }
 .portal-v2 .member-booking-row .row-card__title { font-size: 12px; margin-bottom: 4px; }
 .portal-v2 .member-booking-row .row-card__meta { font-size: 11px; }
-.member-booking-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 30px; width: 30px; height: 30px; line-height: 1; background: var(--portal-tint); color: var(--portal-salmon); border-radius: 9px; }
 .member-discover-card { display: grid; grid-template-columns: minmax(0, 1fr) 18px; gap: 12px 6px; padding: 10px 10px 16px; border-radius: 18px; background: var(--portal-surface); box-shadow: 0 6px 22px -16px #00000030; }
 .member-discover-card > img { grid-column: 1 / -1; width: 100%; height: 116px; border-radius: 12px; object-fit: cover; }
 .member-discover-card > span { padding-left: 7px; }
@@ -48,7 +45,6 @@
 .member-digital-card-label { margin-top: 23px; font-size: 11px; letter-spacing: .14em; }
 .member-digital-card > strong { margin-top: 7px; font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
 .member-digital-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 20px; font-size: 11px; }
-.member-info-icon { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; line-height: 1; margin-bottom: 14px; border-radius: 12px; background: var(--portal-tint); color: var(--portal-salmon); }
 .member-board-info h3, .member-profile-card h3 { margin: 0 0 8px; font-size: 13px; font-weight: 650; }
 .member-board-info p, .member-profile-card p { margin: 0; color: var(--portal-muted); font-size: 11px; line-height: 1.9; }
 .member-profile-card { display: block; margin-bottom: 14px; padding: 20px 18px 12px; border-radius: 18px; background: var(--portal-surface); box-shadow: 0 6px 22px -16px #00000030; }

@@ -22,9 +22,9 @@ const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: strin
 };
 
 const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }> = {
-  PENDING: { label: '⏳ Chờ duyệt', bg: 'color-mix(in srgb, var(--portal-warning) 14%, transparent)', color: 'var(--portal-warning)' },
-  APPROVED: { label: '✓ Đã duyệt', bg: 'color-mix(in srgb, var(--portal-success) 12%, transparent)', color: 'var(--portal-success)' },
-  REJECTED: { label: '✕ Từ chối', bg: 'color-mix(in srgb, var(--portal-danger) 14%, transparent)', color: 'var(--portal-danger)' },
+  PENDING: { label: 'Chờ duyệt', bg: 'color-mix(in srgb, var(--portal-warning) 14%, transparent)', color: 'var(--portal-warning)' },
+  APPROVED: { label: 'Đã duyệt', bg: 'color-mix(in srgb, var(--portal-success) 12%, transparent)', color: 'var(--portal-success)' },
+  REJECTED: { label: 'Từ chối', bg: 'color-mix(in srgb, var(--portal-danger) 14%, transparent)', color: 'var(--portal-danger)' },
   CANCELLED: { label: 'Đã hủy', bg: 'color-mix(in srgb, var(--portal-muted) 15%, transparent)', color: 'var(--portal-muted)' },
 };
 
@@ -154,9 +154,9 @@ export function StaffInternalRequestsPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
             { key: 'ALL', label: 'Tất cả' },
-            { key: 'PENDING', label: '⏳ Chờ duyệt' },
-            { key: 'APPROVED', label: '✓ Đã duyệt' },
-            { key: 'REJECTED', label: '✕ Từ chối' },
+            { key: 'PENDING', label: 'Chờ duyệt' },
+            { key: 'APPROVED', label: 'Đã duyệt' },
+            { key: 'REJECTED', label: 'Từ chối' },
             { key: 'CANCELLED', label: 'Đã hủy' },
           ].map((tab) => (
             <button
@@ -232,7 +232,7 @@ export function StaffInternalRequestsPage() {
             fontWeight: 600,
           }}
         >
-          <span>✕ {error}</span>
+          <span>{error}</span>
           <button
             type="button"
             onClick={() => setError('')}
@@ -387,7 +387,7 @@ export function StaffInternalRequestsPage() {
                     }}
                   >
                     <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
-                      {req.status === 'APPROVED' ? '✓ Quản lý chấp thuận' : '✕ Quản lý từ chối'} •{' '}
+                      {req.status === 'APPROVED' ? 'Quản lý chấp thuận' : 'Quản lý từ chối'} •{' '}
                       Người duyệt: {req.reviewedByName || 'Ban Quản Lý'} (
                       {formatCenterDate(req.reviewedAt)})
                     </div>
@@ -445,7 +445,7 @@ export function StaffInternalRequestsPage() {
                   fontWeight: 600,
                 }}
               >
-                ✕ {formError}
+                {formError}
               </div>
             )}
 

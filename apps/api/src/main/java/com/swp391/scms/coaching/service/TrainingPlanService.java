@@ -184,23 +184,44 @@ public class TrainingPlanService {
             throw new BadRequestException("INVALID_DATE_RANGE", "coaching.plan.invalid_date_range", null,
                     "Start date cannot be after end date");
         }
+        List<TrainingPlanItem> items = trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId);
+        if (dto.getItems() != null) {
+            var seen = new java.util.HashSet<Long>();
+            for (var update : dto.getItems()) {
+                if (update == null || update.getId() == null || !seen.add(update.getId())
+                        || items.stream().noneMatch(item -> update.getId().equals(item.getId()))) {
+                    throw new BadRequestException("INVALID_PLAN_ITEM", "coaching.plan.item_not_owned", null, null);
+                }
+                validateItem(update);
+            }
+            for (var update : dto.getItems()) {
+                var item = items.stream().filter(existing -> update.getId().equals(existing.getId())).findFirst().orElseThrow();
+                item.setDayOfWeek(update.getDayOfWeek());item.setExerciseName(update.getExerciseName().trim());
+                item.setDescription(update.getDescription());item.setSets(update.getSets());item.setReps(update.getReps());
+                item.setDurationMinutes(update.getDurationMinutes());item.setRestSeconds(update.getRestSeconds());
+            }
+        }
         plan.setStartDate(start);
         plan.setEndDate(end);
         if (dto.getGoal() != null) {
             plan.setGoal(dto.getGoal().isBlank() ? null : dto.getGoal().trim());
         }
         TrainingPlan saved = trainingPlanRepository.save(plan);
-        return toDto(saved, trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId));
+        return toDto(saved, items);
     }
 
-    /** Only drafts are removed: an activated plan may already be followed by the member and is kept for history. */
+    /** Activated plans are withdrawn without deleting exercises or member completion history. */
     public void deletePlan(Long planId, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
         verifyCoachOwnership(plan, currentUserId, currentUserRole);
+        if ("cancelled".equalsIgnoreCase(plan.getStatus())) return;
+        if ("active".equalsIgnoreCase(plan.getStatus())) {
+            plan.setStatus("cancelled");trainingPlanRepository.save(plan);return;
+        }
         if (!"draft".equalsIgnoreCase(plan.getStatus())) {
             throw new ConflictException("INVALID_PLAN_STATUS", "coaching.plan.cannot_delete_status",
-                    new Object[]{plan.getStatus()}, "Only draft training plans can be deleted");
+                    new Object[]{plan.getStatus()}, null);
         }
         trainingPlanRepository.delete(plan);
     }
@@ -269,6 +290,17 @@ public class TrainingPlanService {
             throw new BadRequestException("EXERCISE_NAME_REQUIRED", "validation.coaching.exercise_name.not_blank",
                     null, "Exercise name is required");
         }
+        if (itemDto.getExerciseName().trim().length() > 150) {
+            throw new BadRequestException("INVALID_EXERCISE_NAME", "validation.coaching.exercise_name.size", null, null);
+        }
+        if (itemDto.getSets() != null && itemDto.getSets() < 1)
+            throw new BadRequestException("INVALID_SETS", "validation.coaching.sets.min", null, null);
+        if (itemDto.getReps() != null && itemDto.getReps() < 1)
+            throw new BadRequestException("INVALID_REPS", "validation.coaching.reps.min", null, null);
+        if (itemDto.getDurationMinutes() != null && itemDto.getDurationMinutes() < 1)
+            throw new BadRequestException("INVALID_DURATION", "validation.coaching.duration.min", null, null);
+        if (itemDto.getRestSeconds() != null && itemDto.getRestSeconds() < 0)
+            throw new BadRequestException("INVALID_REST", "validation.coaching.rest.min", null, null);
         if (itemDto.getDayOfWeek() != null && (itemDto.getDayOfWeek() < 1 || itemDto.getDayOfWeek() > 7)) {
             throw new BadRequestException("INVALID_DAY_OF_WEEK", "validation.coaching.day_of_week.range",
                     null, "Day of week must be between 1 and 7");
@@ -281,6 +313,7 @@ public class TrainingPlanService {
         item.setDayOfWeek(dto.getDayOfWeek());
         item.setExerciseName(dto.getExerciseName().trim());
         item.setDescription(dto.getDescription());
+        item.setRestSeconds(dto.getRestSeconds());
         item.setSets(dto.getSets());
         item.setReps(dto.getReps());
         item.setDurationMinutes(dto.getDurationMinutes());
@@ -318,7 +351,7 @@ public class TrainingPlanService {
         dto.setUpdatedAt(plan.getUpdatedAt());
 
         List<TrainingPlanItemDto> itemDtos = items == null ? List.of() : items.stream()
-                .map(i -> new TrainingPlanItemDto(
+                .map(i -> { var itemDto = new TrainingPlanItemDto(
                         i.getId(),
                         plan.getId(),
                         i.getDayOfWeek(),
@@ -328,7 +361,7 @@ public class TrainingPlanService {
                         i.getReps(),
                         i.getDurationMinutes(),
                         i.getOrderIndex()
-                ))
+                ); itemDto.setRestSeconds(i.getRestSeconds()); return itemDto; })
                 .toList();
         dto.setItems(itemDtos);
         return dto;

@@ -557,7 +557,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending]);
     await render();
     expect(host.textContent).toContain('Yêu cầu #12');
-    expect(host.textContent).toContain('Vui lòng thanh toán trực tiếp tại quầy lễ tân');
+    expect(host.textContent).toContain('Bạn có thể thanh toán bằng VNPay Sandbox hoặc tới quầy lễ tân.');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(button('Hủy yêu cầu đăng ký')).toBeDefined();
     expect(host.querySelector('img')).toBeNull();
@@ -613,7 +613,7 @@ describe('SCRUM-86 packages', () => {
     expect(dialog?.textContent).toContain('Essential');
     expect(dialog?.textContent).toContain('500.000');
     expect(dialog?.textContent).toContain('#12');
-    expect(dialog?.textContent).toContain('Vui lòng thanh toán trực tiếp tại quầy lễ tân');
+    expect(dialog?.textContent).toContain('Bạn có thể thanh toán bằng VNPay Sandbox hoặc tới quầy lễ tân.');
     expect(dialog?.textContent).not.toContain('Số tài khoản');
     expect(dialog?.textContent).not.toContain('Tên người nhận');
     expect(dialog?.querySelector('img, canvas')).toBeNull();

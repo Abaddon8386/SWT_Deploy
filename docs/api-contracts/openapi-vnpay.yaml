@@ -1,0 +1,60 @@
+openapi: 3.0.3
+info:
+  title: SCMS VNPay Sandbox checkout — SCRUM-76
+  version: 1.0.0
+paths:
+  /api/v1/payments/vnpay/config:
+    get:
+      summary: Member checks whether VNPay is configured
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: 'ApiResponse containing {enabled: boolean}' }
+  /api/v1/payments/vnpay/checkout:
+    post:
+      summary: Member pays their pending membership, PT, court or existing payment; amount is resolved by the server
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Exactly one of subscriptionId, coachBookingId, courtBookingId or paymentId is required.
+              properties:
+                subscriptionId: { type: integer, format: int64, minimum: 1 }
+                coachBookingId: { type: integer, format: int64, minimum: 1 }
+                courtBookingId: { type: integer, format: int64, minimum: 1 }
+                paymentId: { type: integer, format: int64, minimum: 1 }
+      responses:
+        '200': { description: 'ApiResponse of reference, paymentUrl, amount and expiresAt; reuses an unexpired pending attempt' }
+        '403': { description: Not the subscription owner or not a member }
+        '409': { description: Subscription/payment unavailable or expired attempt awaiting reconciliation }
+        '503': { description: VNPay not configured }
+  /api/v1/payments/vnpay/transactions/{reference}:
+    get:
+      summary: Authoritative status for the owning member; query string return codes never settle payment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: reference, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'ApiResponse of reference, paymentId, subscriptionId, amount, status (pending/success/failed/refunded), expiresAt and destination' }
+        '403': { description: Not the transaction owner }
+        '404': { description: Unknown reference }
+  /api/v1/payments/vnpay/ipn:
+    get:
+      summary: Public VNPay signed callback; duplicates and invalid requests never grant entitlement
+      description: 'All vnp_* fields are signed after removing vnp_SecureHash and vnp_SecureHashType. Duplicate query parameters are rejected. Requires valid merchant, amount and matching immutable reference. Both response and transaction status must be 00 for success. Business errors leave the attempt unchanged for retry/reconciliation.'
+      responses:
+        '200':
+          description: 'Raw VNPay JSON; RspCode 00 confirmed, 01 unknown order, 02 already confirmed, 04 invalid amount, 97 invalid checksum/merchant/parameters, 99 retry later. Message uses Accept-Language (vi default).'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [RspCode, Message]
+                properties:
+                  RspCode: { type: string }
+                  Message: { type: string }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

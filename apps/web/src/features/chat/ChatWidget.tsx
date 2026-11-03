@@ -80,7 +80,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
     {visited && <section ref={panel} id="sol-direct-chat" className="chat-widget__panel" role="dialog" aria-label="Tin nhắn SÖL" hidden={!open}>
       <header className="chat-widget__header">
         <div><strong>Tin nhắn</strong>
-          {feed && <p className={`chat-widget__status is-${feed.connection}`} role="status"><i aria-hidden="true" />{connectionLabel[feed.connection]}
+          {feed && <p className={`chat-widget__status is-${feed.connection}`} role="status">{connectionLabel[feed.connection]}
             {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>Thử lại</button>}</p>}
         </div>
         <div className="chat-widget__header-actions">

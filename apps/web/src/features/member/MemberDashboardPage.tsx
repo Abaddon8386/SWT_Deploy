@@ -131,17 +131,17 @@ export function MemberDashboardPage() {
         eyebrow="Hội viên"
         title={`Xin chào, ${userName}`}
         subtitle="Gói tập, lịch học và thẻ hội viên của bạn."
-        actions={<Link className="btn-primary" to="/member/classes"><PortalIcon name="calendar" size={16} />Khám phá lịch học</Link>}
+        actions={<Link className="btn-primary" to="/member/classes">Khám phá lịch học</Link>}
       />
 
       <div className="member-board-toolbar">
-        <div className="member-board-view"><PortalIcon name="board" size={15} /><span>Tổng quan của tôi</span></div>
+        <div className="member-board-view"><span>Tổng quan của tôi</span></div>
         <span className="member-board-date">{today.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
       </div>
 
       <div className="member-board" aria-label="Tổng quan hội viên">
         <section className="member-board-column member-board-column--pink" aria-labelledby="board-membership">
-          <div className="member-column-heading"><h2 id="board-membership"><i />Gói tập của tôi</h2><Link to="/member/packages" aria-label="Xem các gói tập"><PortalIcon name="arrow" size={16} /></Link></div>
+          <div className="member-column-heading"><h2 id="board-membership">Gói tập của tôi</h2><Link to="/member/packages" aria-label="Xem các gói tập"><PortalIcon name="arrow" size={16} /></Link></div>
 
           {membershipState.status === 'loading' && (
             <section className="portal-card member-board-loading" role="status">
@@ -229,8 +229,8 @@ export function MemberDashboardPage() {
                   className="portal-card portal-card--feature portal-empty"
                   aria-labelledby="membership-empty-title"
                 >
-                  <PortalIcon name="package" size={28} />
-                  <div className="meta-label" style={{ marginTop: 16 }}>SÖL FITNESS</div>
+
+                  <div className="meta-label">SÖL FITNESS</div>
 
                   <h2
                     id="membership-empty-title"
@@ -257,7 +257,7 @@ export function MemberDashboardPage() {
         </section>
 
         <section className="member-board-column member-board-column--orange" aria-labelledby="board-classes">
-          <div className="member-column-heading"><h2 id="board-classes"><i />Lịch tập của tôi</h2><Link to="/member/classes" aria-label="Xem lịch lớp học"><PortalIcon name="arrow" size={16} /></Link></div>
+          <div className="member-column-heading"><h2 id="board-classes">Lịch tập của tôi</h2><Link to="/member/classes" aria-label="Xem lịch lớp học"><PortalIcon name="arrow" size={16} /></Link></div>
 
           <section
             className="portal-card member-classes-card"
@@ -296,7 +296,7 @@ export function MemberDashboardPage() {
 
             {classesState.status === 'success' &&
               classes.length === 0 && (
-                <div className="member-board-empty"><span className="member-board-empty-icon"><PortalIcon name="calendar" size={24} /></span><p className="row-card__meta">Bạn chưa có lớp học đang đặt.</p><Link className="member-text-link" to="/member/classes">Tìm lớp phù hợp<PortalIcon name="arrow" size={14} /></Link></div>
+                <div className="member-board-empty"><p className="row-card__meta">Bạn chưa có lớp học đang đặt.</p><Link className="member-text-link" to="/member/classes">Tìm lớp phù hợp<PortalIcon name="arrow" size={14} /></Link></div>
               )}
 
             {classesState.status === 'success' &&
@@ -307,7 +307,6 @@ export function MemberDashboardPage() {
                   </p>
                   {classes.map((item) => (
                     <div key={item.id} className="row-card member-booking-row">
-                      <span className="member-booking-icon"><PortalIcon name="calendar" size={17} /></span>
                       <div>
                         <h3 className="row-card__title">
                           {item.className}
@@ -324,23 +323,23 @@ export function MemberDashboardPage() {
                 </div>
               )}
           </section>
-          <Link className="member-board-note" to="/member/classes?tab=pt"><PortalIcon name="profile" size={18} /><span>Đặt lịch HLV 1:1<small>PT kèm riêng theo giờ · Đặt trước 2 tiếng</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/classes?tab=pt"><span>Đặt lịch HLV 1:1<small>PT kèm riêng theo giờ · Đặt trước 2 tiếng</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--blue" aria-labelledby="board-card">
-          <div className="member-column-heading"><h2 id="board-card"><i />Thẻ & thanh toán</h2><Link to="/member/card" aria-label="Xem thẻ hội viên"><PortalIcon name="arrow" size={16} /></Link></div>
+          <div className="member-column-heading"><h2 id="board-card">Thẻ & thanh toán</h2><Link to="/member/card" aria-label="Xem thẻ hội viên"><PortalIcon name="arrow" size={16} /></Link></div>
           <Link className="member-digital-card" to="/member/card">
             <div className="member-digital-card-top"><span>SÖL</span><PortalIcon name="scan" size={24} /></div>
             <span className="member-digital-card-label">FITNESS MEMBERSHIP</span>
             <strong>{userName}</strong>
             <div className="member-digital-card-bottom"><span>Thẻ hội viên điện tử</span><PortalIcon name="arrow" size={17} /></div>
           </Link>
-          <Link className="member-board-note" to="/member/invoices"><PortalIcon name="receipt" size={18} /><span>Giao dịch & hóa đơn<small>Xem các khoản đã thanh toán</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/invoices"><span>Giao dịch & hóa đơn<small>Xem các khoản đã thanh toán</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
-          <div className="member-column-heading"><h2 id="board-wellness"><i />Sức khỏe & cân bằng</h2><Link to="/member/profile" aria-label="Xem hồ sơ và sức khỏe"><PortalIcon name="arrow" size={16} /></Link></div>
-          <Link className="member-profile-card" to="/member/profile"><span className="member-info-icon"><PortalIcon name="profile" size={20} /></span><h3>Hồ sơ sức khỏe</h3><p>Cập nhật thông tin cá nhân và chỉ số cơ thể.</p><span className="member-text-link">Hồ sơ & sức khỏe<PortalIcon name="arrow" size={14} /></span></Link>
+          <div className="member-column-heading"><h2 id="board-wellness">Sức khỏe & cân bằng</h2><Link to="/member/profile" aria-label="Xem hồ sơ và sức khỏe"><PortalIcon name="arrow" size={16} /></Link></div>
+          <Link className="member-profile-card" to="/member/profile"><h3>Hồ sơ sức khỏe</h3><p>Cập nhật thông tin cá nhân và chỉ số cơ thể.</p><span className="member-text-link">Hồ sơ & sức khỏe<PortalIcon name="arrow" size={14} /></span></Link>
         </section>
       </div>
     </div>

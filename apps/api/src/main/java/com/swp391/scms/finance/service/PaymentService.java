@@ -40,6 +40,7 @@ import java.util.UUID;
 @Service
 @Transactional
 public class PaymentService {
+    private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
     private static final Set<String> VALID_STATUSES = Set.of("success", "pending", "failed", "refunded");
 
@@ -79,13 +80,23 @@ public class PaymentService {
         this(paymentRepository, memberRepository, userRepository, null, null, paymentMapper, clock);
     }
 
-    @Autowired
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
                           MembershipSubscriptionRepository membershipSubscriptionRepository,
                           ClassEnrollmentRepository classEnrollmentRepository,
                           PaymentMapper paymentMapper, Clock clock) {
+        this(paymentRepository, memberRepository, userRepository, membershipSubscriptionRepository, classEnrollmentRepository, paymentMapper, clock, null);
+    }
+
+    @Autowired
+    public PaymentService(PaymentRepository paymentRepository,
+                          MemberRepository memberRepository,
+                          UserRepository userRepository,
+                          MembershipSubscriptionRepository membershipSubscriptionRepository,
+                          ClassEnrollmentRepository classEnrollmentRepository,
+                          PaymentMapper paymentMapper, Clock clock, com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard) {
+        this.vnpayGuard = vnpayGuard;
         this.paymentRepository = paymentRepository;
         this.memberRepository = memberRepository;
         this.userRepository = userRepository;
@@ -174,6 +185,9 @@ public class PaymentService {
             }
         }
 
+        if (vnpayGuard != null && dto.getClassEnrollmentId() != null) {
+            paymentRepository.findByClassEnrollmentId(dto.getClassEnrollmentId()).ifPresent(p -> vnpayGuard.payment(p.getId()));
+        }
         User receiver = null;
         if (dto.getReceivedById() != null) {
             receiver = userRepository.findByIdAndDeletedAtIsNull(dto.getReceivedById())
@@ -220,6 +234,7 @@ public class PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", id));
 
         lockSubscriptionMember(payment);
+        if (vnpayGuard != null) vnpayGuard.payment(payment.getId());
         if (status == null || !VALID_STATUSES.contains(status.toLowerCase(Locale.ROOT))) {
             throw new BadRequestException("INVALID_PAYMENT_STATUS", "finance.payment.invalid_status", new Object[]{status}, null);
         }
@@ -295,6 +310,9 @@ public class PaymentService {
             }
         }
 
+        if (vnpayGuard != null && dto.getClassEnrollmentId() != null) {
+            paymentRepository.findByClassEnrollmentId(dto.getClassEnrollmentId()).ifPresent(p -> vnpayGuard.payment(p.getId()));
+        }
         User receiver = null;
         if (dto.getReceivedById() != null) {
             receiver = userRepository.findByIdAndDeletedAtIsNull(dto.getReceivedById())
@@ -338,6 +356,7 @@ public class PaymentService {
             }
             if (!pendingSubs.isEmpty()) {
                 MembershipSubscription pendingSub = pendingSubs.get(0);
+                if (vnpayGuard != null) vnpayGuard.subscription(pendingSub.getId());
                 if (pendingSub.getMembershipPackage() == null
                         || !pkg.getId().equals(pendingSub.getMembershipPackage().getId())) {
                     throw new BadRequestException("PAYMENT_PACKAGE_MISMATCH",
@@ -366,6 +385,7 @@ public class PaymentService {
                 resolvedSubscriptionId = subId;
             }
         } else if (resolvedSubscriptionId != null && membershipSubscriptionRepository != null) {
+            if (vnpayGuard != null) vnpayGuard.subscription(resolvedSubscriptionId);
             final Long targetSubId = resolvedSubscriptionId;
             MembershipSubscription subscription = membershipSubscriptionRepository.findById(targetSubId)
                     .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", targetSubId));
@@ -440,6 +460,7 @@ public class PaymentService {
 
     @Audited(action = "PAYMENT_REFUND", entity = "payments")
     public PaymentDto refundPayment(Long paymentId, PaymentRefundRequest request) {
+        if (vnpayGuard != null) vnpayGuard.refund(paymentId);
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", paymentId));
 

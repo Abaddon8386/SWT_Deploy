@@ -3,7 +3,6 @@
 .notification-item:last-child { border-bottom: 0; }
 .notification-item:hover, .notification-item:focus-visible { background: var(--portal-raised); }
 .notification-item--unread { background: var(--portal-tint); }
-.notification-icon { display: grid; place-items: center; flex: 0 0 42px; height: 42px; border: 1px solid var(--portal-salmon); border-radius: 50%; color: var(--portal-salmon); font-size: 1.3rem; }
 .notification-copy { display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
 .notification-copy strong { font: 650 14px/1.4 var(--font-sans); }
 .notification-copy span { font-size: .88rem; line-height: 1.5; color: var(--portal-muted); }
@@ -29,7 +28,6 @@
 .notification-panel__scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .notification-popover .notification-list { border: 0; border-radius: 0; }
 .notification-popover .notification-item { gap: 12px; padding: 16px 20px; }
-.notification-popover .notification-icon { flex-basis: 32px; height: 32px; font-size: 16px; }
 .notification-popover .notification-copy { gap: 4px; }
 .notification-popover .notification-copy strong { font-size: 13px; }
 .notification-popover .notification-copy span { font-size: 12px; }

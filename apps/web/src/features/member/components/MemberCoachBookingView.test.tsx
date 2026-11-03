@@ -128,7 +128,7 @@ describe('MemberCoachBookingView Review Logic', () => {
     expect(host.textContent).toContain('Đánh giá sau khi kết thúc buổi');
     expect(host.textContent).toContain('Hủy lịch hẹn');
     // Review button should not be present
-    expect(host.textContent).not.toContain('⭐ Đánh giá HLV');
+    expect(host.textContent).not.toContain('Đánh giá HLV');
   });
 
   it('renders completed session with "Đã kết thúc buổi" and allows reviewing coach', async () => {
@@ -149,7 +149,7 @@ describe('MemberCoachBookingView Review Logic', () => {
     await renderComponent();
 
     expect(host.textContent).toContain('Đã kết thúc buổi');
-    expect(host.textContent).toContain('⭐ Đánh giá HLV');
+    expect(host.textContent).toContain('Đánh giá HLV');
     // Session in the past cannot be cancelled
     expect(host.textContent).not.toContain('Hủy lịch hẹn');
 

@@ -111,7 +111,7 @@ export function MemberProgressPage() {
         <ol className="member-progress-exercises">{exercises.map(({ plan, item }) => <li key={`${plan.id}-${item.id}`}>
         {completions.kind === 'ready' && <label className="member-progress-check"><input type="checkbox" aria-label={`Hoàn thành ${item.exerciseName}`} checked={completions.data.includes(item.id)} disabled={savingItemId != null} onChange={(event) => void updateCompletion(item.id, event.target.checked)} />{savingItemId === item.id && <span>Đang lưu…</span>}</label>}
         <div><span className="member-progress-day">{plan.coachName || 'Huấn luyện viên'}</span><h3>{item.exerciseName}</h3>{item.description && <p>{item.description}</p>}</div>
-        <div className="member-progress-dose">{item.sets != null && item.reps != null && <span>{item.sets} hiệp × {item.reps} lần</span>}{item.durationMinutes != null && <span>{item.durationMinutes} phút</span>}</div>
+        <div className="member-progress-dose">{item.sets != null && item.reps != null && <span>{item.sets} hiệp × {item.reps} lần</span>}{item.durationMinutes != null && <span>{item.durationMinutes} phút</span>}{item.restSeconds != null && <span>Nghỉ {item.restSeconds} giây</span>}</div>
       </li>)}</ol></>}
     </section>
   </div>;

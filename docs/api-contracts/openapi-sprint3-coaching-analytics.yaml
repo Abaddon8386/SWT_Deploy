@@ -1,11 +1,14 @@
 openapi: 3.0.3
 info:
   title: SCMS Sprint 3 - Coaching, AI Recommendation & Utilization Analytics APIs
-  version: 1.0.0
+  version: 1.1.0
   description: >
     OpenAPI contract for Training Plans (SCRUM-116), AI Workout Recommendations (SCRUM-117),
     Session Evaluations (SCRUM-119), and Class Utilization Reports (SCRUM-120).
 paths:
+  # Exercise create/add DTOs accept restSeconds/rest_seconds (integer >= 0, nullable).
+  # All plan/item responses include restSeconds. Historic null values stay null.
+  # Persistence is an additive nullable JPA column; no manual migration/backfill.
   /api/v1/coaching/training-plans:
     get:
       summary: List training plans filtered by memberId or coachId
@@ -53,7 +56,7 @@ paths:
           description: Exercise item added successfully
   /api/v1/coaching/training-plans/{id}:
     put:
-      summary: Update goal and dates of a draft or active plan (owner Coach or CENTER_MANAGER)
+      summary: Update header and existing exercises of a draft or active plan (owner Coach or CENTER_MANAGER)
       tags: [Coaching]
       parameters:
         - in: path
@@ -70,13 +73,28 @@ paths:
                 goal: { type: string, maxLength: 255 }
                 startDate: { type: string, format: date }
                 endDate: { type: string, format: date }
+                items:
+                  type: array
+                  description: Optional list of full exercise values. Each ID must belong to this plan and appear once. Omitted exercises are unchanged; IDs and completion records are preserved.
+                  items:
+                    type: object
+                    required: [id, exerciseName]
+                    properties:
+                      id: { type: integer, format: int64 }
+                      exerciseName: { type: string, minLength: 1, maxLength: 150 }
+                      description: { type: string, nullable: true }
+                      dayOfWeek: { type: integer, minimum: 1, maximum: 7, nullable: true }
+                      sets: { type: integer, minimum: 1, nullable: true }
+                      reps: { type: integer, minimum: 1, nullable: true }
+                      durationMinutes: { type: integer, minimum: 1, nullable: true }
+                      restSeconds: { type: integer, minimum: 0, nullable: true }
       responses:
         '200': { description: Training plan updated successfully }
         '400': { description: INVALID_DATE_RANGE }
         '403': { description: Plan belongs to another Coach }
         '409': { description: INVALID_PLAN_STATUS - completed or cancelled plan }
     delete:
-      summary: Delete a draft plan; activated plans are kept (owner Coach or CENTER_MANAGER)
+      summary: Delete a draft or withdraw an active plan (owner Coach or CENTER_MANAGER)
       tags: [Coaching]
       parameters:
         - in: path
@@ -84,10 +102,10 @@ paths:
           required: true
           schema: { type: integer, format: int64 }
       responses:
-        '200': { description: Training plan deleted successfully }
+        '200': { description: 'Draft removed; active plan becomes cancelled and is no longer shown to the member. Existing exercises/completion history are retained for active plans. Repeated withdrawal is idempotent.' }
         '403': { description: Plan belongs to another Coach }
         '404': { description: Plan not found }
-        '409': { description: INVALID_PLAN_STATUS - only draft plans can be deleted }
+        '409': { description: INVALID_PLAN_STATUS - completed plans cannot be deleted }
   /api/v1/coaching/training-plans/{id}/activate:
     put:
       summary: Activate a draft training plan and archive older active plans (SCRUM-116)

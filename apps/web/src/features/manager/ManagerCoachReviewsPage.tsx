@@ -169,7 +169,7 @@ export function ManagerCoachReviewsPage() {
               disabled={generating}
               onClick={() => void handleAutoGenerate()}
             >
-              {generating ? 'Đang tổng hợp…' : '⚡ Tự động tổng hợp số liệu tháng'}
+              {generating ? 'Đang tổng hợp…' : 'Tự động tổng hợp số liệu tháng'}
             </button>
           ) : (
             <ActionMenu label="Tùy chọn kỳ đánh giá">
@@ -179,7 +179,7 @@ export function ManagerCoachReviewsPage() {
                 disabled={generating}
                 onClick={() => void handleAutoGenerate()}
               >
-                {generating ? 'Đang tổng hợp…' : '⚡ Tự động tổng hợp số liệu tháng'}
+                {generating ? 'Đang tổng hợp…' : 'Tự động tổng hợp số liệu tháng'}
               </button>
             </ActionMenu>
           )}
@@ -218,14 +218,14 @@ export function ManagerCoachReviewsPage() {
           className={`filter-chip ${activeTab === 'leaderboard' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('leaderboard')}
         >
-          🏆 Bảng xếp hạng Top Coach ({reviews.length})
+          Bảng xếp hạng Top Coach ({reviews.length})
         </button>
         <button
           type="button"
           className={`filter-chip ${activeTab === 'member_reviews' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('member_reviews')}
         >
-          💬 Đánh giá từ Hội viên ({memberReviews.length})
+          Đánh giá từ Hội viên ({memberReviews.length})
         </button>
       </div>
 
@@ -237,7 +237,7 @@ export function ManagerCoachReviewsPage() {
         reviews.length === 0 ? (
           <div className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
             <p className="row-card__meta">
-              Chưa có bảng tổng kết tháng {selectedMonth}/{selectedYear}. Bấm nút "⚡ Tự động tổng hợp số liệu tháng" ở trên để bắt đầu!
+              Chưa có bảng tổng kết tháng {selectedMonth}/{selectedYear}. Bấm nút "Tự động tổng hợp số liệu tháng" ở trên để bắt đầu!
             </p>
           </div>
         ) : (
@@ -298,7 +298,7 @@ export function ManagerCoachReviewsPage() {
 
                       <p className="row-card__meta" style={{ margin: '4px 0 0', fontSize: 13 }}>
                         Chuyên môn: <strong>{r.coachSpecialization}</strong> • Đánh giá:{' '}
-                        <strong style={{ color: 'var(--portal-star)' }}>⭐ {r.averageRating?.toFixed(1) || '5.0'} / 5.0</strong> ({r.totalReviews} lượt) • Tổng số buổi dạy:{' '}
+                        <strong style={{ color: 'var(--portal-star)' }}>{r.averageRating?.toFixed(1) || '5.0'} / 5.0</strong> ({r.totalReviews} lượt) • Tổng số buổi dạy:{' '}
                         <strong>{r.totalSessions} buổi</strong>
                       </p>
 

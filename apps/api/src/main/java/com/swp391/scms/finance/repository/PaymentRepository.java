@@ -29,6 +29,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findAllBySubscriptionId(Long subscriptionId);
 
+    List<Payment> findAllByCoachBookingId(Long coachBookingId);
+    List<Payment> findAllByCourtBookingId(Long courtBookingId);
+
     boolean existsBySubscriptionIdAndStatus(Long subscriptionId, String status);
 
     @Query("""

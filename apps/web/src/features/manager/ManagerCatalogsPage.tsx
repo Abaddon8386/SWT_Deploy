@@ -144,7 +144,7 @@ export function ManagerCatalogsPage() {
             className="btn-primary"
             onClick={() => openEditor({ id: null, form: emptyForm() })}
           >
-            + Thêm mới
+            Thêm mới
           </button>
         }
       />
@@ -380,7 +380,7 @@ export function ManagerCatalogsPage() {
               className="btn-primary"
               onClick={() => openEditor({ id: null, form: emptyForm() })}
             >
-              + Thêm mới
+              Thêm mới
             </button>
           </div>
         </div>

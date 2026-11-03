@@ -1,3 +1,5 @@
+import { TrainingExerciseFields } from './TrainingExerciseFields';
+import { validateExercise, type ExerciseValues } from './trainingExercise';
 import React, { useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -203,13 +205,16 @@ export function CoachTrainingPlanPage() {
       sets: Number(newSets) || 3,
       reps: Number(newReps) || 10,
       durationMinutes: Number(newDuration) || 15,
-      restSeconds: Number(newRestSeconds) || 60,
+      restSeconds: Number(newRestSeconds),
     };
 
     setExercises((prev) => [...prev, item]);
     setNewExerciseName('');
     setNewDescription('');
   };
+
+  const [editingExercise, setEditingExercise] = useState<{ id: string; values: ExerciseValues } | null>(null);
+  const [editExerciseError, setEditExerciseError] = useState('');
 
   // Xóa bài tập
   const handleRemoveExercise = (id?: string) => {
@@ -380,6 +385,7 @@ export function CoachTrainingPlanPage() {
         <p>Danh sách học viên lấy từ các lớp đã có hội viên ghi danh. Khi có hội viên đăng ký lớp, họ sẽ xuất hiện ở đây.</p>
         <button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>Tải lại danh sách</button>
       </div>
+      <SavedTrainingPlans refreshKey={plansRefresh} />
     </div>;
   }
 
@@ -398,7 +404,6 @@ export function CoachTrainingPlanPage() {
                 setIsAiModalOpen(true);
               }}
             >
-              <span aria-hidden="true">↗</span>
               <span>Gợi ý giáo án bằng AI</span>
             </button>}
 
@@ -426,7 +431,7 @@ export function CoachTrainingPlanPage() {
             </h2>
             {lastSavedTime && (
               <span className="plan-saved-badge">
-                ✓ Đã kích hoạt ({lastSavedTime})
+                Đã kích hoạt ({lastSavedTime})
               </span>
             )}
           </div>
@@ -570,7 +575,7 @@ export function CoachTrainingPlanPage() {
         {/* AC: Form soạn giáo án theo ngày trong tuần */}
         <form onSubmit={handleAddExercise} className="exercise-form-card">
           <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--fit-salmon, #ce9180)', marginBottom: '12px' }}>
-            + Thêm bài tập mới vào {DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name}
+            Thêm bài tập mới vào {DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name}
           </div>
 
           <div className="exercise-form-grid">
@@ -651,7 +656,7 @@ export function CoachTrainingPlanPage() {
             </div>
 
             <button type="submit" className="btn-secondary" style={{ height: '42px', alignSelf: 'flex-end' }}>
-              + Thêm
+              Thêm
             </button>
           </div>
 
@@ -744,6 +749,7 @@ export function CoachTrainingPlanPage() {
                       </div>
                     )}
 
+                    <button type="button" className="btn-secondary btn-sm" aria-label={`Sửa bài tập ${item.exerciseName}`} onClick={() => { if (item.id) { setEditExerciseError(''); setEditingExercise({ id: item.id, values: { ...item } }); } }}>Sửa</button>
                     <button
                       type="button"
                       className="btn-remove-exercise"
@@ -851,7 +857,7 @@ export function CoachTrainingPlanPage() {
               <div className="ai-result-box">
                 <div className="ai-result-header">
                   <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--portal-salmon)' }}>
-                    🎯 Phân tích chuyên sâu từ AI ({aiResult.modelName})
+                    Phân tích chuyên sâu từ AI
                   </span>
                   <span className="badge badge-success">Đã hoàn thành đề xuất</span>
                 </div>
@@ -882,7 +888,6 @@ export function CoachTrainingPlanPage() {
                     Hủy bỏ
                   </button>
                   <button type="button" className="btn-ai-sparkle" onClick={handleApplyAiPlan}>
-                    <span>✓</span>
                     <span>Áp dụng vào giáo án</span>
                   </button>
                 </div>
@@ -893,6 +898,21 @@ export function CoachTrainingPlanPage() {
       )}
 
       <SavedTrainingPlans refreshKey={plansRefresh} />
+      {editingExercise && <Modal title="Sửa bài tập" onClose={() => setEditingExercise(null)}>
+        <form className="stack" onSubmit={event => {
+          event.preventDefault();
+          const error = validateExercise(editingExercise.values, true);
+          if (error) { setEditExerciseError(error); return; }
+          const value = editingExercise.values;
+          setExercises(current => current.map(item => item.id === editingExercise.id ? { ...item, exerciseName: value.exerciseName.trim(), description: value.description ?? undefined, dayOfWeek: value.dayOfWeek!, sets: value.sets!, reps: value.reps!, restSeconds: value.restSeconds!, durationMinutes: value.durationMinutes! } : item));
+          setActiveDay(value.dayOfWeek!);setEditingExercise(null);
+        }}>
+          <TrainingExerciseFields prefix="draft-exercise" value={editingExercise.values} onChange={values => { setEditExerciseError(''); setEditingExercise({ ...editingExercise, values }); }} />
+          {editExerciseError && <p className="form-error" role="alert">{editExerciseError}</p>}
+          <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setEditingExercise(null)}>Hủy</button><button type="submit" className="btn-primary">Lưu bài tập</button></div>
+        </form>
+      </Modal>}
+
     </div>
   );
 }

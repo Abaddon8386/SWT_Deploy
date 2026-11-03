@@ -35,6 +35,7 @@ import java.util.List;
 
 @Service
 public class CoachBookingService {
+    private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
     private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 hours
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
@@ -81,7 +82,6 @@ public class CoachBookingService {
                 classEnrollmentRepository, subscriptionRepository, disciplineRepository, null, clock, messageService);
     }
 
-    @Autowired
     public CoachBookingService(
             CoachBookingRepository coachBookingRepository,
             CoachRepository coachRepository,
@@ -93,6 +93,22 @@ public class CoachBookingService {
             @Autowired(required = false) NotificationService notificationService,
             Clock clock,
             MessageService messageService) {
+        this(coachBookingRepository, coachRepository, memberRepository, classSessionRepository, classEnrollmentRepository, subscriptionRepository, disciplineRepository, notificationService, clock, messageService, null);
+    }
+
+    @Autowired
+    public CoachBookingService(
+            CoachBookingRepository coachBookingRepository,
+            CoachRepository coachRepository,
+            MemberRepository memberRepository,
+            ClassSessionRepository classSessionRepository,
+            ClassEnrollmentRepository classEnrollmentRepository,
+            MembershipSubscriptionRepository subscriptionRepository,
+            DisciplineRepository disciplineRepository,
+            @Autowired(required = false) NotificationService notificationService,
+            Clock clock,
+            MessageService messageService, com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard) {
+        this.vnpayGuard = vnpayGuard;
         this.coachBookingRepository = coachBookingRepository;
         this.coachRepository = coachRepository;
         this.memberRepository = memberRepository;
@@ -444,17 +460,23 @@ public class CoachBookingService {
 
     @Transactional
     public CoachBookingDto cancelBooking(AuthenticatedPrincipal principal, Long bookingId, String reason) {
-        CoachBooking booking = coachBookingRepository.findById(bookingId)
+        CoachBooking booking = coachBookingRepository.findByIdForUpdate(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("CoachBooking", bookingId));
-
         if (!booking.getMember().getUserId().equals(principal.id()) && !"CENTER_MANAGER".equalsIgnoreCase(principal.role()) && !("COACH".equalsIgnoreCase(principal.role()) && booking.getCoach().getUserId().equals(principal.id()))) {
             throw new ForbiddenException("FORBIDDEN", "error.coach_booking.forbidden_cancel", null, "You cannot cancel this booking.");
         }
+
+        if (vnpayGuard != null) vnpayGuard.coach(bookingId);
 
         if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
             throw new BadRequestException("ALREADY_CANCELLED", "error.coach_booking.already_cancelled", "Lịch này đã được hủy trước đó.");
         }
 
+        if (paymentRepository != null) {
+            paymentRepository.findAllByCoachBookingId(bookingId).stream()
+                    .filter(payment -> "pending".equals(payment.getStatus()))
+                    .forEach(payment -> payment.setStatus("failed"));
+        }
         booking.setStatus("cancelled");
         booking.setCancelledAt(LocalDateTime.now(clock));
         booking.setCancelReason(reason != null ? reason : "Hội viên yêu cầu hủy");
@@ -487,6 +509,7 @@ public class CoachBookingService {
         requireDesk(principal);
         CoachBooking booking = coachBookingRepository.findByIdForUpdate(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach_booking", bookingId));
+        if (vnpayGuard != null) vnpayGuard.coach(bookingId);
         if ("package_quota".equalsIgnoreCase(booking.getPaymentMethod())
                 || !"pending".equalsIgnoreCase(booking.getPaymentStatus())
                 || "cancelled".equalsIgnoreCase(booking.getStatus())) {
@@ -509,10 +532,18 @@ public class CoachBookingService {
             payment.setStatus("success");
             payment.setPaidAt(LocalDateTime.now(clock));
             payment.setNote("PT #" + booking.getId());
+            payment.setCoachBookingId(booking.getId());
             if (userRepository != null) {
                 userRepository.findByIdAndDeletedAtIsNull(principal.id()).ifPresent(payment::setReceivedBy);
             }
-            paymentRepository.save(payment);
+            var existing = paymentRepository.findAllByCoachBookingId(bookingId);
+            if (existing != null && !existing.isEmpty()) {
+                if (existing.size() != 1 || !"pending".equals(existing.getFirst().getStatus()))
+                    throw new ConflictException("VNPAY_TARGET_UNAVAILABLE", "finance.vnpay.target_unavailable", null, null);
+                var pending = existing.getFirst();
+                pending.setMethod(payment.getMethod()); pending.setStatus("success");pending.setPaidAt(payment.getPaidAt());pending.setReceivedBy(payment.getReceivedBy());
+                paymentRepository.save(pending);
+            } else paymentRepository.save(payment);
         }
         return mapToDto(booking);
     }

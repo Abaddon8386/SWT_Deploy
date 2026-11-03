@@ -44,7 +44,7 @@ export function ChatThread({ conversation, chat, onBack, active = true, canMarkR
   const unavailable = !conversation.peer.available;
   return <section className="direct-chat__thread" aria-labelledby="chat-thread-title">
     <header className="direct-chat__thread-header">
-      <button type="button" className="direct-chat__back direct-chat__link" onClick={onBack}>← Danh sách</button>
+      <button type="button" className="direct-chat__back direct-chat__link" onClick={onBack}>Danh sách</button>
       <div><h2 id="chat-thread-title" data-thread-title tabIndex={-1} ref={title}>{conversation.peer.name}</h2>
         <p>{chatRoleLabel(conversation.peer.role)}{unavailable ? ' · Tài khoản không còn khả dụng' : ''}</p></div>
     </header>

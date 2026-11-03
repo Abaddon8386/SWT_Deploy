@@ -1,3 +1,4 @@
+import { VnpayPayButton } from '../../payments/VnpayPayButton';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
@@ -315,7 +316,7 @@ export function MemberCoachBookingView({
   }
 
   return (
-    <div style={{ display: 'grid', gap: 24 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', minWidth: 0, gap: 24 }}>
 
       {error && (
         <div
@@ -357,7 +358,7 @@ export function MemberCoachBookingView({
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #202020)' }}>
-              🏆 Bảng vinh danh top huấn luyện viên xuất sắc tháng này
+              Bảng vinh danh top huấn luyện viên xuất sắc tháng này
             </h4>
             <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
               Dựa trên đánh giá và mức độ hài lòng của hội viên
@@ -406,7 +407,7 @@ export function MemberCoachBookingView({
                     {item.coachName}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--portal-star)', fontWeight: 700 }}>
-                    ⭐ {item.averageRating?.toFixed(1) || '5.0'} / 5.0 • {item.badge || 'Top Coach'}
+                    {item.averageRating?.toFixed(1) || '5.0'} / 5.0 • {item.badge || 'Top Coach'}
                   </div>
                 </div>
               </div>
@@ -430,7 +431,7 @@ export function MemberCoachBookingView({
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
             <span
               style={{
                 fontSize: 12,
@@ -552,7 +553,7 @@ export function MemberCoachBookingView({
                     </h4>
                     {isSelected && (
                       <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon, #ce9180)' }}>
-                        ✓ Đang chọn
+                        Đang chọn
                       </span>
                     )}
                   </div>
@@ -576,7 +577,7 @@ export function MemberCoachBookingView({
             2. Chọn ngày tập luyện
           </h3>
           <span className="row-card__meta" style={{ fontSize: 13, color: 'var(--portal-star)' }}>
-            ⚠️ Quy tắc: Buổi tập 1:1 phải được đặt trước ít nhất <strong>2 tiếng</strong>
+            Quy tắc: Buổi tập 1:1 phải được đặt trước ít nhất <strong>2 tiếng</strong>
           </span>
         </div>
 
@@ -665,7 +666,7 @@ export function MemberCoachBookingView({
                       {startFmt} – {endFmt}
                     </span>
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--portal-success, #226442)' }}>
-                      ✓ Còn trống • Đặt lịch
+                      Còn trống • Đặt lịch
                     </span>
                   </button>
                 );
@@ -707,7 +708,7 @@ export function MemberCoachBookingView({
                     {startFmt} – {endFmt}
                   </span>
                   <span style={{ fontSize: 10, fontWeight: 600, color: badgeColor }}>
-                    ⛔ {badgeText}
+                    {badgeText}
                   </span>
                 </div>
               );
@@ -762,7 +763,7 @@ export function MemberCoachBookingView({
                       : 'var(--portal-border, #e4e2de)',
                   }}
                 >
-                  <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', minWidth: 0, gap: 14, alignItems: 'center' }}>
                     <div
                       style={{
                         width: 44,
@@ -799,7 +800,7 @@ export function MemberCoachBookingView({
                               color: 'var(--portal-info)',
                             }}
                           >
-                            ✓ Đã kết thúc buổi
+                            Đã kết thúc buổi
                           </span>
                         ) : (
                           <span className="badge badge-success" style={{ fontSize: 11 }}>
@@ -808,12 +809,12 @@ export function MemberCoachBookingView({
                         )}
                         {existingReview && (
                           <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-star)' }}>
-                            ⭐ Đã đánh giá ({existingReview.rating} sao)
+                            Đã đánh giá ({existingReview.rating} sao)
                           </span>
                         )}
                       </div>
                       <p className="row-card__meta" style={{ margin: '3px 0 0' }}>
-                        📅 Ngày <strong>{b.bookingDate}</strong> • ⏰ <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? '🎁 Quyền lợi gói tập' : `💳 Trả phí: ${formatPrice(b.hourlyRate)}`}
+                        Ngày <strong>{b.bookingDate}</strong> • <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? 'Quyền lợi gói tập' : `Trả phí: ${formatPrice(b.hourlyRate)}`}
                       </p>
                       {b.notes && (
                         <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-muted, #71717a)', fontStyle: 'italic' }}>
@@ -838,11 +839,11 @@ export function MemberCoachBookingView({
                               setReviewAnonymous(false);
                             }}
                           >
-                            ⭐ Đánh giá HLV
+                            Đánh giá HLV
                           </button>
                         ) : (
                           <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
-                            ✓ Đã gửi review
+                            Đã gửi review
                           </span>
                         )
                       ) : (
@@ -858,10 +859,11 @@ export function MemberCoachBookingView({
                           }}
                           title="Hệ thống sẽ mở đánh giá HLV sau khi buổi học kết thúc"
                         >
-                          ⏳ Đánh giá sau khi kết thúc buổi
+                          Đánh giá sau khi kết thúc buổi
                         </span>
                       )}
 
+                      {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && <VnpayPayButton target={{ coachBookingId: b.id }} />}
                       {b.paymentMethod !== 'package_quota' && (
                         <button
                           type="button"
@@ -971,7 +973,7 @@ export function MemberCoachBookingView({
               <span>Đánh giá ẩn danh (Không hiển thị họ tên của tôi với Huấn luyện viên)</span>
             </label>
 
-            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span>⚠️ <strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
+            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span><strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button
                 type="button"
@@ -1124,7 +1126,7 @@ export function MemberCoachBookingView({
               />
             </div>
 
-            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span>⚠️ <strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
+            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span><strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button
                 type="button"
@@ -1169,6 +1171,7 @@ export function MemberCoachBookingView({
           title="Thanh toán Buổi tập PT 1:1"
           onClose={() => setPaymentModalBooking(null)}
         >
+          <VnpayPayButton target={{ coachBookingId: paymentModalBooking.id }} />
           <div style={{ display: 'grid', gap: 16 }}>
             <div
               style={{
@@ -1179,7 +1182,7 @@ export function MemberCoachBookingView({
               }}
             >
               <h4 style={{ margin: '0 0 6px', color: 'var(--portal-success, #226442)', fontSize: 15, fontWeight: 750 }}>
-                ✓ Lịch tập 1:1 đã được ghi nhận thành công!
+                Lịch tập 1:1 đã được ghi nhận thành công!
               </h4>
               <p style={{ margin: 0, fontSize: 13 }}>
                 HLV: <strong>{formatCoachName(paymentModalBooking.coachName)}</strong> • Thời gian:{' '}

@@ -24,7 +24,7 @@ describe('MemberInvoicesPage', () => {
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); vi.unstubAllGlobals(); });
   async function render() { await act(async () => root.render(<MemberInvoicesPage />)); }
 
-  it('shows loading, then only successful transactions from my-payments API', async () => {
+  it('separates pending VNPay checkout from successful invoice history', async () => {
     let resolve!: (value: unknown[]) => void;
     mocks.payments.mockReturnValue(new Promise((done) => { resolve = done; }));
     await render();
@@ -33,7 +33,9 @@ describe('MemberInvoicesPage', () => {
     expect(host.querySelector('.portal-container.member-invoices')).not.toBeNull();
     await act(async () => resolve([paid, { ...paid, id: 13, status: 'pending' }]));
     expect(host.textContent).toContain('#12');
-    expect(host.textContent).not.toContain('#13');
+    expect(host.querySelector('.member-invoices__table')?.textContent).not.toContain('#13');
+    expect(host.querySelector('[aria-label="Khoản chờ thanh toán"]')?.textContent).toContain('#13');
+    expect(host.textContent).toContain('Thanh toán VNPay Sandbox');
   });
 
   it('shows an invoice skeleton until the detail request settles without a display delay', async () => {

@@ -112,6 +112,23 @@ class CourtBookingServiceTest {
         error("COURT_BOOKING_PAYMENT_REQUIRED", () -> service.book(member, request(date, LocalTime.NOON)));
         verify(bookings, never()).saveAndFlush(any());
     }
+    @Test void vnpayBookingRemainsUnpaidUntilTheSignedCallback() {
+        used(1);
+        var result = service.book(member, paid(LocalTime.NOON, "vnpay"));
+        assertEquals("pending", result.paymentStatus());
+        var captor = org.mockito.ArgumentCaptor.forClass(Payment.class);
+        verify(payments).save(captor.capture());
+        assertEquals("pending", captor.getValue().getStatus());
+        assertNull(captor.getValue().getPaidAt());
+        assertEquals(result.id(), captor.getValue().getCourtBookingId());
+    }
+    @Test void cancellingAnUnpaidCourtClearsTheUnstartedPayment() {
+        existing(LocalTime.NOON);
+        var payment = new Payment(); payment.setStatus("pending");
+        when(payments.findAllByCourtBookingId(8L)).thenReturn(List.of(payment));
+        assertEquals("cancelled", service.cancel(member, 8L, null).status());
+        assertEquals("failed", payment.getStatus());
+    }
     @Test void paidDaytimeBookingCosts100kAndWritesAPayment() {
         used(1);
         var result = service.book(member, paid(LocalTime.NOON, "online_wallet"));

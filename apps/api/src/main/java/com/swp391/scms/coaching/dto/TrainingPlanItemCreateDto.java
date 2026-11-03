@@ -20,6 +20,10 @@ public class TrainingPlanItemCreateDto {
 
     private String description;
 
+    @JsonAlias("rest_seconds")
+    @Min(value = 0, message = "{validation.coaching.rest.min}")
+    private Integer restSeconds;
+
     @Min(value = 1, message = "{validation.coaching.sets.min}")
     private Integer sets;
 
@@ -52,6 +56,8 @@ public class TrainingPlanItemCreateDto {
     public void setExerciseName(String exerciseName) { this.exerciseName = exerciseName; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public Integer getRestSeconds() { return restSeconds; }
+    public void setRestSeconds(Integer restSeconds) { this.restSeconds = restSeconds; }
     public Integer getSets() { return sets; }
     public void setSets(Integer sets) { this.sets = sets; }
     public Integer getReps() { return reps; }

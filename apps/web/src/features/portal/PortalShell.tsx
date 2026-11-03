@@ -144,10 +144,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
       <aside className="app-sidebar" aria-label="Thanh công cụ SÖL">
         <Link to="/" className="portal-logo" aria-label="SÖL · Về trang chủ"><span>S</span><i /></Link>
         <nav className="portal-rail-nav" aria-label="Điều hướng portal">
-          {navItems.filter((item) => item.to !== '/member/profile').map((item) => item.to === '/member/notifications' ? <button
-            key={item.to} type="button" className="portal-rail-link" aria-label={item.label} title={item.label} aria-haspopup="dialog" aria-expanded={dialog === 'notifications'} aria-controls="portal-notifications" onClick={openNotifications}>
-            <PortalIcon name={item.icon} /><span className="portal-rail-tooltip">{item.label}</span>
-          </button> : <NavLink
+          {navItems.filter((item) => item.to !== '/member/profile' && item.to !== '/member/notifications').map((item) => <NavLink
             key={item.to} to={item.to} className="portal-rail-link" aria-label={item.label} title={item.label}>
             <PortalIcon name={item.icon} /><span className="portal-rail-tooltip">{item.label}</span>
           </NavLink>)}
@@ -169,7 +166,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
             <button type="button" className="portal-icon-button portal-mobile-menu" aria-label="Mở điều hướng" onClick={() => openNavigation('menu')}><PortalIcon name="menu" /></button>
             <Link to="/portal" className="portal-wordmark" aria-label="SÖL Fitness · Trang đầu portal">SÖL<span>Fitness</span></Link>
             <span className="portal-workspace-divider" />
-            <span className="portal-workspace-role"><PortalIcon name="building" size={15} />{ROLE_LABELS[user.role]}</span>
+            <span className="portal-workspace-role">{ROLE_LABELS[user.role]}</span>
           </div>
           <div className="portal-topbar-actions">
             <ThemeToggle />
@@ -178,7 +175,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
               {totalUnread > 0 && <span className="member-notification-badge" aria-hidden="true">{totalUnread > 99 ? '99+' : totalUnread}</span>}
             </button>}
             <button type="button" className="portal-search-trigger" aria-label="Tìm màn hình" onClick={() => openNavigation('search')}>
-              <PortalIcon name="search" size={17} /><span>Tìm màn hình…</span>
+              <span className="portal-search-icon"><PortalIcon name="search" size={17} /></span><span>Tìm màn hình…</span>
             </button>
             <Link to="/member/profile" className="portal-account" aria-label={`Hồ sơ của ${user.name}`}>
               <span className="portal-avatar">{initials}</span>
@@ -196,10 +193,10 @@ function PortalShellContent({ user }: { user: UserSession }) {
 
       <nav className="portal-mobile-nav" aria-label="Điều hướng nhanh">
         {mobileItems.map(item => <NavLink key={item.to} to={item.to} className="portal-mobile-nav__item">
-          <PortalIcon name={item.icon} size={21} /><span>{item.label}</span>
+          <span>{item.label}</span>
         </NavLink>)}
         <button ref={moreRef} type="button" className={`portal-mobile-nav__item${secondaryScreen ? ' active' : ''}`} aria-label="Thêm màn hình" aria-haspopup="dialog" aria-expanded={dialog === 'menu'} aria-current={secondaryScreen ? 'true' : undefined} onClick={() => openNavigation('menu')}>
-          <PortalIcon name="menu" size={21} /><span>Thêm</span>
+          <span>Thêm</span>
         </button>
       </nav>
 
@@ -220,15 +217,15 @@ function PortalShellContent({ user }: { user: UserSession }) {
           {results.map((item) => item.to === '/member/notifications' ? <button key={item.to} type="button" onClick={() => {
             notificationTrigger.current = document.querySelector<HTMLButtonElement>('.member-notification-bell');
             setDialog('notifications');
-          }}><PortalIcon name={item.icon} /><span>{item.label}</span><PortalIcon name="arrow" size={16} /></button> : <NavLink key={item.to} to={item.to} onClick={() => setDialog(null)}>
-            <PortalIcon name={item.icon} /><span>{item.label}</span><PortalIcon name="arrow" size={16} />
+          }}><span>{item.label}</span><PortalIcon name="arrow" size={16} /></button> : <NavLink key={item.to} to={item.to} onClick={() => setDialog(null)}>
+            <span>{item.label}</span><PortalIcon name="arrow" size={16} />
           </NavLink>)}
           {results.length === 0 && <p className="portal-search-empty" role="status">Không tìm thấy màn hình. Hãy thử từ khóa khác.</p>}
         </nav>
         {dialog === 'menu' && <div className="portal-menu-settings">
           <PwaStatus mode="install" />
-          <Link className="portal-menu-home" to="/" onClick={() => setDialog(null)}><PortalIcon name="home" size={16} />Về trang chủ SÖL</Link>
-          <button type="button" className="portal-menu-logout" aria-label="Đăng xuất" onClick={() => setDialog('logout')}><PortalIcon name="logout" size={18} />Đăng xuất</button>
+          <Link className="portal-menu-home" to="/" onClick={() => setDialog(null)}>Về trang chủ SÖL</Link>
+          <button type="button" className="portal-menu-logout" aria-label="Đăng xuất" onClick={() => setDialog('logout')}>Đăng xuất</button>
         </div>}
       </Modal>}
     </div>

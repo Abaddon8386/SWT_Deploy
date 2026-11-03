@@ -324,8 +324,47 @@ class TrainingPlanServiceTest {
         verify(trainingPlanRepository, never()).delete(any());
         service.deletePlan(100L, 20L, "COACH");
         verify(trainingPlanRepository).delete(plan);
-        plan.setStatus("active");
+        plan.setStatus("completed");
         assertThrows(ConflictException.class, () -> service.deletePlan(100L, 20L, "COACH"));
         verify(trainingPlanRepository, times(1)).delete(any());
     }
+    @Test void updatesExerciseDetailsWithoutReplacingItsId() {
+        var plan = ownedPlan("active");
+        var item = new com.swp391.scms.coaching.entity.TrainingPlanItem();
+        ReflectionTestUtils.setField(item, "id", 501L); item.setTrainingPlan(plan); item.setExerciseName("Squat");
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+        when(trainingPlanRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(100L)).thenReturn(List.of(item));
+        var edit = new com.swp391.scms.coaching.dto.TrainingPlanItemUpdateDto();
+        edit.setId(501L); edit.setExerciseName("Squat chỉnh sửa");edit.setDayOfWeek(3);edit.setSets(5);edit.setReps(8);edit.setDurationMinutes(20);edit.setRestSeconds(90);
+        var dto = new com.swp391.scms.coaching.dto.TrainingPlanUpdateDto();dto.setItems(List.of(edit));
+        var result = service.updatePlan(100L,dto,20L,"COACH");
+        assertEquals(501L,result.getItems().getFirst().getId());assertEquals(5,item.getSets());assertEquals(8,item.getReps());
+        assertEquals(90,result.getItems().getFirst().getRestSeconds());assertEquals(3,item.getDayOfWeek());
+        verify(trainingPlanItemRepository,never()).delete(any());
+    }
+    @Test void cannotAttachAnotherPlansExerciseToAnUpdate() {
+        var plan=ownedPlan("draft");when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+        when(trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(100L)).thenReturn(List.of());
+        var edit=new com.swp391.scms.coaching.dto.TrainingPlanItemUpdateDto();edit.setId(999L);edit.setExerciseName("Squat");
+        var dto=new com.swp391.scms.coaching.dto.TrainingPlanUpdateDto();dto.setItems(List.of(edit));
+        assertThrows(BadRequestException.class,()->service.updatePlan(100L,dto,20L,"COACH"));verify(trainingPlanRepository,never()).save(any());
+    }
+    @Test void deletingAnActivePlanHidesItWithoutRemovingItsExerciseHistory() {
+        var plan=ownedPlan("active");when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+        service.deletePlan(100L,20L,"COACH");assertEquals("cancelled",plan.getStatus());
+        verify(trainingPlanRepository,never()).delete(any());
+    }
+
+    @Test void exerciseValidationAllowsZeroRestButRejectsZeroSetsAndNegativeRest() {
+        try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            var validator = factory.getValidator();
+            var item = new com.swp391.scms.coaching.dto.TrainingPlanItemCreateDto();
+            item.setExerciseName("Squat");item.setSets(3);item.setReps(10);item.setRestSeconds(0);
+            assertTrue(validator.validate(item).isEmpty());
+            item.setSets(0);assertFalse(validator.validate(item).isEmpty());
+            item.setSets(3);item.setRestSeconds(-1);assertFalse(validator.validate(item).isEmpty());
+        }
+    }
+
 }

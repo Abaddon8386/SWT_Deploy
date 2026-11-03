@@ -294,7 +294,7 @@ class CoachBookingServiceTest {
         booking.setMember(member);
         booking.setCoach(coach);
         booking.setStatus("confirmed");
-        when(coachBookingRepository.findById(77L)).thenReturn(Optional.of(booking));
+        when(coachBookingRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(booking));
         assertThatThrownBy(() -> service.cancelBooking(new AuthenticatedPrincipal(99L, "other", "COACH"), 77L, null))
                 .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
         assertThat(booking.getStatus()).isEqualTo("confirmed");

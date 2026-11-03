@@ -4,7 +4,6 @@ import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPrese
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { PortalIcon } from '../portal/PortalIcon';
 import { upgradeQuote } from '../../shared/lib/upgradeQuote';
 import './member-packages.css';
 import { notify, resolveNotice } from '../../shared/lib/portalNotices';
@@ -44,7 +43,7 @@ interface RequestResult {
 
 // Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
 const LONG_TERM_DAYS = 60;
-const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại quầy lễ tân để nhân viên xác nhận và kích hoạt gói tập.';
+const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay Sandbox hoặc tới quầy lễ tân.';
 
 function formatDate(value: string): string {
   return formatCenterDate(value.slice(0, 10));
@@ -561,7 +560,6 @@ export function MemberPackagesPage() {
     <div className="portal-container member-packages">
       {blockedMessage && <Modal returnFocusRef={membershipFocus} title="Chưa thể thực hiện" onClose={() => setBlockedMessage(null)}>
         <div className="package-result package-result--error">
-          <span className="package-result__icon package-result__icon--error" aria-hidden="true">!</span>
           <p role="alert">{blockedMessage}</p>
           <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>Đóng</button>
         </div>
@@ -726,7 +724,6 @@ export function MemberPackagesPage() {
             onClick={() => setIsPeriodsOpen((prev) => !prev)}
           >
             <div className="membership-periods__heading">
-              <span className="membership-periods__icon"><PortalIcon name="calendar" size={18} /></span>
               <div>
                 <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
                 <span className="membership-periods__summary">
@@ -749,7 +746,6 @@ export function MemberPackagesPage() {
               {futurePeriods.map((period) => (
                 <li className="membership-periods__row" key={period.id}>
                   <div className="membership-periods__package">
-                    <span className="membership-periods__icon"><PortalIcon name="calendar" size={18} /></span>
                     <strong>{period.packageName}</strong>
                   </div>
                   <dl className="membership-periods__dates">
@@ -783,7 +779,7 @@ export function MemberPackagesPage() {
                 Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
               </p>
             </div>
-            <span className="badge badge-warning">Đang chờ xác nhận tại quầy Lễ tân</span>
+            <span className="badge badge-warning">Đang chờ thanh toán</span>
           </div>
           {paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage && (
             <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
@@ -810,7 +806,7 @@ export function MemberPackagesPage() {
                 to={`/member/packages/checkout?packageId=${pendingPackage.id}&subscriptionId=${pending.id}`}
                 className="btn-primary btn-sm"
               >
-                Thanh toán tại quầy
+                Chọn phương thức thanh toán
               </Link>
             )}
             <button
@@ -962,7 +958,7 @@ export function MemberPackagesPage() {
               : isStatusSyncing ? 'Đang kiểm tra gói và thanh toán.'
               : currentState.status === 'error' || historyState.status === 'error' || paymentsState.status === 'error'
                 ? 'Không thể xác minh trạng thái. Vui lòng thử tải lại.'
-              : pendingItems.length > 0 ? current ? 'Yêu cầu đang chờ xử lý. Gói hiện tại vẫn giữ nguyên hiệu lực.' : 'Yêu cầu đang chờ xử lý tại quầy lễ tân.'
+              : pendingItems.length > 0 ? current ? 'Yêu cầu đang chờ xử lý. Gói hiện tại vẫn giữ nguyên hiệu lực.' : 'Yêu cầu đang chờ thanh toán.'
               : hasPaidFutureUpgrade ? 'Kỳ tiếp theo đã thanh toán. Vui lòng liên hệ nhân viên trước khi nâng cấp.'
               : nextRenewals > 0 ? 'Đã có kỳ tiếp theo; vui lòng liên hệ nhân viên trước khi nâng cấp.'
               : frozenSubscription ? 'Mở lại gói bảo lưu trước khi tiếp tục.'
@@ -1035,7 +1031,6 @@ export function MemberPackagesPage() {
                   <ul className="package-benefit-list" aria-label={`Quyền lợi gói ${membershipPackage.name}`}>
                     {highlights.slice(0, visibleCount).map((benefit, index) => (
                       <li key={index} className="package-benefit-item">
-                        <span className="package-benefit-check" aria-hidden="true">✓</span>
                         <span>{benefit}</span>
                       </li>
                     ))}
@@ -1046,7 +1041,6 @@ export function MemberPackagesPage() {
                       <ul className="package-benefit-list">
                         {highlights.slice(visibleCount).map((benefit, index) => (
                           <li key={index} className="package-benefit-item">
-                            <span className="package-benefit-check" aria-hidden="true">✓</span>
                             <span>{benefit}</span>
                           </li>
                         ))}
@@ -1074,7 +1068,7 @@ export function MemberPackagesPage() {
                       {quote.mode === 'full'
                         ? ` — đã dùng ${quote.usedDays}/${quote.totalDays} ngày (quá nửa) nên đóng đủ giá gói mới.`
                         : ` — bù chênh lệch so với gói hiện tại (đã dùng ${quote.usedDays}/${quote.totalDays} ngày).`}
-                      {' '}Gói hiện tại hết hiệu lực khi lễ tân xác nhận thanh toán.
+                      {' '}Gói hiện tại hết hiệu lực khi thanh toán được xác nhận.
                     </p>;
                   })()}
 
@@ -1110,7 +1104,6 @@ export function MemberPackagesPage() {
       {paymentResult && !blockedMessage && !pendingToCancel && !isHoldModalOpen && !isCancellationModalOpen && (
         <Modal returnFocusRef={membershipFocus} title="Thanh toán thành công" onClose={() => setPaymentResult(null)}>
           <div className="package-result">
-            <span className="package-result__icon" aria-hidden="true">✓</span>
             <h3>{paymentResult.packageName}</h3>
             <p>Gói tập của bạn đã được xác nhận.</p>
             <p className="row-card__meta">{paymentResult.status === 'active'
@@ -1124,13 +1117,12 @@ export function MemberPackagesPage() {
       {requestResult && !blockedMessage && !pendingToCancel && !paymentResult && (
         <Modal returnFocusRef={membershipFocus} title="Đã gửi yêu cầu thành công" onClose={() => setRequestResult(null)}>
           <div className="package-result">
-            <span className="package-result__icon" aria-hidden="true">✓</span>
             <h3>{requestResult.membershipPackage.name}</h3>
             <p>{requestResult.action === 'upgrade' ? 'Nâng cấp gói tập' : requestResult.action === 'renew' ? 'Gia hạn gói tập' : 'Đăng ký gói tập'} · #{requestResult.subscription.id}</p>
             <p>Yêu cầu của bạn đang chờ xử lý.</p>
             {requestResult.action === 'upgrade' && requestResult.subscription.upgradeCharge != null
-              ? <p className="row-card__meta">Số tiền cần thanh toán để nâng cấp: <strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> (giá gói mới {formatPrice(requestResult.membershipPackage.price)}). Gói hiện tại hết hiệu lực khi lễ tân xác nhận thanh toán.</p>
-              : <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán do quầy lễ tân xác nhận.</p>}
+              ? <p className="row-card__meta">Số tiền cần thanh toán để nâng cấp: <strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> (giá gói mới {formatPrice(requestResult.membershipPackage.price)}). Gói hiện tại hết hiệu lực khi thanh toán được xác nhận.</p>
+              : <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán được hệ thống xác nhận khi mở VNPay hoặc tại quầy.</p>}
             <p className="row-card__meta">{paymentInstructionsNotice}</p>
             <div className="package-result__actions">
               <Link
@@ -1138,7 +1130,7 @@ export function MemberPackagesPage() {
                 className="btn-primary"
                 onClick={() => setRequestResult(null)}
               >
-                Thanh toán tại quầy
+                Chọn phương thức thanh toán
               </Link>
               <button type="button" className="btn-secondary"
                 onClick={() => { setActionError(null); setPendingToCancel(requestResult.subscription); }}

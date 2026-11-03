@@ -57,6 +57,7 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/member/MemberCheckoutPage')).MemberCheckoutPage }),
 
           },
+          { path: '/member/payments/vnpay/return', lazy: async () => ({ Component: (await import('../features/payments/VnpayReturnPage')).VnpayReturnPage }) },
           {
             path: '/member/card',
             lazy: async () => ({ Component: (await import('../features/member/MemberCardPage')).MemberCardPage }),
