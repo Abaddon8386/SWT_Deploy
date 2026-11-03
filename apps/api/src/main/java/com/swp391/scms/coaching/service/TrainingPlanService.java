@@ -78,9 +78,7 @@ public class TrainingPlanService {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
                     "Coaches can only create training plans for themselves");
         }
-        if (coachMemberAccess != null) {
-            coachMemberAccess.requireAccess(currentUserId, currentUserRole, member.getUserId());
-        }
+        if (isCoach(currentUserRole)) requireCurrentAssignment(currentUserId, member.getUserId());
 
         Coach coach = coachRepository.findById(targetCoachId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", targetCoachId));
@@ -274,6 +272,7 @@ public class TrainingPlanService {
     }
 
     private void verifyCoachOwnership(TrainingPlan plan, Long currentUserId, String currentUserRole) {
+        if (isCoach(currentUserRole)) requireCurrentAssignment(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
         if (isManager(currentUserRole)) {
             return;
         }
@@ -365,6 +364,14 @@ public class TrainingPlanService {
                 .toList();
         dto.setItems(itemDtos);
         return dto;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private CurrentCoachMembers currentCoachMembers;
+
+    private void requireCurrentAssignment(Long coachId, Long memberId) {
+        if(currentCoachMembers == null) throw new ForbiddenException("COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null, "Current assignment cannot be verified.");
+        currentCoachMembers.requireCoachOf(coachId, memberId);
     }
 
     private boolean isManager(String role) {

@@ -99,6 +99,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST, "/api/v1/coaching/evaluations").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/evaluations/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/health/metrics").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers("/api/v1/health/metrics/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
 
                     // Coach Reviews & Monthly Leaderboard (SCRUM-134)

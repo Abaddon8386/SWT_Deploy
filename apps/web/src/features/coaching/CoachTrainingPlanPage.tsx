@@ -1,3 +1,4 @@
+import { CoachHealthMetrics } from './CoachHealthMetrics';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise, type ExerciseValues } from './trainingExercise';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -548,6 +549,8 @@ export function CoachTrainingPlanPage() {
           </div>
         </div>
       </div>
+
+      <CoachHealthMetrics memberId={selectedMember.id} memberName={selectedMember.fullName} />
 
       {/* Main Workspace: Day Selector & Exercise Form */}
       <div className="portal-card">

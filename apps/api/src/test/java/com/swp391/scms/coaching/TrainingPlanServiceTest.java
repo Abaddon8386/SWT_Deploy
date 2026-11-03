@@ -58,6 +58,8 @@ class TrainingPlanServiceTest {
 
     private TrainingPlanService service;
 
+    @Mock private com.swp391.scms.coaching.service.CurrentCoachMembers currentCoachMembers;
+
     @BeforeEach
     void setUp() {
         service = new TrainingPlanService(
@@ -68,6 +70,7 @@ class TrainingPlanServiceTest {
                 gymClassRepository,
                 aiRecommendationLogRepository
         );
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"currentCoachMembers",currentCoachMembers);
     }
 
     @Test
@@ -367,4 +370,13 @@ class TrainingPlanServiceTest {
         }
     }
 
+
+ @Test void rejectsCreatingPlanForExpiredOrUnassignedMember() {
+  var dto = new com.swp391.scms.coaching.dto.TrainingPlanCreateDto();
+  dto.setMemberId(10L);dto.setStartDate(LocalDate.of(2026,11,4));dto.setEndDate(LocalDate.of(2026,11,10));
+  Member member=new Member();member.setUserId(10L);when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+  doThrow(new com.swp391.scms.common.exception.ForbiddenException("COACH_MEMBER_NOT_ASSIGNED","coaching.member.not_assigned",null,"Denied")).when(currentCoachMembers).requireCoachOf(20L,10L);
+  assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,()->service.createPlan(dto,20L,"COACH"));
+  verify(trainingPlanRepository,never()).save(any());
+ }
 }
