@@ -46,6 +46,13 @@ public class CourtBookingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(msg("success.courts.booked"), service.book(principal, request)));
     }
 
+    @GetMapping("/court-bookings/quota")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ApiResponse<QuotaDto> quota(@AuthenticationPrincipal AuthenticatedPrincipal principal,
+                                       @RequestParam(required = false) LocalDate date) {
+        return ApiResponse.ok(msg("success.courts.quota"), service.quota(principal, date));
+    }
+
     @GetMapping("/court-bookings/my")
     @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<Page<BookingDto>> my(@AuthenticationPrincipal AuthenticatedPrincipal principal,

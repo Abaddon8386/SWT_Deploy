@@ -6,7 +6,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { notify } from '../../shared/lib/portalNotices';
 import { catalogApi, type Room } from '../manager/catalogApi';
-import { courtsApi, bookingEnded, centerDate, courtError, displayDate, shortTime, type BookingPage, type CourtBooking } from './courtsApi';
+import { courtsApi, bookingEnded, centerDate, courtError, displayDate, shortTime, formatVnd, type BookingPage, type CourtBooking } from './courtsApi';
 import './courts.css';
 
 export function CourtLoadError({ message, retry }: { message: string; retry: () => void }) {
@@ -70,7 +70,7 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
     <h2 id="court-booking-list-title" className="portal-card-title" tabIndex={-1} ref={headingRef}>{staff ? 'Danh sách theo ngày' : 'Lượt đặt của tôi'}</h2>
     {loading ? <LoadingSkeleton label="Đang tải lượt đặt sân" variant="rows" count={3} /> : error ? <CourtLoadError message={error} retry={() => setRetry(value => value + 1)} /> : !data?.content.length ? <div className="portal-card portal-state">{staff ? 'Chưa có lượt đặt trong ngày này' : 'Bạn chưa có lượt đặt sân nào'}</div> : <>
       <div className="stack">{data.content.map(booking => <article className="portal-card court-booking-row" key={booking.id}>
-        <div><h3 className="portal-card-title">{booking.roomName}</h3><p>{booking.disciplineName} · {displayDate(booking.date)} · <strong>{shortTime(booking.startTime)}–{shortTime(booking.endTime)}</strong></p>{staff && <p className="muted">Hội viên: {booking.memberName}</p>}<span className={`badge ${booking.status === 'cancelled' || bookingEnded(booking) ? '' : 'badge-success'}`}>{booking.status === 'cancelled' ? 'Đã hủy' : bookingEnded(booking) ? 'Đã diễn ra' : 'Đã đặt'}</span>{booking.cancelReason && <p className="muted">Lý do hủy: {booking.cancelReason}</p>}</div>
+        <div><h3 className="portal-card-title">{booking.roomName}</h3><p>{booking.disciplineName} · {displayDate(booking.date)} · <strong>{shortTime(booking.startTime)}–{shortTime(booking.endTime)}</strong></p>{staff && <p className="muted">Hội viên: {booking.memberName}</p>}<span className={`badge ${booking.status === 'cancelled' || bookingEnded(booking) ? '' : 'badge-success'}`}>{booking.status === 'cancelled' ? 'Đã hủy' : bookingEnded(booking) ? 'Đã diễn ra' : 'Đã đặt'}</span><p className="muted">{booking.paymentMethod === 'package_quota' ? 'Miễn phí (theo gói)' : booking.price > 0 ? `Đã thanh toán ${formatVnd(booking.price)}` : 'Không phí'}</p>{booking.cancelReason && <p className="muted">Lý do hủy: {booking.cancelReason}</p>}</div>
         {booking.canCancel && booking.status === 'booked' && <button type="button" className="btn-secondary btn-sm" disabled={busy} aria-label={`Hủy lượt đặt ${booking.roomName} ${displayDate(booking.date)} ${shortTime(booking.startTime)}`} onClick={() => { setCancel(booking); setReason(''); setActionError(''); }}>Hủy lượt đặt</button>}
       </article>)}</div>
       {data.totalPages > 1 && <nav className="court-pagination" aria-label="Phân trang lượt đặt"><button type="button" className="btn-secondary" disabled={page === 0} onClick={() => setPage(value => value - 1)}>Trang trước</button><span>Trang {page + 1} / {data.totalPages}</span><button type="button" className="btn-secondary" disabled={page + 1 >= data.totalPages} onClick={() => setPage(value => value + 1)}>Trang sau</button></nav>}

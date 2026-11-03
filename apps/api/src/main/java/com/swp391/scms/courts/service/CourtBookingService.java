@@ -10,10 +10,14 @@ import com.swp391.scms.courts.entity.CourtBooking;
 import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.RoomRepository;
+import com.swp391.scms.finance.entity.Payment;
+import com.swp391.scms.finance.repository.PaymentRepository;
+import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
+import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
 import org.springframework.data.domain.*;
@@ -33,9 +37,16 @@ public class CourtBookingService {
     private final MemberRepository members;
     private final Clock clock;
     private static final int RECURRING_MAX_DAYS = 31;
+    /** Must match trg_court_bookings_check_limit. */
+    private static final int MAX_BOOKINGS_PER_DAY = 4;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private MessageService messages;
+
+    /** Optional so the service stays constructible in unit tests; without it no revenue row is written. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PaymentRepository payments;
+    private static final Set<String> PAYMENT_METHODS = Set.of("online_wallet", "bank_transfer");
 
     public CourtBookingService(CourtBookingRepository bookings, RoomRepository rooms,
                                MembershipSubscriptionRepository subscriptions, MemberRepository members, Clock clock) {
@@ -98,7 +109,7 @@ public class CourtBookingService {
             String status = !date.atTime(start).isAfter(current) ? "past"
                     : classes.stream().anyMatch(s -> overlaps(slotStart, end, s.getStartTime(), s.getEndTime())) ? "class"
                     : existing.stream().anyMatch(b -> overlaps(slotStart, end, b.getStartTime(), b.getEndTime())) ? "booked" : "free";
-            result.add(new SlotDto(start, end, status));
+            result.add(new SlotDto(start, end, status, CourtPricing.priceFor(start)));
         }
         return result;
     }
@@ -109,7 +120,7 @@ public class CourtBookingService {
 
     @Transactional
     public BookingDto book(AuthenticatedPrincipal principal, BookRequest request) {
-        return bookOne(principal, request.roomId(), request.date(), request.startTime(), false);
+        return bookOne(principal, request.roomId(), request.date(), request.startTime(), false, request.paymentMethod());
     }
 
     /**
@@ -125,7 +136,7 @@ public class CourtBookingService {
         List<RecurrenceDates.Skipped> skipped = new ArrayList<>();
         for (LocalDate date : dates) {
             try {
-                booked.add(bookOne(principal, request.roomId(), date, request.startTime(), true));
+                booked.add(bookOne(principal, request.roomId(), date, request.startTime(), true, request.paymentMethod()));
             } catch (AppException e) {
                 skipped.add(new RecurrenceDates.Skipped(date, e.getErrorCode(), reason(e)));
             }
@@ -144,7 +155,8 @@ public class CourtBookingService {
         return e.getErrorCode();
     }
 
-    private BookingDto bookOne(AuthenticatedPrincipal principal, Long roomId, LocalDate date, LocalTime start, boolean recurring) {
+    private BookingDto bookOne(AuthenticatedPrincipal principal, Long roomId, LocalDate date, LocalTime start,
+                               boolean recurring, String paymentMethod) {
         if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
         dateWindow(date, recurring);
         if (!wholeHour(start)) throw invalid("invalid_slot");
@@ -160,10 +172,55 @@ public class CourtBookingService {
         if (bookings.existsRoomOverlap(room.getId(), date, start, end)
                 || bookings.existsClassOverlap(room.getId(), date, start, end)
                 || bookings.existsMemberOverlap(principal.id(), date, start, end)) throw conflict("slot_taken");
-        if (bookings.countByMemberIdAndBookingDateAndStatus(principal.id(), date, "booked") >= 2) throw conflict("limit_reached");
+        // Mirrors trg_court_bookings_check_limit so the member gets a readable error instead of a trigger failure.
+        if (bookings.countByMemberIdAndBookingDateAndStatus(principal.id(), date, "booked") >= MAX_BOOKINGS_PER_DAY) throw conflict("limit_reached");
+        String method = paymentMethod == null || paymentMethod.isBlank() ? null : paymentMethod.trim().toLowerCase(Locale.ROOT);
+        if (method != null && !PAYMENT_METHODS.contains(method)) throw invalid("invalid_payment_method");
+        BigDecimal price = CourtPricing.priceFor(start);
+        // The plan covers the first bookings of the month; every extra court or hour is paid when booking.
+        boolean covered = quotaUsed(principal.id(), date) < monthlyQuota(principal.id(), date);
+        if (!covered && method == null) throw invalid("payment_required");
         CourtBooking booking = new CourtBooking(); booking.setRoom(room); booking.setMember(member.getUser());
         booking.setBookingDate(date); booking.setStartTime(start); booking.setEndTime(end); booking.setCreatedAt(now());
-        return dto(bookings.saveAndFlush(booking), principal);
+        booking.setPrice(covered ? BigDecimal.ZERO : price);
+        booking.setPaymentMethod(covered ? CourtPricing.PACKAGE_QUOTA : method);
+        booking.setPaymentStatus(covered ? "covered" : "paid");
+        CourtBooking saved = bookings.saveAndFlush(booking);
+        if (!covered && payments != null) {
+            Payment payment = new Payment();
+            payment.setMember(member); payment.setAmount(price); payment.setMethod(method); payment.setStatus("success");
+            payment.setPaidAt(now()); payment.setNote("Court #" + saved.getId());
+            payments.save(payment);
+        }
+        return dto(saved, principal);
+    }
+
+    private MembershipSubscription activeSubscription(Long memberId, LocalDate date) {
+        return subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
+                .filter(s -> s.getStartDate() != null && s.getEndDate() != null
+                        && !s.getStartDate().isAfter(date) && !s.getEndDate().isBefore(date))
+                .findFirst().orElse(null);
+    }
+    private int monthlyQuota(Long memberId, LocalDate date) {
+        MembershipSubscription subscription = activeSubscription(memberId, date);
+        return subscription == null || subscription.getMembershipPackage() == null ? 0
+                : CourtPricing.monthlyQuota(subscription.getMembershipPackage().getName());
+    }
+    private long quotaUsed(Long memberId, LocalDate date) {
+        return bookings.countQuotaUsage(memberId, date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()),
+                CourtPricing.PACKAGE_QUOTA);
+    }
+
+    /** Included bookings the member has left in the month of {@code date} (today when null). */
+    public QuotaDto quota(AuthenticatedPrincipal principal, LocalDate date) {
+        if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
+        LocalDate day = date == null ? now().toLocalDate() : date;
+        MembershipSubscription subscription = activeSubscription(principal.id(), day);
+        String name = subscription == null || subscription.getMembershipPackage() == null ? null
+                : subscription.getMembershipPackage().getName();
+        int total = CourtPricing.monthlyQuota(name);
+        int used = (int) quotaUsed(principal.id(), day);
+        return new QuotaDto(name, total, used, Math.max(0, total - used));
     }
 
     public Page<BookingDto> my(AuthenticatedPrincipal principal, int page, int size) {
@@ -207,6 +264,7 @@ public class CourtBookingService {
         return new BookingDto(b.getId(), b.getRoom().getId(), b.getRoom().getName(),
                 b.getRoom().getDiscipline() == null ? null : b.getRoom().getDiscipline().getName(),
                 b.getMember().getId(), b.getMember().getFullName(), b.getBookingDate(), b.getStartTime(), b.getEndTime(),
-                b.getStatus(), b.getCreatedAt(), b.getCancelledAt(), b.getCancelReason(), canCancel(b, principal));
+                b.getStatus(), b.getCreatedAt(), b.getCancelledAt(), b.getCancelReason(), canCancel(b, principal),
+                b.getPrice() == null ? BigDecimal.ZERO : b.getPrice(), b.getPaymentMethod(), b.getPaymentStatus());
     }
 }

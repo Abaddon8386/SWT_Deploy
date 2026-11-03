@@ -6,7 +6,11 @@ import com.swp391.scms.courts.entity.CourtBooking;
 import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.courts.service.CourtBookingService;
 import com.swp391.scms.facilities.entity.Discipline;
+import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.facilities.entity.Room;
+import com.swp391.scms.finance.entity.Payment;
+import com.swp391.scms.finance.repository.PaymentRepository;
+import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.facilities.repository.RoomRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -15,6 +19,7 @@ import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import org.springframework.data.domain.PageImpl;
+import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +36,7 @@ class CourtBookingServiceTest {
     final Clock clock = Clock.fixed(Instant.parse("2026-11-02T03:00:00Z"), ZoneOffset.UTC);
     final AuthenticatedPrincipal member = new AuthenticatedPrincipal(1L, "member", "MEMBER");
     final LocalDate date = LocalDate.of(2026, 11, 2);
+    final PaymentRepository payments = mock(PaymentRepository.class);
     CourtBookingService service;
     Room room;
     User user;
@@ -46,7 +52,27 @@ class CourtBookingServiceTest {
         lenient().when(rooms.findById(10L)).thenReturn(Optional.of(room));
         lenient().when(subscriptions.hasActiveMembershipCoveringSession(1L, date, date)).thenReturn(true);
         lenient().when(bookings.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
+        plan("SILVER");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "payments", payments);
     }
+
+    void plan(String name) {
+        MembershipPackage pkg = new MembershipPackage(); pkg.setName(name);
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setMembershipPackage(pkg); sub.setStatus("active"); sub.setStartDate(date.minusDays(10)); sub.setEndDate(date.plusDays(60));
+        lenient().when(subscriptions.findByMemberUserIdAndStatus(1L, "active")).thenReturn(List.of(sub));
+    }
+    /** Pretends {@code n} bookings of the month were already covered by the plan, then counts the ones made since. */
+    void used(long n) {
+        long[] extra = {0};
+        lenient().when(bookings.countQuotaUsage(eq(1L), any(), any(), eq("package_quota"))).thenAnswer(i -> n + extra[0]);
+        lenient().doAnswer(i -> {
+            CourtBooking saved = i.getArgument(0);
+            if ("package_quota".equals(saved.getPaymentMethod())) extra[0]++;
+            return saved;
+        }).when(bookings).saveAndFlush(any());
+    }
+    BookRequest paid(LocalTime time, String method) { return new BookRequest(10L, date, time, method); }
 
     BookRequest request(LocalDate day, LocalTime time) { return new BookRequest(10L, day, time); }
     void error(String code, Runnable action) { assertEquals(code, assertThrows(AppException.class, action::run).getErrorCode()); }
@@ -72,8 +98,63 @@ class CourtBookingServiceTest {
         when(bookings.existsRoomOverlap(10L, date, LocalTime.NOON, LocalTime.of(13, 0))).thenReturn(true);
         error("COURT_BOOKING_SLOT_TAKEN", () -> service.book(member, request(date, LocalTime.NOON)));
         when(bookings.existsRoomOverlap(anyLong(), any(), any(), any())).thenReturn(false);
-        when(bookings.countByMemberIdAndBookingDateAndStatus(1L, date, "booked")).thenReturn(2L);
+        when(bookings.countByMemberIdAndBookingDateAndStatus(1L, date, "booked")).thenReturn(4L);
         error("COURT_BOOKING_LIMIT_REACHED", () -> service.book(member, request(date, LocalTime.NOON)));
+    }
+    @Test void firstBookingIsCoveredByTheSilverPlanAndFree() {
+        var result = service.book(member, request(date, LocalTime.NOON));
+        assertEquals(0, BigDecimal.ZERO.compareTo(result.price()));
+        assertEquals("package_quota", result.paymentMethod()); assertEquals("covered", result.paymentStatus());
+        verify(payments, never()).save(any());
+    }
+    @Test void bookingBeyondTheSilverQuotaNeedsPayment() {
+        used(1);
+        error("COURT_BOOKING_PAYMENT_REQUIRED", () -> service.book(member, request(date, LocalTime.NOON)));
+        verify(bookings, never()).saveAndFlush(any());
+    }
+    @Test void paidDaytimeBookingCosts100kAndWritesAPayment() {
+        used(1);
+        var result = service.book(member, paid(LocalTime.NOON, "online_wallet"));
+        assertEquals(0, new BigDecimal("100000").compareTo(result.price()));
+        assertEquals("online_wallet", result.paymentMethod()); assertEquals("paid", result.paymentStatus());
+        var captor = org.mockito.ArgumentCaptor.forClass(Payment.class);
+        verify(payments).save(captor.capture());
+        assertEquals(0, new BigDecimal("100000").compareTo(captor.getValue().getAmount()));
+        assertEquals("success", captor.getValue().getStatus());
+    }
+    @Test void paidBookingStartingAtSixPmCosts125k() {
+        used(1);
+        assertEquals(0, new BigDecimal("125000").compareTo(service.book(member, paid(LocalTime.of(18, 0), "bank_transfer")).price()));
+        assertEquals(0, new BigDecimal("100000").compareTo(service.book(member, paid(LocalTime.of(17, 0), "bank_transfer")).price()));
+    }
+    @Test void goldGetsTwoAndPlatinumThreeIncludedBookings() {
+        plan("GOLD"); used(1);
+        assertEquals("package_quota", service.book(member, request(date, LocalTime.NOON)).paymentMethod());
+        error("COURT_BOOKING_PAYMENT_REQUIRED", () -> service.book(member, request(date, LocalTime.of(14, 0))));
+        plan("PLATINUM"); used(2);
+        assertEquals("package_quota", service.book(member, request(date, LocalTime.NOON)).paymentMethod());
+        error("COURT_BOOKING_PAYMENT_REQUIRED", () -> service.book(member, request(date, LocalTime.of(14, 0))));
+    }
+    @Test void paymentIsNotChargedWhileTheQuotaStillCoversTheSlot() {
+        var result = service.book(member, paid(LocalTime.NOON, "online_wallet"));
+        assertEquals("package_quota", result.paymentMethod());
+        verify(payments, never()).save(any());
+    }
+    @Test void rejectsUnknownPaymentMethod() {
+        used(1); error("COURT_BOOKING_INVALID_PAYMENT_METHOD", () -> service.book(member, paid(LocalTime.NOON, "cash")));
+    }
+    @Test void standingBookingUsesTheQuotaFirstThenSkipsUnpaidDays() {
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
+        used(0);
+        var result = service.bookRecurring(member, recurring(date, "week", List.of(1, 3, 5)));
+        assertEquals(1, result.booked().size());
+        assertEquals(2, result.skipped().size());
+        assertTrue(result.skipped().stream().allMatch(s -> "COURT_BOOKING_PAYMENT_REQUIRED".equals(s.code())), result.skipped().toString());
+    }
+    @Test void quotaReportsPlanUsageAndRemaining() {
+        used(1); plan("GOLD");
+        var quota = service.quota(member, date);
+        assertEquals(2, quota.monthlyQuota()); assertEquals(1, quota.used()); assertEquals(1, quota.remaining());
     }
     CourtBooking existing(LocalTime start) {
         CourtBooking booking = new CourtBooking(); booking.setId(8L); booking.setRoom(room); booking.setMember(user);

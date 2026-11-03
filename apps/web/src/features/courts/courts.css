@@ -10,6 +10,9 @@
 .court-slot--free:hover { background: color-mix(in srgb, var(--portal-salmon) 15%, var(--portal-surface)); }
 .court-slot:disabled { cursor: default; color: var(--portal-muted); background: var(--portal-raised); }
 .court-slot:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 3px; }
+.court-pricing { margin: 12px 0; padding: 12px; border: 1px solid var(--portal-border); border-radius: 12px; }
+.court-pricing p { margin: 0 0 8px; }
+.court-pricing .portal-form-group { margin: 0; }
 .court-booking-list { margin-top: 32px; }
 .court-booking-list > .portal-card-title { margin-bottom: 16px; }
 .court-booking-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }

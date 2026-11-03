@@ -161,7 +161,7 @@ class GlobalExceptionHandlerTriggerTest {
                 Arguments.of("trg_court_bookings_check_membership", 403, "COURT_BOOKING_MEMBERSHIP_INVALID", "vi",
                         "Bạn chưa đăng ký gói tập hoặc gói tập không còn hiệu lực đến ngày đặt sân. Vui lòng đăng ký gói tập đang hoạt động để đặt sân"),
                 Arguments.of("trg_court_bookings_check_limit", 409, "COURT_BOOKING_LIMIT_REACHED", "en",
-                        "You can have at most two court bookings per day"),
+                        "You can have at most four court bookings per day"),
                 Arguments.of("trg_court_bookings_check_slot", 400, "COURT_BOOKING_INVALID_SLOT", "en",
                         "Choose a whole-hour 60-minute slot within the court opening hours"));
     }

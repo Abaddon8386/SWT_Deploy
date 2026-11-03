@@ -3,11 +3,15 @@ info:
   title: SCMS court booking
   version: 1.0.0
   description: >
-    Tennis, badminton and swimming lane reservations. No payment is created.
+    Tennis, badminton and swimming lane reservations. Each plan includes some bookings per calendar month, shared across
+    the three court types (SILVER 1, GOLD 2, PLATINUM 3). Any booking beyond that is paid when it is made: 100,000 VND per
+    one-hour slot, 125,000 VND for slots starting at 18:00 or later (lighting included). A paid booking writes a successful
+    payment (online_wallet or bank_transfer) and needs paymentMethod; without it the API answers
+    COURT_BOOKING_PAYMENT_REQUIRED (400).
     All responses use ApiResponse and Accept-Language (vi by default).
     Dates/times use Asia/Ho_Chi_Minh. Book from today through today+7 inclusive,
     at whole hours for 60 minutes within the configured room opening hours.
-    Maximum two booked reservations per member per day; one currently active
+    Maximum four booked reservations per member per day; one currently active
     subscription must cover today and the reservation date.
 servers:
   - url: /api/v1
@@ -63,6 +67,7 @@ paths:
                 roomId: {type: integer, format: int64}
                 date: {type: string, format: date}
                 startTime: {type: string, example: '12:00:00'}
+                paymentMethod: {type: string, enum: [online_wallet, bank_transfer], description: Required only when the plan no longer covers the booking; ignored while it does}
       responses:
         '201': {$ref: '#/components/responses/Booking'}
         '400': {$ref: '#/components/responses/BadRequest'}
@@ -87,7 +92,7 @@ paths:
         Books the same one-hour slot on the chosen ISO weekdays (1 = Monday ... 7 = Sunday; defaults to the weekday of
         startDate). period week covers 7 days from startDate, month covers one calendar month. Standing bookings may
         reach 31 days ahead instead of 7. Every date is checked on its own (court overlap, class overlap, member
-        overlap, 2 bookings per day, membership covering that date); dates that fail are returned in skipped and the
+        overlap, 4 bookings per day, membership covering that date); dates that fail are returned in skipped and the
         rest are kept. Status 201 when at least one booking was created, 200 when none was.
       requestBody:
         required: true
@@ -102,6 +107,7 @@ paths:
                 startTime: { type: string, example: '18:00:00' }
                 period: { type: string, enum: [week, month] }
                 daysOfWeek: { type: array, maxItems: 7, items: { type: integer, minimum: 1, maximum: 7 } }
+                paymentMethod: { type: string, enum: [online_wallet, bank_transfer], description: 'Dates are covered by the plan first, then charged; without a method the dates beyond the quota are skipped with COURT_BOOKING_PAYMENT_REQUIRED' }
       responses:
         '201':
           description: At least one booking created
@@ -127,6 +133,28 @@ paths:
         '400': { description: Invalid period, weekdays, court or time }
         '403': { description: MEMBER required }
         '409': { description: COURT_BOOKING_COURT_UNAVAILABLE }
+  /court-bookings/quota:
+    get:
+      summary: Court bookings still included in the member's plan (MEMBER)
+      parameters:
+        - {name: date, in: query, schema: {type: string, format: date}, description: 'Month to evaluate; defaults to today'}
+      responses:
+        '200':
+          description: Plan, monthly quota, used and remaining
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ApiResponse'}
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          packageName: {type: string, nullable: true}
+                          monthlyQuota: {type: integer}
+                          used: {type: integer}
+                          remaining: {type: integer}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /court-bookings/my:
     get:
       description: MEMBER only. Own bookings, newest date first, including cancelled/past reservations.
@@ -191,6 +219,7 @@ components:
         startTime: {type: string}
         endTime: {type: string}
         status: {type: string, enum: [free, booked, class, past]}
+        price: {type: number, description: 'Fee for the slot if it is not covered by the plan: 100000, or 125000 from 18:00'}
     Booking:
       type: object
       properties:
@@ -208,6 +237,9 @@ components:
         cancelledAt: {type: string, format: date-time, nullable: true}
         cancelReason: {type: string, nullable: true}
         canCancel: {type: boolean, description: Calculated for authenticated actor and current time}
+        price: {type: number, description: 'Amount charged; 0 when covered by the plan'}
+        paymentMethod: {type: string, nullable: true, description: 'package_quota, online_wallet or bank_transfer'}
+        paymentStatus: {type: string, nullable: true, enum: [covered, paid]}
     BookingPage:
       type: object
       properties:
@@ -238,7 +270,7 @@ components:
               - properties:
                   data: {$ref: '#/components/schemas/BookingPage'}
     BadRequest:
-      description: 'COURT_BOOKING_PAST_SLOT, TOO_FAR, INVALID_SLOT, INVALID_COURT or CANCEL_TOO_LATE (all prefixed COURT_BOOKING_); invalid input also uses shared validation errors'
+      description: 'COURT_BOOKING_PAST_SLOT, TOO_FAR, INVALID_SLOT, INVALID_COURT, PAYMENT_REQUIRED, INVALID_PAYMENT_METHOD or CANCEL_TOO_LATE (all prefixed COURT_BOOKING_); invalid input also uses shared validation errors'
     Forbidden:
       description: 'COURT_BOOKING_MEMBERSHIP_INVALID, COURT_BOOKING_FORBIDDEN or role denied'
     NotFound:

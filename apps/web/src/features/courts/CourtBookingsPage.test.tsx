@@ -7,7 +7,7 @@ import { courtsApi } from './courtsApi';
 import { MemberCourtsPage, StaffCourtsPage } from './CourtBookingsPage';
 
 vi.mock('./courtsApi', async original => ({ ...(await original<typeof import('./courtsApi')>()), courtsApi: {
-  courts: vi.fn(), availability: vi.fn(), my: vi.fn(), list: vi.fn(), book: vi.fn(), bookRecurring: vi.fn(), cancel: vi.fn(),
+  courts: vi.fn(), availability: vi.fn(), quota: vi.fn(), my: vi.fn(), list: vi.fn(), book: vi.fn(), bookRecurring: vi.fn(), cancel: vi.fn(),
 } }));
 vi.mock('../manager/catalogApi', () => ({ catalogApi: { rooms: vi.fn().mockResolvedValue([]) } }));
 vi.mock('../../shared/lib/portalNotices', () => ({ notify: vi.fn() }));
@@ -19,7 +19,8 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.clearAllMocks();
   vi.mocked(courtsApi.courts).mockResolvedValue([court]);
-  vi.mocked(courtsApi.availability).mockResolvedValue([{ startTime: '09:00', endTime: '10:00', status: 'free' }, { startTime: '10:00', endTime: '11:00', status: 'class' }]);
+  vi.mocked(courtsApi.availability).mockResolvedValue([{ startTime: '09:00', endTime: '10:00', status: 'free', price: 100000 }, { startTime: '10:00', endTime: '11:00', status: 'class', price: 100000 }]);
+  vi.mocked(courtsApi.quota).mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 1, used: 0, remaining: 1 });
   vi.mocked(courtsApi.my).mockResolvedValue(empty);
   vi.mocked(courtsApi.list).mockResolvedValue(empty);
   HTMLDialogElement.prototype.showModal = function () { this.open = true; };
@@ -77,7 +78,7 @@ it('shows staff daily empty state and queries the paginated daily endpoint', asy
 });
 
 it('books a standing week on the chosen weekdays and reports the skipped day with its reason', async () => {
-  const booking = { id: 1, roomId: 5, roomName: 'Sân A', disciplineName: 'Tennis', memberId: 1, memberName: 'M', date: '2099-01-05', startTime: '09:00', endTime: '10:00', status: 'booked' as const, createdAt: '', cancelledAt: null, cancelReason: null, canCancel: true };
+  const booking = { id: 1, roomId: 5, roomName: 'Sân A', disciplineName: 'Tennis', memberId: 1, memberName: 'M', date: '2099-01-05', startTime: '09:00', endTime: '10:00', status: 'booked' as const, createdAt: '', cancelledAt: null, cancelReason: null, canCancel: true, price: 0, paymentMethod: 'package_quota', paymentStatus: 'covered' };
   vi.mocked(courtsApi.bookRecurring).mockResolvedValue({ booked: [booking], skipped: [{ date: '2099-01-07', code: 'COURT_BOOKING_SLOT_TAKEN', message: 'Khung giờ đã có lượt đặt' }] });
   await render();
   await click('Trống');
@@ -91,4 +92,23 @@ it('books a standing week on the chosen weekdays and reports the skipped day wit
   expect(host.textContent).toContain('07/01: Khung giờ đã có lượt đặt');
   await click('Đóng');
   expect(host.querySelector('[role="dialog"]')).toBeNull();
+});
+
+it('books free while the plan has included bookings left', async () => {
+  vi.mocked(courtsApi.book).mockResolvedValue({} as never);
+  await render();
+  await click('Trống');
+  expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Miễn phí');
+  await click('Xác nhận đặt');
+  expect(courtsApi.book).toHaveBeenCalledWith({ roomId: 5, date: expect.any(String), startTime: '09:00' });
+});
+
+it('charges the slot price and sends the payment method once the plan quota is used up', async () => {
+  vi.mocked(courtsApi.quota).mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 1, used: 1, remaining: 0 });
+  vi.mocked(courtsApi.book).mockResolvedValue({} as never);
+  await render();
+  await click('Trống');
+  expect(host.querySelector('[role="dialog"]')?.textContent).toContain('100.000đ');
+  await click('Thanh toán 100.000đ và đặt');
+  expect(courtsApi.book).toHaveBeenCalledWith({ roomId: 5, date: expect.any(String), startTime: '09:00', paymentMethod: 'online_wallet' });
 });

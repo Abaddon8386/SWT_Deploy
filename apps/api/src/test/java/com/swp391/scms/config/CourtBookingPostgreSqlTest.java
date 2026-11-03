@@ -87,16 +87,18 @@ class CourtBookingPostgreSqlTest {
     }
 
     @Test
-    void concurrentThirdBookingCannotExceedDailyLimit() throws Exception {
+    void concurrentFifthBookingCannotExceedDailyLimit() throws Exception {
         long firstRoom = room();
         long secondRoom = room();
         long member = member(true);
         booking(jdbc, firstRoom, member, 8);
+        booking(jdbc, firstRoom, member, 9);
+        booking(jdbc, firstRoom, member, 11);
         race("court-member:" + member,
                 worker -> booking(worker, firstRoom, member, 10),
                 worker -> booking(worker, secondRoom, member, 12),
                 "trg_court_bookings_check_limit");
-        assertEquals(2, count("member_id = " + member));
+        assertEquals(4, count("member_id = " + member));
     }
 
     @Test

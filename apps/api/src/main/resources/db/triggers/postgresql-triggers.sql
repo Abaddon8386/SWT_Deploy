@@ -187,7 +187,7 @@ BEGIN
     END IF;
     IF (SELECT count(*) FROM court_bookings b
         WHERE b.member_id = NEW.member_id AND b.booking_date = NEW.booking_date
-          AND b.status = 'booked' AND b.id IS DISTINCT FROM NEW.id) >= 2 THEN
+          AND b.status = 'booked' AND b.id IS DISTINCT FROM NEW.id) >= 4 THEN
         RAISE EXCEPTION 'trg_court_bookings_check_limit'
             USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_limit';
     END IF;

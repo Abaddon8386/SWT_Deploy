@@ -3,6 +3,7 @@ package com.swp391.scms.courts.entity;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.*;
 
 @Entity
@@ -22,6 +23,11 @@ public class CourtBooking {
     @Column(name = "created_at", nullable = false, updatable = false) private LocalDateTime createdAt;
     @Column(name = "cancelled_at") private LocalDateTime cancelledAt;
     @Column(name = "cancel_reason", length = 255) private String cancelReason;
+    /** Court fee for the slot; null on bookings made before pricing existed (they were free). */
+    @Column(precision = 12, scale = 2) private BigDecimal price;
+    /** {@code package_quota} when the plan covered the slot, otherwise the method paid at booking time. */
+    @Column(name = "payment_method", length = 20) private String paymentMethod;
+    @Column(name = "payment_status", length = 20) private String paymentStatus;
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Room getRoom() { return room; }
@@ -42,4 +48,10 @@ public class CourtBooking {
     public void setCancelledAt(LocalDateTime value) { cancelledAt = value; }
     public String getCancelReason() { return cancelReason; }
     public void setCancelReason(String value) { cancelReason = value; }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal value) { price = value; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String value) { paymentMethod = value; }
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String value) { paymentStatus = value; }
 }
