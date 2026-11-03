@@ -1,45 +1,58 @@
-name: Sport Center Project (CI included) | © 2026 by Agile4Life
+# CI = Continuous Integration: tự kiểm tra code mỗi khi có người push hoặc mở Pull Request.
+# Nếu bất kỳ bước nào đỏ, GitHub báo lỗi ngay trên PR để cả nhóm biết trước khi merge.
+#
+# MẪU DÙNG CHO DỰ ÁN React (npm) + Spring Boot (Maven). Dùng cho dự án khác chỉ cần sửa:
+#   1. Thư mục frontend "apps/web" và backend "apps/api" (xuất hiện ở 2 job bên dưới)
+#   2. Nhánh chạy CI ở mục `push.branches`
+#   3. Phiên bản Node / Java nếu dự án dùng bản khác
+# Tên workflow "CI" phải trùng với `workflows: [CI]` trong cd.yml.
+name: CI
 
 on:
-  pull_request:
+  pull_request:            # mở/cập nhật PR
   push:
     branches: [main, develop]
-  workflow_dispatch:
+  workflow_dispatch:       # cho phép bấm chạy tay trong tab Actions
 
 permissions:
-  contents: read
+  contents: read           # CI chỉ cần đọc code
 
+# Có commit mới trên cùng nhánh/PR thì hủy lần chạy cũ cho đỡ tốn thời gian.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Job 1: giao diện React
   frontend:
     name: Frontend test, lint and build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: apps/web
+        working-directory: apps/web                       # <-- thư mục frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4                         # lấy code về máy chạy CI
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/web/package-lock.json
-      - run: npm ci
-      - run: npm test
-      - run: npm run lint
-      - run: npm run build
+          cache-dependency-path: apps/web/package-lock.json   # <-- thư mục frontend
+      - run: npm ci                                       # cài thư viện đúng theo package-lock
+      - run: npm test --if-present                        # bỏ qua nếu dự án chưa có script "test"
+        env:
+          CI: true                                        # để Jest/Vitest không chạy chế độ watch
+      - run: npm run lint --if-present                    # bỏ qua nếu chưa có script "lint"
+      - run: npm run build                                # build lỗi nghĩa là không deploy được
 
+  # Job 2: API Spring Boot
   backend:
     name: Backend compile and test
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: apps/api
+        working-directory: apps/api                       # <-- thư mục backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -47,11 +60,16 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-          cache-dependency-path: apps/api/pom.xml
+          cache-dependency-path: apps/api/pom.xml         # <-- thư mục backend
+      # Riêng dự án SWP391: kiểm tra chính sách database. Dự án khác không có file này thì bước tự bỏ qua.
       - name: Verify Supabase runner configuration
+        if: hashFiles('scripts/test-database-config.ps1') != ''
         shell: pwsh
         working-directory: .
         run: ./scripts/test-database-config.ps1
-      # Database integration tests run only when SCMS_POSTGRES_TEST_URL is set.
-      - name: Verify database policy and backend tests
-        run: ./mvnw --batch-mode --no-transfer-progress test
+      # Biên dịch và chạy toàn bộ test. Dùng mvnw của dự án nếu có, không thì dùng mvn có sẵn trên máy chạy.
+      # (Dự án Gradle: thay bằng `./gradlew build` và đổi `cache: gradle`.)
+      - name: Compile and run backend tests
+        run: |
+          if [ -f mvnw ]; then chmod +x mvnw; ./mvnw --batch-mode --no-transfer-progress test
+          else mvn --batch-mode --no-transfer-progress test; fi

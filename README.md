@@ -2,8 +2,8 @@
 
 # 🏛️ SÖL Wellness Sanctuary — Sports Center Management System (SCMS)
 
-[![Sport Center Project (CD included) | © 2026 by Agile4Life](https://github.com/Agile4Life/SWP391/actions/workflows/cd.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/cd.yml)
-[![Sport Center Project (CI included) | © 2026 by Agile4Life](https://github.com/Agile4Life/SWP391/actions/workflows/ci.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/ci.yml)
+[![CD](https://github.com/Agile4Life/SWP391/actions/workflows/cd.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/cd.yml)
+[![CI](https://github.com/Agile4Life/SWP391/actions/workflows/ci.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/ci.yml)
 ![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot 3](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?logo=springboot&logoColor=white)
 ![React](https://img.shields.io/badge/React-TypeScript-61DAFB?logo=react&logoColor=black)
