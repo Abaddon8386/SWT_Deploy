@@ -337,6 +337,27 @@ class SupportRequestServiceTest {
     }
 
     @Test
+    @DisplayName("Lễ tân vẫn trả lời được phiếu của hội viên đã bị xóa mềm, không gửi thông báo")
+    void sendMessage_StaffReplyToDeletedMemberSkipsNotification() {
+        sampleUser.setDeletedAt(LocalDateTime.now());
+        User staff = new User();
+        staff.setId(20L);
+        staff.setStatus("active");
+        var staffRole = new com.swp391.scms.users.entity.Role(); staffRole.setCode("RECEPTIONIST"); staff.setRole(staffRole);
+        staff.setFullName("Lễ tân Lan");
+
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staff));
+        when(supportRequestMessageRepository.save(any(SupportRequestMessage.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        supportRequestService.sendMessage(1L, 20L, "RECEPTIONIST", new CreateSupportMessageDto("Chúng tôi đã xử lý"));
+
+        verify(supportRequestMessageRepository).save(any(SupportRequestMessage.class));
+        verify(notificationService, never()).send(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
     @DisplayName("Gửi tin nhắn thất bại khi phiếu hỗ trợ đã đóng (closed)")
     void sendMessage_whenTicketClosed_throwsBadRequestException() {
         sampleRequest.setStatus("closed");

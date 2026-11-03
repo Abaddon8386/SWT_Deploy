@@ -196,7 +196,7 @@ public class SupportRequestService {
             Long memberUserId = request.getMember().getUserId() != null
                     ? request.getMember().getUserId()
                     : (request.getMember().getUser() != null ? request.getMember().getUser().getId() : null);
-            if (memberUserId != null) {
+            if (memberUserId != null && memberReachable(request)) {
                 String title = messageService != null
                         ? messageService.getMessage("notifications.support.status_updated.title")
                         : "notifications.support.status_updated.title";
@@ -285,8 +285,8 @@ public class SupportRequestService {
 
             Long targetRequestId = request.getId() != null ? request.getId() : requestId;
             if (staff) {
-                // If staff replies, notify the member
-                if (memberUserId != null) {
+                // If staff replies, notify the member (a deleted account has no inbox to notify)
+                if (memberUserId != null && memberReachable(request)) {
                     notificationService.send(memberUserId, title, body, "support_reply", "support_request", targetRequestId);
                 }
             } else {
@@ -436,13 +436,23 @@ public class SupportRequestService {
         SupportRequest result = saved != null ? saved : request;
         notifyStaff(MANAGER, "notifications.support.escalated_manager.title", "notifications.support.escalated_manager.body",
                 id, result.getSubject());
-        if (notificationService != null && result.getMember() != null && result.getMember().getUserId() != null) {
+        if (notificationService != null && result.getMember() != null && result.getMember().getUserId() != null
+                && memberReachable(result)) {
             notificationService.send(result.getMember().getUserId(),
                     text("notifications.support.escalated_member.title"),
                     text("notifications.support.escalated_member.body", result.getSubject()),
                     "support_reply", "support_request", id);
         }
         return supportRequestMapper.toDto(result);
+    }
+
+    /**
+     * Notifications resolve the recipient among non-deleted users. Replying to or updating a complaint
+     * of a deleted member must still work, so skip the in-app notice instead of failing the whole write.
+     */
+    private static boolean memberReachable(SupportRequest request) {
+        Member member = request.getMember();
+        return member != null && (member.getUser() == null || member.getUser().getDeletedAt() == null);
     }
 
     private String text(String key, Object... args) {

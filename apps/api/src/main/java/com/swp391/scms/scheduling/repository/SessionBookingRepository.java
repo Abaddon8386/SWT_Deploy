@@ -52,12 +52,21 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
             select b from SessionBooking b
             where b.member.userId = :memberId
               and (:status is null or b.status = :status)
-              and (:fromDate is null or b.session.sessionDate >= :fromDate)
-              and (:toDate is null or b.session.sessionDate <= :toDate)
+              and b.session.sessionDate >= :fromDate
+              and b.session.sessionDate <= :toDate
             order by b.session.sessionDate, b.session.startTime, b.id
             """)
-    List<SessionBooking> findForMember(@Param("memberId") Long memberId, @Param("status") String status,
-                                       @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+    List<SessionBooking> findForMemberBetween(@Param("memberId") Long memberId, @Param("status") String status,
+                                              @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
+    /**
+     * A null bound means "unbounded". PostgreSQL cannot infer the type of a bare {@code ? is null} date parameter
+     * ("could not determine data type of parameter"), so open bounds are replaced by sentinel dates instead.
+     */
+    default List<SessionBooking> findForMember(Long memberId, String status, LocalDate fromDate, LocalDate toDate) {
+        return findForMemberBetween(memberId, status, fromDate != null ? fromDate : LocalDate.of(1900, 1, 1),
+                toDate != null ? toDate : LocalDate.of(9999, 12, 31));
+    }
 
     /** Booked seats of a member in sessions that have not started yet, for hold / cancellation / expiry clean-up. */
     @EntityGraph(attributePaths = {"session", "session.gymClass"})
