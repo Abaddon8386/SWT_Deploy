@@ -105,7 +105,7 @@ class SessionBookingServiceTest {
         assertEquals(11L, dto.sessionId());
         assertEquals("booked", dto.status());
         assertNull(dto.batchId());
-        verify(notifications).send(eq(5L), any(), any(), eq("system"), eq("session_booking"), eq(dto.id()));
+        verify(notifications).send(eq(5L), any(), any(), eq("system"), eq("class_session"), eq(11L));
     }
 
     @Test void rejectsSessionsThatCannotBeBooked() {
@@ -175,7 +175,7 @@ class SessionBookingServiceTest {
         assertTrue(result.skipped().stream().anyMatch(s -> s.id() == 404L && "NOT_FOUND".equals(s.code())));
         assertNotNull(result.booked().get(0).batchId());
         assertEquals(result.booked().get(0).batchId(), result.booked().get(1).batchId());
-        verify(notifications, times(1)).send(eq(5L), any(), any(), eq("system"), eq("session_booking"), anyLong());
+        verify(notifications, times(1)).send(eq(5L), any(), any(), eq("system"), eq("class_session"), eq(21L));
     }
 
     @Test void bulkRejectsEmptyAndOversizedRequests() {
@@ -207,6 +207,7 @@ class SessionBookingServiceTest {
         var dto = service.cancel(owner, 50L);
         assertEquals("cancelled", dto.status());
         assertNotNull(b.getCancelledAt());
+        verify(notifications).send(eq(5L), any(), any(), eq("system"), eq("class_session"), eq(41L));
     }
 
     @Test void staffMayCancelButAnotherMemberMayNot() {
@@ -237,6 +238,17 @@ class SessionBookingServiceTest {
         assertEquals(1, result.cancelled().size());
         assertEquals(1, result.skipped().size());
         assertEquals(61L, result.skipped().get(0).id());
+        verify(notifications).send(eq(5L), any(), any(), eq("system"), eq("class_session"), eq(45L));
+    }
+
+    @Test void bulkCancellationNotifiesWithAClassSessionReference() {
+        lockBooking(booked(60, session(45, today.plusDays(2), 7), 5L));
+        lockBooking(booked(62, session(46, today.plusDays(3), 7), 5L));
+
+        var result = service.cancelMany(owner, List.of(60L, 62L));
+
+        assertEquals(2, result.cancelled().size());
+        verify(notifications).send(eq(5L), any(), any(), eq("system"), eq("class_session"), eq(45L));
     }
 
     @Test void holdOrExpiryCancelsOnlyUncoveredUpcomingBookings() {
@@ -248,6 +260,7 @@ class SessionBookingServiceTest {
         assertEquals("booked", covered.getStatus());
         assertEquals("cancelled", uncovered.getStatus());
         assertEquals("Gói tập hết hạn", uncovered.getCancelReason());
+        verify(notifications).send(eq(5L), any(), any(), eq("system"), eq("class_session"), isNull());
     }
 
     @Test void listsOnlyTheMembersOwnBookings() {
