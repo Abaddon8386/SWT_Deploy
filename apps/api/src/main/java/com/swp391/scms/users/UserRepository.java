@@ -29,8 +29,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByPhoneAndDeletedAtIsNull(String phone);
     Optional<User> findByGoogleSub(String googleSub);
 
-    @Query("select u from User u join fetch u.role r where u.deletedAt is null and upper(r.code) in ('CENTER_MANAGER', 'RECEPTIONIST', 'ROLE_CENTER_MANAGER', 'ROLE_RECEPTIONIST') order by u.id asc")
+    @Query("select u from User u join fetch u.role r where u.deletedAt is null and upper(r.code) in ('CENTER_MANAGER', 'MANAGER', 'RECEPTIONIST', 'STAFF', 'ROLE_CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_RECEPTIONIST', 'ROLE_STAFF') order by u.id asc")
     List<User> findActiveStaffUsers();
-    @Query("select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' and upper(r.code) in ('MANAGER', 'CENTER_MANAGER') order by u.id asc")
+    @Query("select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' and upper(r.code) in ('MANAGER', 'CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_CENTER_MANAGER') order by u.id asc")
     List<User> findActiveManagers();
 }

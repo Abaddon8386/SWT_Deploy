@@ -115,7 +115,8 @@ class StaffInternalRequestServiceTest {
                 anyString(),
                 eq("system"),
                 isNull(),
-                eq(100L)
+                eq(100L),
+                eq("/manager/requests")
         );
     }
 

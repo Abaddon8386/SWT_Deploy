@@ -109,11 +109,13 @@ public class SupportRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
 
         SupportRequest request = new SupportRequest(member, dto.subject(), dto.description());
-        supportRequestRepository.save(request);
-        // A new complaint reaches the receptionists first; managers only see what they escalate.
+        SupportRequest saved = supportRequestRepository.save(request);
+        // Both receptionists and managers are notified of a new complaint
         notifyStaff(RECEPTIONIST, "notifications.support.new_request.title", "notifications.support.new_request.body",
-                request.getId(), dto.subject());
-        return supportRequestMapper.toDto(request).forMember();
+                saved.getId(), dto.subject());
+        notifyStaff(MANAGER, "notifications.support.new_request.title", "notifications.support.new_request.body",
+                saved.getId(), dto.subject());
+        return supportRequestMapper.toDto(saved).forMember();
     }
 
     @Transactional(readOnly = true)
@@ -464,8 +466,10 @@ public class SupportRequestService {
         List<User> staff = userRepository.findActiveStaffUsers();
         if (staff == null) return;
         for (User user : staff) {
-            if (user.getId() != null && user.getRole() != null
-                    && roleCode.equals(normalizeRole(user.getRole().getCode()))) {
+            boolean match = MANAGER.equals(roleCode)
+                    ? isManager(user.getRole() != null ? user.getRole().getCode() : null)
+                    : isReceptionist(user.getRole() != null ? user.getRole().getCode() : null);
+            if (user.getId() != null && user.getRole() != null && match) {
                 notificationService.send(user.getId(), text(titleKey), text(bodyKey, bodyArgs),
                         "support_reply", "support_request", requestId);
             }

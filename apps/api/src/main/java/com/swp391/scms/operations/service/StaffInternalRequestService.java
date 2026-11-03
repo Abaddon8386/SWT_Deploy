@@ -122,7 +122,8 @@ public class StaffInternalRequestService {
                         msg("notifications.operations.created.body", user.getFullName(), roleCode, type, saved.getTitle()),
                         "system",
                         null,
-                        saved.getId()
+                        saved.getId(),
+                        "/manager/requests"
                 );
             }
         }
