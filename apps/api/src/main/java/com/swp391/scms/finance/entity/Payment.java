@@ -47,6 +47,10 @@ public class Payment {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
+    /** Money already returned to the member; a partial refund keeps the payment successful. */
+    @Column(name = "refunded_amount", precision = 12, scale = 2)
+    private BigDecimal refundedAmount;
+
     @Column(nullable = false, length = 20)
     private String method; // cash, pos, bank_transfer, online_wallet
 
@@ -165,5 +169,19 @@ public class Payment {
 
     public void setInvoice(Invoice invoice) {
         this.invoice = invoice;
+    }
+
+    public BigDecimal getRefundedAmount() {
+        return refundedAmount;
+    }
+
+    public void setRefundedAmount(BigDecimal refundedAmount) {
+        this.refundedAmount = refundedAmount;
+    }
+
+    /** Amount the centre keeps: what was paid minus what was refunded. */
+    public BigDecimal netAmount() {
+        if (amount == null) return BigDecimal.ZERO;
+        return refundedAmount == null ? amount : amount.subtract(refundedAmount);
     }
 }

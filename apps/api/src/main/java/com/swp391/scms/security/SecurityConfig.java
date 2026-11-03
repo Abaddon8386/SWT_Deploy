@@ -163,6 +163,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/available-slots").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/quota-status").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coach-schedule").hasAnyRole("COACH", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/unpaid").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings/*/confirm-payment").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/coach-bookings/*").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")

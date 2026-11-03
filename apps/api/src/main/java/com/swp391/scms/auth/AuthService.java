@@ -368,6 +368,12 @@ public class AuthService {
                 } catch (RuntimeException deliveryFailure) {
                     otpService.invalidate(normalizedTarget);
                     log.warn("OTP delivery failed for {}", maskEmail(normalizedTarget), deliveryFailure);
+                    // afterCommit exceptions propagate to the caller, so the user is told the code was not sent.
+                    if (deliveryFailure instanceof com.swp391.scms.common.exception.AppException) {
+                        throw deliveryFailure;
+                    }
+                    throw new com.swp391.scms.common.exception.ServiceUnavailableException(
+                            "OTP_DELIVERY_FAILED", "auth.otp.delivery_failed", null, null);
                 }
             });
         }

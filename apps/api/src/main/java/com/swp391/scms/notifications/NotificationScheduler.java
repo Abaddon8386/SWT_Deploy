@@ -84,7 +84,9 @@ public class NotificationScheduler {
      * Job 1 (Hết hạn gói): Chạy lúc 08:00 sáng mỗi ngày.
      * Quét các membership_subscriptions có end_date còn đúng 7 ngày; tạo notification package_expiry.
      */
+    // The scan below is called on this instance, which bypasses its proxy; the job method owns the transaction.
     @Scheduled(cron = "${app.scheduler.package-expiry.cron:0 0 8 * * ?}")
+    @Transactional
     public void schedulePackageExpiryJob() {
         log.info("[NotificationScheduler] Running daily package expiry reminder job...");
         LocalDate targetDate = LocalDate.now(clock).plusDays(7);
@@ -113,6 +115,10 @@ public class NotificationScheduler {
                 continue;
             }
             Long userId = sub.getMember().getUserId();
+            // A member who already paid the next period is not running out.
+            if (subscriptionRepository.existsByPreviousSubscriptionIdAndStatusIn(sub.getId(), java.util.List.of("active", "expired"))) {
+                continue;
+            }
 
             // Idempotency check: avoid duplicate notifications for this subscription
             boolean alreadySent = notificationRepository.existsNotification(
@@ -157,6 +163,7 @@ public class NotificationScheduler {
      * Quét các class_sessions diễn ra trong vòng 2 giờ tới; gửi notification class_reminder cho toàn bộ hội viên có enrollment booked.
      */
     @Scheduled(cron = "${app.scheduler.class-reminder.cron:0 */30 * * * ?}")
+    @Transactional
     public void scheduleClassReminderJob() {
         log.info("[NotificationScheduler] Running class reminder job...");
         LocalDateTime now = LocalDateTime.now(clock);

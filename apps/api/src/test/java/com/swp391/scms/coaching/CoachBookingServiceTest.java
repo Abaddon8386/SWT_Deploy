@@ -355,11 +355,44 @@ class CoachBookingServiceTest {
         sub.setStartDate(LocalDate.of(2026, 10, 1));
         sub.setEndDate(LocalDate.of(2026, 12, 31));
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
-        when(coachBookingRepository.countUnpaidUpcoming(10L, LocalDate.of(2026, 10, 31))).thenReturn(2L);
+        when(coachBookingRepository.countUnpaid(10L)).thenReturn(2L);
         var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
                 LocalTime.of(14, 0), LocalTime.of(15, 0), "cash", null);
         assertThatThrownBy(() -> service.createBooking(principal, request))
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
         verify(coachBookingRepository, never()).save(any());
+    }
+
+    @Test
+    void deskConfirmsHourlyPaymentAndRecordsRevenue() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", payments);
+        CoachBooking booking = new CoachBooking();
+        booking.setId(90L);
+        booking.setMember(member);
+        booking.setCoach(coach);
+        booking.setBookingDate(LocalDate.of(2026, 10, 30));
+        booking.setStartTime(LocalTime.of(14, 0));
+        booking.setEndTime(LocalTime.of(15, 0));
+        booking.setHourlyRate(new java.math.BigDecimal("200000.00"));
+        booking.setPaymentMethod("bank_transfer");
+        booking.setPaymentStatus("pending");
+        booking.setStatus("completed");
+        when(coachBookingRepository.findByIdForUpdate(90L)).thenReturn(Optional.of(booking));
+        var desk = new AuthenticatedPrincipal(30L, "desk", "RECEPTIONIST");
+
+        assertThatThrownBy(() -> service.confirmHourlyPayment(principal, 90L, null))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+
+        var result = service.confirmHourlyPayment(desk, 90L, "cash");
+        assertThat(result.paymentStatus()).isEqualTo("paid");
+        assertThat(booking.getPaymentMethod()).isEqualTo("cash");
+        var saved = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.finance.entity.Payment.class);
+        verify(payments).save(saved.capture());
+        assertThat(saved.getValue().getStatus()).isEqualTo("success");
+        assertThat(saved.getValue().getAmount()).isEqualByComparingTo("200000.00");
+
+        assertThatThrownBy(() -> service.confirmHourlyPayment(desk, 90L, "cash"))
+                .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
     }
 }

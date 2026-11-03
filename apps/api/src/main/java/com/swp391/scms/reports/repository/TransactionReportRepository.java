@@ -12,7 +12,7 @@ import java.util.List;
 public interface TransactionReportRepository extends Repository<Payment, Long> {
     @Query("""
             select new com.swp391.scms.reports.dto.RecentTransactionDto(
-                p.id, i.invoiceNumber, u.fullName, coalesce(pkg.name, c.name), p.amount, p.method, p.paidAt)
+                p.id, i.invoiceNumber, u.fullName, coalesce(pkg.name, c.name), p.amount, p.refundedAmount, p.method, p.paidAt)
             from Payment p
             join p.member m join m.user u
             left join p.invoice i

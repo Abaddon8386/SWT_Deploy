@@ -143,6 +143,7 @@ class SessionAttendanceServiceTest {
     @Test
     void recordBatchAttendance_success() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        stubBookedEnrollment();
         when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
         when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
         when(attendanceRepository.findBySessionIdAndMemberUserId(100L, 20L)).thenReturn(Optional.empty());
@@ -163,6 +164,7 @@ class SessionAttendanceServiceTest {
 
         assertEquals(1, items.size());
         assertEquals("present", items.get(0).attendanceStatus());
+        assertEquals("booked", items.get(0).enrollmentStatus());
         assertEquals(20L, items.get(0).memberId());
         verify(attendanceRepository, times(1)).saveAndFlush(any(SessionAttendance.class));
     }
@@ -170,6 +172,7 @@ class SessionAttendanceServiceTest {
     @Test
     void recordBatchAttendance_duplicateKey_throwsConflictException() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        stubBookedEnrollment();
         when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
         when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
         when(attendanceRepository.findBySessionIdAndMemberUserId(100L, 20L)).thenReturn(Optional.empty());
@@ -181,5 +184,43 @@ class SessionAttendanceServiceTest {
         ));
 
         assertThrows(ConflictException.class, () -> service.recordBatchAttendance(100L, request, coachPrincipal));
+    }
+
+    private void stubBookedEnrollment() {
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus("booked");
+        when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(enrollment));
+    }
+
+    @Test
+    void recordBatchAttendance_rejectsMemberWithoutBooking() {
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
+        when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of());
+        BatchAttendanceRequest request = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", null)));
+
+        var error = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.recordBatchAttendance(100L, request, coachPrincipal));
+        assertEquals("ATTENDANCE_MEMBER_NOT_ENROLLED", error.getErrorCode());
+        verify(attendanceRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void recordBatchAttendance_rejectsCancelledAndNotYetStartedSessions() {
+        when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
+        BatchAttendanceRequest request = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", null)));
+
+        session.setStatus("cancelled");
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        assertThrows(ConflictException.class, () -> service.recordBatchAttendance(100L, request, coachPrincipal));
+
+        session.setStatus("scheduled");
+        session.setStartTime(LocalTime.of(10, 0));
+        var error = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.recordBatchAttendance(100L, request, coachPrincipal));
+        assertEquals("ATTENDANCE_SESSION_NOT_STARTED", error.getErrorCode());
+        verify(attendanceRepository, never()).saveAndFlush(any());
     }
 }

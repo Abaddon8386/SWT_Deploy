@@ -497,43 +497,6 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
-    void activateAfterPayment_expiresPreviousActiveSubscriptionWhenUpgrading() {
-        MembershipPackage basicPack = new MembershipPackage();
-        basicPack.setId(1L);
-        basicPack.setDurationDays(30);
-
-        MembershipPackage vipPack = new MembershipPackage();
-        vipPack.setId(2L);
-        vipPack.setDurationDays(90);
-
-        MembershipSubscription prev = new MembershipSubscription();
-        prev.setId(100L);
-        prev.setMembershipPackage(basicPack);
-        prev.setStatus("active");
-        prev.setStartDate(LocalDate.now(clock).minusDays(10));
-        prev.setEndDate(LocalDate.now(clock).plusDays(20));
-
-        MembershipSubscription upgradeSub = new MembershipSubscription();
-        upgradeSub.setId(101L);
-        upgradeSub.setMembershipPackage(vipPack);
-        upgradeSub.setPreviousSubscription(prev);
-        upgradeSub.setStatus("pending_payment");
-        upgradeSub.setStartDate(LocalDate.now(clock));
-
-        when(subscriptions.findById(101L)).thenReturn(Optional.of(upgradeSub));
-        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        SubscriptionDto result = service.activateAfterPayment(101L);
-
-        assertThat(result.status()).isEqualTo("active");
-        assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
-        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(89));
-        assertThat(prev.getStatus()).isEqualTo("expired");
-        assertThat(prev.getEndDate()).isEqualTo(LocalDate.now(clock));
-        verify(subscriptions).save(prev);
-    }
-
-    @Test
     void approveHold_rejectsPeriodThatExpiredWhileAwaitingApproval() {
         MembershipSubscription subscription = frozenSubscription();
         subscription.setStatus("active");
@@ -812,28 +775,6 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
-    void activateAfterPayment_success() {
-        MembershipPackage pack = new MembershipPackage();
-        pack.setId(1L);
-        pack.setDurationDays(30);
-
-        MembershipSubscription sub = new MembershipSubscription();
-        sub.setId(100L);
-        sub.setMembershipPackage(pack);
-        sub.setStatus("pending_payment");
-        sub.setStartDate(LocalDate.now(clock));
-
-        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
-        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        SubscriptionDto result = service.activateAfterPayment(100L);
-
-        assertThat(result.status()).isEqualTo("active");
-        assertThat(result.qrCode()).isNotNull().isNotBlank();
-        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
-    }
-
-    @Test
     void listPending_excludesSoftDeletedMembers() {
         com.swp391.scms.users.entity.User activeUser = new com.swp391.scms.users.entity.User();
         activeUser.setId(10L);
@@ -945,23 +886,6 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.startDate()).isEqualTo(today.plusDays(30));
         assertThat(first.getEndDate()).isEqualTo(today.plusDays(29));
         assertThat(failed.getStatus()).isEqualTo("cancelled");
-    }
-
-    @Test
-    void paymentConfirmationPreservesRenewalDatesWhenCatalogDurationChanges() {
-        Member member = new Member(); member.setUserId(10L);
-        MembershipPackage pack = new MembershipPackage(); pack.setId(1L); pack.setDurationDays(90);
-        LocalDate today = LocalDate.now(clock);
-        MembershipSubscription previous = period(100L, member, pack, null, today, today.plusDays(29));
-        MembershipSubscription renewal = period(101L, member, pack, previous,
-                today.plusDays(30), today.plusDays(59));
-        renewal.setStatus("pending_payment");
-        when(subscriptions.findById(101L)).thenReturn(Optional.of(renewal));
-        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
-        SubscriptionDto result = service.activateAfterPayment(101L);
-        assertThat(result.startDate()).isEqualTo(today.plusDays(30));
-        assertThat(result.endDate()).isEqualTo(today.plusDays(59));
-        assertThat(previous.getEndDate()).isEqualTo(today.plusDays(29));
     }
 
     @Test

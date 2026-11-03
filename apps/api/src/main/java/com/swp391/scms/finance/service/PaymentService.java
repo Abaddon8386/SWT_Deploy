@@ -69,6 +69,9 @@ public class PaymentService {
     @Autowired(required = false)
     private com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
 
+    @Autowired(required = false)
+    private com.swp391.scms.membership.service.EntitlementRevocationService entitlementRevocation;
+
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
@@ -138,6 +141,7 @@ public class PaymentService {
             if (enrollment.getMember() == null || !memberId.equals(enrollment.getMember().getUserId())) {
                 throw new ForbiddenException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null, null);
             }
+            requirePayableEnrollment(enrollment);
         }
     }
 
@@ -400,9 +404,7 @@ public class PaymentService {
                         "Enrollment does not belong to member");
             }
 
-            requireBookable(enrollment);
-            enrollment.setStatus("booked");
-            classEnrollmentRepository.save(enrollment);
+            requirePayableEnrollment(enrollment);
         }
 
         if (pendingToSettle != null) {
@@ -447,13 +449,21 @@ public class PaymentService {
                     new Object[]{currentStatus}, "Only successful payments can be refunded");
         }
 
-        BigDecimal refundAmount = request.getRefundAmount() != null ? request.getRefundAmount() : payment.getAmount();
-        if (refundAmount.compareTo(BigDecimal.ZERO) <= 0 || refundAmount.compareTo(payment.getAmount()) > 0) {
+        BigDecimal alreadyRefunded = payment.getRefundedAmount() != null ? payment.getRefundedAmount() : BigDecimal.ZERO;
+        BigDecimal refundable = payment.getAmount().subtract(alreadyRefunded);
+        BigDecimal refundAmount = request.getRefundAmount() != null ? request.getRefundAmount() : refundable;
+        if (refundAmount.compareTo(BigDecimal.ZERO) <= 0 || refundAmount.compareTo(refundable) > 0) {
             throw new BadRequestException("INVALID_REFUND_AMOUNT", "finance.payment.invalid_refund_amount",
-                    new Object[]{refundAmount, payment.getAmount()}, "Invalid refund amount");
+                    new Object[]{refundAmount, refundable}, "Invalid refund amount");
         }
 
-        payment.setStatus("refunded");
+        BigDecimal totalRefunded = alreadyRefunded.add(refundAmount);
+        boolean fullRefund = totalRefunded.compareTo(payment.getAmount()) == 0;
+        payment.setRefundedAmount(totalRefunded);
+        // A partial refund keeps the payment successful and the membership running; only the full amount ends it.
+        if (fullRefund) {
+            payment.setStatus("refunded");
+        }
         String refundNote = resolveRefundNote(refundAmount, request.getReason());
         String combinedNote = (payment.getNote() != null && !payment.getNote().isBlank())
                 ? payment.getNote() + " | " + refundNote
@@ -463,7 +473,7 @@ public class PaymentService {
         }
         payment.setNote(combinedNote);
 
-        if (refundAmount.compareTo(payment.getAmount()) == 0) {
+        if (fullRefund) {
             cancelLinkedTargetsOnRefund(payment, request.getReason());
         }
 
@@ -478,6 +488,7 @@ public class PaymentService {
                 sub.setHoldStatus(null);
                 sub.setUpdatedAt(LocalDateTime.now(clock));
                 membershipSubscriptionRepository.save(sub);
+                restorePeriodReplacedByUpgrade(sub);
                 cancelFutureBookingsWithoutEntitlement(sub, cancelReason);
             });
         }
@@ -497,10 +508,46 @@ public class PaymentService {
         }
     }
 
+    /**
+     * Refunding an upgrade gives back the period it replaced: the old package returns to active with the expiry
+     * it had before the upgrade cut it to the upgrade day, unless that date has already passed.
+     */
+    private void restorePeriodReplacedByUpgrade(MembershipSubscription refunded) {
+        MembershipSubscription previous = refunded.getPreviousSubscription();
+        if (previous == null || !isUpgradeOf(refunded, previous) || !"expired".equalsIgnoreCase(previous.getStatus())) {
+            return;
+        }
+        java.time.LocalDate originalEnd = refunded.getReplacedEndDate();
+        if (originalEnd == null && previous.getStartDate() != null && previous.getMembershipPackage() != null
+                && previous.getEndDate() != null && previous.getEndDate().equals(refunded.getStartDate())) {
+            // Upgrades activated before replacedEndDate existed: rebuild the term from the package length.
+            originalEnd = previous.getStartDate().plusDays(Math.max(1, previous.getMembershipPackage().getDurationDays()) - 1L);
+        }
+        java.time.LocalDate today = java.time.LocalDate.now(clock);
+        if (originalEnd == null || originalEnd.isBefore(today)) {
+            return;
+        }
+        previous.setStatus("active");
+        previous.setEndDate(originalEnd);
+        previous.setUpdatedAt(LocalDateTime.now(clock));
+        membershipSubscriptionRepository.save(previous);
+    }
+
+    private static boolean isUpgradeOf(MembershipSubscription subscription, MembershipSubscription previous) {
+        return subscription.getMembershipPackage() != null && previous.getMembershipPackage() != null
+                && previous.getMembershipPackage().getId() != null
+                && !previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId());
+    }
+
     /** A refunded membership grants no booking rights, unless another paid period still covers the member. */
     private void cancelFutureBookingsWithoutEntitlement(MembershipSubscription refunded, String reason) {
         if (refunded.getMember() == null) return;
         Long memberId = refunded.getMember().getUserId();
+        if (entitlementRevocation != null) {
+            // Checks every booking date, so a gap before a later renewal is released too.
+            entitlementRevocation.revokeUncoveredBookings(memberId, reason != null && !reason.isBlank() ? reason : "Refunded membership");
+            return;
+        }
         java.time.LocalDate today = java.time.LocalDate.now(clock);
         boolean stillCovered = membershipSubscriptionRepository.findByMemberUserId(memberId).stream()
                 .anyMatch(other -> !other.getId().equals(refunded.getId())
@@ -567,16 +614,14 @@ public class PaymentService {
             membershipSubscriptionRepository.findById(payment.getSubscriptionId()).ifPresent(this::activateSubscription);
         }
         if (payment.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
-            classEnrollmentRepository.findById(payment.getClassEnrollmentId()).ifPresent(enrollment -> {
-                requireBookable(enrollment);
-                enrollment.setStatus("booked");
-                classEnrollmentRepository.save(enrollment);
-            });
+            classEnrollmentRepository.findById(payment.getClassEnrollmentId())
+                    .ifPresent(this::requirePayableEnrollment);
         }
     }
 
-    private void requireBookable(ClassEnrollment enrollment) {
-        if (!"booked".equalsIgnoreCase(enrollment.getStatus())) {
+    /** Paying never changes an enrollment; a booked or attended one may be paid, a cancelled one may not. */
+    private void requirePayableEnrollment(ClassEnrollment enrollment) {
+        if ("cancelled".equalsIgnoreCase(enrollment.getStatus())) {
             throw new ConflictException("PAYMENT_ENROLLMENT_NOT_PAYABLE", "finance.payment.enrollment_not_payable",
                     new Object[]{enrollment.getStatus()}, null);
         }
@@ -619,6 +664,7 @@ public class PaymentService {
             previous.setStatus("expired");
             previous.setHoldStatus(null);
             if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
+                subscription.setReplacedEndDate(previous.getEndDate());
                 previous.setEndDate(today);
             }
             previous.setUpdatedAt(LocalDateTime.now(clock));
@@ -632,6 +678,13 @@ public class PaymentService {
             int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
             subscription.setStartDate(today);
             subscription.setEndDate(today.plusDays(durationDays - 1L));
+        } else if (subscription.getPreviousSubscription() != null && !isUpgrade
+                && subscription.getStartDate() != null && subscription.getEndDate() != null
+                && subscription.getStartDate().isBefore(today)) {
+            // A renewal paid after its planned start keeps its full length instead of losing the unpaid days.
+            long lengthDays = java.time.temporal.ChronoUnit.DAYS.between(subscription.getStartDate(), subscription.getEndDate());
+            subscription.setStartDate(today);
+            subscription.setEndDate(today.plusDays(lengthDays));
         }
         subscription.setStatus("active");
         if (subscription.getQrCode() == null || subscription.getQrCode().isBlank()) {

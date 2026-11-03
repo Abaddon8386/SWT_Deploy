@@ -135,7 +135,7 @@ public class RevenueReportService {
         while (!cur.isAfter(end)) {
             List<Payment> list = byDate.getOrDefault(cur, Collections.emptyList());
             BigDecimal sum = list.stream()
-                    .map(Payment::getAmount)
+                    .map(Payment::netAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             result.add(new DailyRevenueDto(cur, sum, list.size()));
@@ -164,7 +164,7 @@ public class RevenueReportService {
                     MembershipPackage pkg = subOpt.get().getMembershipPackage();
                     Long pkgId = pkg.getId();
                     String pkgName = pkg.getName();
-                    BigDecimal amount = payment.getAmount() != null ? payment.getAmount() : BigDecimal.ZERO;
+                    BigDecimal amount = payment.netAmount();
 
                     revenueMap.put(pkgId, revenueMap.getOrDefault(pkgId, BigDecimal.ZERO).add(amount));
                     countMap.put(pkgId, countMap.getOrDefault(pkgId, 0) + 1);

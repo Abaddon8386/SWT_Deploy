@@ -58,6 +58,18 @@ public class UserService {
     private final com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
     private final Clock clock;
 
+    /** Roles whose accounts are managed by people, never by the inactivity sweep. */
+    private static final java.util.Set<String> NEVER_AUTO_DELETED =
+            java.util.Set.of("ADMIN", "CENTER_MANAGER", "MANAGER", "COACH", "RECEPTIONIST", "STAFF");
+
+    // Optional activity sources; a member who scans in at the gate or pays at the desk is active
+    // even if they never sign in to the app.
+    @Autowired(required = false)
+    com.swp391.scms.attendance.repository.CenterCheckinRepository checkinRepository;
+
+    @Autowired(required = false)
+    com.swp391.scms.finance.repository.PaymentRepository paymentRepository;
+
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
                        ReceptionistRepository receptionistRepository) {
@@ -280,29 +292,41 @@ public class UserService {
         List<User> users = userRepository.findAllByDeletedAtIsNullOrderByIdAsc();
         int count = 0;
         for (User user : users) {
-            // Không bao giờ tự động xóa Quản lý trung tâm
-            if (user.getRole() != null && List.of("CENTER_MANAGER", "ADMIN").contains(user.getRole().getCode().toUpperCase(Locale.ROOT))) {
+            // Staff accounts are retired by a manager, never by the sweep; an unknown role is not guessed at.
+            if (user.getRole() == null || user.getRole().getCode() == null
+                    || NEVER_AUTO_DELETED.contains(user.getRole().getCode().toUpperCase(Locale.ROOT))) {
                 continue;
             }
 
             LocalDateTime refTime = user.getLastLoginAt() != null ? user.getLastLoginAt() : user.getCreatedAt();
-            if (refTime != null && refTime.isBefore(sixMonthsAgo)) {
-                boolean isFrozen = false;
-                if (subscriptionRepository != null && user.getId() != null) {
-                    isFrozen = subscriptionRepository.existsByMemberUserIdAndStatus(user.getId(), "frozen");
-                }
-
-                // Nếu không đang trong thời gian bảo lưu tập -> tự động xóa mềm
-                if (!isFrozen) {
-                    LocalDateTime now = LocalDateTime.now(clock);
-                    user.setDeletedAt(now);
-                    user.setUpdatedAt(now);
-                    userRepository.save(user);
-                    count++;
-                }
+            if (refTime == null || !refTime.isBefore(sixMonthsAgo)) {
+                continue;
             }
+            if (user.getId() == null || hasRecentUseOrEntitlement(user.getId(), sixMonthsAgo)) {
+                continue;
+            }
+            LocalDateTime now = LocalDateTime.now(clock);
+            user.setDeletedAt(now);
+            user.setUpdatedAt(now);
+            userRepository.save(user);
+            count++;
         }
         return count;
+    }
+
+    /**
+     * True when the member still holds (or recently held) a membership, or scanned in or paid within the window.
+     * Without the subscription source nothing can be verified, so the account is kept.
+     */
+    private boolean hasRecentUseOrEntitlement(Long userId, LocalDateTime since) {
+        if (subscriptionRepository == null
+                || subscriptionRepository.existsEntitlementEndingOnOrAfter(userId, since.toLocalDate())) {
+            return true;
+        }
+        if (checkinRepository != null && checkinRepository.existsByMemberUserIdAndCheckInTimeGreaterThanEqual(userId, since)) {
+            return true;
+        }
+        return paymentRepository != null && paymentRepository.existsByMemberUserIdAndPaidAtGreaterThanEqual(userId, since);
     }
 
     /**

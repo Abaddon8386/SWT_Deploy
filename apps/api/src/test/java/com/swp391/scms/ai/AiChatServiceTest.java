@@ -256,11 +256,10 @@ class AiChatServiceTest {
         };
 
         var txActiveDuringProvider = new java.util.concurrent.atomic.AtomicBoolean(true);
+        // The session is read in the read-only phase and again, for the ownership re-check, in the write phase.
         when(sessionRepository.findById(500L)).thenAnswer(inv -> {
             org.junit.jupiter.api.Assertions.assertTrue(
                     org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
-            org.junit.jupiter.api.Assertions.assertTrue(
-                    org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly());
             return Optional.of(session);
         });
         when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());

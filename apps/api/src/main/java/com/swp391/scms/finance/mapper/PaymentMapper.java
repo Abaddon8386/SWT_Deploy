@@ -30,6 +30,7 @@ public interface PaymentMapper {
     @Mapping(target = "receivedBy", ignore = true)
     @Mapping(target = "invoice", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "refundedAmount", ignore = true)
     Payment toEntity(PaymentCreateDto dto);
 
     @Mapping(target = "id", ignore = true)
@@ -37,5 +38,6 @@ public interface PaymentMapper {
     @Mapping(target = "receivedBy", ignore = true)
     @Mapping(target = "invoice", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "refundedAmount", ignore = true)
     void updateEntityFromDto(PaymentDto dto, @MappingTarget Payment entity);
 }

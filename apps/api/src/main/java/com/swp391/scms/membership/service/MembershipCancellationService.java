@@ -38,6 +38,9 @@ public class MembershipCancellationService {
     private final PaymentRepository payments;
     private final EntityManager entityManager;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private EntitlementRevocationService entitlementRevocation;
+
     public MembershipCancellationService(MembershipCancellationRequestRepository requests,
             MembershipSubscriptionRepository subscriptions, MemberRepository members,
             UserRepository users, EnrollmentService enrollments, MessageService messages, Clock clock,
@@ -125,7 +128,11 @@ public class MembershipCancellationService {
             String cancelReason = messages != null
                     ? messages.getMessage("scheduling.enrollment.cancelled_by_membership")
                     : "Gói tập đã được quản lý duyệt hủy.";
-            enrollments.cancelFutureEnrollmentsForMember(memberId, cancelReason);
+            if (entitlementRevocation != null) {
+                entitlementRevocation.revokeUncoveredBookings(memberId, cancelReason);
+            } else {
+                enrollments.cancelFutureEnrollmentsForMember(memberId, cancelReason);
+            }
         }
         User manager = users.findByIdAndDeletedAtIsNull(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.manager", principal.id()));

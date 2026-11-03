@@ -90,4 +90,13 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
               and s.endDate = :endDate
             """)
     List<MembershipSubscription> findActiveSubscriptionsExpiringOn(@Param("endDate") LocalDate endDate);
+
+    /** A paid, frozen or awaiting-payment period that is still running or ended after {@code since}. */
+    @Query("""
+            select (count(s) > 0) from MembershipSubscription s
+            where s.member.userId = :memberId
+              and s.status in ('active', 'expired', 'frozen', 'pending_payment')
+              and (s.endDate is null or s.endDate >= :since)
+            """)
+    boolean existsEntitlementEndingOnOrAfter(@Param("memberId") Long memberId, @Param("since") LocalDate since);
 }

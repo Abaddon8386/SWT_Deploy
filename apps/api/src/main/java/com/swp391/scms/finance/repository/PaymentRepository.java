@@ -51,4 +51,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findByPaidAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    boolean existsByMemberUserIdAndPaidAtGreaterThanEqual(Long memberId, java.time.LocalDateTime since);
 }

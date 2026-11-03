@@ -40,6 +40,13 @@ public class CoachBookingService {
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
             java.util.Set.of("package_quota", "cash", "bank_transfer", "online_wallet");
     private static final int MAX_UNPAID_UPCOMING = 2;
+    private static final java.util.Set<String> DESK_ROLES = java.util.Set.of("RECEPTIONIST", "CENTER_MANAGER");
+
+    @Autowired(required = false)
+    private com.swp391.scms.finance.repository.PaymentRepository paymentRepository;
+
+    @Autowired(required = false)
+    private com.swp391.scms.users.UserRepository userRepository;
     private static final BigDecimal DEFAULT_HOURLY_RATE = new BigDecimal("200000.00");
 
     private final CoachBookingRepository coachBookingRepository;
@@ -331,7 +338,7 @@ public class CoachBookingService {
             }
         } else {
             // Hourly sessions are settled at the desk; cap unpaid ones so they cannot become free, unlimited booking.
-            if (coachBookingRepository.countUnpaidUpcoming(member.getUserId(), LocalDate.now(clock)) >= MAX_UNPAID_UPCOMING) {
+            if (coachBookingRepository.countUnpaid(member.getUserId()) >= MAX_UNPAID_UPCOMING) {
                 throw new ConflictException("COACH_BOOKING_UNPAID_LIMIT", "error.coach_booking.unpaid_limit",
                         new Object[]{MAX_UNPAID_UPCOMING}, "Please settle your unpaid 1:1 sessions first.");
             }
@@ -420,6 +427,59 @@ public class CoachBookingService {
         }
 
         return mapToDto(booking);
+    }
+
+    /** Hourly 1:1 sessions waiting for the desk to collect payment, oldest first. */
+    @Transactional(readOnly = true)
+    public List<CoachBookingDto> getUnpaidBookings(AuthenticatedPrincipal principal) {
+        requireDesk(principal);
+        return coachBookingRepository.findUnpaid().stream().map(this::mapToDto).toList();
+    }
+
+    /**
+     * The desk records that an hourly 1:1 session was paid: the booking becomes paid and a successful payment
+     * is written so the money appears in revenue reports.
+     */
+    @Transactional
+    public CoachBookingDto confirmHourlyPayment(AuthenticatedPrincipal principal, Long bookingId, String method) {
+        requireDesk(principal);
+        CoachBooking booking = coachBookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.coach_booking", bookingId));
+        if ("package_quota".equalsIgnoreCase(booking.getPaymentMethod())
+                || !"pending".equalsIgnoreCase(booking.getPaymentStatus())
+                || "cancelled".equalsIgnoreCase(booking.getStatus())) {
+            throw new ConflictException("COACH_BOOKING_PAYMENT_NOT_PENDING",
+                    "error.coach_booking.payment_not_pending", null, "This 1:1 session has no payment to collect.");
+        }
+        String paidWith = method == null || method.isBlank()
+                ? booking.getPaymentMethod() : method.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!ALLOWED_PAYMENT_METHODS.contains(paidWith) || "package_quota".equals(paidWith)) {
+            throw new BadRequestException("INVALID_PAYMENT_METHOD", "error.coach_booking.invalid_payment_method",
+                    "Unsupported payment method.");
+        }
+        booking.setPaymentMethod(paidWith);
+        booking.setPaymentStatus("paid");
+        if (paymentRepository != null) {
+            com.swp391.scms.finance.entity.Payment payment = new com.swp391.scms.finance.entity.Payment();
+            payment.setMember(booking.getMember());
+            payment.setAmount(booking.getHourlyRate() != null ? booking.getHourlyRate() : DEFAULT_HOURLY_RATE);
+            payment.setMethod(paidWith);
+            payment.setStatus("success");
+            payment.setPaidAt(LocalDateTime.now(clock));
+            payment.setNote("PT #" + booking.getId());
+            if (userRepository != null) {
+                userRepository.findByIdAndDeletedAtIsNull(principal.id()).ifPresent(payment::setReceivedBy);
+            }
+            paymentRepository.save(payment);
+        }
+        return mapToDto(booking);
+    }
+
+    private static void requireDesk(AuthenticatedPrincipal principal) {
+        if (principal == null || principal.role() == null
+                || !DESK_ROLES.contains(principal.role().toUpperCase(java.util.Locale.ROOT))) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "Only the front desk can collect 1:1 payments.");
+        }
     }
 
     private CoachBookingDto mapToDto(CoachBooking b) {

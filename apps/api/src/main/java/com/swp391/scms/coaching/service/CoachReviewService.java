@@ -38,6 +38,9 @@ public class CoachReviewService {
     private final ClassEnrollmentRepository enrollmentRepository;
     private final Clock clock;
 
+    @Autowired(required = false)
+    private com.swp391.scms.attendance.repository.SessionAttendanceRepository attendanceRepository;
+
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
                               MemberRepository memberRepository) {
@@ -176,13 +179,21 @@ public class CoachReviewService {
                     .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", request.classSessionId()));
             var gymClass = session.getGymClass();
             if (!gymClass.getCoach().getUserId().equals(request.coachId())
-                    || enrollmentRepository.findByGymClassIdAndMemberUserId(gymClass.getId(), memberId)
-                        .filter(e -> !"cancelled".equals(e.getStatus())).isEmpty()) {
+                    || enrollmentRepository.findByGymClassId(gymClass.getId()).stream()
+                        .noneMatch(e -> e.getMember() != null && memberId.equals(e.getMember().getUserId())
+                                && !"cancelled".equals(e.getStatus()))) {
                 throw new ForbiddenException("FORBIDDEN", "error.review.forbidden_source", null, "You cannot review this session.");
             }
             if ("cancelled".equals(session.getStatus())
                     || !LocalDateTime.of(session.getSessionDate(), session.getEndTime()).isBefore(LocalDateTime.now(clock))) {
                 throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", "The session has not finished.");
+            }
+            // Being enrolled is not enough: the coach must have marked the member present or late.
+            if (attendanceRepository != null && attendanceRepository.findBySessionIdAndMemberUserId(session.getId(), memberId)
+                    .filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
+                    .isEmpty()) {
+                throw new ForbiddenException("REVIEW_NOT_ATTENDED", "error.review.not_attended", null,
+                        "Only members who attended this session can review it.");
             }
             if (reviewRepository.existsByMemberUserIdAndClassSessionId(memberId, request.classSessionId())) {
                 throw new ConflictException("DUPLICATE_REVIEW", "error.review.duplicate", null, "This session was already reviewed.");

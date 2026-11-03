@@ -63,6 +63,9 @@ public class MembershipSubscriptionService {
     private PaymentRepository paymentRepository;
 
     @Autowired(required = false)
+    private EntitlementRevocationService entitlementRevocation;
+
+    @Autowired(required = false)
     private MembershipCancellationRequestRepository cancellationRequests;
 
     @Autowired(required = false)
@@ -663,10 +666,15 @@ public class MembershipSubscriptionService {
         MembershipSubscription saved = subscriptions.saveAndFlush(subscription);
 
         int cancelledCount = 0;
-        if (enrollmentService != null && saved.getMember() != null && saved.getMember().getUserId() != null) {
+        if (saved.getMember() != null && saved.getMember().getUserId() != null) {
             String cancelReason = msg("scheduling.enrollment.cancelled_by_hold");
-            cancelledCount = enrollmentService.cancelFutureEnrollmentsForMember(
-                    saved.getMember().getUserId(), cancelReason);
+            if (entitlementRevocation != null) {
+                // A frozen period covers no date, so classes, 1:1 sessions and courts are all released.
+                cancelledCount = entitlementRevocation.revokeUncoveredBookings(saved.getMember().getUserId(), cancelReason);
+            } else if (enrollmentService != null) {
+                cancelledCount = enrollmentService.cancelFutureEnrollmentsForMember(
+                        saved.getMember().getUserId(), cancelReason);
+            }
         }
 
         if (notificationService != null && saved.getMember() != null && saved.getMember().getUserId() != null) {
@@ -777,78 +785,6 @@ public class MembershipSubscriptionService {
         return subscriptions.findByMemberUserIdOrderByCreatedAtDesc(principal.id()).stream()
                 .map(this::toDto)
                 .toList();
-    }
-
-    /**
-     * SCRUM-71 BR-01, BR-03:
-     * Kích hoạt subscription sau khi thanh toán thành công (được gọi từ workflow
-     * thanh toán - SCRUM-76).
-     * Chỉ chuyển từ pending_payment sang active.
-     * Sinh qr_code ngẫu nhiên bảo mật (UUID duy nhất), tính end_date.
-     */
-    @Transactional
-    public SubscriptionDto activateAfterPayment(Long subscriptionId) {
-        MembershipSubscription subscription = subscriptions.findById(subscriptionId)
-                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
-
-        if (!STATUS_PENDING_PAYMENT.equals(subscription.getStatus())) {
-            throw new BadRequestException(
-                    "MEMBERSHIP_NOT_PENDING",
-                    "error.membership.not_pending",
-                    null,
-                    "Subscription is not pending payment");
-        }
-
-        if (subscription.getMember() != null && subscriptions.findByMemberUserId(
-                subscription.getMember().getUserId()).stream()
-                .anyMatch(item -> STATUS_FROZEN.equalsIgnoreCase(item.getStatus()))) {
-            throw new ConflictException("MEMBERSHIP_FROZEN_PAYMENT",
-                    "error.membership.frozen_payment", null,
-                    "Membership on hold cannot be activated by payment");
-        }
-        LocalDate today = LocalDate.now(clock);
-        MembershipSubscription previous = subscription.getPreviousSubscription();
-        if (previous != null && ("cancelled".equalsIgnoreCase(previous.getStatus())
-                || STATUS_FROZEN.equalsIgnoreCase(previous.getStatus()))) {
-            throw new ConflictException("PAYMENT_PREVIOUS_UNAVAILABLE",
-                    "finance.payment.previous_unavailable", null,
-                    "Source subscription was cancelled or frozen");
-        }
-        boolean isUpgrade = previous != null
-                && subscription.getMembershipPackage() != null
-                && previous.getMembershipPackage() != null
-                && previous.getMembershipPackage().getId() != null
-                && !previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId());
-
-        if (isUpgrade && STATUS_ACTIVE.equalsIgnoreCase(previous.getStatus())) {
-            previous.setStatus(STATUS_EXPIRED);
-            if (HOLD_PENDING.equalsIgnoreCase(previous.getHoldStatus())) {
-                previous.setHoldStatus(null);
-            }
-            if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
-                previous.setEndDate(today);
-            }
-            previous.setUpdatedAt(LocalDateTime.now(clock));
-            subscriptions.save(previous);
-        }
-
-        if (isUpgrade) {
-            int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
-            subscription.setStartDate(today);
-            subscription.setEndDate(today.plusDays(durationDays - 1L));
-        } else if (previous == null) {
-            LocalDate start = subscription.getStartDate() == null || subscription.getStartDate().isBefore(today)
-                    ? today : subscription.getStartDate();
-            subscription.setStartDate(start);
-            subscription.setEndDate(start.plusDays(Math.max(1, subscription.getMembershipPackage().getDurationDays()) - 1L));
-        } else if (!validPeriod(subscription)) {
-            throw renewalConflict();
-        }
-        subscription.setQrCode(UUID.randomUUID().toString());
-        subscription.setStatus(STATUS_ACTIVE);
-        subscription.setUpdatedAt(LocalDateTime.now(clock));
-
-        return toDto(subscriptions.saveAndFlush(subscription));
     }
 
     private boolean hasPaidFutureRenewal(Long memberId, LocalDate today) {

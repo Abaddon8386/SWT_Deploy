@@ -256,8 +256,8 @@ class UserServiceTest {
         user3.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(9));
 
         when(userRepository.findAllByDeletedAtIsNullOrderByIdAsc()).thenReturn(java.util.List.of(user1, user2, user3));
-        when(subscriptionRepository.existsByMemberUserIdAndStatus(10L, "frozen")).thenReturn(false);
-        when(subscriptionRepository.existsByMemberUserIdAndStatus(20L, "frozen")).thenReturn(true);
+        when(subscriptionRepository.existsEntitlementEndingOnOrAfter(org.mockito.ArgumentMatchers.eq(10L), any())).thenReturn(false);
+        when(subscriptionRepository.existsEntitlementEndingOnOrAfter(org.mockito.ArgumentMatchers.eq(20L), any())).thenReturn(true);
 
         int deletedCount = service.cleanupInactiveUsers();
 
@@ -268,5 +268,38 @@ class UserServiceTest {
         verify(userRepository).save(user1);
         verify(userRepository, never()).save(user2);
         verify(userRepository, never()).save(user3);
+    }
+
+    @Test
+    void cleanupKeepsStaffAndMembersWhoScanInOrPayWithoutSigningIn() {
+        var memberRole = new com.swp391.scms.users.entity.Role();
+        memberRole.setCode("MEMBER");
+        var coachRole = new com.swp391.scms.users.entity.Role();
+        coachRole.setCode("COACH");
+        User gateOnly = new User();
+        gateOnly.setId(40L);
+        gateOnly.setRole(memberRole);
+        gateOnly.setLastLoginAt(java.time.LocalDateTime.now().minusYears(1));
+        User payer = new User();
+        payer.setId(50L);
+        payer.setRole(memberRole);
+        payer.setLastLoginAt(java.time.LocalDateTime.now().minusYears(1));
+        User coach = new User();
+        coach.setId(60L);
+        coach.setRole(coachRole);
+        coach.setLastLoginAt(java.time.LocalDateTime.now().minusYears(1));
+        var checkins = org.mockito.Mockito.mock(com.swp391.scms.attendance.repository.CenterCheckinRepository.class);
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        service.checkinRepository = checkins;
+        service.paymentRepository = payments;
+        when(userRepository.findAllByDeletedAtIsNullOrderByIdAsc()).thenReturn(java.util.List.of(gateOnly, payer, coach));
+        when(checkins.existsByMemberUserIdAndCheckInTimeGreaterThanEqual(org.mockito.ArgumentMatchers.eq(40L), any())).thenReturn(true);
+        when(payments.existsByMemberUserIdAndPaidAtGreaterThanEqual(org.mockito.ArgumentMatchers.eq(50L), any())).thenReturn(true);
+
+        assertEquals(0, service.cleanupInactiveUsers());
+        org.junit.jupiter.api.Assertions.assertNull(gateOnly.getDeletedAt());
+        org.junit.jupiter.api.Assertions.assertNull(payer.getDeletedAt());
+        org.junit.jupiter.api.Assertions.assertNull(coach.getDeletedAt());
+        verify(userRepository, never()).save(any());
     }
 }

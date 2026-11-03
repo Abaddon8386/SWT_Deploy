@@ -49,4 +49,10 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
     @Query("select b from CourtBooking b where b.bookingDate = :date and b.room.id = :roomId "
             + "and b.member.deletedAt is null order by b.startTime, b.room.name, b.id")
     Page<CourtBooking> findDailyByRoom(@Param("date") LocalDate date, @Param("roomId") Long roomId, Pageable pageable);
+
+    @Query("""
+            select b from CourtBooking b
+            where b.member.id = :memberId and b.status = 'booked' and b.bookingDate >= :today
+            """)
+    List<CourtBooking> findUpcomingBookedByMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 }

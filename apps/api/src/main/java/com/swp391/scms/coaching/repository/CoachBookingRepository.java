@@ -70,12 +70,26 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             """)
     List<CoachBooking> findFutureConfirmedByMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 
+    /** Hourly sessions not yet paid for, past or upcoming; only a cancellation or a payment clears them. */
     @Query("""
             select count(cb) from CoachBooking cb
             where cb.member.userId = :memberId
-              and cb.bookingDate >= :today
               and cb.paymentStatus = 'pending'
-              and cb.status = 'confirmed'
+              and cb.status in ('confirmed', 'completed')
             """)
-    long countUnpaidUpcoming(@Param("memberId") Long memberId, @Param("today") LocalDate today);
+    long countUnpaid(@Param("memberId") Long memberId);
+
+    @Query("""
+            select cb from CoachBooking cb
+            join fetch cb.member m join fetch m.user mu
+            join fetch cb.coach c join fetch c.user cu
+            left join fetch cb.discipline d
+            where cb.paymentStatus = 'pending' and cb.status in ('confirmed', 'completed')
+            order by cb.bookingDate asc, cb.startTime asc, cb.id asc
+            """)
+    List<CoachBooking> findUnpaid();
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select cb from CoachBooking cb where cb.id = :id")
+    java.util.Optional<CoachBooking> findByIdForUpdate(@Param("id") Long id);
 }

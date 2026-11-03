@@ -43,4 +43,6 @@ public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Lo
 
     List<CenterCheckin> findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
             String status, LocalDateTime cutoff);
+
+    boolean existsByMemberUserIdAndCheckInTimeGreaterThanEqual(Long memberId, LocalDateTime since);
 }

@@ -370,6 +370,16 @@ public class EnrollmentService {
      */
     @Transactional
     public int cancelFutureEnrollmentsForMember(Long memberId, String cancelReason) {
+        return cancelFutureEnrollmentsForMember(memberId, cancelReason, date -> false);
+    }
+
+    /**
+     * Cancels the member's upcoming class bookings and waitlist entries whose next session date is not
+     * {@code coveredOn}; a predicate that is always false cancels all of them (hold, cancellation).
+     */
+    @Transactional
+    public int cancelFutureEnrollmentsForMember(Long memberId, String cancelReason,
+                                                java.util.function.Predicate<LocalDate> coveredOn) {
         if (memberId == null || enrollments == null) {
             return 0;
         }
@@ -389,6 +399,10 @@ public class EnrollmentService {
         LocalTime nowTime = now.toLocalTime();
         int cancelledCount = 0;
         for (GymClass gymClass : lockedClasses) {
+            java.util.Optional<LocalDate> nextSession = nextOpenSessionDate(gymClass, today, nowTime);
+            if (nextSession.isPresent() && coveredOn.test(nextSession.get())) {
+                continue;
+            }
             int released = 0;
             for (String state : List.of(WAITING, "notified")) {
                 var item = waitlists.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), memberId, state);
@@ -400,7 +414,7 @@ public class EnrollmentService {
                 }
             }
             var booking = enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), memberId, BOOKED);
-            if (booking.isPresent() && hasUpcomingOrActiveSession(gymClass, today, nowTime)) {
+            if (booking.isPresent() && nextSession.isPresent()) {
                 ClassEnrollment enrollment = booking.get();
                 enrollment.setStatus(CANCELLED);
                 enrollment.setCancelledAt(now);
@@ -417,21 +431,24 @@ public class EnrollmentService {
         return cancelledCount;
     }
 
-    private boolean hasUpcomingOrActiveSession(GymClass gymClass, LocalDate today, LocalTime nowTime) {
+    /** Date of the class's next session that has not ended; today when the schedule is unknown, empty when none. */
+    private java.util.Optional<LocalDate> nextOpenSessionDate(GymClass gymClass, LocalDate today, LocalTime nowTime) {
         if (gymClass == null || gymClass.getId() == null || sessions == null) {
-            return true;
+            return java.util.Optional.of(today);
         }
         List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(gymClass.getId());
         if (classSessions == null || classSessions.isEmpty()) {
-            return true;
+            return java.util.Optional.of(today);
         }
         return classSessions.stream()
                 .filter(s -> !"cancelled".equalsIgnoreCase(s.getStatus())
                         && !"completed".equalsIgnoreCase(s.getStatus()))
-                .anyMatch(s -> s.getSessionDate() == null
+                .filter(s -> s.getSessionDate() == null
                         || s.getSessionDate().isAfter(today)
                         || (s.getSessionDate().isEqual(today)
-                            && (s.getEndTime() == null || !s.getEndTime().isBefore(nowTime))));
+                            && (s.getEndTime() == null || !s.getEndTime().isBefore(nowTime))))
+                .map(s -> s.getSessionDate() == null ? today : s.getSessionDate())
+                .findFirst();
     }
 
     /**

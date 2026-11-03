@@ -200,6 +200,25 @@ public class SessionAttendanceService {
         LocalDateTime now = LocalDateTime.now(clock);
         List<MemberAttendanceItem> result = new ArrayList<>();
 
+        if ("cancelled".equalsIgnoreCase(session.getStatus())) {
+            throw new ConflictException("ATTENDANCE_SESSION_CANCELLED", "attendance.error.session_cancelled",
+                    new Object[]{sessionId}, "Attendance cannot be recorded for a cancelled session");
+        }
+        if (session.getSessionDate() != null && session.getStartTime() != null
+                && LocalDateTime.of(session.getSessionDate(), session.getStartTime()).isAfter(now)) {
+            throw new com.swp391.scms.common.exception.BadRequestException("ATTENDANCE_SESSION_NOT_STARTED",
+                    "attendance.error.session_not_started", new Object[]{sessionId},
+                    "Attendance can be recorded once the session has started");
+        }
+        // Only members holding a booking for this class (or one already completed) are on the roster.
+        Map<Long, String> enrollmentStatus = new HashMap<>();
+        for (ClassEnrollment enrollment : enrollmentRepository.findByGymClassId(session.getGymClass().getId())) {
+            if (enrollment.getMember() != null && ("booked".equalsIgnoreCase(enrollment.getStatus())
+                    || "completed".equalsIgnoreCase(enrollment.getStatus()))) {
+                enrollmentStatus.putIfAbsent(enrollment.getMember().getUserId(), enrollment.getStatus().toLowerCase());
+            }
+        }
+
         Map<Long, SessionEvaluation> existingEvalMap = new HashMap<>();
         if (evaluationRepository != null) {
             List<SessionEvaluation> existingEvals = evaluationRepository.findBySessionIdOrderByEvaluatedAtDesc(sessionId);
@@ -214,6 +233,11 @@ public class SessionAttendanceService {
 
         try {
             for (BatchAttendanceRequest.AttendanceItem item : request.records()) {
+                if (!enrollmentStatus.containsKey(item.memberId())) {
+                    throw new com.swp391.scms.common.exception.BadRequestException("ATTENDANCE_MEMBER_NOT_ENROLLED",
+                            "attendance.error.not_enrolled", new Object[]{item.memberId()},
+                            "Member is not enrolled in this class");
+                }
                 Member member = memberRepository.findById(item.memberId())
                         .orElseThrow(() -> new ResourceNotFoundException("resource.member", item.memberId()));
 
@@ -270,7 +294,7 @@ public class SessionAttendanceService {
                         user != null ? user.getEmail() : null,
                         user != null ? user.getPhone() : null,
                         user != null ? user.getAvatarUrl() : null,
-                        "booked",
+                        enrollmentStatus.get(member.getUserId()),
                         saved.getStatus(),
                         saved.getCheckedInAt(),
                         recordingCoach.getUserId(),

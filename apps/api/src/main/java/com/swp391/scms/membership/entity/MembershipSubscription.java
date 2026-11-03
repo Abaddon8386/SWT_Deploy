@@ -46,6 +46,13 @@ public class MembershipSubscription {
     @Column(name = "upgrade_charge", precision = 14, scale = 2)
     private BigDecimal upgradeCharge;
 
+    /** For an upgrade: the expiry the replaced period had before the upgrade cut it short. */
+    @Column(name = "replaced_end_date")
+    private java.time.LocalDate replacedEndDate;
+
+    public java.time.LocalDate getReplacedEndDate() { return replacedEndDate; }
+    public void setReplacedEndDate(java.time.LocalDate replacedEndDate) { this.replacedEndDate = replacedEndDate; }
+
     @Column(name = "hold_status", length = 20)
     private String holdStatus;
 

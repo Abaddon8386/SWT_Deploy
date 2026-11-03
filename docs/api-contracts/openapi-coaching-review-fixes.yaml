@@ -11,7 +11,7 @@ paths:
   /coach-bookings:
     post:
       summary: Member books a one-hour PT session
-      description: Requires an active, unexpired membership covering today and the booking date for every payment method. Slots start on the hour between 06:00 and 20:00 and must be at least two hours ahead. Rejects overlapping PT or booked group sessions. Paid methods remain pending until payment is verified; package quota uses used_quota. Database triggers enforce concurrent schedule and membership checks.
+      description: Requires an active, unexpired membership covering today and the booking date for every payment method. Slots start on the hour between 06:00 and 20:00 and must be at least two hours ahead. Rejects overlapping PT or booked group sessions. Paid methods remain pending until the front desk confirms payment (POST /coach-bookings/{id}/confirm-payment); package quota uses used_quota. A member may hold at most two unpaid hourly sessions, past or upcoming (409 COACH_BOOKING_UNPAID_LIMIT). Concurrent bookings by one member are serialized so the monthly quota cannot be exceeded. Database triggers enforce concurrent schedule and membership checks.
       requestBody:
         required: true
         content:
@@ -25,13 +25,33 @@ paths:
                 bookingDate: {type: string, format: date}
                 startTime: {type: string, example: '14:00:00'}
                 endTime: {type: string, example: '15:00:00'}
-                paymentMethod: {type: string, default: package_quota}
+                paymentMethod: {type: string, enum: [package_quota, cash, bank_transfer, online_wallet], default: package_quota}
                 notes: {type: string, nullable: true}
       responses:
         '201': {description: ApiResponse containing CoachBookingDto; paymentStatus is pending or used_quota}
-        '400': {description: Invalid slot, unavailable membership or exhausted quota}
+        '400': {description: Invalid slot, unavailable membership, exhausted quota or INVALID_PAYMENT_METHOD}
         '403': {description: Role denied or trigger rejects inactive membership}
         '409': {description: Schedule conflict or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
+  /coach-bookings/unpaid:
+    get:
+      summary: Hourly PT sessions waiting for payment (RECEPTIONIST, CENTER_MANAGER)
+      description: Confirmed or completed sessions whose paymentStatus is pending, oldest first.
+      responses:
+        '200': {description: ApiResponse containing CoachBookingDto[]}
+        '403': {description: Role denied}
+  /coach-bookings/{id}/confirm-payment:
+    post:
+      summary: Front desk records payment for an hourly PT session (RECEPTIONIST, CENTER_MANAGER)
+      description: Sets paymentStatus to paid and writes a successful payment of the session's hourlyRate so it appears in revenue reports. method defaults to the booking's payment method.
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: integer, format: int64}}
+        - {in: query, name: method, schema: {type: string, enum: [cash, bank_transfer, online_wallet]}}
+      responses:
+        '200': {description: ApiResponse containing CoachBookingDto with paymentStatus paid}
+        '400': {description: INVALID_PAYMENT_METHOD}
+        '403': {description: Role denied}
+        '404': {description: Booking not found}
+        '409': {description: COACH_BOOKING_PAYMENT_NOT_PENDING when the session is cancelled, uses package quota or is already paid}
   /coach-bookings/{id}:
     delete:
       summary: Cancel a PT booking
@@ -47,7 +67,7 @@ paths:
   /coaching/reviews:
     post:
       summary: Member reviews their completed session
-      description: Supply exactly one of bookingId or classSessionId. The session must belong to the member, use the requested coach, have ended and not be cancelled. Each member may review a session once. The owner's response retains source IDs even when anonymous.
+      description: Supply exactly one of bookingId or classSessionId. The session must belong to the member, use the requested coach, have ended and not be cancelled. For a class session the member must have been marked present or late (403 REVIEW_NOT_ATTENDED). Each member may review a session once. The owner's response retains source IDs even when anonymous.
       requestBody:
         required: true
         content:

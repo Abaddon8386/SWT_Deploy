@@ -71,6 +71,10 @@ components:
         amount: {type: number}
         method: {type: string, enum: [cash, pos, bank_transfer, online_wallet]}
         status: {type: string, enum: [pending, success, failed, refunded]}
+        refundedAmount:
+          type: number
+          nullable: true
+          description: Total refunded so far. A partial refund keeps status success; reports count amount minus refundedAmount.
         paidAt: {type: string, format: date-time, nullable: true}
         receivedById: {type: integer, format: int64, nullable: true}
         receivedByName: {type: string, nullable: true}
@@ -1839,29 +1843,61 @@ paths:
   /payments/{id}/status:
     patch:
       summary: Cập nhật trạng thái giao dịch thanh toán (CENTER_MANAGER, RECEPTIONIST)
+      description: >-
+        Allowed transitions are pending → success, pending → failed and failed → pending.
+        success → refunded is rejected with 400 INVALID_STATUS_TRANSITION; refunds go through
+        POST /payments/{id}/refund (CENTER_MANAGER, audited, with a reason). Confirming a payment
+        linked to a class enrollment never changes the enrollment; a cancelled enrollment returns
+        409 PAYMENT_ENROLLMENT_NOT_PAYABLE. A renewal paid after its planned start keeps its full
+        length starting on the payment day.
       tags: [Payments]
       parameters:
         - name: id
           in: path
           required: true
           schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [pending, success, failed]}
       responses:
         '200': {description: Cập nhật thành công}
-        '400': {description: Trạng thái chuyển đổi không hợp lệ}
-        '409': {description: Subscription đã hủy/không còn chờ thanh toán hoặc có quyền lợi gia hạn/bảo lưu cần xử lý trước}
+        '400': {description: Trạng thái chuyển đổi không hợp lệ (INVALID_STATUS_TRANSITION)}
+        '409': {description: Subscription đã hủy/không còn chờ thanh toán, ghi danh đã hủy (PAYMENT_ENROLLMENT_NOT_PAYABLE) hoặc có quyền lợi gia hạn/bảo lưu cần xử lý trước}
 
   /payments/{id}/refund:
     post:
       summary: Hoàn tiền và hủy gói tập/ghi danh liên quan (CENTER_MANAGER)
+      description: >-
+        refundAmount defaults to the amount not yet refunded and may not exceed it. A partial refund
+        adds to refundedAmount and keeps status success, the membership and bookings. When the total
+        reaches the paid amount the payment becomes refunded and its subscription or enrollment is
+        cancelled; upcoming classes, 1:1 sessions and court bookings on dates no other active period
+        covers are cancelled too. Refunding an upgrade restores the replaced package with its original
+        expiry when that date has not passed.
       tags: [Payments]
       parameters:
         - name: id
           in: path
           required: true
           schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: {type: string}
+                refundAmount: {type: number, nullable: true}
       responses:
         '200': {description: Hoàn tiền thành công}
-        '400': {description: Không thể hoàn tiền}
+        '400': {description: Không thể hoàn tiền hoặc số tiền vượt phần còn lại (INVALID_REFUND_AMOUNT)}
         '403': {description: Chỉ CENTER_MANAGER được phép hoàn tiền}
 
   /invoices:

@@ -259,5 +259,16 @@ class TrainingPlanServiceTest {
         assertTrue(recoLog.isApplied());
         verify(aiRecommendationLogRepository).save(recoLog);
     }
+
+    @Test
+    @DisplayName("Should forbid a coach from changing a plan no coach is assigned to")
+    void shouldForbidCoachEditingUnassignedPlan() {
+        TrainingPlan plan = new TrainingPlan();
+        ReflectionTestUtils.setField(plan, "id", 101L);
+        plan.setStatus("draft");
+        when(trainingPlanRepository.findById(101L)).thenReturn(Optional.of(plan));
+
+        assertThrows(ForbiddenException.class, () -> service.activatePlan(101L, 20L, "COACH"));
+    }
 }
 

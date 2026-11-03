@@ -717,4 +717,134 @@ class PaymentServiceTest {
         verify(paymentRepository).save(pendingPayment);
     }
 
+
+    @Test
+    @DisplayName("A partial refund keeps the payment successful and the membership running; the rest ends it")
+    void partialRefundKeepsMembershipUntilFullyRefunded() {
+        Payment payment = new Payment();
+        payment.setId(10L);
+        payment.setStatus("success");
+        payment.setAmount(new BigDecimal("1500000.00"));
+        payment.setSubscriptionId(5L);
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setId(5L);
+        sub.setStatus("active");
+        when(paymentRepository.findById(10L)).thenReturn(Optional.of(payment));
+
+        paymentService.refundPayment(10L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Ốm", new BigDecimal("500000.00")));
+        assertEquals("success", payment.getStatus());
+        assertEquals(0, new BigDecimal("500000.00").compareTo(payment.getRefundedAmount()));
+        assertEquals(0, new BigDecimal("1000000.00").compareTo(payment.netAmount()));
+        assertEquals("active", sub.getStatus());
+        verify(membershipSubscriptionRepository, never()).findById(5L);
+
+        assertThrows(BadRequestException.class, () -> paymentService.refundPayment(10L,
+                new com.swp391.scms.finance.dto.PaymentRefundRequest("Quá số còn lại", new BigDecimal("1000000.01"))));
+
+        when(membershipSubscriptionRepository.findById(5L)).thenReturn(Optional.of(sub));
+        paymentService.refundPayment(10L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Chuyển nhà", null));
+        assertEquals("refunded", payment.getStatus());
+        assertEquals(0, payment.getAmount().compareTo(payment.getRefundedAmount()));
+        assertEquals("cancelled", sub.getStatus());
+    }
+
+    @Test
+    @DisplayName("Refunding an upgrade restores the period it replaced with its original expiry")
+    void refundingUpgradeRestoresReplacedPeriod() {
+        com.swp391.scms.facilities.entity.MembershipPackage basic = new com.swp391.scms.facilities.entity.MembershipPackage();
+        basic.setId(1L);
+        com.swp391.scms.facilities.entity.MembershipPackage premium = new com.swp391.scms.facilities.entity.MembershipPackage();
+        premium.setId(2L);
+        MembershipSubscription previous = new MembershipSubscription();
+        previous.setId(4L);
+        previous.setMembershipPackage(basic);
+        previous.setStartDate(java.time.LocalDate.of(2026, 9, 1));
+        previous.setEndDate(java.time.LocalDate.of(2026, 10, 1));
+        previous.setStatus("expired");
+        MembershipSubscription upgrade = new MembershipSubscription();
+        upgrade.setId(5L);
+        upgrade.setMembershipPackage(premium);
+        upgrade.setPreviousSubscription(previous);
+        upgrade.setStartDate(java.time.LocalDate.of(2026, 10, 1));
+        upgrade.setReplacedEndDate(java.time.LocalDate.of(2026, 12, 31));
+        upgrade.setStatus("active");
+        Payment payment = new Payment();
+        payment.setId(11L);
+        payment.setStatus("success");
+        payment.setAmount(new BigDecimal("900000.00"));
+        payment.setSubscriptionId(5L);
+        when(paymentRepository.findById(11L)).thenReturn(Optional.of(payment));
+        when(membershipSubscriptionRepository.findById(5L)).thenReturn(Optional.of(upgrade));
+
+        paymentService.refundPayment(11L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Đổi ý", null));
+
+        assertEquals("cancelled", upgrade.getStatus());
+        assertEquals("active", previous.getStatus());
+        assertEquals(java.time.LocalDate.of(2026, 12, 31), previous.getEndDate());
+    }
+
+    @Test
+    @DisplayName("A renewal paid after its planned start keeps its full length from the payment day")
+    void lateRenewalPaymentKeepsFullLength() {
+        com.swp391.scms.facilities.entity.MembershipPackage pkg = new com.swp391.scms.facilities.entity.MembershipPackage();
+        pkg.setId(1L);
+        pkg.setDurationDays(30);
+        Member member = new Member();
+        member.setUserId(3L);
+        MembershipSubscription previous = new MembershipSubscription();
+        previous.setId(6L);
+        previous.setMember(member);
+        previous.setMembershipPackage(pkg);
+        previous.setStatus("expired");
+        MembershipSubscription renewal = new MembershipSubscription();
+        renewal.setId(7L);
+        renewal.setMember(member);
+        renewal.setMembershipPackage(pkg);
+        renewal.setPreviousSubscription(previous);
+        renewal.setStartDate(java.time.LocalDate.of(2026, 9, 20));
+        renewal.setEndDate(java.time.LocalDate.of(2026, 10, 19));
+        renewal.setStatus("pending_payment");
+        Payment payment = new Payment();
+        payment.setId(12L);
+        payment.setStatus("pending");
+        payment.setSubscriptionId(7L);
+        when(paymentRepository.findById(12L)).thenReturn(Optional.of(payment));
+        when(membershipSubscriptionRepository.findById(7L)).thenReturn(Optional.of(renewal));
+        when(memberRepository.findByUserIdForUpdate(3L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findByMemberUserId(3L)).thenReturn(List.of(previous, renewal));
+
+        paymentService.updatePaymentStatus(12L, "success");
+
+        assertEquals("active", renewal.getStatus());
+        assertEquals(java.time.LocalDate.of(2026, 10, 1), renewal.getStartDate());
+        assertEquals(java.time.LocalDate.of(2026, 10, 30), renewal.getEndDate());
+    }
+
+    @Test
+    @DisplayName("Paying for an attended enrollment never reopens it; a cancelled one cannot be paid")
+    void enrollmentPaymentNeverChangesItsStatus() {
+        Payment payment = new Payment();
+        payment.setId(13L);
+        payment.setStatus("pending");
+        payment.setClassEnrollmentId(8L);
+        ClassEnrollment attended = new ClassEnrollment();
+        attended.setStatus("completed");
+        when(paymentRepository.findById(13L)).thenReturn(Optional.of(payment));
+        when(classEnrollmentRepository.findById(8L)).thenReturn(Optional.of(attended));
+
+        paymentService.updatePaymentStatus(13L, "success");
+        assertEquals("success", payment.getStatus());
+        assertEquals("completed", attended.getStatus());
+
+        Payment second = new Payment();
+        second.setId(14L);
+        second.setStatus("pending");
+        second.setClassEnrollmentId(9L);
+        ClassEnrollment cancelled = new ClassEnrollment();
+        cancelled.setStatus("cancelled");
+        when(paymentRepository.findById(14L)).thenReturn(Optional.of(second));
+        when(classEnrollmentRepository.findById(9L)).thenReturn(Optional.of(cancelled));
+        assertThrows(ConflictException.class, () -> paymentService.updatePaymentStatus(14L, "success"));
+        assertEquals("cancelled", cancelled.getStatus());
+    }
 }

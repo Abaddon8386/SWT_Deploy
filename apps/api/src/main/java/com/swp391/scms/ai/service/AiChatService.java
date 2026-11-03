@@ -153,6 +153,10 @@ public class AiChatService {
         Long sessionId = dto.sessionId();
         if (sessionId == null) {
             sessionId = inWriteTx(() -> {
+                // Serialize a member's quick sends so two messages at once share one new session.
+                if ("MEMBER".equalsIgnoreCase(currentRole)) {
+                    memberRepository.findByUserIdForUpdate(currentUserId);
+                }
                 List<AiChatSession> existing = sessionRepository.findByMemberUserIdOrderByStartedAtDesc(currentUserId);
                 if (!existing.isEmpty() && existing.get(0).getEndedAt() == null) {
                     return existing.get(0).getId();
@@ -228,8 +232,8 @@ public class AiChatService {
 
         // Phase 3: short write transaction to persist user & AI messages
         return inWriteTx(() -> {
-            AiChatSession sessionRef = sessionRepository.getReferenceById(sessionId);
-            AiChatSession targetSession = sessionRef != null ? sessionRef : prepared.session();
+            // Re-check ownership: the AI call ran without a transaction, so the session is read again before writing.
+            AiChatSession targetSession = getAuthorizedSession(sessionId, currentUserId, currentRole);
             LocalDateTime now = LocalDateTime.now();
 
             AiChatMessage memberMsg = new AiChatMessage();

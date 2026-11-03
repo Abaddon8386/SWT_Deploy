@@ -188,5 +188,35 @@ class CoachReviewServiceTest {
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
         verify(reviewRepository, never()).save(any());
     }
+
+    @Test
+    void classSessionReviewRequiresAttendance() {
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        var gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        org.springframework.test.util.ReflectionTestUtils.setField(gymClass, "id", 7L);
+        gymClass.setCoach(coach);
+        var session = new com.swp391.scms.scheduling.entity.ClassSession();
+        org.springframework.test.util.ReflectionTestUtils.setField(session, "id", 70L);
+        session.setGymClass(gymClass);
+        session.setStatus("completed");
+        session.setSessionDate(java.time.LocalDate.now().minusDays(1));
+        session.setEndTime(java.time.LocalTime.NOON);
+        var enrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        enrollment.setMember(member);
+        enrollment.setStatus("booked");
+        when(sessionRepository.findById(70L)).thenReturn(Optional.of(session));
+        when(enrollmentRepository.findByGymClassId(7L)).thenReturn(java.util.List.of(enrollment));
+        var attendance = mock(com.swp391.scms.attendance.repository.SessionAttendanceRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(reviewService, "attendanceRepository", attendance);
+        var absent = new com.swp391.scms.attendance.entity.SessionAttendance();
+        absent.setStatus("absent");
+        when(attendance.findBySessionIdAndMemberUserId(70L, 10L)).thenReturn(Optional.of(absent));
+
+        assertThatThrownBy(() -> reviewService.createReview(10L,
+                new CoachReviewCreateDto(20L, null, 70L, 4, "Review", false)))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+        verify(reviewRepository, never()).save(any());
+    }
 }
 

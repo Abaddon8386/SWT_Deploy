@@ -93,6 +93,28 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, schedule));
     }
 
+    @GetMapping("/unpaid")
+    public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getUnpaidBookings(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        List<CoachBookingDto> bookings = coachBookingService.getUnpaidBookings(principal);
+        String msg = messageService != null
+                ? messageService.getMessage("message.coach_booking.unpaid_list", "Danh sách buổi 1:1 chưa thanh toán")
+                : "Danh sách buổi 1:1 chưa thanh toán";
+        return ResponseEntity.ok(ApiResponse.ok(msg, bookings));
+    }
+
+    @PostMapping("/{id}/confirm-payment")
+    public ResponseEntity<ApiResponse<CoachBookingDto>> confirmPayment(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable("id") Long id,
+            @RequestParam(value = "method", required = false) String method) {
+        CoachBookingDto paid = coachBookingService.confirmHourlyPayment(principal, id, method);
+        String msg = messageService != null
+                ? messageService.getMessage("message.coach_booking.payment_confirmed", "Đã xác nhận thu tiền buổi 1:1")
+                : "Đã xác nhận thu tiền buổi 1:1";
+        return ResponseEntity.ok(ApiResponse.ok(msg, paid));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<CoachBookingDto>> cancelBooking(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,

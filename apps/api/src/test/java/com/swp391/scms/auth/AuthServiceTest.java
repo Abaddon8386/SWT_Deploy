@@ -210,9 +210,11 @@ class AuthServiceTest {
             assertEquals("654321", code);
             verify(otpDeliveryPort, org.mockito.Mockito.never()).send(any(), any());
 
-            for (var sync : org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()) {
-                sync.afterCommit();
-            }
+            var syncs = org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations();
+            var failure = org.junit.jupiter.api.Assertions.assertThrows(
+                    com.swp391.scms.common.exception.ServiceUnavailableException.class,
+                    () -> syncs.forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit));
+            assertEquals("OTP_DELIVERY_FAILED", failure.getErrorCode());
             verify(otpDeliveryPort).send("slow@gmail.com", "654321");
             verify(otpService).invalidate("slow@gmail.com");
         } finally {
