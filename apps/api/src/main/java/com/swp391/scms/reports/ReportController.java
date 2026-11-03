@@ -24,7 +24,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Tag(name = "Reports & Analytics", description = "Báo cáo doanh thu tài chính, thống kê gói tập và ảnh chụp snapshot")
-@PreAuthorize("hasRole('CENTER_MANAGER')")
+@PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
 @RestController
 @RequestMapping("/api/v1/reports")
 public class ReportController {

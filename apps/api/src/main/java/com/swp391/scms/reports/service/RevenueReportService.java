@@ -226,16 +226,22 @@ public class RevenueReportService {
 
             double utilizationRate = 0.0;
             if (capacity > 0) {
-                utilizationRate = BigDecimal.valueOf(enrolledCount * 100.0)
+                utilizationRate = BigDecimal.valueOf(Math.min(enrolledCount, (long) capacity) * 100.0)
                         .divide(BigDecimal.valueOf(capacity), 1, RoundingMode.HALF_UP)
                         .doubleValue();
+                if (utilizationRate > 100.0) {
+                    utilizationRate = 100.0;
+                }
             }
 
             double attendanceRate = 0.0;
             if (enrolledCount > 0) {
-                attendanceRate = BigDecimal.valueOf(presentCount * 100.0)
+                attendanceRate = BigDecimal.valueOf(Math.min(presentCount, enrolledCount) * 100.0)
                         .divide(BigDecimal.valueOf(enrolledCount), 1, RoundingMode.HALF_UP)
                         .doubleValue();
+                if (attendanceRate > 100.0) {
+                    attendanceRate = 100.0;
+                }
             }
 
             results.add(new ClassUtilizationDto(
@@ -243,6 +249,7 @@ public class RevenueReportService {
                     row.getClassName(),
                     row.getDisciplineId(),
                     row.getDisciplineName(),
+                    row.getRoomName(),
                     capacity,
                     enrolledCount,
                     presentCount,

@@ -120,7 +120,7 @@ export function ManagerAuditLogsPage() {
       return { avgUtilization: 0, highestClass: '—', totalCapacity: 0, totalEnrolled: 0 };
     }
     const totalCap = occupancyList.reduce((acc, c) => acc + c.capacity, 0);
-    const totalEnr = occupancyList.reduce((acc, c) => acc + c.enrolledCount, 0);
+    const totalEnr = occupancyList.reduce((acc, c) => acc + Math.min(c.enrolledCount, c.capacity), 0);
     const avg = totalCap > 0 ? (totalEnr / totalCap) * 100 : 0;
     const sorted = [...occupancyList].sort((a, b) => b.utilizationRate - a.utilizationRate);
 
@@ -429,8 +429,13 @@ export function ManagerAuditLogsPage() {
                 {occupancyList.map((item) => (
                   <div key={item.classId} className="discipline-chart-item">
                     <div className="discipline-chart-header">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span className="discipline-name-bold">{item.className}</span>
+                        {item.roomName && (
+                          <span className="portal-badge" style={{ fontSize: '0.75rem', background: 'rgba(226, 91, 69, 0.15)', color: 'var(--color-primary, #e25b45)' }}>
+                            {item.roomName}
+                          </span>
+                        )}
                         {item.disciplineName && (
                           <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
                             ({item.disciplineName})

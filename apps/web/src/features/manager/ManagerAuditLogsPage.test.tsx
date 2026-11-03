@@ -43,6 +43,7 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
       className: 'Reformer Core & Spinal Alignment',
       disciplineId: 1,
       disciplineName: 'Pilates Reformer',
+      roomName: 'Phòng Reformer 1',
       capacity: 10,
       enrolledCount: 9,
       presentCount: 8,
@@ -201,6 +202,7 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
     expect(host.textContent).toContain('Tỷ lệ lấp đầy trung bình');
     expect(host.textContent).toContain('Reformer Core & Spinal Alignment');
     expect(host.textContent).toContain('90%');
+    expect(host.textContent).toContain('Phòng Reformer 1');
     expect(host.textContent).toContain('Athletic Conditioning');
     expect(host.textContent).toContain('80%');
   });
