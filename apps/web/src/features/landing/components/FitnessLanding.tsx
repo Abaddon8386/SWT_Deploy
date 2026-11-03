@@ -156,11 +156,10 @@ const muscleGroups = [
   },
 ] as const;
 
-const stories = [
-  { slug: 'strength-coach', name: 'Derek', image: 'coach-strength.webp', quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.', focus: 'STRENGTH COACH', meta: '6 năm kinh nghiệm · Strength Floor' },
-  { slug: 'aquatics-coach', name: 'Anthony', image: 'coach-aquatics.jpg', quote: 'Tôi tìm được nhịp tập phù hợp dưới nước và giúp học viên lướt nhẹ mà không tốn sức.', focus: 'AQUATICS COACH', meta: '8 năm kinh nghiệm · Hồ bơi 25m' },
-  { slug: 'personal-coach', name: 'Jhon', image: 'coach-personal.jpg', quote: 'Không chỉ là thay đổi vóc dáng. Tôi muốn bạn thấy khỏe và tự tin hơn mỗi tuần.', focus: 'PERSONAL COACH', meta: '7 năm kinh nghiệm · Kèm 1:1 Đa môn' },
-  { slug: 'tennis-coach', name: 'Ezekiel', image: 'coach-tennis.jpg', quote: 'Có người đồng hành chỉnh từng bước chân giúp bạn tự tin trong mọi đường bóng.', focus: 'TENNIS COACH', meta: '7 năm kinh nghiệm · Sân Tennis' },
+const coachAvatars = [
+  { name: 'Derek', image: 'coach-strength.webp' },
+  { name: 'Anthony', image: 'coach-aquatics.jpg' },
+  { name: 'Huỳnh Đắc Tài', image: 'coach-personal.jpg' },
 ];
 
 const dailyRhythmItems = [
@@ -422,7 +421,7 @@ export function FitnessLanding() {
       <div className="fit-hero-lines" aria-hidden="true" />
       <h1 id="hero-title" className="fit-hero-title"><span>BUILD YOUR</span><span>BODY SHAPES<span className="fit-title-dot">.</span></span></h1>
       <div className="fit-hero-copy"><p>Mạnh mẽ từ thể chất.<br />Tự tin từ bên trong.</p>
-        <a href="#stories" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{stories.slice(0, 3).map((story) => <LoadingImage key={story.name} src={`/images/fitness/${story.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span><span className="fit-review-label">Đội ngũ đồng hành</span></a>
+        <a href="#trainers" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{coachAvatars.map((coach) => <LoadingImage key={coach.name} src={`/images/fitness/${coach.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span><span className="fit-review-label">Đội ngũ đồng hành</span></a>
       </div>
       <LoadingImage
         className="fit-hero-athlete"
@@ -717,10 +716,6 @@ export function FitnessLanding() {
       <div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
       {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="packages" />}
     </section>
-    <section className="fit-section fit-stories" id="stories" aria-labelledby="stories-title">
-      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="stories-title" lines={['Mỗi người,', 'một nhịp tập']} /></div>
-      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><Link to="/#trainers" className="fit-story-link"><div className="fit-story-photo"><LoadingImage src={`/images/fitness/${story.image}`} alt={story.name} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></Link></article>)}</div>
-    </section>
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
         <span className="fit-kicker">FAQ</span>
@@ -792,3 +787,4 @@ export function FitnessLanding() {
     <section className="fit-final-cta" data-reveal="soft"><span className="fit-kicker">ONE SMALL STEP. A STRONGER YOU.</span><h2>READY WHEN<br /><em>YOU ARE.</em></h2><Link to={joinPath} className="fit-pill">Bắt đầu hành trình<RoundArrow diagonal /></Link><span className="fit-cta-star" aria-hidden="true">✳</span></section>
   </main>;
 }
+

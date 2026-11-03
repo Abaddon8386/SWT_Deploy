@@ -144,7 +144,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
             if (id === 'about' || id === 'multisport') return 'about';
             if (id === 'trainers' || id === 'schedule' || id === 'journey') return 'trainers';
             if (id === 'packages' || id === 'benefits') return 'packages';
-            if (id === 'stories' || id === 'faq') return 'stories';
+
             return '';
           };
           sectionObserver = new IntersectionObserver((entries) => {
