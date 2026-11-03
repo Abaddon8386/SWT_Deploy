@@ -1,0 +1,32 @@
+openapi: 3.0.3
+info: { title: Current assigned Coach member directory, version: 1.0.0 }
+paths:
+  /api/v1/coaching/members:
+    get:
+      summary: Current class, PT and active-plan members, deduplicated by member ID
+      description: JWT COACH identity is authoritative. Active non-deleted members only. Current means an active plan covering today, confirmed PT on/after today, or booked class/session with scheduled session on/after today in Asia/Ho_Chi_Minh. Completed/cancelled/expired relationships alone are excluded. CENTER_MANAGER retains global active-member access. No client coachId parameter.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: ApiResponse data array, empty when no current assignment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer, format: int64 }
+                        memberCode: { type: string, nullable: true }
+                        fullName: { type: string }
+                        fitnessGoal: { type: string, nullable: true }
+                        healthNotes: { type: string, nullable: true }
+                        fitnessLevel: { type: string, nullable: true }
+        '401': { description: Authentication required }
+        '403': { description: Role denied }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

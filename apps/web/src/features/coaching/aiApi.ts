@@ -97,39 +97,7 @@ export const aiApi = {
    * Lấy danh sách học viên thực tế đã ghi danh trong các lớp học từ Backend.
    * Danh sách rỗng nghĩa là chưa có học viên; lỗi tải được ném ra để UI báo lỗi, không bao giờ thay bằng dữ liệu mẫu.
    */
-  getCoachMembers: async (): Promise<MemberOption[]> => {
-    const classes = await apiFetch<Array<{ id: number }>>('/classes');
-    if (!Array.isArray(classes) || classes.length === 0) return [];
-    const byMemberId = new Map<number, MemberOption>();
-    const rosters = await Promise.allSettled(classes.map(async cls => apiFetch<
-      Array<{
-        memberId: number;
-        membershipCode?: string;
-        fullName?: string;
-        fitnessGoal?: string;
-        healthNotes?: string;
-        fitnessLevel?: string;
-      }>
-    >(`/classes/${cls.id}/students`)));
-    const failed = rosters.filter((roster): roster is PromiseRejectedResult => roster.status === 'rejected');
-    if (failed.length === rosters.length) throw failed[0].reason;
-    for (const roster of rosters) {
-      if (roster.status === 'rejected' || !Array.isArray(roster.value)) continue;
-      for (const s of roster.value) {
-        if (s.memberId && !byMemberId.has(s.memberId)) {
-          byMemberId.set(s.memberId, {
-            id: s.memberId,
-            memberCode: s.membershipCode || `MEM-${s.memberId}`,
-            fullName: s.fullName || `Hội viên #${s.memberId}`,
-            fitnessGoal: s.fitnessGoal || 'Cải thiện thể lực toàn diện',
-            healthNotes: s.healthNotes || 'Bình thường',
-            fitnessLevel: s.fitnessLevel || 'beginner',
-          });
-        }
-      }
-    }
-    return Array.from(byMemberId.values());
-  },
+  getCoachMembers: (): Promise<MemberOption[]> => apiFetch<MemberOption[]>('/coaching/members'),
 
   /** Huấn luyện viên đang hoạt động để Manager chọn người phụ trách giáo án. */
   getActiveCoaches: async (): Promise<CoachOption[]> => {
