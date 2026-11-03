@@ -29,6 +29,15 @@ public class EntitlementRevocationService {
     private final CourtBookingRepository courtBookings;
     private final Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.notifications.NotificationService notificationService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.common.i18n.MessageService messageService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollments;
+
     public EntitlementRevocationService(MembershipSubscriptionRepository subscriptions,
                                         EnrollmentService enrollmentService,
                                         CoachBookingRepository coachBookings,
@@ -60,6 +69,16 @@ public class EntitlementRevocationService {
             booking.setCancelledAt(now);
             booking.setCancelReason(cancelReason);
             cancelled++;
+            notifyReleased(memberId, "notifications.membership.pt_released.body", booking.getId(),
+                    booking.getBookingDate(), booking.getStartTime());
+            if (booking.getCoach() != null) {
+                notify(booking.getCoach().getUserId(), "notifications.coaching.booking.cancelled.title",
+                        msg("notifications.coaching.booking.cancelled.body",
+                                booking.getMember() != null && booking.getMember().getUser() != null
+                                        ? booking.getMember().getUser().getFullName() : "",
+                                booking.getBookingDate(), hhmm(booking.getStartTime()), hhmm(booking.getEndTime())),
+                        booking.getId());
+            }
         }
         for (CourtBooking booking : courtBookings.findUpcomingBookedByMember(memberId, today)) {
             if (started(booking.getBookingDate(), booking.getStartTime(), today, nowTime)
@@ -68,8 +87,39 @@ public class EntitlementRevocationService {
             booking.setCancelledAt(now);
             booking.setCancelReason(cancelReason);
             cancelled++;
+            notifyReleased(memberId, "notifications.membership.court_released.body", booking.getId(),
+                    booking.getBookingDate(), booking.getStartTime());
         }
         return cancelled;
+    }
+
+    /** Members holding a class booking, an upcoming 1:1 session or an upcoming court; the daily sweep checks each. */
+    @Transactional(readOnly = true)
+    public java.util.Set<Long> membersWithUpcomingBookings() {
+        LocalDate today = LocalDate.now(clock);
+        java.util.Set<Long> ids = new java.util.TreeSet<>();
+        if (classEnrollments != null) ids.addAll(classEnrollments.findMemberIdsWithBookedEnrollments());
+        ids.addAll(coachBookings.findMemberIdsWithUpcomingSessions(today));
+        ids.addAll(courtBookings.findMemberIdsWithUpcomingBookings(today));
+        ids.remove(null);
+        return ids;
+    }
+
+    private void notifyReleased(Long memberId, String bodyKey, Long bookingId, LocalDate date, LocalTime start) {
+        notify(memberId, "notifications.membership.booking_released.title", msg(bodyKey, date, hhmm(start)), bookingId);
+    }
+
+    private void notify(Long userId, String titleKey, String body, Long bookingId) {
+        if (notificationService == null || userId == null) return;
+        notificationService.send(userId, msg(titleKey), body, "system", null, bookingId);
+    }
+
+    private String msg(String key, Object... args) {
+        return messageService != null ? messageService.getMessage(key, args) : key;
+    }
+
+    private static String hhmm(LocalTime time) {
+        return time == null ? "" : time.toString().substring(0, 5);
     }
 
     private static boolean started(LocalDate date, LocalTime start, LocalDate today, LocalTime nowTime) {

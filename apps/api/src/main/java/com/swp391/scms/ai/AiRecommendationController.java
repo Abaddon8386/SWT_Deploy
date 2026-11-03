@@ -69,8 +69,11 @@ public class AiRecommendationController {
     @Operation(summary = "Lịch sử gợi ý giáo án AI của hội viên")
     @GetMapping("/recommendations/member/{memberId}")
     public ResponseEntity<ApiResponse<List<AiWorkoutPlanResponse>>> getMemberRecommendations(
-            @PathVariable Long memberId) {
-        List<AiWorkoutPlanResponse> list = recommendationService.getMemberRecommendations(memberId);
+            @PathVariable Long memberId,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        List<AiWorkoutPlanResponse> list = principal == null
+                ? recommendationService.getMemberRecommendations(memberId)
+                : recommendationService.getMemberRecommendations(memberId, principal.id(), principal.role());
         return ResponseEntity.ok(ApiResponse.ok(msg("ai.recommend.list"), list));
     }
 }

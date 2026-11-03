@@ -78,6 +78,9 @@ public class TrainingPlanService {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
                     "Coaches can only create training plans for themselves");
         }
+        if (coachMemberAccess != null) {
+            coachMemberAccess.requireAccess(currentUserId, currentUserRole, member.getUserId());
+        }
 
         Coach coach = coachRepository.findById(targetCoachId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", targetCoachId));
@@ -179,6 +182,10 @@ public class TrainingPlanService {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
 
+        if (isCoach(currentUserRole) && coachMemberAccess != null
+                && (plan.getCoach() == null || !plan.getCoach().getUserId().equals(currentUserId))) {
+            coachMemberAccess.requireCoachOf(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
+        }
         if (!isManager(currentUserRole) && !isCoach(currentUserRole)) {
             Long ownerId = plan.getMember() != null ? plan.getMember().getUserId() : null;
             if (currentUserId == null || !currentUserId.equals(ownerId)) {
@@ -195,6 +202,9 @@ public class TrainingPlanService {
     public List<TrainingPlanDto> getPlans(Long memberId, Long currentUserId, String currentUserRole) {
         List<TrainingPlan> plans;
         if (memberId != null) {
+            if (coachMemberAccess != null) {
+                coachMemberAccess.requireAccess(currentUserId, currentUserRole, memberId);
+            }
             plans = trainingPlanRepository.findByMemberUserIdOrderByCreatedAtDesc(memberId);
         } else if (isCoach(currentUserRole) && currentUserId != null) {
             plans = trainingPlanRepository.findByCoachUserIdOrderByCreatedAtDesc(currentUserId);
@@ -295,5 +305,8 @@ public class TrainingPlanService {
     private boolean isCoach(String role) {
         return "COACH".equalsIgnoreCase(role) || "Coach".equalsIgnoreCase(role);
     }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.coaching.service.CoachMemberAccess coachMemberAccess;
 }
 

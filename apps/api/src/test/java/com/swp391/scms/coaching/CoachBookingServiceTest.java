@@ -395,4 +395,26 @@ class CoachBookingServiceTest {
         assertThatThrownBy(() -> service.confirmHourlyPayment(desk, 90L, "cash"))
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
     }
+
+    @Test
+    void coachOnApprovedLeaveCannotBeBookedAndShowsNoFreeSlots() {
+        var leaves = org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "staffRequestRepository", leaves);
+        LocalDate day = LocalDate.of(2026, 11, 2);
+        when(leaves.existsApprovedLeaveOn(20L, day)).thenReturn(true);
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        var request = new CoachBookingCreateDto(20L, null, day, LocalTime.of(14, 0), LocalTime.of(15, 0), "package_quota", null);
+
+        assertThatThrownBy(() -> service.createBooking(principal, request))
+                .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class)
+                .satisfies(e -> assertThat(((com.swp391.scms.common.exception.ConflictException) e).getErrorCode())
+                        .isEqualTo("COACH_ON_LEAVE"));
+        assertThat(service.getAvailableSlots(20L, day, 10L))
+                .allSatisfy(slot -> {
+                    assertThat(slot.available()).isFalse();
+                    assertThat(slot.reason()).isEqualTo("coach_on_leave");
+                });
+        verify(coachBookingRepository, never()).save(any());
+    }
 }

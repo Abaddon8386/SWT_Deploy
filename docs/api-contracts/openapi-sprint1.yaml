@@ -339,7 +339,13 @@ paths:
         '200': { description: OK }
         '400': { description: Validation failed, including invalid gender }
         '403': { description: ADMIN role required }
-    delete: { summary: Soft delete user, responses: { '200': { description: OK } } }
+        '409': { description: "USER_HAS_OPEN_COMMITMENTS when the role changes while a member still holds an active/frozen/unpaid membership or upcoming bookings, or a coach still has upcoming class sessions or 1:1 sessions" }
+    delete:
+      summary: Soft delete user
+      description: Refused while the user has open commitments (same rules as a role change); settle or reassign them first.
+      responses:
+        '200': { description: OK }
+        '409': { description: USER_HAS_OPEN_COMMITMENTS (messageKey users.blocked.membership, users.blocked.bookings, users.blocked.coach_classes or users.blocked.coach_sessions) }
   /users/{id}/lock:
     patch: { summary: Lock account, parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
   /users/{id}/unlock:
@@ -367,7 +373,7 @@ paths:
     put: { summary: Update receptionist profile (RECEPTIONIST), responses: { '200': { description: OK }, '403': { description: FORBIDDEN } } }
   /members/{memberId}/health-metrics:
     parameters: [ { name: memberId, in: path, required: true, schema: { type: integer } } ]
-    get: { summary: Health metric history (owner, coach or manager), responses: { '200': { description: OK }, '403': { description: FORBIDDEN } } }
+    get: { summary: "Health metric history (owner, manager, or a coach who trains the member: training plan, 1:1 session or class enrollment)", responses: { '200': { description: OK }, '403': { description: FORBIDDEN or COACH_MEMBER_NOT_ASSIGNED } } }
     post: { summary: Record a health metric, responses: { '200': { description: OK }, '400': { description: INVALID_METRIC } } }
   /members/lookup:
     get:

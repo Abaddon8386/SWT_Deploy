@@ -8,6 +8,7 @@ import { checkinApi } from './checkinApi';
 const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), getPendingHoldRequests: vi.fn(),
   getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(),
+  getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
 }));
 vi.mock('./receptionApi', () => ({ receptionApi: api, maskCitizenId: () => '—' }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn() }));
@@ -29,6 +30,7 @@ beforeEach(() => {
   api.lookupMembers.mockResolvedValue([member]);
   api.getPendingSubscriptions.mockResolvedValue([]);
   api.getPendingHoldRequests.mockResolvedValue([]);
+  api.getUnpaidCoachBookings.mockResolvedValue([]);
   api.getActivePackages.mockResolvedValue([pkg]);
   api.getRenewalCandidates.mockResolvedValue([]);
   api.processPayment.mockResolvedValue({ id: 42, memberId: 10, amount: 200, method: 'pos', status: 'success', paidAt: '2026-10-01T10:00:00', invoiceNumber: 'INV-42' });
@@ -138,4 +140,28 @@ it('keeps the created renewal pending when payment fails', async () => {
   await chooseAndPay('renew:5');
   expect((host.querySelector('#pos-package') as HTMLInputElement).value).toContain('Yêu cầu #6');
   expect(host.textContent).not.toContain('Hóa đơn thực');
+});
+
+it('lets the desk record payment for an unpaid hourly 1:1 session', async () => {
+  const booking = { id: 90, memberId: 10, memberName: 'An', coachId: 20, coachName: 'Hùng', coachSpecialization: 'Gym',
+    coachAvatarUrl: null, disciplineId: null, disciplineName: null, bookingDate: '2026-11-02', startTime: '14:00:00',
+    endTime: '15:00:00', hourlyRate: 200000, paymentMethod: 'bank_transfer', paymentStatus: 'pending', status: 'confirmed',
+    notes: null, createdAt: '2026-10-30T10:00:00', cancelledAt: null, cancelReason: null };
+  api.getUnpaidCoachBookings.mockResolvedValueOnce([booking]).mockResolvedValue([]);
+  api.confirmCoachBookingPayment.mockResolvedValue({ ...booking, paymentStatus: 'paid' });
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.textContent).toContain('Buổi PT chưa thanh toán (1)');
+  const confirm = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Đã nhận chuyển khoản')!;
+  await act(async () => confirm.click());
+  expect(api.confirmCoachBookingPayment).toHaveBeenCalledWith(90, 'bank_transfer');
+  expect(host.textContent).toContain('Không có buổi PT nào chờ thu tiền.');
+});
+
+it('shows a retry when unpaid 1:1 sessions fail to load', async () => {
+  api.getUnpaidCoachBookings.mockRejectedValueOnce(new Error('Mất kết nối')).mockResolvedValue([]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.textContent).toContain('Mất kết nối');
+  const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Thử lại')!;
+  await act(async () => retry.click());
+  expect(host.textContent).toContain('Không có buổi PT nào chờ thu tiền.');
 });

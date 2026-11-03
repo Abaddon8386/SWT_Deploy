@@ -1,6 +1,8 @@
 import { apiFetch } from '../../shared/api/client';
 import { catalogApi, type MembershipPackage } from '../manager/catalogApi';
+import type { CoachBookingDto } from '../member/coachBookingApi';
 export type { MembershipPackage };
+export type UnpaidCoachBooking = CoachBookingDto;
 
 export interface MemberLookupResult {
   userId: number;
@@ -202,6 +204,13 @@ export const receptionApi = {
       method: 'POST',
     });
   },
+
+  /** Buổi PT 1:1 trả phí theo giờ chưa thu tiền, cũ nhất trước. */
+  getUnpaidCoachBookings: (): Promise<UnpaidCoachBooking[]> => apiFetch('/coach-bookings/unpaid'),
+
+  /** Ghi nhận đã thu tiền buổi PT 1:1; backend tạo payment để tính vào doanh thu. */
+  confirmCoachBookingPayment: (bookingId: number, method: string): Promise<UnpaidCoachBooking> =>
+    apiFetch(`/coach-bookings/${bookingId}/confirm-payment?method=${encodeURIComponent(method)}`, { method: 'POST' }),
 
   /**
    * Xác nhận thu tiền qua Payment API (/payments/process) & tự động phát hành hóa đơn

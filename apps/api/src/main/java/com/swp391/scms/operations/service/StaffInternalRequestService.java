@@ -32,6 +32,14 @@ public class StaffInternalRequestService {
     private final NotificationService notificationService;
     private final MessageService messageService;
 
+    private static final Set<String> REPLACEMENT_ROLES = Set.of("COACH", "RECEPTIONIST");
+
+    @Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.ClassSessionRepository classSessionRepository;
+
+    @Autowired(required = false)
+    private com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
+
     public StaffInternalRequestService(StaffInternalRequestRepository requestRepository,
                                        UserRepository userRepository) {
         this(requestRepository, userRepository, null);
@@ -69,9 +77,21 @@ public class StaffInternalRequestService {
                     "End date must not precede start date.");
         }
 
+        if ("LEAVE".equals(type) && requestDto.startDate() == null) {
+            throw new BadRequestException("LEAVE_DATES_REQUIRED", "error.operations.request.leave_dates_required",
+                    "A leave request needs its start date.");
+        }
+
+        // A replacement must be another active staff member who can actually cover the shift.
         User replacement = null;
         if (requestDto.replacementUserId() != null) {
-            replacement = userRepository.findById(requestDto.replacementUserId()).orElse(null);
+            replacement = userRepository.findByIdAndDeletedAtIsNull(requestDto.replacementUserId())
+                    .filter(candidate -> !candidate.getId().equals(userId)
+                            && "active".equalsIgnoreCase(candidate.getStatus())
+                            && candidate.getRole() != null
+                            && REPLACEMENT_ROLES.contains(candidate.getRole().getCode().toUpperCase(java.util.Locale.ROOT)))
+                    .orElseThrow(() -> new BadRequestException("INVALID_REPLACEMENT",
+                            "error.operations.request.invalid_replacement", "Choose another active staff member."));
         }
 
         StaffInternalRequest req = new StaffInternalRequest();
@@ -178,6 +198,10 @@ public class StaffInternalRequestService {
 
         StaffInternalRequest saved = requestRepository.save(req);
 
+        if ("APPROVED".equals(newStatus)) {
+            reportLeaveImpact(saved, manager);
+        }
+
         // Send in-app notification to the requester
         if (notificationService != null) {
             String title = msg("APPROVED".equals(newStatus) ? "notifications.operations.approved.title" : "notifications.operations.rejected.title");
@@ -224,5 +248,32 @@ public class StaffInternalRequestService {
     }
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
+    }
+
+    /**
+     * An approved coach leave keeps new 1:1 bookings away (see CoachBookingService); classes and sessions already
+     * scheduled in the period are reported to the approving manager so cover can be arranged.
+     */
+    private void reportLeaveImpact(StaffInternalRequest leave, User manager) {
+        if (!"LEAVE".equals(leave.getRequestType()) || leave.getStartDate() == null || notificationService == null) {
+            return;
+        }
+        java.time.LocalDate end = leave.getEndDate() != null ? leave.getEndDate() : leave.getStartDate();
+        Long staffId = leave.getUser().getId();
+        long classSessions = classSessionRepository != null
+                ? classSessionRepository.countScheduledForCoachBetween(staffId, leave.getStartDate(), end) : 0;
+        long ptSessions = coachBookingRepository != null
+                ? coachBookingRepository.countConfirmedForCoachBetween(staffId, leave.getStartDate(), end) : 0;
+        if (classSessions == 0 && ptSessions == 0) {
+            return;
+        }
+        notificationService.send(
+                manager.getId(),
+                msg("notifications.operations.leave_impact.title"),
+                msg("notifications.operations.leave_impact.body", leave.getUser().getFullName(),
+                        leave.getStartDate(), end, classSessions, ptSessions),
+                "system",
+                null,
+                leave.getId());
     }
 }

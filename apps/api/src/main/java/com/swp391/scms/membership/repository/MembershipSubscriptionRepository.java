@@ -99,4 +99,10 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
               and (s.endDate is null or s.endDate >= :since)
             """)
     boolean existsEntitlementEndingOnOrAfter(@Param("memberId") Long memberId, @Param("since") LocalDate since);
+
+    List<MembershipSubscription> findByStatusAndHoldStatusAndHoldResolvedAtLessThanEqual(
+            String status, String holdStatus, java.time.LocalDateTime resolvedBefore);
+
+    boolean existsByMemberUserIdAndStatusInAndEndDateGreaterThanEqual(
+            Long memberId, java.util.Collection<String> statuses, LocalDate date);
 }

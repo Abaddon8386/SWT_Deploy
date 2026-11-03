@@ -9,10 +9,10 @@ paths:
   /operations/requests:
     post:
       summary: Submit an internal staff request
-      description: Staff/coach can submit a request. If both dates are supplied, endDate must be on or after startDate. Notifications target active, non-deleted managers only.
+      description: Staff/coach can submit a request. If both dates are supplied, endDate must be on or after startDate. A LEAVE request needs startDate (a missing endDate means a single day). replacementUserId must be another active, non-deleted coach or receptionist. Notifications target active, non-deleted managers only.
       responses:
         '201': {description: Request created}
-        '400': {description: Invalid request type or INVALID_DATE_RANGE}
+        '400': {description: Invalid request type, INVALID_DATE_RANGE, LEAVE_DATES_REQUIRED or INVALID_REPLACEMENT}
   /operations/requests/{id}/cancel:
     put:
       summary: Owner cancels a pending request
@@ -26,7 +26,7 @@ paths:
   /operations/requests/{id}/review:
     put:
       summary: Manager approves or rejects a pending request
-      description: Serialized with cancellation and other review attempts. Rejection requires managerNotes. Notifications use localized system messages.
+      description: Serialized with cancellation and other review attempts. Rejection requires managerNotes. Notifications use localized system messages. An approved LEAVE blocks new 1:1 bookings with that coach on the leave days (409 COACH_ON_LEAVE, available-slots reason coach_on_leave); if class sessions or 1:1 sessions are already scheduled in the period, the approving manager is notified with their counts so cover can be arranged.
       parameters:
         - {in: path, name: id, required: true, schema: {type: integer, format: int64}}
       responses:

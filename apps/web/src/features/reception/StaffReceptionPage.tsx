@@ -12,6 +12,7 @@ import {
   maskCitizenId,
   receptionApi,
   type HoldRequestItem,
+  type UnpaidCoachBooking,
   type MemberLookupResult,
   type MembershipPackage,
   type PaymentMethod,
@@ -53,6 +54,12 @@ export function StaffReceptionPage() {
   const [holdList, setHoldList] = useState<HoldRequestItem[]>([]);
   const [loadingHolds, setLoadingHolds] = useState(true);
   const [processingHoldId, setProcessingHoldId] = useState<number | null>(null);
+
+  // Buổi PT 1:1 trả phí chờ thu tiền
+  const [unpaidPt, setUnpaidPt] = useState<UnpaidCoachBooking[]>([]);
+  const [loadingPt, setLoadingPt] = useState(true);
+  const [ptError, setPtError] = useState('');
+  const [processingPtId, setProcessingPtId] = useState<number | null>(null);
 
   // Form thanh toán
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('pos');
@@ -96,10 +103,25 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
+  const loadUnpaidPt = useCallback(async () => {
+    if (!hasAccess) return;
+    setLoadingPt(true);
+    setPtError('');
+    try {
+      setUnpaidPt(await receptionApi.getUnpaidCoachBookings());
+    } catch (err: unknown) {
+      setUnpaidPt([]);
+      setPtError(err instanceof Error ? err.message : 'Không tải được danh sách buổi PT chưa thanh toán.');
+    } finally {
+      setLoadingPt(false);
+    }
+  }, [hasAccess]);
+
   useEffect(() => {
     void loadPendingSubscriptions();
     void loadPendingHolds();
-  }, [loadPendingSubscriptions, loadPendingHolds]);
+    void loadUnpaidPt();
+  }, [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt]);
 
   useEffect(() => {
     let active = true;
@@ -159,7 +181,7 @@ export function StaffReceptionPage() {
     try {
       const res = await receptionApi.approveHoldRequest(item.id);
       toast(
-        `Đã xác nhận bảo lưu gói "${item.packageName}" cho ${item.memberName}. Đã tự động hủy ${res.cancelledEnrollmentsCount} lịch học trong tương lai.`,
+        `Đã xác nhận bảo lưu gói "${item.packageName}" cho ${item.memberName}. Đã tự động hủy ${res.cancelledEnrollmentsCount} lịch sắp tới.`,
         'success',
       );
       await loadPendingHolds();
@@ -168,6 +190,22 @@ export function StaffReceptionPage() {
       toast(msg, 'error');
     } finally {
       setProcessingHoldId(null);
+    }
+  };
+
+  const handleConfirmPt = async (item: UnpaidCoachBooking, method: string) => {
+    if (processingPtId !== null) return;
+    setProcessingPtId(item.id);
+    try {
+      await receptionApi.confirmCoachBookingPayment(item.id, method);
+      toast(`Đã thu ${vnd(item.hourlyRate)} buổi PT của ${item.memberName} (${item.bookingDate}).`, 'success');
+      await loadUnpaidPt();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Xác nhận thu tiền buổi PT thất bại.';
+      await loadUnpaidPt();
+      toast(msg, 'error');
+    } finally {
+      setProcessingPtId(null);
     }
   };
 
@@ -715,7 +753,7 @@ export function StaffReceptionPage() {
             <h2 className="portal-card-title">Yêu cầu bảo lưu ({holdList.length})</h2>
             {holdList.length > 0 && (
               <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
-                Duyệt bảo lưu sẽ hủy các lịch học tương lai của hội viên.
+                Duyệt bảo lưu sẽ hủy lịch lớp, PT 1:1 và lịch sân sắp tới của hội viên. Gói tự mở lại sau tối đa 90 ngày.
               </p>
             )}
           </div>
@@ -812,7 +850,92 @@ export function StaffReceptionPage() {
                       disabled={processingHoldId !== null}
                       onClick={() => void handleApproveHold(item)}
                     >
-                      {isBusy ? 'Đang xử lý...' : 'Xác nhận bảo lưu & Hủy lịch tương lai'}
+                      {isBusy ? 'Đang xử lý...' : 'Xác nhận bảo lưu & hủy lịch sắp tới'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Buổi PT 1:1 trả phí chờ thu tiền */}
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 className="portal-card-title">Buổi PT chưa thanh toán ({unpaidPt.length})</h2>
+            {unpaidPt.length > 0 && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
+                Mỗi hội viên chỉ đặt được tối đa 2 buổi trả phí khi chưa thanh toán.
+              </p>
+            )}
+          </div>
+          <RefreshButton label="Làm mới buổi PT" onClick={() => void loadUnpaidPt()} disabled={loadingPt} />
+        </div>
+
+        {loadingPt ? (
+          <LoadingSkeleton label="Đang tải buổi PT chưa thanh toán…" count={2} />
+        ) : ptError ? (
+          <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
+            <span style={{ color: 'var(--portal-danger)', fontSize: '0.9rem' }}>{ptError}</span>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => void loadUnpaidPt()}>Thử lại</button>
+          </div>
+        ) : unpaidPt.length === 0 ? (
+          <div style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+            Không có buổi PT nào chờ thu tiền.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+            {unpaidPt.map((item) => {
+              const isBusy = processingPtId === item.id;
+              const paidWith = item.paymentMethod === 'package_quota' ? 'cash' : item.paymentMethod;
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    padding: '16px 18px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--color-border-medium)',
+                    backgroundColor: 'var(--color-bg-warm)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 240 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
+                        PT #{item.id}
+                      </span>
+                      <strong>{item.memberName}</strong>
+                      {item.status === 'completed' && <span className="badge badge-warning">ĐÃ TẬP</span>}
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
+                      HLV {item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
+                      <strong>{vnd(item.hourlyRate)}</strong>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    {paidWith !== 'cash' && (
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        disabled={processingPtId !== null}
+                        onClick={() => void handleConfirmPt(item, 'cash')}
+                      >
+                        {isBusy ? 'Đang xử lý...' : 'Thu tiền mặt'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn-primary btn-sm"
+                      disabled={processingPtId !== null}
+                      onClick={() => void handleConfirmPt(item, paidWith)}
+                    >
+                      {isBusy ? 'Đang xử lý...' : paidWith === 'cash' ? 'Đã thu tiền mặt' : 'Đã nhận chuyển khoản'}
                     </button>
                   </div>
                 </div>

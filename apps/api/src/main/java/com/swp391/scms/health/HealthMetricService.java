@@ -29,6 +29,9 @@ public class HealthMetricService {
     private final MemberRepository memberRepository;
     private final UserRepository userRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.coaching.service.CoachMemberAccess coachMemberAccess;
+
     public HealthMetricService(MemberProgressLogRepository progressLogRepository,
                                MemberRepository memberRepository,
                                UserRepository userRepository) {
@@ -42,6 +45,9 @@ public class HealthMetricService {
         if (!memberId.equals(currentUserId) && !isManager(currentUserRole) && !isCoach(currentUserRole)) {
             throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden", null,
                     "You do not have permission to view these health metrics");
+        }
+        if (coachMemberAccess != null && !memberId.equals(currentUserId)) {
+            coachMemberAccess.requireAccess(currentUserId, currentUserRole, memberId);
         }
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("resource.member", memberId);
@@ -120,6 +126,9 @@ public class HealthMetricService {
         if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
             throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
                     "You do not have permission to modify this health metric");
+        }
+        if (coachMemberAccess != null && !memberId.equals(currentUserId)) {
+            coachMemberAccess.requireAccess(currentUserId, currentUserRole, memberId);
         }
     }
 

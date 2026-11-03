@@ -47,6 +47,13 @@ public class CoachBookingService {
 
     @Autowired(required = false)
     private com.swp391.scms.users.UserRepository userRepository;
+
+    @Autowired(required = false)
+    private com.swp391.scms.operations.repository.StaffInternalRequestRepository staffRequestRepository;
+
+    private boolean onLeave(Long coachId, LocalDate date) {
+        return staffRequestRepository != null && staffRequestRepository.existsApprovedLeaveOn(coachId, date);
+    }
     private static final BigDecimal DEFAULT_HOURLY_RATE = new BigDecimal("200000.00");
 
     private final CoachBookingRepository coachBookingRepository;
@@ -128,6 +135,7 @@ public class CoachBookingService {
 
         LocalDateTime now = LocalDateTime.now(clock);
         List<CoachAvailableSlotDto> slots = new ArrayList<>();
+        boolean coachOnLeave = onLeave(coachId, date);
 
         for (int hour = 6; hour <= 20; hour++) {
             LocalTime start = LocalTime.of(hour, 0);
@@ -147,10 +155,12 @@ public class CoachBookingService {
                     || memberBookings.stream().anyMatch(mb ->
                     start.isBefore(mb.getEndTime()) && end.isAfter(mb.getStartTime()));
 
-            boolean available = !isTooSoon && !coachBusy && !memberBusy;
+            boolean available = !coachOnLeave && !isTooSoon && !coachBusy && !memberBusy;
             String reason = null;
             if (!available) {
-                if (isTooSoon) {
+                if (coachOnLeave) {
+                    reason = "coach_on_leave";
+                } else if (isTooSoon) {
                     reason = "too_soon";
                 } else if (coachBusy) {
                     reason = "coach_busy";
@@ -206,6 +216,10 @@ public class CoachBookingService {
 
         if (!"active".equalsIgnoreCase(coach.getEmploymentStatus())) {
             throw new BadRequestException("COACH_INACTIVE", "error.coach.inactive", "Huấn luyện viên hiện không nhận học viên.");
+        }
+        if (request.bookingDate() != null && onLeave(coach.getUserId(), request.bookingDate())) {
+            throw new ConflictException("COACH_ON_LEAVE", "error.coach_booking.coach_on_leave",
+                    new Object[]{request.bookingDate()}, "The coach is on approved leave that day.");
         }
 
         String paymentMethod = request.paymentMethod() != null

@@ -31,7 +31,7 @@ paths:
         '201': {description: ApiResponse containing CoachBookingDto; paymentStatus is pending or used_quota}
         '400': {description: Invalid slot, unavailable membership, exhausted quota or INVALID_PAYMENT_METHOD}
         '403': {description: Role denied or trigger rejects inactive membership}
-        '409': {description: Schedule conflict or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
+        '409': {description: Schedule conflict, COACH_ON_LEAVE, COACH_BOOKING_UNPAID_LIMIT, or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
   /coach-bookings/unpaid:
     get:
       summary: Hourly PT sessions waiting for payment (RECEPTIONIST, CENTER_MANAGER)

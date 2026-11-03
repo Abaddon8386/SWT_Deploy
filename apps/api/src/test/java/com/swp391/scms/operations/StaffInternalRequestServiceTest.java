@@ -250,4 +250,50 @@ class StaffInternalRequestServiceTest {
         assertThrows(BadRequestException.class, () -> service.createRequest(10L, dto));
         verify(requestRepository, never()).save(any());
     }
+
+    @Test
+    void replacementMustBeAnotherActiveStaffMember() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        Role memberRole = new Role();
+        memberRole.setCode("MEMBER");
+        User member = new User();
+        member.setId(50L);
+        member.setStatus("active");
+        member.setRole(memberRole);
+        when(userRepository.findByIdAndDeletedAtIsNull(50L)).thenReturn(Optional.of(member));
+        var dto = new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Việc riêng",
+                LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), null, 50L);
+
+        var error = assertThrows(BadRequestException.class, () -> service.createRequest(10L, dto));
+        assertEquals("INVALID_REPLACEMENT", error.getErrorCode());
+        verify(requestRepository, never()).save(any());
+    }
+
+    @Test
+    void approvingLeaveTellsManagerWhatNeedsCover() {
+        var sessions = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
+        var bookings = mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "classSessionRepository", sessions);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository", bookings);
+        LocalDate start = LocalDate.of(2026, 11, 10);
+        LocalDate end = LocalDate.of(2026, 11, 15);
+        StaffInternalRequest leave = new StaffInternalRequest();
+        leave.setId(100L);
+        leave.setUser(staffUser);
+        leave.setRequestType("LEAVE");
+        leave.setTitle("Nghỉ phép");
+        leave.setStartDate(start);
+        leave.setEndDate(end);
+        leave.setStatus("PENDING");
+        when(requestRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(leave));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(managerUser));
+        when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(call -> call.getArgument(0));
+        when(sessions.countScheduledForCoachBetween(10L, start, end)).thenReturn(2L);
+        when(bookings.countConfirmedForCoachBetween(10L, start, end)).thenReturn(1L);
+
+        service.reviewRequest(1L, 100L, new StaffInternalRequestReviewDto("APPROVED", null));
+
+        verify(notificationService).send(eq(1L), any(),
+                org.mockito.ArgumentMatchers.contains("2 buổi lớp và 1 buổi PT"), eq("system"), isNull(), eq(100L));
+    }
 }

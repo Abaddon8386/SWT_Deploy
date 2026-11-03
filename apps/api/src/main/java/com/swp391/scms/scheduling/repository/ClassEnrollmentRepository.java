@@ -44,4 +44,24 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
     List<ClassEnrollment> findByGymClassIdAndStatus(Long classId, String status);
 
     void deleteByGymClassId(Long classId);
+
+    @org.springframework.data.jpa.repository.Query("""
+            select (count(e) > 0) from ClassEnrollment e
+            where e.member.userId = :memberId and e.gymClass.coach.userId = :coachId
+              and e.status in ('booked', 'completed')
+            """)
+    boolean existsForCoachAndMember(@org.springframework.data.repository.query.Param("coachId") Long coachId,
+                                    @org.springframework.data.repository.query.Param("memberId") Long memberId);
+
+    @org.springframework.data.jpa.repository.Query("select distinct e.member.userId from ClassEnrollment e where e.status = 'booked'")
+    List<Long> findMemberIdsWithBookedEnrollments();
+
+    @org.springframework.data.jpa.repository.Query("""
+            select (count(e) > 0) from ClassEnrollment e
+            where e.member.userId = :memberId and e.status = 'booked'
+              and exists (select s.id from ClassSession s
+                          where s.gymClass = e.gymClass and s.status = 'scheduled' and s.sessionDate >= :today)
+            """)
+    boolean existsUpcomingBookedForMember(@org.springframework.data.repository.query.Param("memberId") Long memberId,
+                                          @org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
 }

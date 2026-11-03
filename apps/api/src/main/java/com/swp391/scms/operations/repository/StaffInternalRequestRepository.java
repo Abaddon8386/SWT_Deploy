@@ -27,5 +27,13 @@ public interface StaffInternalRequestRepository extends JpaRepository<StaffInter
            "ORDER BY r.createdAt DESC")
     List<StaffInternalRequest> findWithFilters(@Param("status") String status,
                                               @Param("requestType") String requestType);
+
+    /** An approved leave covering {@code date}; a leave without an end date covers its start day only. */
+    @Query("""
+            select (count(r) > 0) from StaffInternalRequest r
+            where r.user.id = :userId and r.requestType = 'LEAVE' and r.status = 'APPROVED'
+              and r.startDate <= :date and coalesce(r.endDate, r.startDate) >= :date
+            """)
+    boolean existsApprovedLeaveOn(@Param("userId") Long userId, @Param("date") java.time.LocalDate date);
 }
 

@@ -116,6 +116,9 @@ public class SessionEvaluationService {
         if ("MEMBER".equalsIgnoreCase(currentRole) && !memberId.equals(currentUserId)) {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null, null);
         }
+        if (coachMemberAccess != null) {
+            coachMemberAccess.requireAccess(currentUserId, currentRole, memberId);
+        }
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("resource.member", memberId);
         }
@@ -161,4 +164,7 @@ public class SessionEvaluationService {
                 e.getCreatedAt()
         );
     }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.coaching.service.CoachMemberAccess coachMemberAccess;
 }

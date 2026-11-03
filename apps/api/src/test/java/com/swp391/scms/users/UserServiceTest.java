@@ -302,4 +302,34 @@ class UserServiceTest {
         org.junit.jupiter.api.Assertions.assertNull(coach.getDeletedAt());
         verify(userRepository, never()).save(any());
     }
+
+    @Test
+    void deletingMemberWithMembershipOrCoachWithClassesIsBlocked() {
+        var memberRole = new com.swp391.scms.users.entity.Role();
+        memberRole.setCode("MEMBER");
+        User member = new User();
+        member.setId(5L);
+        member.setRole(memberRole);
+        when(userRepository.findByIdAndDeletedAtIsNull(5L)).thenReturn(Optional.of(member));
+        when(subscriptionRepository.existsByMemberUserIdAndStatusInAndEndDateGreaterThanEqual(
+                org.mockito.ArgumentMatchers.eq(5L), any(), any())).thenReturn(true);
+        var memberError = assertThrows(ConflictException.class, () -> service.deleteUser(5L));
+        assertEquals("users.blocked.membership", memberError.getMessageKey());
+
+        var coachRole = new com.swp391.scms.users.entity.Role();
+        coachRole.setCode("COACH");
+        User coach = new User();
+        coach.setId(6L);
+        coach.setRole(coachRole);
+        when(userRepository.findByIdAndDeletedAtIsNull(6L)).thenReturn(Optional.of(coach));
+        var sessions = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
+        service.classSessionRepository = sessions;
+        when(sessions.existsScheduledForCoachFrom(org.mockito.ArgumentMatchers.eq(6L), any())).thenReturn(true);
+        var coachError = assertThrows(ConflictException.class, () -> service.deleteUser(6L));
+        assertEquals("users.blocked.coach_classes", coachError.getMessageKey());
+
+        org.junit.jupiter.api.Assertions.assertNull(member.getDeletedAt());
+        org.junit.jupiter.api.Assertions.assertNull(coach.getDeletedAt());
+        verify(userRepository, never()).save(any());
+    }
 }

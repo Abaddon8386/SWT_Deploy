@@ -47,6 +47,8 @@ public class MembershipSubscriptionService {
 
     private static final String HOLD_PENDING = "PENDING";
     private static final String HOLD_APPROVED = "APPROVED";
+    /** Longest a membership may stay frozen; later it resumes on its own with this many days added back. */
+    public static final int MAX_HOLD_DAYS = 90;
     private static final String HOLD_REJECTED = "REJECTED";
 
     private final MembershipSubscriptionRepository subscriptions;
@@ -603,12 +605,55 @@ public class MembershipSubscriptionService {
                 || hasPaidFutureRenewal(principal.id(), today)) {
             throw new ConflictException("MEMBERSHIP_RESUME_CONFLICT", "error.membership.resume_conflict", null, null);
         }
-        // Preserve the original paid period and class-credit usage; only extend its expiry.
-        subscription.setEndDate(subscription.getEndDate().plusDays(java.time.temporal.ChronoUnit.DAYS.between(heldOn, today)));
+        // Preserve the original paid period and class-credit usage; only extend its expiry, by at most MAX_HOLD_DAYS.
+        long heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(heldOn, today), MAX_HOLD_DAYS);
+        subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setHoldStatus(null);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
         return toDto(subscriptions.saveAndFlush(subscription));
+    }
+
+    /** Frozen memberships whose hold reached MAX_HOLD_DAYS. */
+    @Transactional(readOnly = true)
+    public List<Long> findHoldsDueForResume() {
+        LocalDateTime cutoff = LocalDateTime.now(clock).minusDays(MAX_HOLD_DAYS);
+        return subscriptions.findByStatusAndHoldStatusAndHoldResolvedAtLessThanEqual(STATUS_FROZEN, HOLD_APPROVED, cutoff)
+                .stream().map(MembershipSubscription::getId).toList();
+    }
+
+    /** Ends a hold that reached MAX_HOLD_DAYS: the membership runs again with those days added to its expiry. */
+    @Transactional
+    public boolean autoResumeHold(Long subscriptionId) {
+        MembershipSubscription lookup = subscriptions.findById(subscriptionId).orElse(null);
+        if (lookup == null || lookup.getMember() == null) return false;
+        members.findByUserIdForUpdate(lookup.getMember().getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", lookup.getMember().getUserId()));
+        MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId).orElse(null);
+        if (subscription == null) return false;
+        if (entityManager != null) entityManager.refresh(subscription);
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
+                || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
+                || subscription.getHoldResolvedAt() == null || subscription.getEndDate() == null
+                || subscription.getHoldResolvedAt().isAfter(now.minusDays(MAX_HOLD_DAYS))) {
+            return false;
+        }
+        long heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(
+                subscription.getHoldResolvedAt().toLocalDate(), now.toLocalDate()), MAX_HOLD_DAYS);
+        subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
+        subscription.setStatus(STATUS_ACTIVE);
+        subscription.setHoldStatus(null);
+        subscription.setUpdatedAt(now);
+        subscriptions.saveAndFlush(subscription);
+        if (notificationService != null) {
+            String pkgName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
+            notificationService.send(subscription.getMember().getUserId(),
+                    msg("notifications.membership.hold_auto_resumed.title"),
+                    msg("notifications.membership.hold_auto_resumed.body", pkgName, MAX_HOLD_DAYS, subscription.getEndDate()),
+                    "system", "membership_subscription", subscription.getId());
+        }
+        return true;
     }
 
     /**

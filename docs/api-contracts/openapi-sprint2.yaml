@@ -1225,7 +1225,7 @@ paths:
   /memberships/subscriptions/{id}/resume:
     post:
       summary: Mở lại gói bảo lưu miễn phí (MEMBER, SCRUM-71)
-      description: Giữ nguyên subscription, QR và số buổi đã dùng. Cộng số ngày từ ngày duyệt bảo lưu đến ngày mở lại vào endDate. Không tạo payment. Mua mới bị chặn khi còn gói frozen. Yêu cầu thanh toán cũ phải được xử lý trước khi mở lại.
+      description: Giữ nguyên subscription, QR và số buổi đã dùng. Cộng số ngày từ ngày duyệt bảo lưu đến ngày mở lại vào endDate, tối đa 90 ngày. Bảo lưu đủ 90 ngày thì hệ thống tự mở lại gói (job hằng ngày) và báo cho hội viên. Không tạo payment. Mua mới bị chặn khi còn gói frozen. Yêu cầu thanh toán cũ phải được xử lý trước khi mở lại.
       tags: [Memberships]
       parameters:
         - name: id
@@ -1274,7 +1274,8 @@ paths:
 
   /memberships/subscriptions/{id}/hold/approve:
     post:
-      summary: Lễ tân duyệt bảo lưu gói tập và tự động hủy các lịch học đã đặt trong tương lai (CENTER_MANAGER, RECEPTIONIST)
+      summary: Lễ tân duyệt bảo lưu gói tập và tự động hủy lịch lớp, PT 1:1 và lịch sân sắp tới (CENTER_MANAGER, RECEPTIONIST)
+      description: cancelledEnrollmentsCount đếm mọi lịch đã hủy. Gói tự mở lại sau tối đa 90 ngày. Hằng ngày hệ thống cũng hủy lịch lớp, PT và sân rơi vào ngày không còn gói active nào phủ (gói hết hạn, chưa gia hạn) và báo cho hội viên.
       tags: [Memberships]
       parameters:
         - name: id

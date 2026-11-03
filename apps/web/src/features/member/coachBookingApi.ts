@@ -16,7 +16,7 @@ export interface CoachAvailableSlotDto {
   startTime: string; // "08:00"
   endTime: string;   // "09:00"
   available: boolean;
-  reason: 'too_soon' | 'coach_busy' | 'member_busy' | null;
+  reason: 'too_soon' | 'coach_busy' | 'member_busy' | 'coach_on_leave' | null;
 }
 
 export interface CoachBookingDto {

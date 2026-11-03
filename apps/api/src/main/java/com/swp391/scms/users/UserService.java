@@ -70,6 +70,19 @@ public class UserService {
     @Autowired(required = false)
     com.swp391.scms.finance.repository.PaymentRepository paymentRepository;
 
+    // Commitment sources checked before an account is removed or changes role.
+    @Autowired(required = false)
+    com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollmentRepository;
+
+    @Autowired(required = false)
+    com.swp391.scms.scheduling.repository.ClassSessionRepository classSessionRepository;
+
+    @Autowired(required = false)
+    com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
+
+    @Autowired(required = false)
+    com.swp391.scms.courts.repository.CourtBookingRepository courtBookingRepository;
+
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
                        ReceptionistRepository receptionistRepository) {
@@ -205,6 +218,9 @@ public class UserService {
             if (!"ADMIN".equalsIgnoreCase(newRole.getCode())) {
                 protectLastActiveAdmin(user);
             }
+            if (user.getRole() == null || !newRole.getCode().equalsIgnoreCase(user.getRole().getCode())) {
+                ensureNoOpenCommitments(user);
+            }
             user.setRole(newRole);
             initializeStaffProfile(user);
             if ("MEMBER".equalsIgnoreCase(newRole.getCode()) && user.getMember() == null) {
@@ -225,6 +241,7 @@ public class UserService {
     public void deleteUser(Long id) {
         User user = findActiveUser(id);
         protectLastActiveAdmin(user);
+        ensureNoOpenCommitments(user);
         LocalDateTime now = LocalDateTime.now(clock);
         user.setDeletedAt(now);
         user.setUpdatedAt(now);
@@ -242,6 +259,35 @@ public class UserService {
         user.setStatus(status);
         user.setUpdatedAt(LocalDateTime.now(clock));
         return userMapper.toDto(userRepository.save(user));
+    }
+
+    /**
+     * A member who still holds a membership or upcoming bookings, or a coach who still teaches upcoming classes or
+     * 1:1 sessions, keeps their account and role until a manager has settled those first.
+     */
+    private void ensureNoOpenCommitments(User user) {
+        if (user.getRole() == null || user.getId() == null) return;
+        String role = user.getRole().getCode().toUpperCase(Locale.ROOT);
+        Long id = user.getId();
+        LocalDate today = LocalDate.now(clock);
+        if ("MEMBER".equals(role)) {
+            if (subscriptionRepository != null && subscriptionRepository.existsByMemberUserIdAndStatusInAndEndDateGreaterThanEqual(
+                    id, List.of("active", "frozen", "pending_payment"), today)) {
+                throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.membership", null, null);
+            }
+            if ((classEnrollmentRepository != null && classEnrollmentRepository.existsUpcomingBookedForMember(id, today))
+                    || (coachBookingRepository != null && coachBookingRepository.existsUpcomingForMember(id, today))
+                    || (courtBookingRepository != null && courtBookingRepository.existsUpcomingForMember(id, today))) {
+                throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.bookings", null, null);
+            }
+        } else if ("COACH".equals(role)) {
+            if (classSessionRepository != null && classSessionRepository.existsScheduledForCoachFrom(id, today)) {
+                throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.coach_classes", null, null);
+            }
+            if (coachBookingRepository != null && coachBookingRepository.existsUpcomingForCoach(id, today)) {
+                throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.coach_sessions", null, null);
+            }
+        }
     }
 
     private Role findRole(Long roleId) {

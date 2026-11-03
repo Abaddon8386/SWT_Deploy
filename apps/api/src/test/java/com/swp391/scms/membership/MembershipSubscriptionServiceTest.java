@@ -1148,4 +1148,48 @@ class MembershipSubscriptionServiceTest {
                 .isEqualByComparingTo(hasPendingPayment ? "2800000" : "299000");
     }
 
+
+    @Test
+    void holdReachingNinetyDaysResumesWithNinetyDaysAddedBack() {
+        Member member = new Member();
+        member.setUserId(10L);
+        MembershipSubscription held = new MembershipSubscription();
+        held.setId(30L);
+        held.setMember(member);
+        held.setStatus("frozen");
+        held.setHoldStatus("APPROVED");
+        held.setHoldResolvedAt(java.time.LocalDateTime.of(2026, 7, 8, 10, 0));
+        held.setStartDate(java.time.LocalDate.of(2026, 6, 1));
+        held.setEndDate(java.time.LocalDate.of(2026, 8, 1));
+        when(subscriptions.findByStatusAndHoldStatusAndHoldResolvedAtLessThanEqual(
+                "frozen", "APPROVED", java.time.LocalDateTime.of(2026, 7, 13, 10, 0))).thenReturn(List.of(held));
+        when(subscriptions.findById(30L)).thenReturn(Optional.of(held));
+        when(subscriptions.findByIdForUpdate(30L)).thenReturn(Optional.of(held));
+
+        assertThat(service.findHoldsDueForResume()).containsExactly(30L);
+        assertThat(service.autoResumeHold(30L)).isTrue();
+
+        assertThat(held.getStatus()).isEqualTo("active");
+        assertThat(held.getHoldStatus()).isNull();
+        assertThat(held.getEndDate()).isEqualTo(java.time.LocalDate.of(2026, 10, 30));
+    }
+
+    @Test
+    void recentHoldIsNotResumedAutomatically() {
+        Member member = new Member();
+        member.setUserId(10L);
+        MembershipSubscription held = new MembershipSubscription();
+        held.setId(31L);
+        held.setMember(member);
+        held.setStatus("frozen");
+        held.setHoldStatus("APPROVED");
+        held.setHoldResolvedAt(java.time.LocalDateTime.of(2026, 10, 1, 10, 0));
+        held.setEndDate(java.time.LocalDate.of(2026, 11, 1));
+        when(subscriptions.findById(31L)).thenReturn(Optional.of(held));
+        when(subscriptions.findByIdForUpdate(31L)).thenReturn(Optional.of(held));
+
+        assertThat(service.autoResumeHold(31L)).isFalse();
+        assertThat(held.getStatus()).isEqualTo("frozen");
+        assertThat(held.getEndDate()).isEqualTo(java.time.LocalDate.of(2026, 11, 1));
+    }
 }

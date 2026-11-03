@@ -640,7 +640,10 @@ export function MemberCoachBookingView({
 
               let badgeText = 'Đã kín lịch';
               let badgeColor = 'var(--portal-muted, #71717a)';
-              if (slot.reason === 'too_soon') {
+              if (slot.reason === 'coach_on_leave') {
+                badgeText = 'HLV nghỉ phép';
+                badgeColor = 'var(--portal-warning)';
+              } else if (slot.reason === 'too_soon') {
                 badgeText = 'Cần đặt trước 2 tiếng';
                 badgeColor = 'var(--portal-warning)';
               } else if (slot.reason === 'coach_busy') {

@@ -16,5 +16,8 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
     List<TrainingPlan> findByCoachUserIdOrderByCreatedAtDesc(Long coachId);
 
     List<TrainingPlan> findAllByOrderByCreatedAtDesc();
+
+    @org.springframework.data.jpa.repository.Query("select (count(p) > 0) from TrainingPlan p where p.coach.userId = :coachId and p.member.userId = :memberId")
+    boolean existsForCoachAndMember(@org.springframework.data.repository.query.Param("coachId") Long coachId, @org.springframework.data.repository.query.Param("memberId") Long memberId);
 }
 

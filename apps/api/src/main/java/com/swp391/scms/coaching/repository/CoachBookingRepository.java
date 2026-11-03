@@ -92,4 +92,33 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select cb from CoachBooking cb where cb.id = :id")
     java.util.Optional<CoachBooking> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("""
+            select (count(cb) > 0) from CoachBooking cb
+            where cb.coach.userId = :coachId and cb.member.userId = :memberId and cb.status <> 'cancelled'
+            """)
+    boolean existsForCoachAndMember(@Param("coachId") Long coachId, @Param("memberId") Long memberId);
+
+    @Query("select distinct cb.member.userId from CoachBooking cb where cb.status = 'confirmed' and cb.bookingDate >= :today")
+    List<Long> findMemberIdsWithUpcomingSessions(@Param("today") LocalDate today);
+
+    @Query("""
+            select (count(cb) > 0) from CoachBooking cb
+            where cb.member.userId = :memberId and cb.status = 'confirmed' and cb.bookingDate >= :today
+            """)
+    boolean existsUpcomingForMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
+
+    @Query("""
+            select (count(cb) > 0) from CoachBooking cb
+            where cb.coach.userId = :coachId and cb.status = 'confirmed' and cb.bookingDate >= :today
+            """)
+    boolean existsUpcomingForCoach(@Param("coachId") Long coachId, @Param("today") LocalDate today);
+
+    @Query("""
+            select count(cb) from CoachBooking cb
+            where cb.coach.userId = :coachId and cb.status = 'confirmed'
+              and cb.bookingDate between :startDate and :endDate
+            """)
+    long countConfirmedForCoachBetween(@Param("coachId") Long coachId, @Param("startDate") LocalDate startDate,
+                                       @Param("endDate") LocalDate endDate);
 }

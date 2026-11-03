@@ -153,6 +153,10 @@ public class AiRecommendationService {
             if (coachUserId != null && coachRepository != null) {
                 coach = coachRepository.findById(coachUserId).orElse(null);
             }
+            // A coach (not a manager, who has no coach profile) plans only for members they train.
+            if (coach != null && coachMemberAccess != null) {
+                coachMemberAccess.requireCoachOf(coach.getUserId(), member.getUserId());
+            }
 
             Map<String, BigDecimal> latestMetrics = readLatestMetrics(member.getUserId());
             BigDecimal height = latestMetrics.get("height");
@@ -304,6 +308,14 @@ public class AiRecommendationService {
     }
 
     @Transactional(readOnly = true)
+    public List<AiWorkoutPlanResponse> getMemberRecommendations(Long memberId, Long currentUserId, String currentRole) {
+        if (coachMemberAccess != null) {
+            coachMemberAccess.requireAccess(currentUserId, currentRole, memberId);
+        }
+        return getMemberRecommendations(memberId);
+    }
+
+    @Transactional(readOnly = true)
     public List<AiWorkoutPlanResponse> getMemberRecommendations(Long memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("resource.member", memberId);
@@ -442,4 +454,7 @@ public class AiRecommendationService {
     public AiClient getAiClient() {
         return aiClient;
     }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.coaching.service.CoachMemberAccess coachMemberAccess;
 }

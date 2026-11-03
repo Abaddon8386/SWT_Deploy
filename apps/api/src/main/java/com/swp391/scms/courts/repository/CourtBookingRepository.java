@@ -55,4 +55,13 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
             where b.member.id = :memberId and b.status = 'booked' and b.bookingDate >= :today
             """)
     List<CourtBooking> findUpcomingBookedByMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
+
+    @Query("select distinct b.member.id from CourtBooking b where b.status = 'booked' and b.bookingDate >= :today")
+    List<Long> findMemberIdsWithUpcomingBookings(@Param("today") LocalDate today);
+
+    @Query("""
+            select (count(b) > 0) from CourtBooking b
+            where b.member.id = :memberId and b.status = 'booked' and b.bookingDate >= :today
+            """)
+    boolean existsUpcomingForMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 }
