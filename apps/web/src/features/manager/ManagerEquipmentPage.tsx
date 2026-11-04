@@ -56,17 +56,48 @@ export function ManagerEquipmentPage() {
 
   // Modal editor
   const [editing, setEditing] = useState<{ id: number | null; form: FormState } | null>(null);
+  const [tierMode, setTierMode] = useState<'STANDARD' | 'VIP' | 'OTHER'>('STANDARD');
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [eqList, roomList] = await Promise.all([
+      const [eqList, initialRooms] = await Promise.all([
         equipmentApi.list(),
         catalogApi.rooms(),
       ]);
+      let roomList = initialRooms;
+      const hasStd = roomList.some((r) => r.name.toLowerCase().includes('tiêu chuẩn'));
+      const hasVip = roomList.some((r) => r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'));
+      if (!hasStd || !hasVip) {
+        try {
+          if (!hasStd) {
+            const newStd = await catalogApi.saveRoom(null, {
+              name: 'Phòng Gym Tiêu chuẩn',
+              location: 'Tầng 1 - Khu Gym Chính',
+              capacity: 50,
+              status: 'available',
+              tier: 'STANDARD',
+            });
+            roomList = [...roomList, newStd];
+          }
+          if (!hasVip) {
+            const newVip = await catalogApi.saveRoom(null, {
+              name: 'Phòng Gym VIP',
+              location: 'Tầng 2 - Khu VIP Platinum',
+              capacity: 25,
+              status: 'available',
+              tier: 'PLATINUM',
+            });
+            roomList = [...roomList, newVip];
+          }
+        } catch {
+          // Non-blocking fallback
+        }
+      }
       setItems(eqList);
       setRooms(roomList);
     } catch (err) {
@@ -122,6 +153,11 @@ export function ManagerEquipmentPage() {
   const openEditor = (id: number | null, item?: Equipment) => {
     setFormError('');
     if (item) {
+      let mode: 'STANDARD' | 'VIP' | 'OTHER' = 'OTHER';
+      if (isVipItem(item)) mode = 'VIP';
+      else if (isStandardGymItem(item)) mode = 'STANDARD';
+      setTierMode(mode);
+
       setEditing({
         id,
         form: {
@@ -137,16 +173,138 @@ export function ManagerEquipmentPage() {
         },
       });
     } else {
-      // Default to standard or vip room if currently filtered
+      let defaultMode: 'STANDARD' | 'VIP' | 'OTHER';
       let defaultRoomId = '';
+
       if (areaTab === 'VIP') {
+        defaultMode = 'VIP';
         const vip = rooms.find((r) => r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'));
         if (vip) defaultRoomId = String(vip.id);
-      } else if (areaTab === 'STANDARD') {
-        const std = rooms.find((r) => r.name.toLowerCase().includes('tiêu chuẩn'));
+      } else {
+        defaultMode = 'STANDARD';
+        const std = rooms.find((r) => r.name.toLowerCase().includes('tiêu chuẩn') || (r.name.toLowerCase().includes('gym') && r.tier !== 'PLATINUM'));
         if (std) defaultRoomId = String(std.id);
       }
+
+      setTierMode(defaultMode);
       setEditing({ id: null, form: { ...emptyForm(), roomId: defaultRoomId } });
+    }
+  };
+
+  const handleSelectTier = async (mode: 'STANDARD' | 'VIP' | 'OTHER') => {
+    setTierMode(mode);
+    if (mode === 'VIP') {
+      let vip = rooms.find((r) => r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'));
+      if (!vip) {
+        try {
+          vip = await catalogApi.saveRoom(null, {
+            name: 'Phòng Gym VIP',
+            location: 'Tầng 2 - Khu VIP Platinum',
+            capacity: 25,
+            status: 'available',
+            tier: 'PLATINUM',
+          });
+          setRooms((prev) => [...prev, vip!]);
+        } catch {
+          // ignore
+        }
+      }
+      if (vip) {
+        setFormField('roomId', String(vip.id));
+      }
+    } else if (mode === 'STANDARD') {
+      let std = rooms.find((r) => r.name.toLowerCase().includes('tiêu chuẩn') || (r.name.toLowerCase().includes('gym') && r.tier !== 'PLATINUM'));
+      if (!std) {
+        try {
+          std = await catalogApi.saveRoom(null, {
+            name: 'Phòng Gym Tiêu chuẩn',
+            location: 'Tầng 1 - Khu Gym Chính',
+            capacity: 50,
+            status: 'available',
+            tier: 'STANDARD',
+          });
+          setRooms((prev) => [...prev, std!]);
+        } catch {
+          // ignore
+        }
+      }
+      if (std) {
+        setFormField('roomId', String(std.id));
+      }
+    } else {
+      setFormField('roomId', '');
+    }
+  };
+
+  const onRoomChange = (newRoomId: string) => {
+    setFormField('roomId', newRoomId);
+    if (!newRoomId) {
+      setTierMode('OTHER');
+      return;
+    }
+    const r = rooms.find((room) => String(room.id) === newRoomId);
+    if (r && (r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'))) {
+      setTierMode('VIP');
+    } else if (r && (r.name.toLowerCase().includes('tiêu chuẩn') || r.name.toLowerCase().includes('gym'))) {
+      setTierMode('STANDARD');
+    } else {
+      setTierMode('OTHER');
+    }
+  };
+
+  const handleQuickSeed = async () => {
+    setIsSeeding(true);
+    try {
+      let roomList = rooms;
+      let std = roomList.find((r) => r.name.toLowerCase().includes('tiêu chuẩn') || (r.name.toLowerCase().includes('gym') && r.tier !== 'PLATINUM'));
+      let vip = roomList.find((r) => r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'));
+
+      if (!std) {
+        std = await catalogApi.saveRoom(null, {
+          name: 'Phòng Gym Tiêu chuẩn',
+          location: 'Tầng 1 - Khu Gym Chính',
+          capacity: 50,
+          status: 'available',
+          tier: 'STANDARD',
+        });
+        roomList = [...roomList, std];
+      }
+      if (!vip) {
+        vip = await catalogApi.saveRoom(null, {
+          name: 'Phòng Gym VIP',
+          location: 'Tầng 2 - Khu VIP Platinum',
+          capacity: 25,
+          status: 'available',
+          tier: 'PLATINUM',
+        });
+        roomList = [...roomList, vip];
+      }
+      setRooms(roomList);
+
+      const sampleItems: EquipmentInput[] = [
+        { name: 'Máy chạy bộ điện Commercial Pro', code: 'EQ-RUN-01', category: 'Cardio', roomId: std.id, quantity: 8, status: 'active', note: 'Bảo hành 3 năm' },
+        { name: 'Xe đạp tập Upright Bike', code: 'EQ-BIKE-01', category: 'Cardio', roomId: std.id, quantity: 6, status: 'active', note: 'Kháng lực từ 16 cấp' },
+        { name: 'Giàn tạ đa năng Smith Machine', code: 'EQ-SMI-01', category: 'Strength', roomId: std.id, quantity: 3, status: 'active', note: 'Thanh đòn đối trọng trợ lực' },
+        { name: 'Máy kéo xô đôi Dual Lat Pulldown', code: 'EQ-LAT-01', category: 'Strength', roomId: std.id, quantity: 2, status: 'active', note: 'Dây cáp bọc nilon chịu lực' },
+        { name: 'Dàn tạ tay cao su Dumbbell (2.5-40kg)', code: 'EQ-DUMB-01', category: 'Free Weights', roomId: std.id, quantity: 2, status: 'active', note: 'Giá tạ 3 tầng chống trượt' },
+        { name: 'Khung gánh tạ Squat Rack', code: 'EQ-SQUAT-01', category: 'Strength', roomId: std.id, quantity: 2, status: 'active', note: 'Chốt an toàn đa nấc' },
+        { name: 'Ghế đẩy ngực đa năng Adjustable Bench', code: 'EQ-BENCH-01', category: 'Free Weights', roomId: std.id, quantity: 6, status: 'active', note: 'Điều chỉnh độ dốc 0-90 độ' },
+        { name: 'Máy chạy bộ cao cấp Technogym Artis Run', code: 'EQ-VIP-RUN-01', category: 'Cardio', roomId: vip.id, quantity: 4, status: 'active', note: 'Màn hình cảm ứng Live 21.5 inch' },
+        { name: 'Máy tập toàn thân Synchro Elliptical VIP', code: 'EQ-VIP-SYN-01', category: 'Cardio', roomId: vip.id, quantity: 3, status: 'active', note: 'Chuyển động công thái học êm ái' },
+        { name: 'Dàn tạ khối thông minh Technogym Kinesis One', code: 'EQ-VIP-KIN-01', category: 'Strength', roomId: vip.id, quantity: 2, status: 'active', note: 'Công nghệ FullGravity 3 chiều' },
+        { name: 'Dàn tạ đơn Urethane bọc crôm VIP', code: 'EQ-VIP-DUMB-01', category: 'Free Weights', roomId: vip.id, quantity: 1, status: 'active', note: 'Chống mài mòn, bọc crôm sang trọng' },
+        { name: 'Máy đo chỉ số cơ thể chuyên sâu InBody 770', code: 'EQ-VIP-INBODY-01', category: 'Diagnostic', roomId: vip.id, quantity: 1, status: 'active', note: 'Phân tích thành phần mỡ cơ chuyên sâu' },
+      ];
+
+      for (const it of sampleItems) {
+        await equipmentApi.save(null, it);
+      }
+      toast('Đã khởi tạo thành công 12 máy móc mẫu cho Phòng Gym Tiêu chuẩn và VIP!', 'success');
+      await loadData();
+    } catch (err) {
+      toast(errorMessage(err, 'Khởi tạo máy móc mẫu thất bại.'), 'error');
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -503,9 +661,21 @@ export function ManagerEquipmentPage() {
             <p style={{ color: 'var(--color-text-muted)' }}>
               Chưa có máy móc thiết bị nào phù hợp với bộ lọc hoặc cơ sở dữ liệu đang trống.
             </p>
-            <button type="button" className="btn-primary" onClick={() => openEditor(null)}>
-              Thêm thiết bị mới
-            </button>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+              <button type="button" className="btn-primary" onClick={() => openEditor(null)}>
+                + Thêm thiết bị mới
+              </button>
+              {items.length === 0 && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={isSeeding}
+                  onClick={() => void handleQuickSeed()}
+                >
+                  {isSeeding ? 'Đang nạp dữ liệu...' : '⚡ Nạp 12 máy móc mẫu (Gym Tiêu chuẩn & VIP)'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ) : (
@@ -690,6 +860,110 @@ export function ManagerEquipmentPage() {
               </div>
             </div>
 
+            {/* Phân loại phòng tập Gym: Tiêu chuẩn vs VIP */}
+            <div className="portal-form-group" style={{ marginBottom: 16 }}>
+              <label className="portal-label" style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                Phân loại phòng tập Gym <span style={{ color: 'var(--color-primary, #e25845)' }}>*</span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px' }}>
+                <button
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: tierMode === 'STANDARD' ? '2px solid #0284c7' : '1px solid var(--color-border, #e5e7eb)',
+                    background: tierMode === 'STANDARD' ? 'rgba(2, 132, 199, 0.12)' : 'var(--color-surface, #fff)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onClick={() => void handleSelectTier('STANDARD')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '24px' }}>🏋️</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: tierMode === 'STANDARD' ? '#0284c7' : 'inherit' }}>
+                        Gym Tiêu chuẩn
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                        Mọi hội viên tập luyện
+                      </div>
+                    </div>
+                  </div>
+                  {tierMode === 'STANDARD' && (
+                    <span style={{ color: '#0284c7', fontWeight: 800, fontSize: '1.2rem', marginLeft: 6 }}>✓</span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: tierMode === 'VIP' ? '2px solid #f59e0b' : '1px solid var(--color-border, #e5e7eb)',
+                    background: tierMode === 'VIP' ? 'rgba(245, 158, 11, 0.12)' : 'var(--color-surface, #fff)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onClick={() => void handleSelectTier('VIP')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '24px' }}>👑</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: tierMode === 'VIP' ? '#d97706' : 'inherit' }}>
+                        Gym VIP Platinum
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                        Đặc quyền hội viên Platinum
+                      </div>
+                    </div>
+                  </div>
+                  {tierMode === 'VIP' && (
+                    <span style={{ color: '#d97706', fontWeight: 800, fontSize: '1.2rem', marginLeft: 6 }}>✓</span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: tierMode === 'OTHER' ? '2px solid var(--color-primary, #e25845)' : '1px solid var(--color-border, #e5e7eb)',
+                    background: tierMode === 'OTHER' ? 'rgba(226, 88, 69, 0.1)' : 'var(--color-surface, #fff)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onClick={() => void handleSelectTier('OTHER')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '24px' }}>🏢</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: tierMode === 'OTHER' ? 'var(--color-primary, #e25845)' : 'inherit' }}>
+                        Phòng khác / Kho
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                        Bơi, Yoga hoặc kho tổng
+                      </div>
+                    </div>
+                  </div>
+                  {tierMode === 'OTHER' && (
+                    <span style={{ color: 'var(--color-primary, #e25845)', fontWeight: 800, fontSize: '1.2rem', marginLeft: 6 }}>✓</span>
+                  )}
+                </button>
+              </div>
+            </div>
+
             <div className="grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="eq-room">Khu vực phòng tập lắp đặt *</label>
@@ -697,7 +971,7 @@ export function ManagerEquipmentPage() {
                   id="eq-room"
                   className="portal-select"
                   value={editing.form.roomId}
-                  onChange={(e) => setFormField('roomId', e.target.value)}
+                  onChange={(e) => onRoomChange(e.target.value)}
                 >
                   <option value="">-- Kho tổng / Chưa xếp phòng --</option>
                   {vipRooms.length > 0 && (
