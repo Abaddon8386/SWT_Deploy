@@ -29,6 +29,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/manager/reports', label: 'Báo cáo & Doanh thu', icon: 'chart', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/equipment', label: 'Quản lý máy móc thiết bị', icon: 'dumbbell', roles: ['MANAGER'] },
+  { to: '/manager/coach-assignments', label: 'Theo dõi HLV & Học viên', icon: 'users', roles: ['MANAGER'] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/manager/support', label: 'Khiếu nại chuyển lên', icon: 'inbox', roles: ['MANAGER'] },
   { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'users', roles: ['MANAGER'] },

@@ -203,6 +203,10 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/manager/ManagerEquipmentPage')).ManagerEquipmentPage }),
           },
           {
+            path: '/manager/coach-assignments',
+            lazy: async () => ({ Component: (await import('../features/manager/ManagerCoachAssignmentsPage')).ManagerCoachAssignmentsPage }),
+          },
+          {
             path: '/manager/staff-accounts',
             lazy: async () => ({ Component: (await import('../features/manager/StaffAccountsPage')).StaffAccountsPage }),
           },
