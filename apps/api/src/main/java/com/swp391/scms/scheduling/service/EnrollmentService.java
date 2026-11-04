@@ -109,6 +109,22 @@ public class EnrollmentService {
         SessionEligibility.ensureBookable(session, clock);
         SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), session.getSessionDate(), clock);
 
+        var room = gymClass.getRoom();
+        if (room != null && "PLATINUM".equalsIgnoreCase(room.getTier())) {
+            var sessionDate = session.getSessionDate();
+            boolean hasPlatinum = subscriptions.findByMemberUserIdAndStatus(member.getUserId(), "active").stream()
+                    .anyMatch(sub -> !sub.getStartDate().isAfter(sessionDate)
+                            && !sub.getEndDate().isBefore(sessionDate)
+                            && sub.getMembershipPackage() != null
+                            && sub.getMembershipPackage().getName() != null
+                            && sub.getMembershipPackage().getName().toUpperCase(java.util.Locale.ROOT).contains("PLATINUM"));
+            if (!hasPlatinum) {
+                throw new ForbiddenException("SCHEDULING_ROOM_PLATINUM_REQUIRED",
+                        "error.scheduling.room_platinum_required", null,
+                        "Phòng Gym VIP chỉ dành cho hội viên sở hữu gói Platinum");
+            }
+        }
+
         if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED)
                 .isPresent()) {
             throw new ConflictException(

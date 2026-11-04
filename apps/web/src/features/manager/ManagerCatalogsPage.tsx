@@ -66,7 +66,7 @@ export function ManagerCatalogsPage() {
     tab === 'disciplines'
       ? { name: '', description: '' }
       : tab === 'rooms'
-        ? { name: '', location: '', capacity: '10', status: 'available', disciplineId: '', openTime: '06:00', closeTime: '22:00' }
+        ? { name: '', location: '', capacity: '10', status: 'available', disciplineId: '', openTime: '06:00', closeTime: '22:00', tier: 'STANDARD' }
         : { name: '', description: '', price: '', durationDays: '30', classCreditLimit: '', status: 'active' };
 
   const submit = (e: React.FormEvent) => {
@@ -93,6 +93,7 @@ export function ManagerCatalogsPage() {
           disciplineId: f.disciplineId ? Number(f.disciplineId) : null,
           openTime: f.disciplineId ? f.openTime : null,
           closeTime: f.disciplineId ? f.closeTime : null,
+          tier: (f.tier as Room['tier']) || 'STANDARD',
         });
       }
       return catalogApi.savePackage(id, {
@@ -217,6 +218,13 @@ export function ManagerCatalogsPage() {
                   <label className="portal-form-group" htmlFor="cat-open"><span className="portal-label">Giờ mở cửa</span><input id="cat-open" className="portal-input" type="time" step="3600" required value={editing.form.openTime ?? ''} onChange={event => set('openTime', event.target.value)} /></label>
                   <label className="portal-form-group" htmlFor="cat-close"><span className="portal-label">Giờ đóng cửa</span><input id="cat-close" className="portal-input" type="time" step="3600" required value={editing.form.closeTime ?? ''} onChange={event => set('closeTime', event.target.value)} /></label>
                 </div>}
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor="cat-tier">Phân hạng phòng</label>
+                  <Select id="cat-tier" className="portal-select" value={editing.form.tier || 'STANDARD'} onChange={(e) => set('tier', e.target.value)}>
+                    <option value="STANDARD">Tiêu chuẩn (Mọi hội viên)</option>
+                    <option value="PLATINUM">VIP (Chỉ dành cho Platinum)</option>
+                  </Select>
+                </div>
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="cat-location">Vị trí / tầng</label>
                   <input
@@ -430,6 +438,7 @@ export function ManagerCatalogsPage() {
                   <thead>
                     <tr>
                       <th>Phòng tập</th>
+                      <th>Phân hạng</th>
                       <th>Vị trí</th>
                       <th>Sức chứa</th>
                       <th>Trạng thái</th>
@@ -440,6 +449,13 @@ export function ManagerCatalogsPage() {
                     {rooms.map((r) => (
                       <tr key={r.id}>
                         <td><strong>{r.name}</strong>{r.disciplineName && <div className="muted">{r.disciplineName}{r.openTime && r.closeTime ? ` · ${r.openTime.slice(0, 5)}–${r.closeTime.slice(0, 5)}` : ''}</div>}</td>
+                        <td>
+                          {r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip') ? (
+                            <span className="badge badge-primary" style={{ backgroundColor: 'rgba(235, 114, 91, 0.2)', color: 'var(--color-brand-salmon, #eb725b)', border: '1px solid rgba(235, 114, 91, 0.4)' }}>VIP · Platinum</span>
+                          ) : (
+                            <span className="badge badge-secondary">Tiêu chuẩn</span>
+                          )}
+                        </td>
                         <td>{r.location || <span className="muted">—</span>}</td>
                         <td><strong>{r.capacity} người</strong></td>
                         <td>
@@ -454,7 +470,7 @@ export function ManagerCatalogsPage() {
                             onClick={() =>
                               openEditor({
                                 id: r.id,
-                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, disciplineId: r.disciplineId == null ? '' : String(r.disciplineId), openTime: r.openTime?.slice(0, 5) ?? '', closeTime: r.closeTime?.slice(0, 5) ?? '' },
+                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, disciplineId: r.disciplineId == null ? '' : String(r.disciplineId), openTime: r.openTime?.slice(0, 5) ?? '', closeTime: r.closeTime?.slice(0, 5) ?? '', tier: r.tier || (r.name.toLowerCase().includes('vip') ? 'PLATINUM' : 'STANDARD') },
                               })
                             }
                           >

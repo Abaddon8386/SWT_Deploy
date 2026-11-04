@@ -67,6 +67,11 @@ public class RoomService {
         if (request.status() != null) {
             room.setStatus(request.status());
         }
+        if (request.tier() != null && !request.tier().isBlank()) {
+            room.setTier(request.tier().trim().toUpperCase(java.util.Locale.ROOT));
+        } else if (room.getTier() == null) {
+            room.setTier("STANDARD");
+        }
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)

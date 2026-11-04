@@ -134,11 +134,13 @@ public class CatalogSeeder implements ApplicationRunner {
         upsertDiscipline("Cầu lông", "Bộ chân, phản xạ và kỹ thuật đánh cầu");
         upsertDiscipline("Yoga", "Hơi thở, thăng bằng và giãn cơ", "Mindful Yoga");
         if (rooms.list().isEmpty()) {
-            rooms.create(new RoomRequest("Studio 01", "Level 2 - North Wing", 12, "available"));
-            rooms.create(new RoomRequest("Arena 02 (Strength)", "Level 1 - Main Floor", 25, "available"));
-            rooms.create(new RoomRequest("Zen Garden Studio", "Penthouse", 18, "available"));
-            rooms.create(new RoomRequest("Ring Arena 01", "Level 1 - East Wing", 14, "maintenance"));
-            rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available"));
+            rooms.create(new RoomRequest("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", null, null, null, "STANDARD"));
+            rooms.create(new RoomRequest("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", null, null, null, "PLATINUM"));
+            rooms.create(new RoomRequest("Zen Garden Studio", "Penthouse", 18, "available", null, null, null, "STANDARD"));
+            rooms.create(new RoomRequest("Ring Arena 01", "Level 1 - East Wing", 14, "maintenance", null, null, null, "STANDARD"));
+            rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available", null, null, null, "STANDARD"));
+        } else {
+            migrateGymRooms();
         }
 
         // Upsert 1-month base packages
@@ -155,6 +157,27 @@ public class CatalogSeeder implements ApplicationRunner {
         for (String retired : new String[] {SILVER_6M_NAME, GOLD_6M_NAME, PLATINUM_6M_NAME,
                 SILVER_12M_NAME, GOLD_12M_NAME, PLATINUM_12M_NAME}) {
             retirePackage(retired);
+        }
+    }
+
+    private void migrateGymRooms() {
+        var existing = rooms.list();
+        boolean hasStandard = existing.stream().anyMatch(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.name()));
+        boolean hasVip = existing.stream().anyMatch(r -> "Phòng Gym VIP".equalsIgnoreCase(r.name()));
+
+        if (!hasStandard) {
+            var legacy = existing.stream().filter(r -> "Arena 02 (Strength)".equalsIgnoreCase(r.name())).findFirst();
+            if (legacy.isPresent()) {
+                var l = legacy.get();
+                rooms.update(l.id(), new RoomRequest("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, l.status(), l.disciplineId(), l.openTime(), l.closeTime(), "STANDARD"));
+            }
+        }
+        if (!hasVip) {
+            var legacy = existing.stream().filter(r -> "Studio 01".equalsIgnoreCase(r.name())).findFirst();
+            if (legacy.isPresent()) {
+                var l = legacy.get();
+                rooms.update(l.id(), new RoomRequest("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, l.status(), l.disciplineId(), l.openTime(), l.closeTime(), "PLATINUM"));
+            }
         }
     }
 

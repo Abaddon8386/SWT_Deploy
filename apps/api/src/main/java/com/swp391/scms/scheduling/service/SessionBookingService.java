@@ -158,6 +158,22 @@ public class SessionBookingService {
         SessionEligibility.ensureBookable(session, clock);
         SessionEligibility.ensureMembershipCoversSession(subscriptions, memberId, session.getSessionDate(), clock);
 
+        var room = gymClass.getRoom();
+        if (room != null && "PLATINUM".equalsIgnoreCase(room.getTier())) {
+            var sessionDate = session.getSessionDate();
+            boolean hasPlatinum = subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
+                    .anyMatch(sub -> !sub.getStartDate().isAfter(sessionDate)
+                            && !sub.getEndDate().isBefore(sessionDate)
+                            && sub.getMembershipPackage() != null
+                            && sub.getMembershipPackage().getName() != null
+                            && sub.getMembershipPackage().getName().toUpperCase(java.util.Locale.ROOT).contains("PLATINUM"));
+            if (!hasPlatinum) {
+                throw new ForbiddenException("SCHEDULING_ROOM_PLATINUM_REQUIRED",
+                        "error.scheduling.room_platinum_required", null,
+                        "Phòng Gym VIP chỉ dành cho hội viên sở hữu gói Platinum");
+            }
+        }
+
         if (bookings.existsBySessionIdAndMemberUserIdAndStatus(session.getId(), memberId, BOOKED)) {
             throw new ConflictException("SCHEDULING_SESSION_ALREADY_BOOKED", "error.scheduling.session_already_booked",
                     null, "Member already booked this session");

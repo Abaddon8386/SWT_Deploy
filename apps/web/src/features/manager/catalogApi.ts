@@ -17,6 +17,7 @@ export interface Room {
   disciplineName?: string | null;
   openTime?: string | null;
   closeTime?: string | null;
+  tier?: 'STANDARD' | 'PLATINUM' | string | null;
 }
 
 export interface MembershipPackage {

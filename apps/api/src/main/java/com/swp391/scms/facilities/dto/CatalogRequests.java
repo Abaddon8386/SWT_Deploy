@@ -19,9 +19,13 @@ public final class CatalogRequests {
             @Size(max = 150, message = "{validation.catalog.location.size}") String location,
             @Min(value = 1, message = "{validation.catalog.capacity.min}") int capacity,
             @Pattern(regexp = "available|maintenance|closed", message = "{validation.catalog.room_status.pattern}") String status,
-            Long disciplineId, LocalTime openTime, LocalTime closeTime) {
+            Long disciplineId, LocalTime openTime, LocalTime closeTime,
+            String tier) {
         public RoomRequest(String name, String location, int capacity, String status) {
-            this(name, location, capacity, status, null, null, null);
+            this(name, location, capacity, status, null, null, null, "STANDARD");
+        }
+        public RoomRequest(String name, String location, int capacity, String status, Long disciplineId, LocalTime openTime, LocalTime closeTime) {
+            this(name, location, capacity, status, disciplineId, openTime, closeTime, "STANDARD");
         }
     }
 
