@@ -209,11 +209,17 @@ public class RevenueReportService {
             return List.of();
         }
 
-        LocalDateTime startTs = startDate != null ? startDate.atStartOfDay() : null;
-        LocalDateTime endTs = endDate != null ? endDate.plusDays(1).atStartOfDay() : null;
+        LocalDate start = startDate != null ? startDate : LocalDate.of(2000, 1, 1);
+        LocalDate end = endDate != null ? endDate : LocalDate.of(2099, 12, 31);
+        LocalDateTime startTs = startDate != null ? startDate.atStartOfDay() : LocalDateTime.of(2000, 1, 1, 0, 0, 0);
+        LocalDateTime endTs = endDate != null ? endDate.plusDays(1).atStartOfDay() : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
 
-        List<SessionAttendanceReportRepository.ClassUtilizationRow> rows =
-                sessionAttendanceReportRepository.classUtilization(startDate, endDate, startTs, endTs, disciplineId);
+        List<SessionAttendanceReportRepository.ClassUtilizationRow> rows;
+        if (disciplineId != null) {
+            rows = sessionAttendanceReportRepository.classUtilizationByDiscipline(start, end, startTs, endTs, disciplineId);
+        } else {
+            rows = sessionAttendanceReportRepository.classUtilizationAll(start, end, startTs, endTs);
+        }
         if (rows == null) {
             return List.of();
         }
