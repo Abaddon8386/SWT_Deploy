@@ -1,17 +1,28 @@
 package com.swp391.scms.reports.dto;
 
-/**
- * DTO representing utilization and attendance metrics for a class and its discipline (SCRUM-120).
- */
 public record ClassUtilizationDto(
         Long classId,
         String className,
         Long disciplineId,
         String disciplineName,
-        int capacity,
-        long enrolledCount,
-        long presentCount,
-        double utilizationRate,
-        double attendanceRate
+        String roomName,
+        Integer capacity,
+        Long enrolledCount,
+        Long presentCount,
+        Double utilizationRate,
+        Double attendanceRate
 ) {
+    public ClassUtilizationDto(
+            Long classId,
+            String className,
+            Long disciplineId,
+            String disciplineName,
+            Integer capacity,
+            Long enrolledCount,
+            Long presentCount,
+            Double utilizationRate,
+            Double attendanceRate
+    ) {
+        this(classId, className, disciplineId, disciplineName, null, capacity, enrolledCount, presentCount, utilizationRate, attendanceRate);
+    }
 }

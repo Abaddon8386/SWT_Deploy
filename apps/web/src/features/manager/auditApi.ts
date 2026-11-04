@@ -37,6 +37,7 @@ export interface ClassOccupancyItem {
   className: string;
   disciplineId: number | null;
   disciplineName: string | null;
+  roomName?: string | null;
   capacity: number;
   enrolledCount: number;
   presentCount: number;
