@@ -232,15 +232,6 @@ export function ManagerEquipmentPage() {
     }
   };
 
-  const onRoomChange = (newRoomId: string) => {
-    setFormField('roomId', newRoomId);
-    const r = rooms.find((room) => String(room.id) === newRoomId);
-    if (r && (r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'))) {
-      setTierMode('VIP');
-    } else {
-      setTierMode('STANDARD');
-    }
-  };
 
   const handleQuickSeed = async () => {
     setIsSeeding(true);
@@ -355,11 +346,50 @@ export function ManagerEquipmentPage() {
     setIsSubmitting(true);
     setFormError('');
 
+    let finalRoomId = f.roomId ? parseInt(f.roomId, 10) : undefined;
+    if (!finalRoomId) {
+      if (tierMode === 'VIP') {
+        let vip = rooms.find((r) => r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'));
+        if (!vip) {
+          try {
+            vip = await catalogApi.saveRoom(null, {
+              name: 'Phòng Gym VIP',
+              location: 'Tầng 2 - Khu VIP Platinum',
+              capacity: 25,
+              status: 'available',
+              tier: 'PLATINUM',
+            });
+            setRooms((prev) => [...prev, vip!]);
+          } catch {
+            // ignore
+          }
+        }
+        finalRoomId = vip?.id;
+      } else {
+        let std = rooms.find((r) => r.name.toLowerCase().includes('tiêu chuẩn') || (r.name.toLowerCase().includes('gym') && r.tier !== 'PLATINUM'));
+        if (!std) {
+          try {
+            std = await catalogApi.saveRoom(null, {
+              name: 'Phòng Gym Tiêu chuẩn',
+              location: 'Tầng 1 - Khu Gym Chính',
+              capacity: 50,
+              status: 'available',
+              tier: 'STANDARD',
+            });
+            setRooms((prev) => [...prev, std!]);
+          } catch {
+            // ignore
+          }
+        }
+        finalRoomId = std?.id;
+      }
+    }
+
     const payload: EquipmentInput = {
       name: f.name.trim(),
       code: f.code.trim() || undefined,
       category: f.category,
-      roomId: f.roomId ? parseInt(f.roomId, 10) : undefined,
+      roomId: finalRoomId,
       quantity: qty,
       status: f.status,
       purchaseDate: f.purchaseDate || undefined,
@@ -852,17 +882,17 @@ export function ManagerEquipmentPage() {
 
             <div className="grid-2">
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="eq-room">
+                <label className="portal-label">
                   Khu vực phòng tập lắp đặt *
                 </label>
-                {/* 2 lựa chọn phân loại: Gym Tiêu chuẩn hoặc Gym VIP */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                {/* 2 lựa chọn phân loại phòng gym: Gym Tiêu chuẩn hoặc Gym VIP */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', height: '42px' }}>
                   <button
                     type="button"
                     style={{
                       padding: '8px 12px',
                       borderRadius: '6px',
-                      fontSize: '0.84rem',
+                      fontSize: '0.88rem',
                       fontWeight: tierMode === 'STANDARD' ? 700 : 500,
                       border: tierMode === 'STANDARD' ? '2px solid #0284c7' : '1px solid var(--color-border, #e5e7eb)',
                       background: tierMode === 'STANDARD' ? 'rgba(2, 132, 199, 0.12)' : 'var(--color-surface, #fff)',
@@ -882,7 +912,7 @@ export function ManagerEquipmentPage() {
                     style={{
                       padding: '8px 12px',
                       borderRadius: '6px',
-                      fontSize: '0.84rem',
+                      fontSize: '0.88rem',
                       fontWeight: tierMode === 'VIP' ? 700 : 500,
                       border: tierMode === 'VIP' ? '2px solid #d97706' : '1px solid var(--color-border, #e5e7eb)',
                       background: tierMode === 'VIP' ? 'rgba(245, 158, 11, 0.12)' : 'var(--color-surface, #fff)',
@@ -897,32 +927,6 @@ export function ManagerEquipmentPage() {
                     Gym VIP
                   </button>
                 </div>
-
-                <Select
-                  id="eq-room"
-                  className="portal-select"
-                  value={editing.form.roomId}
-                  onChange={(e) => onRoomChange(e.target.value)}
-                >
-                  {vipRooms.length > 0 && (
-                    <optgroup label="-- KHU VỰC GYM VIP (PLATINUM) --">
-                      {vipRooms.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name} (VIP Platinum)
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {standardGymRooms.length > 0 && (
-                    <optgroup label="-- KHU VỰC GYM TIÊU CHUẨN --">
-                      {standardGymRooms.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name} (Tiêu chuẩn)
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </Select>
               </div>
 
               <div className="portal-form-group">
