@@ -164,7 +164,7 @@ class MemberTrialServiceTest {
         assertEquals(LocalDate.now(clock).plusDays(3), result.endDate());
 
         verify(trialRedemptions).saveAndFlush(any(MemberTrialRedemption.class));
-        verify(notifications).send(eq(10L), anyString(), anyString(), eq("membership"), eq("memberships"), eq(200L));
+        verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("membership_subscription"), eq(200L));
     }
 
     @Test

@@ -355,6 +355,18 @@ BEGIN
         EXECUTE format('ALTER TABLE %I.membership_subscriptions DROP CONSTRAINT IF EXISTS ck_subscriptions_status', current_schema());
         EXECUTE format('ALTER TABLE %I.membership_subscriptions ADD CONSTRAINT ck_subscriptions_status CHECK (status IN (''pending_payment'',''active'',''frozen'',''expired'',''cancelled''))', current_schema());
     END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'member_trial_redemptions'
+          AND column_name = 'cccd'
+          AND is_nullable = 'NO'
+    ) THEN
+        EXECUTE format('ALTER TABLE %I.member_trial_redemptions ALTER COLUMN cccd DROP NOT NULL', current_schema());
+        EXECUTE format('ALTER TABLE %I.member_trial_redemptions DROP CONSTRAINT IF EXISTS uq_trial_cccd', current_schema());
+    END IF;
 END;
 $$;
 
