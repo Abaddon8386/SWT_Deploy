@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   MemberCoachBookingView,
+  COACH_FILTER_DISCIPLINES,
+  matchesCoachDiscipline,
 } from './MemberCoachBookingView';
 import {
   formatCoachName,
@@ -213,5 +215,162 @@ describe('MemberCoachBookingView membership notice', () => {
     await render();
     expect(host.textContent).toContain('Gói SILVER không bao gồm lượt tập PT 1:1 miễn phí.');
     expect(host.textContent).not.toContain(NO_PACKAGE_NOTICE);
+  });
+});
+
+describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
+  it('has ALL, Gym, Boxing, Yoga as filter disciplines', () => {
+    expect(COACH_FILTER_DISCIPLINES).toEqual(['ALL', 'Gym', 'Boxing', 'Yoga']);
+  });
+
+  it('matches coaches by discipline patterns accurately', () => {
+    const gymCoach = {
+      id: 1,
+      fullName: 'Huỳnh Đắc Tài',
+      email: 'tai@example.com',
+      phone: '0901234567',
+      specialization: 'Fitness & Cardio',
+      bio: 'Chuyên gia huấn luyện thể hình và phục hồi thể lực.',
+      certification: 'NASM',
+      avatarUrl: null,
+      defaultHourlyRate: 200000,
+    };
+    const multiCoach = {
+      id: 2,
+      fullName: 'Nguyễn Minh Quân',
+      email: 'quan@example.com',
+      phone: '0901234568',
+      specialization: 'Yoga & Strength',
+      bio: 'HLV 5 nam kinh nghiem',
+      certification: 'Yoga Alliance',
+      avatarUrl: null,
+      defaultHourlyRate: 200000,
+    };
+    const yogaCoach = {
+      id: 3,
+      fullName: 'Trần Thị Mỹ Trâm',
+      email: 'tram@example.com',
+      phone: '0901234569',
+      specialization: 'Pilates & Yoga',
+      bio: '',
+      certification: '',
+      avatarUrl: null,
+      defaultHourlyRate: 200000,
+    };
+    const boxingCoach = {
+      id: 4,
+      fullName: 'Võ Văn Quyền',
+      email: 'quyen@example.com',
+      phone: '0901234570',
+      specialization: 'Boxing & Kickfit',
+      bio: 'Võ sĩ boxing chuyên nghiệp',
+      certification: '',
+      avatarUrl: null,
+      defaultHourlyRate: 200000,
+    };
+
+    // ALL matches everything
+    expect(matchesCoachDiscipline(gymCoach, 'ALL')).toBe(true);
+    expect(matchesCoachDiscipline(yogaCoach, 'ALL')).toBe(true);
+    expect(matchesCoachDiscipline(boxingCoach, 'ALL')).toBe(true);
+
+    // Gym matching
+    expect(matchesCoachDiscipline(gymCoach, 'Gym')).toBe(true);
+    expect(matchesCoachDiscipline(multiCoach, 'Gym')).toBe(true);
+    expect(matchesCoachDiscipline(yogaCoach, 'Gym')).toBe(false);
+
+    // Yoga matching
+    expect(matchesCoachDiscipline(yogaCoach, 'Yoga')).toBe(true);
+    expect(matchesCoachDiscipline(multiCoach, 'Yoga')).toBe(true);
+    expect(matchesCoachDiscipline(gymCoach, 'Yoga')).toBe(false);
+
+    // Boxing matching
+    expect(matchesCoachDiscipline(boxingCoach, 'Boxing')).toBe(true);
+    expect(matchesCoachDiscipline(gymCoach, 'Boxing')).toBe(false);
+    expect(matchesCoachDiscipline(yogaCoach, 'Boxing')).toBe(false);
+  });
+
+  describe('UI Interaction for discipline chips', () => {
+    let host: HTMLDivElement;
+    let root: Root;
+
+    beforeEach(() => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      host = document.createElement('div');
+      document.body.append(host);
+      root = createRoot(host);
+
+      mocks.getCoaches.mockResolvedValue([
+        { id: 1, fullName: 'Huỳnh Đắc Tài', specialization: 'Fitness & Cardio', defaultHourlyRate: 200000 },
+        { id: 2, fullName: 'Nguyễn Minh Quân', specialization: 'Yoga & Strength', defaultHourlyRate: 200000 },
+        { id: 3, fullName: 'Trần Thị Mỹ Trâm', specialization: 'Pilates & Yoga', defaultHourlyRate: 200000 },
+      ]);
+      mocks.getAvailableSlots.mockResolvedValue([]);
+      mocks.getMyCoachBookings.mockResolvedValue([]);
+      mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'Gold', monthlyQuota: 3, usedThisMonth: 0, remainingQuota: 3 });
+      mocks.getMyCoachReviews.mockResolvedValue([]);
+      mocks.getCoachLeaderboard.mockResolvedValue([]);
+    });
+
+    afterEach(async () => {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.clearAllMocks();
+      vi.unstubAllGlobals();
+    });
+
+    it('renders discipline chips and filters coach list when clicked', async () => {
+      await act(async () => {
+        root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>);
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 60));
+      });
+
+      // Default: ALL - all 3 coaches visible
+      expect(host.textContent).toContain('Tất cả bộ môn');
+      expect(host.textContent).toContain('Gym');
+      expect(host.textContent).toContain('Boxing');
+      expect(host.textContent).toContain('Yoga');
+      expect(host.textContent).toContain('Huỳnh Đắc Tài');
+      expect(host.textContent).toContain('Nguyễn Minh Quân');
+      expect(host.textContent).toContain('Trần Thị Mỹ Trâm');
+
+      // Click "Yoga" chip
+      const chips = [...host.querySelectorAll<HTMLButtonElement>('.filter-chip')];
+      const yogaChip = chips.find((c) => c.textContent?.trim() === 'Yoga');
+      expect(yogaChip).toBeDefined();
+
+      await act(async () => {
+        yogaChip?.click();
+      });
+
+      // Huỳnh Đắc Tài should be filtered out
+      expect(host.textContent).not.toContain('Huỳnh Đắc Tài');
+      expect(host.textContent).toContain('Nguyễn Minh Quân');
+      expect(host.textContent).toContain('Trần Thị Mỹ Trâm');
+
+      // Click "Boxing" chip (no coaches match)
+      const boxingChip = chips.find((c) => c.textContent?.trim() === 'Boxing');
+      await act(async () => {
+        boxingChip?.click();
+      });
+
+      expect(host.textContent).toContain('Chưa có huấn luyện viên nào cho bộ môn Boxing.');
+      expect(host.textContent).toContain('Xem tất cả huấn luyện viên');
+
+      // Click "Xem tất cả huấn luyện viên" button in empty state
+      const resetBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+        (b) => b.textContent?.includes('Xem tất cả huấn luyện viên')
+      );
+      await act(async () => {
+        resetBtn?.click();
+      });
+
+      // All 3 back
+      expect(host.textContent).toContain('Huỳnh Đắc Tài');
+      expect(host.textContent).toContain('Nguyễn Minh Quân');
+      expect(host.textContent).toContain('Trần Thị Mỹ Trâm');
+    });
   });
 });

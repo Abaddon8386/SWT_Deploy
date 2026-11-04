@@ -52,3 +52,35 @@ it('summarises booked and skipped dates, or says nothing could be booked', async
   await act(async () => root.render(<RecurrenceSummary booked={[]} skipped={[]} describe={() => ''} />));
   expect(host.textContent).toContain('Không đặt được buổi nào');
 });
+
+it('filters out disallowed periods such as month when allowedPeriods is specified', async () => {
+  await act(async () => {
+    root.render(
+      <RecurrenceFields
+        startDate="2026-11-02"
+        value={{ period: 'once', days: [] }}
+        onChange={() => {}}
+        allowedPeriods={['once', 'week']}
+      />
+    );
+  });
+  expect(host.textContent).toContain('Một buổi');
+  expect(host.textContent).toContain('Hàng tuần');
+  expect(host.textContent).not.toContain('Hàng tháng');
+  expect(host.textContent).not.toContain('Cả tháng');
+});
+
+it('defaults to Monday (T2) when no days are selected or all days are toggled off', async () => {
+  let currentVal: RecurrenceChoice = { period: 'week', days: [4] };
+  await act(async () => {
+    root.render(
+      <RecurrenceFields
+        startDate="2026-11-05"
+        value={currentVal}
+        onChange={(next) => { currentVal = next; }}
+      />
+    );
+  });
+  await press('T5');
+  expect(currentVal.days).toEqual([1]);
+});

@@ -30,6 +30,29 @@ import { ApiError } from '../../../shared/api/client';
 import { errorMessage } from '../../../shared/lib/errorMessage';
 import { formatCoachName, isSessionCompleted } from '../coachBookingUtils';
 
+export const COACH_FILTER_DISCIPLINES = ['ALL', 'Gym', 'Boxing', 'Yoga'] as const;
+export type CoachDisciplineFilter = (typeof COACH_FILTER_DISCIPLINES)[number];
+
+const COACH_DISCIPLINE_PATTERNS: Record<'Gym' | 'Boxing' | 'Yoga', RegExp> = {
+  Gym: /\bgym\b|fitness|cardio|strength|olympic|thể hình|tập tạ|sức mạnh|thể lực/i,
+  Boxing: /boxing|kickfit|đấm bốc|võ|muay|combat/i,
+  Yoga: /yoga|pilates|mindful|thiền|dẻo dai|stretch|giãn cơ|movement/i,
+};
+
+export function matchesCoachDiscipline(coach: CoachPublicDto, filter: CoachDisciplineFilter): boolean {
+  if (filter === 'ALL') return true;
+  const pattern = COACH_DISCIPLINE_PATTERNS[filter];
+  if (!pattern) return true;
+  if (coach.specialization && pattern.test(coach.specialization)) {
+    return true;
+  }
+  const isGenericSpec = !coach.specialization || /huấn luyện|coach|personal|trainer|pt|chuyên gia/i.test(coach.specialization);
+  if (isGenericSpec && (pattern.test(coach.bio || '') || pattern.test(coach.certification || ''))) {
+    return true;
+  }
+  return false;
+}
+
 function coachBookingErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.code === 'MEMBERSHIP_INACTIVE_OR_EXPIRED') {
@@ -94,6 +117,7 @@ export function MemberCoachBookingView({
 }) {
   const navigate = useNavigate();
   const [coaches, setCoaches] = useState<CoachPublicDto[]>([]);
+  const [coachDiscipline, setCoachDiscipline] = useState<CoachDisciplineFilter>('ALL');
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(localToday());
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
@@ -185,6 +209,21 @@ export function MemberCoachBookingView({
   }, [selectedCoachId, selectedDate]);
 
   const selectedCoach = coaches.find((c) => c.id === selectedCoachId);
+  const filteredCoaches = coaches.filter((c) => matchesCoachDiscipline(c, coachDiscipline));
+
+  function handleFilterCoachDiscipline(discipline: CoachDisciplineFilter) {
+    setCoachDiscipline(discipline);
+    const nextFiltered = coaches.filter((c) => matchesCoachDiscipline(c, discipline));
+    if (nextFiltered.length > 0) {
+      if (!nextFiltered.some((c) => c.id === selectedCoachId)) {
+        setSelectedCoachId(nextFiltered[0].id);
+        setError('');
+      }
+    } else {
+      setSelectedCoachId(null);
+    }
+  }
+
   const hasRemainingQuota = (quotaStatus?.remainingQuota ?? 0) > 0;
 
   function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
@@ -441,73 +480,118 @@ export function MemberCoachBookingView({
           </span>
         </div>
 
+        {/* Lọc HLV theo bộ môn: Tất cả bộ môn, Gym, Boxing, Yoga */}
         <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-            gap: 14,
-          }}
+          className="filter-chips tt-chips"
+          role="group"
+          aria-label="Lọc huấn luyện viên theo bộ môn"
+          style={{ marginBottom: 14 }}
         >
-          {coaches.map((c) => {
-            const isSelected = c.id === selectedCoachId;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setSelectedCoachId(c.id);
-                  setError('');
-                }}
-                className="portal-card"
-                style={{
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  padding: 16,
-                  display: 'flex',
-                  gap: 14,
-                  alignItems: 'center',
-                  borderColor: isSelected ? 'var(--portal-salmon)' : 'var(--portal-border)',
-                  background: isSelected ? 'color-mix(in srgb, var(--portal-salmon) 12%, transparent)' : 'var(--portal-surface)',
-                  boxShadow: isSelected ? '0 0 0 2px var(--portal-salmon)' : undefined,
-                  transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
-                }}
-              >
-                <img
-                  src={c.avatarUrl || coachIllustration(c.specialization, c.fullName)}
-                  alt={c.fullName}
-                  loading="lazy"
-                  decoding="async"
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    flexShrink: 0,
-                    border: '2px solid var(--portal-border-strong)',
-                  }}
-                />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {c.fullName}
-                    </h4>
-                    {isSelected && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon)' }}>
-                        Đang chọn
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-salmon)', fontWeight: 600 }}>
-                    {c.specialization || 'Huấn luyện cá nhân'}
-                  </p>
-                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--portal-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {c.bio || 'Chuyên gia huấn luyện thể hình và phục hồi thể lực.'}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
+          {COACH_FILTER_DISCIPLINES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              className={`filter-chip ${coachDiscipline === value ? 'is-active' : ''}`}
+              aria-pressed={coachDiscipline === value}
+              onClick={() => handleFilterCoachDiscipline(value)}
+            >
+              {value === 'ALL' ? 'Tất cả bộ môn' : value}
+            </button>
+          ))}
         </div>
+
+        {filteredCoaches.length === 0 ? (
+          <div
+            className="portal-card"
+            style={{
+              padding: '28px 20px',
+              textAlign: 'center',
+              borderRadius: 14,
+              background: 'var(--portal-surface)',
+              border: '1px dashed var(--portal-border)',
+              color: 'var(--portal-muted)',
+            }}
+          >
+            <p style={{ margin: '0 0 10px', fontSize: 14 }}>
+              Chưa có huấn luyện viên nào cho bộ môn <strong>{coachDiscipline}</strong>.
+            </p>
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => handleFilterCoachDiscipline('ALL')}
+            >
+              Xem tất cả huấn luyện viên
+            </button>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gap: 14,
+            }}
+          >
+            {filteredCoaches.map((c) => {
+              const isSelected = c.id === selectedCoachId;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCoachId(c.id);
+                    setError('');
+                  }}
+                  className="portal-card"
+                  style={{
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    padding: 16,
+                    display: 'flex',
+                    gap: 14,
+                    alignItems: 'center',
+                    borderColor: isSelected ? 'var(--portal-salmon)' : 'var(--portal-border)',
+                    background: isSelected ? 'color-mix(in srgb, var(--portal-salmon) 12%, transparent)' : 'var(--portal-surface)',
+                    boxShadow: isSelected ? '0 0 0 2px var(--portal-salmon)' : undefined,
+                    transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
+                  }}
+                >
+                  <img
+                    src={c.avatarUrl || coachIllustration(c.specialization, c.fullName)}
+                    alt={c.fullName}
+                    loading="lazy"
+                    decoding="async"
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      flexShrink: 0,
+                      border: '2px solid var(--portal-border-strong)',
+                    }}
+                  />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {c.fullName}
+                      </h4>
+                      {isSelected && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon)' }}>
+                          Đang chọn
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-salmon)', fontWeight: 600 }}>
+                      {c.specialization || 'Huấn luyện cá nhân'}
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--portal-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {c.bio || 'Chuyên gia huấn luyện thể hình và phục hồi thể lực.'}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Chọn ngày và khung giờ */}
@@ -528,6 +612,7 @@ export function MemberCoachBookingView({
         const renderSlotPill = (slot: CoachAvailableSlotDto) => {
           const startFmt = slot.startTime.slice(0, 5);
           const endFmt = slot.endTime.slice(0, 5);
+          const slotRange = `${startFmt} – ${endFmt}`;
           const isSelected = selectedSlot?.startTime === slot.startTime;
 
           if (slot.available) {
@@ -540,10 +625,10 @@ export function MemberCoachBookingView({
                   handleOpenBookingModal(slot);
                 }}
                 style={{
-                  minWidth: 70,
-                  padding: '9px 18px',
+                  minWidth: 110,
+                  padding: '9px 16px',
                   borderRadius: 12,
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: isSelected ? 750 : 600,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
@@ -574,9 +659,9 @@ export function MemberCoachBookingView({
                     e.currentTarget.style.background = 'var(--portal-surface)';
                   }
                 }}
-                title={`Còn trống: ${startFmt} – ${endFmt} (Nhấn để đặt lịch)`}
+                title={`Còn trống: ${slotRange} (Nhấn để đặt lịch)`}
               >
-                {startFmt}
+                {slotRange}
               </button>
             );
           }
@@ -596,10 +681,10 @@ export function MemberCoachBookingView({
             <div
               key={slot.startTime}
               style={{
-                minWidth: 70,
-                padding: '9px 18px',
+                minWidth: 110,
+                padding: '9px 16px',
                 borderRadius: 12,
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: 500,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -610,9 +695,9 @@ export function MemberCoachBookingView({
                 opacity: 0.5,
                 cursor: 'not-allowed',
               }}
-              title={`${startFmt} – ${endFmt} (${badgeText})`}
+              title={`${slotRange} (${badgeText})`}
             >
-              {startFmt}
+              {slotRange}
             </div>
           );
         };
@@ -1464,7 +1549,7 @@ export function MemberCoachBookingView({
             {/* Recurrence Option (collapsible) */}
             <details style={{ cursor: 'pointer' }}>
               <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--portal-muted)' }}>
-                Tùy chọn đặt lịch định kỳ (lặp lại hàng tuần/tháng)
+                Tùy chọn đặt lịch định kỳ (lặp lại hàng tuần)
               </summary>
               <div style={{ marginTop: 10 }}>
                 <RecurrenceFields
@@ -1472,7 +1557,8 @@ export function MemberCoachBookingView({
                   value={recurrence}
                   onChange={setRecurrence}
                   disabled={submitting}
-                  hint="Hệ thống sẽ tự động gia hạn lịch tập vào cùng ngày này mỗi tháng. Bạn có thể hủy hoặc thay đổi lịch tập bất cứ lúc nào."
+                  allowedPeriods={['once', 'week']}
+                  hint="Hệ thống sẽ tự động đặt lịch tập vào các ngày đã chọn mỗi tuần. Bạn có thể hủy hoặc thay đổi lịch tập bất cứ lúc nào."
                 />
               </div>
             </details>
