@@ -427,7 +427,7 @@ export function ManagerEquipmentPage() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              🏋️ Khu vực Gym Tiêu chuẩn
+              Khu vực Gym Tiêu chuẩn
             </span>
             <span style={{ fontSize: '0.78rem', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
               Mọi hội viên
@@ -456,7 +456,7 @@ export function ManagerEquipmentPage() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              👑 Khu vực Gym VIP Platinum
+              Khu vực Gym VIP Platinum
             </span>
             <span style={{ fontSize: '0.78rem', background: '#fef3c7', color: '#d97706', padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>
               Đặc quyền Platinum
@@ -524,7 +524,7 @@ export function ManagerEquipmentPage() {
             color: areaTab === 'STANDARD' ? '#ffffff' : undefined,
           }}
         >
-          🏋️ Gym Tiêu chuẩn ({standardGymCount} máy)
+          Gym Tiêu chuẩn ({standardGymCount} máy)
         </button>
         <button
           type="button"
@@ -539,7 +539,7 @@ export function ManagerEquipmentPage() {
             borderColor: '#f59e0b',
           }}
         >
-          👑 Gym VIP Platinum ({vipGymCount} máy)
+          Gym VIP Platinum ({vipGymCount} máy)
         </button>
         {otherAreaCount > 0 && (
           <button
@@ -568,25 +568,25 @@ export function ManagerEquipmentPage() {
           >
             <option value="">Tất cả phòng tập</option>
             {vipRooms.length > 0 && (
-              <optgroup label="-- 👑 KHU VỰC GYM VIP (PLATINUM) --">
+              <optgroup label="-- KHU VỰC GYM VIP (PLATINUM) --">
                 {vipRooms.map((r) => (
                   <option key={r.id} value={r.id}>
-                    👑 {r.name} (VIP Platinum)
+                    {r.name} (VIP Platinum)
                   </option>
                 ))}
               </optgroup>
             )}
             {standardGymRooms.length > 0 && (
-              <optgroup label="-- 🏋️ KHU VỰC GYM TIÊU CHUẨN --">
+              <optgroup label="-- KHU VỰC GYM TIÊU CHUẨN --">
                 {standardGymRooms.map((r) => (
                   <option key={r.id} value={r.id}>
-                    🏋️ {r.name} (Tiêu chuẩn)
+                    {r.name} (Tiêu chuẩn)
                   </option>
                 ))}
               </optgroup>
             )}
             {otherRooms.length > 0 && (
-              <optgroup label="-- 🏊 CÁC PHÒNG BỘ MÔN KHÁC --">
+              <optgroup label="-- CÁC PHÒNG BỘ MÔN KHÁC --">
                 {otherRooms.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
@@ -672,7 +672,7 @@ export function ManagerEquipmentPage() {
                   disabled={isSeeding}
                   onClick={() => void handleQuickSeed()}
                 >
-                  {isSeeding ? 'Đang nạp dữ liệu...' : '⚡ Nạp 12 máy móc mẫu (Gym Tiêu chuẩn & VIP)'}
+                  {isSeeding ? 'Đang nạp dữ liệu...' : 'Nạp 12 máy móc mẫu (Gym Tiêu chuẩn & VIP)'}
                 </button>
               )}
             </div>
@@ -720,7 +720,7 @@ export function ManagerEquipmentPage() {
                               fontWeight: 700,
                               border: '1px solid #fde68a',
                             }}>
-                              👑 GYM VIP (PLATINUM)
+                              GYM VIP (PLATINUM)
                             </span>
                             <div className="muted" style={{ fontSize: '0.8rem', marginTop: 3 }}>
                               {item.roomName || 'Phòng Gym VIP'}
@@ -740,7 +740,7 @@ export function ManagerEquipmentPage() {
                               fontWeight: 700,
                               border: '1px solid #bae6fd',
                             }}>
-                              🏋️ GYM TIÊU CHUẨN
+                              GYM TIÊU CHUẨN
                             </span>
                             <div className="muted" style={{ fontSize: '0.8rem', marginTop: 3 }}>
                               {item.roomName || 'Phòng Gym Tiêu chuẩn'}
@@ -765,10 +765,10 @@ export function ManagerEquipmentPage() {
                           onChange={(e) => void handleQuickStatusChange(item, e.target.value as Equipment['status'])}
                           style={{ fontSize: '0.85rem', padding: '4px 8px', height: 'auto', minWidth: 140 }}
                         >
-                          <option value="active">🟢 Đang hoạt động</option>
-                          <option value="maintenance">🟡 Đang bảo trì</option>
-                          <option value="broken">🔴 Hỏng hóc</option>
-                          <option value="retired">⚪ Ngừng dùng</option>
+                          <option value="active">Đang hoạt động</option>
+                          <option value="maintenance">Đang bảo trì</option>
+                          <option value="broken">Hỏng hóc</option>
+                          <option value="retired">Ngừng dùng</option>
                         </Select>
                       </td>
                       <td>
@@ -860,113 +860,74 @@ export function ManagerEquipmentPage() {
               </div>
             </div>
 
-            {/* Phân loại phòng tập Gym: Tiêu chuẩn vs VIP */}
-            <div className="portal-form-group" style={{ marginBottom: 16 }}>
-              <label className="portal-label" style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                Phân loại phòng tập Gym <span style={{ color: 'var(--color-primary, #e25845)' }}>*</span>
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px' }}>
-                <button
-                  type="button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    border: tierMode === 'STANDARD' ? '2px solid #0284c7' : '1px solid var(--color-border, #e5e7eb)',
-                    background: tierMode === 'STANDARD' ? 'rgba(2, 132, 199, 0.12)' : 'var(--color-surface, #fff)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onClick={() => void handleSelectTier('STANDARD')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '24px' }}>🏋️</span>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: tierMode === 'STANDARD' ? '#0284c7' : 'inherit' }}>
-                        Gym Tiêu chuẩn
-                      </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                        Mọi hội viên tập luyện
-                      </div>
-                    </div>
-                  </div>
-                  {tierMode === 'STANDARD' && (
-                    <span style={{ color: '#0284c7', fontWeight: 800, fontSize: '1.2rem', marginLeft: 6 }}>✓</span>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    border: tierMode === 'VIP' ? '2px solid #f59e0b' : '1px solid var(--color-border, #e5e7eb)',
-                    background: tierMode === 'VIP' ? 'rgba(245, 158, 11, 0.12)' : 'var(--color-surface, #fff)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onClick={() => void handleSelectTier('VIP')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '24px' }}>👑</span>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: tierMode === 'VIP' ? '#d97706' : 'inherit' }}>
-                        Gym VIP Platinum
-                      </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                        Đặc quyền hội viên Platinum
-                      </div>
-                    </div>
-                  </div>
-                  {tierMode === 'VIP' && (
-                    <span style={{ color: '#d97706', fontWeight: 800, fontSize: '1.2rem', marginLeft: 6 }}>✓</span>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    border: tierMode === 'OTHER' ? '2px solid var(--color-primary, #e25845)' : '1px solid var(--color-border, #e5e7eb)',
-                    background: tierMode === 'OTHER' ? 'rgba(226, 88, 69, 0.1)' : 'var(--color-surface, #fff)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onClick={() => void handleSelectTier('OTHER')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '24px' }}>🏢</span>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: tierMode === 'OTHER' ? 'var(--color-primary, #e25845)' : 'inherit' }}>
-                        Phòng khác / Kho
-                      </div>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                        Bơi, Yoga hoặc kho tổng
-                      </div>
-                    </div>
-                  </div>
-                  {tierMode === 'OTHER' && (
-                    <span style={{ color: 'var(--color-primary, #e25845)', fontWeight: 800, fontSize: '1.2rem', marginLeft: 6 }}>✓</span>
-                  )}
-                </button>
-              </div>
-            </div>
-
             <div className="grid-2">
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="eq-room">Khu vực phòng tập lắp đặt *</label>
+                <label className="portal-label" htmlFor="eq-room">
+                  Khu vực phòng tập lắp đặt *
+                </label>
+                {/* Phân loại phòng gym đặt trực tiếp bên trong khu vực phòng tập lắp đặt, không dùng icon */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '7px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.82rem',
+                      fontWeight: tierMode === 'STANDARD' ? 700 : 500,
+                      border: tierMode === 'STANDARD' ? '2px solid #0284c7' : '1px solid var(--color-border, #e5e7eb)',
+                      background: tierMode === 'STANDARD' ? 'rgba(2, 132, 199, 0.12)' : 'var(--color-surface, #fff)',
+                      color: tierMode === 'STANDARD' ? '#0284c7' : 'inherit',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.15s ease',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onClick={() => void handleSelectTier('STANDARD')}
+                  >
+                    Gym Tiêu chuẩn
+                  </button>
+
+                  <button
+                    type="button"
+                    style={{
+                      padding: '7px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.82rem',
+                      fontWeight: tierMode === 'VIP' ? 700 : 500,
+                      border: tierMode === 'VIP' ? '2px solid #d97706' : '1px solid var(--color-border, #e5e7eb)',
+                      background: tierMode === 'VIP' ? 'rgba(245, 158, 11, 0.12)' : 'var(--color-surface, #fff)',
+                      color: tierMode === 'VIP' ? '#d97706' : 'inherit',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.15s ease',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onClick={() => void handleSelectTier('VIP')}
+                  >
+                    Gym VIP
+                  </button>
+
+                  <button
+                    type="button"
+                    style={{
+                      padding: '7px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.82rem',
+                      fontWeight: tierMode === 'OTHER' ? 700 : 500,
+                      border: tierMode === 'OTHER' ? '2px solid var(--color-primary, #e25845)' : '1px solid var(--color-border, #e5e7eb)',
+                      background: tierMode === 'OTHER' ? 'rgba(226, 88, 69, 0.1)' : 'var(--color-surface, #fff)',
+                      color: tierMode === 'OTHER' ? 'var(--color-primary, #e25845)' : 'inherit',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.15s ease',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onClick={() => void handleSelectTier('OTHER')}
+                  >
+                    Phòng khác
+                  </button>
+                </div>
+
                 <Select
                   id="eq-room"
                   className="portal-select"
@@ -975,25 +936,25 @@ export function ManagerEquipmentPage() {
                 >
                   <option value="">-- Kho tổng / Chưa xếp phòng --</option>
                   {vipRooms.length > 0 && (
-                    <optgroup label="-- 👑 KHU VỰC GYM VIP (PLATINUM) --">
+                    <optgroup label="-- KHU VỰC GYM VIP (PLATINUM) --">
                       {vipRooms.map((r) => (
                         <option key={r.id} value={r.id}>
-                          👑 {r.name} (VIP Platinum)
+                          {r.name} (VIP Platinum)
                         </option>
                       ))}
                     </optgroup>
                   )}
                   {standardGymRooms.length > 0 && (
-                    <optgroup label="-- 🏋️ KHU VỰC GYM TIÊU CHUẨN --">
+                    <optgroup label="-- KHU VỰC GYM TIÊU CHUẨN --">
                       {standardGymRooms.map((r) => (
                         <option key={r.id} value={r.id}>
-                          🏋️ {r.name} (Tiêu chuẩn)
+                          {r.name} (Tiêu chuẩn)
                         </option>
                       ))}
                     </optgroup>
                   )}
                   {otherRooms.length > 0 && (
-                    <optgroup label="-- 🏊 CÁC PHÒNG BỘ MÔN KHÁC --">
+                    <optgroup label="-- CÁC PHÒNG BỘ MÔN KHÁC --">
                       {otherRooms.map((r) => (
                         <option key={r.id} value={r.id}>
                           {r.name}
