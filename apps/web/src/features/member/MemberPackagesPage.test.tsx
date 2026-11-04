@@ -8,6 +8,14 @@ import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 
 const noticeText = () => getNotices().map((notice) => notice.message).join(' ');
 
+const trialApiMock = vi.hoisted(() => ({
+  getStatus: vi.fn(),
+  claim: vi.fn(),
+}));
+vi.mock('./trialApi', () => ({
+  trialApi: trialApiMock,
+}));
+
 const realtime = vi.hoisted(() => ({ subscribe: vi.fn(), changed: () => {}, cleanup: vi.fn() }));
 vi.mock('./membershipRealtime', () => ({ subscribeMembershipChanges: realtime.subscribe }));
 
@@ -78,6 +86,8 @@ describe('SCRUM-86 packages', () => {
     Object.values(api).forEach((mock) => mock.mockReset());
     realtime.subscribe.mockImplementation((changed: () => void) => { realtime.changed = changed; return realtime.cleanup; });
     realtime.cleanup.mockClear();
+    trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
+    trialApiMock.claim.mockResolvedValue({ id: 1, memberId: 1, cccd: '001200001234', fullName: 'Nguyen Van A', grantedDays: 3, tier: 'GOLD', claimedAt: '2026-10-16T10:00:00' });
     api.packages.mockResolvedValue([membershipPackage]);
     api.current.mockResolvedValue(null);
     api.history.mockResolvedValue([]);
@@ -721,6 +731,21 @@ describe('SCRUM-86 packages', () => {
     await render();
     expect(button('Cần kiểm tra lịch sử')?.disabled).toBe(false);
     expect(api.renew).not.toHaveBeenCalled();
+  });
+
+  it('renders and claims the 3-day gold trial with cccd', async () => {
+    trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
+    await render();
+    expect(host.textContent).toContain('Trải nghiệm 3 ngày tập miễn phí với đặc quyền Gold');
+    expect(button('Nhận 3 ngày tập miễn phí')).toBeDefined();
+    await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
+    expect(host.textContent).toContain('Xác minh Căn cước công dân (CCCD)');
+    const nameInput = host.querySelector('#trial-full-name');
+    const cccdInput = host.querySelector('#trial-cccd');
+    expect(nameInput).not.toBeNull();
+    expect(cccdInput).not.toBeNull();
+    const submitBtn = button('Xác minh & Kích hoạt');
+    expect(submitBtn).toBeDefined();
   });
 
   it.each(['failed', 'refunded'])('explains a %s payment without offering another POST', async (status) => {
