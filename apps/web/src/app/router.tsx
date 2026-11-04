@@ -216,7 +216,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/manager/cancellations',
-            lazy: async () => ({ Component: (await import('../features/manager/ManagerCancellationPage')).ManagerCancellationPage }),
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: '/manager/audit-logs',

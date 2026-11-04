@@ -407,37 +407,11 @@ describe('SCRUM-86 packages', () => {
     expect(button('Đang chờ duyệt bảo lưu')?.disabled).toBe(true);
   });
 
-  it('requires a reason and manager approval for active membership cancellation', async () => {
+  it('does not offer package cancellation request for active membership', async () => {
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active]);
-    const requested = { id: 77, memberId: 34, memberName: 'Member', subscriptionId: 1,
-      packageName: 'Essential', reason: 'Chuyển nơi ở', status: 'PENDING',
-      requestedAt: '2026-10-22T10:00:00', resolvedById: null, resolvedAt: null, resolutionNote: null };
-    api.requestCancellation.mockResolvedValue(requested);
     await render();
-    await act(async () => button('Yêu cầu hủy gói')?.click());
-    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('không được hoàn tiền');
-    expect(button('Xác nhận gửi yêu cầu')?.disabled).toBe(true);
-    expect(api.requestCancellation).not.toHaveBeenCalled();
-    const textarea = host.querySelector('#membership-cancellation-reason') as HTMLTextAreaElement;
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set?.call(textarea, 'Chuyển nơi ở');
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      textarea.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    api.cancellations.mockResolvedValue([requested]);
-    await act(async () => button('Xác nhận gửi yêu cầu')?.click());
-    expect(api.requestCancellation).toHaveBeenCalledExactlyOnceWith(1, 'Chuyển nơi ở');
-    expect(button('Đang chờ duyệt hủy')?.disabled).toBe(true);
-    expect(noticeText()).toContain('Gói vẫn có hiệu lực');
-  });
-
-  it('shows approved cancellation after the active membership disappears', async () => {
-    api.cancellations.mockResolvedValue([{ id: 77, memberId: 34, memberName: 'Member',
-      subscriptionId: 1, packageName: 'Essential', reason: 'Moving', status: 'APPROVED',
-      requestedAt: '2026-10-22T10:00:00', resolvedById: 20, resolvedAt: '2026-10-23T10:00:00', resolutionNote: null }]);
-    await render();
-    expect(host.textContent).toContain('Đã duyệt hủy');
+    expect(button('Yêu cầu hủy gói')).toBeUndefined();
   });
 
   it('allows another renewal after a paid successor', async () => {

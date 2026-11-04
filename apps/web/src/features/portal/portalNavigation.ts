@@ -30,7 +30,6 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/equipment', label: 'Quản lý máy móc thiết bị', icon: 'dumbbell', roles: ['MANAGER'] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
-  { to: '/manager/cancellations', label: 'Yêu cầu hủy gói', icon: 'package', roles: ['MANAGER'] },
   { to: '/manager/support', label: 'Khiếu nại chuyển lên', icon: 'inbox', roles: ['MANAGER'] },
   { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'users', roles: ['MANAGER'] },
   { to: '/manager/requests', label: 'Duyệt đơn nội bộ', icon: 'file', roles: ['MANAGER'] },
