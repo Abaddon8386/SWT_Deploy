@@ -125,4 +125,23 @@ describe('SCRUM-127 member notifications', () => {
       window.removeEventListener('member-notifications-changed', changed);
     }
   });
+  it('renders English notifications in Vietnamese', async () => {
+    api.list.mockResolvedValue({
+      content: [{
+        id: 5,
+        title: 'Upcoming class reminder',
+        message: 'Your class "Lớp boxing" is starting at 09:00 on 04/11/2026. Get ready!',
+        type: 'class_reminder',
+        relatedEntityType: 'class_session',
+        relatedEntityId: 10,
+        isRead: false,
+        createdAt: '2026-11-04T07:00:00',
+      }],
+      number: 0,
+      totalPages: 1,
+    });
+    await render();
+    expect(host.textContent).toContain('Nhắc nhở lịch học sắp diễn ra');
+    expect(host.textContent).toContain('Lớp học "Lớp boxing" của bạn sẽ bắt đầu lúc 09:00 ngày 04/11/2026. Hãy chuẩn bị sẵn sàng!');
+  });
 });

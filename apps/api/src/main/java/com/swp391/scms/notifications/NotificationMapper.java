@@ -10,8 +10,8 @@ public class NotificationMapper {
         if (entity == null) return null;
         return new NotificationDto(
             entity.getId(),
-            entity.getTitle(),
-            entity.getMessage(),
+            NotificationLocalizer.localizeTitle(entity.getTitle()),
+            NotificationLocalizer.localizeMessage(entity.getMessage()),
             entity.getType(),
             entity.getRelatedEntityType(),
             entity.getRelatedEntityId(),
@@ -21,4 +21,3 @@ public class NotificationMapper {
         );
     }
 }
-
