@@ -122,3 +122,4 @@ export function localizeMessage(message?: string | null): string {
 
   return message;
 }
+

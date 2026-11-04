@@ -44,3 +44,4 @@ class NotificationLocalizerTest {
         assertThat(NotificationLocalizer.localizeMessage(body)).isEqualTo(body);
     }
 }
+

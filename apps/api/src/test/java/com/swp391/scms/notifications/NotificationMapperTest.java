@@ -31,3 +31,4 @@ class NotificationMapperTest {
         assertThat(dto.message()).isEqualTo("Lớp học \"Lớp boxing\" của bạn sẽ bắt đầu lúc 09:00 ngày 04/11/2026. Hãy chuẩn bị sẵn sàng!");
     }
 }
+
