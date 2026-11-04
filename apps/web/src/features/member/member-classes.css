@@ -9,7 +9,7 @@
   font: inherit;
   cursor: pointer;
 }
-.member-class-enroll > [aria-hidden] { font-size: 36px; line-height: 1; font-weight: 400; }
+.member-class-enroll > svg { display: block; width: 36px; height: 36px; grid-area: 1 / 1; }
 .member-class-enroll:focus-visible { outline: 2px solid var(--portal-paper); outline-offset: 3px; }
 .member-class-enroll:disabled { opacity: .65; cursor: wait; }
 .member-classes-more { display: grid; justify-items: center; gap: 8px; padding: 12px 0; }

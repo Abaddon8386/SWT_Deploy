@@ -6,13 +6,12 @@ import { Select } from '../../shared/ui/Select';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { MemberTimetable } from './components/MemberTimetable';
-import { getFavoriteDisciplines, toggleFavoriteDiscipline } from './favoriteDisciplinesApi';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { getMySubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
 import { DISCIPLINES } from '../../shared/lib/disciplines';
 import {
   bookSession,
-  bookSessions,
   cancelBooking,
   cancelBookings,
   cancelEnrollment,
@@ -21,8 +20,6 @@ import {
   getMyBookings,
   getMyEnrollments,
   getSessions,
-  getUpcomingSessions,
-  upcomingRange,
   type BulkSkipped,
   type ClassSessionDto,
   type EnrollmentDto,
@@ -52,11 +49,6 @@ function errorMessage(error: unknown): string {
   return 'Không thể tải lịch học. Vui lòng thử lại.';
 }
 
-function localToday(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
 /** A per-session booking in the shape the overlap check already understands. */
 function bookingAsEnrollment(booking: SessionBookingDto): EnrollmentDto {
   return {
@@ -66,9 +58,9 @@ function bookingAsEnrollment(booking: SessionBookingDto): EnrollmentDto {
   };
 }
 
-/** Week 0 / 1 are Monday-Sunday calendar weeks; 'month' is today plus the next 30 days. */
-function rangeBounds(range: 0 | 1 | 'month'): { fromDate: string; toDate: string } {
-  return range === 'month' ? upcomingRange() : currentWeek(range);
+/** Only Monday–Sunday calendar weeks are supported. */
+function weekFromQuery(value: string | null): -1 | 0 | 1 {
+  return value === '-1' ? -1 : value === '1' ? 1 : 0;
 }
 
 function formatShortDate(iso: string): string {
@@ -149,21 +141,17 @@ export function MemberClassesPage() {
       ? 'schedule'
       : 'timetable',
   );
-  const [weekOffset, setWeekOffset] = useState<0 | 1 | 'month'>(0);
+  const weekOffset = weekFromQuery(searchParams.get('week'));
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
   const [bookings, setBookings] = useState<SessionBookingDto[]>([]);
-  const [bulkMode, setBulkMode] = useState(false);
-  const [selected, setSelected] = useState<number[]>([]);
   const [cancelSelected, setCancelSelected] = useState<number[]>([]);
   const [confirmBulkCancel, setConfirmBulkCancel] = useState(false);
-  const [bulkResult, setBulkResult] = useState<{ mode: 'book' | 'cancel'; done: SessionBookingDto[]; skipped: BulkSkipped[] } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ done: SessionBookingDto[]; skipped: BulkSkipped[] } | null>(null);
   const [discipline, setDiscipline] = useState(() => disciplineFromQuery(searchParams.get('discipline')));
   const [day, setDay] = useState('ALL');
-  const [favoriteDisciplineIds, setFavoriteDisciplineIds] = useState<number[]>([]);
   // null: chưa biết (đang tải hoặc lỗi) — khi đó không hiện lời nhắc mua gói
   const [hasActivePackage, setHasActivePackage] = useState<boolean | null>(null);
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [visibleCount, setVisibleCount] = useState(SESSION_BATCH_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -182,8 +170,6 @@ export function MemberClassesPage() {
     setVisibleCount(SESSION_BATCH_SIZE);
     actionGenRef.current += 1;
     setActionError('');
-    setSelected([]);
-    
   }
 
   function handleSelectTab(nextTab: 'timetable' | 'schedule' | 'coach_booking' | 'my') {
@@ -202,15 +188,23 @@ export function MemberClassesPage() {
     setSearchParams(params, { replace: true });
   }
 
+  // Normalize removed/unknown URL ranges without losing tab or discipline.
   useEffect(() => {
-    let active = true;
-    void getFavoriteDisciplines()
-      .then((ids) => {
-        if (active) setFavoriteDisciplineIds(ids);
-      })
-      .catch(() => {});
-    return () => { active = false; };
-  }, []);
+    const week = searchParams.get('week');
+    const next = weekFromQuery(week);
+    if (week !== null && week !== String(next)) {
+      const params = new URLSearchParams(searchParams);
+      params.set('week', String(next));
+      setSearchParams(params, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  function changeWeek(next: -1 | 0 | 1) {
+    clearActionFeedback();
+    const params = new URLSearchParams(searchParams);
+    params.set('week', String(next));
+    setSearchParams(params, { replace: true });
+  }
 
   useEffect(() => {
     let active = true;
@@ -222,23 +216,13 @@ export function MemberClassesPage() {
     return () => { active = false; };
   }, []);
 
-  async function handleToggleFavorite(disciplineId: number) {
-    try {
-      const updated = await toggleFavoriteDiscipline(disciplineId);
-      setFavoriteDisciplineIds(updated);
-    } catch {
-      // Handled gracefully in favoriteDisciplinesApi
-    }
-  }
-
   useEffect(() => {
     let active = true;
     async function load() {
       setLoading(true);
       setError('');
       try {
-        const nextSessions = weekOffset === 'month' ? await getUpcomingSessions()
-          : weekOffset === 0 ? await getSessions() : await getSessions(weekOffset);
+        const nextSessions = weekOffset === 0 ? await getSessions() : await getSessions(weekOffset);
         if (active) setSessions(nextSessions);
       } catch (cause) {
         if (active) setError(errorMessage(cause));
@@ -371,32 +355,6 @@ export function MemberClassesPage() {
     }
   }
 
-  async function handleBulkBook() {
-    if (busyRef.current || !myScheduleReady || selected.length === 0) return;
-    busyRef.current = 'bulk';
-    setBusyKey('bulk');
-    const gen = ++actionGenRef.current;
-    setActionError('');
-    try {
-      const result = await bookSessions(selected);
-      if (actionGenRef.current === gen) {
-        setBulkResult({ mode: 'book', done: result.booked, skipped: result.skipped });
-        setSelected([]);
-        if (result.booked.length > 0) notify(`Đã đặt ${result.booked.length} buổi học.`, 'success');
-      }
-      setRetry((v) => v + 1);
-      setMyScheduleRetry((v) => v + 1);
-    } catch (cause) {
-      if (actionGenRef.current === gen) {
-        setActionError(errorMessage(cause));
-        if (cause instanceof ApiError && [400, 403, 409].includes(cause.status)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
-      }
-    } finally {
-      busyRef.current = null;
-      setBusyKey(null);
-    }
-  }
-
   async function handleBulkCancel() {
     if (busyRef.current || !myScheduleReady || cancelSelected.length === 0) return;
     busyRef.current = 'bulk-cancel';
@@ -406,7 +364,7 @@ export function MemberClassesPage() {
     try {
       const result = await cancelBookings(cancelSelected);
       if (actionGenRef.current === gen) {
-        setBulkResult({ mode: 'cancel', done: result.cancelled, skipped: result.skipped });
+        setBulkResult({ done: result.cancelled, skipped: result.skipped });
         setCancelSelected([]);
         if (result.cancelled.length > 0) notify(`Đã hủy ${result.cancelled.length} buổi học.`, 'success');
       }
@@ -427,28 +385,14 @@ export function MemberClassesPage() {
     return list.includes(id) ? list.filter((value) => value !== id) : [...list, id];
   }
 
-  const weekRange = rangeBounds(weekOffset);
+  const weekRange = currentWeek(weekOffset);
   const disciplines = DISCIPLINES.map(item => item.name);
-  const disciplineNameToId: Record<string, number> = {};
-  for (const item of sessions) {
-    if (item.disciplineName && item.disciplineId) disciplineNameToId[item.disciplineName] = item.disciplineId;
-  }
   const visible = filterSessions(sessions, discipline, day)
-    .filter((item) => !showOnlyFavorites || favoriteDisciplineIds.includes(item.disciplineId))
     .sort((a, b) => a.sessionDate.localeCompare(b.sessionDate) || a.startTime.localeCompare(b.startTime));
   const myScheduleReady = !myScheduleLoading && !myScheduleError;
   const activeEnrollments = myScheduleReady ? enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled') : [];
   const activeBookings = myScheduleReady ? bookings.filter((item) => item.status === 'booked') : [];
   const seatsInView: EnrollmentDto[] = [...activeEnrollments, ...activeBookings.map(bookingAsEnrollment)];
-  const isPast = (item: ClassSessionDto) =>
-    item.sessionDate < localToday() ||
-    (item.sessionDate === localToday() && item.startTime.slice(0, 5) <= new Date().toTimeString().slice(0, 5));
-  const isBookable = (item: ClassSessionDto) =>
-    myScheduleReady && !isPast(item) && item.status === 'scheduled' && item.bookedCount < item.capacity
-    && !findOverlappingEnrollment(item, seatsInView, sessions)
-    && !activeBookings.some((b) => b.sessionId === item.id)
-    && !activeEnrollments.some((e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId));
-  const bookableIds = bulkMode ? visible.filter(isBookable).map((item) => item.id) : [];
   const mySeatCount = activeEnrollments.length + activeBookings.length;
 
   return (
@@ -561,101 +505,25 @@ export function MemberClassesPage() {
           >
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <p className="row-card__meta" style={{ margin: 0 }}>
-                Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> ({weekOffset === 'month' ? '30 ngày tới' : 'Thứ 2–Chủ nhật'})
+                Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> (Thứ 2–Chủ nhật)
               </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  className={`filter-chip ${weekOffset === 0 ? 'is-active' : ''}`}
-                  onClick={() => {
-                    clearActionFeedback();
-                    setWeekOffset(0);
-                  }}
-                >
-                  Tuần này
-                </button>
-                <button
-                  type="button"
-                  className={`filter-chip ${weekOffset === 1 ? 'is-active' : ''}`}
-                  onClick={() => {
-                    clearActionFeedback();
-                    setWeekOffset(1);
-                  }}
-                >
-                  Tuần kế tiếp
-                </button>
-                <button
-                  type="button"
-                  className={`filter-chip ${weekOffset === 'month' ? 'is-active' : ''}`}
-                  onClick={() => {
-                    clearActionFeedback();
-                    setWeekOffset('month');
-                  }}
-                >
-                  30 ngày tới
-                </button>
+              <div className="filter-chips" role="group" aria-label="Lọc theo tuần">
+                {([-1, 0, 1] as const).map((offset) => (
+                  <button key={offset} type="button" className={`filter-chip ${weekOffset === offset ? 'is-active' : ''}`}
+                    aria-pressed={weekOffset === offset} onClick={() => changeWeek(offset)}>
+                    {offset === -1 ? 'Tuần trước' : offset === 0 ? 'Tuần này' : 'Tuần kế tiếp'}
+                  </button>
+                ))}
               </div>
             </div>
 
             <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
-              <button
-                type="button"
-                className={`filter-chip ${showOnlyFavorites ? 'is-active' : ''}`}
-                aria-pressed={showOnlyFavorites}
-                onClick={() => {
-                  clearActionFeedback();
-                  setShowOnlyFavorites((prev) => !prev);
-                  setDiscipline('ALL');
-                }}
-              >
-                Bộ môn yêu thích {favoriteDisciplineIds.length > 0 ? `(${favoriteDisciplineIds.length})` : ''}
-              </button>
-              {['ALL', ...disciplines].map((value) => {
-                const discId = disciplineNameToId[value];
-                const isFav = discId ? favoriteDisciplineIds.includes(discId) : false;
-                return (
-                  <div key={value} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                    <button
-                      type="button"
-                      className={`filter-chip ${discipline === value && !showOnlyFavorites ? 'is-active' : ''}`}
-                      aria-pressed={discipline === value && !showOnlyFavorites}
-                      onClick={() => {
-                        clearActionFeedback();
-                        setShowOnlyFavorites(false);
-                        setDiscipline(value);
-                      }}
-                    >
-                      {value === 'ALL' ? 'Tất cả bộ môn' : value}
-                    </button>
-                    {value !== 'ALL' && discId && (
-                      <button
-                        type="button"
-                        className="btn-favorite-star"
-                        title={isFav ? `Bỏ yêu thích ${value}` : `Yêu thích ${value}`}
-                        aria-label={`Yêu thích ${value}`}
-                        aria-pressed={isFav}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleToggleFavorite(discId);
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: 15,
-                          minWidth: 44,
-                          minHeight: 44,
-                          padding: '2px 4px',
-                          marginLeft: -4,
-                          color: isFav ? 'var(--portal-star)' : 'var(--portal-muted, #9ca3af)',
-                        }}
-                      >
-                        {isFav ? '★' : '☆'}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+              {['ALL', ...disciplines].map((value) => (
+                <button key={value} type="button" className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
+                  aria-pressed={discipline === value} onClick={() => { clearActionFeedback(); setDiscipline(value); }}>
+                  {value === 'ALL' ? 'Tất cả bộ môn' : value}
+                </button>
+              ))}
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingTop: 10, borderTop: '1px solid var(--portal-border, #e4e2de)' }}>
@@ -680,56 +548,6 @@ export function MemberClassesPage() {
                 </p>
               )}
             </div>
-          </div>
-
-          <div className="portal-card" style={{ padding: '12px 20px', marginBottom: 16, display: 'grid', gap: 10 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <p className="row-card__meta" style={{ margin: 0 }}>
-                {bulkMode
-                  ? 'Chọn từng buổi hoặc bấm "Chọn tất cả" để đặt cả tuần (Tuần này) hay cả tháng (30 ngày tới). Có thể lọc theo bộ môn và thứ trước khi chọn.'
-                  : 'Bấm dấu + để đặt từng buổi, hoặc bật "Đặt nhiều buổi" để đặt cả tuần hay cả tháng một lượt.'}
-              </p>
-              <button
-                type="button"
-                className={`filter-chip ${bulkMode ? 'is-active' : ''}`}
-                aria-pressed={bulkMode}
-                onClick={() => {
-                  clearActionFeedback();
-                  setBulkMode((value) => !value);
-                }}
-              >
-                Đặt nhiều buổi
-              </button>
-            </div>
-            {bulkMode && (
-              <div role="group" aria-label="Đặt nhiều buổi" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                <strong role="status">Đã chọn {selected.length} buổi</strong>
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  disabled={bookableIds.length === 0 || busyKey !== null}
-                  onClick={() => setSelected(bookableIds)}
-                >
-                  Chọn tất cả {bookableIds.length} buổi có thể đặt
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  disabled={selected.length === 0 || busyKey !== null}
-                  onClick={() => setSelected([])}
-                >
-                  Bỏ chọn
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary btn-sm"
-                  disabled={selected.length === 0 || busyKey !== null || !myScheduleReady}
-                  onClick={() => void handleBulkBook()}
-                >
-                  {busyKey === 'bulk' ? 'Đang đặt...' : `Đặt ${selected.length} buổi`}
-                </button>
-              </div>
-            )}
           </div>
 
           {loading ? (
@@ -768,8 +586,7 @@ export function MemberClassesPage() {
                     type="button"
                     className="btn-secondary btn-sm"
                     onClick={() => {
-                      clearActionFeedback();
-                      setWeekOffset(1);
+                      changeWeek(1);
                     }}
                   >
                     Xem lịch tuần kế tiếp
@@ -784,10 +601,10 @@ export function MemberClassesPage() {
             ) : (
               <>{visible.slice(0, visibleCount).map((item, index) => {
                 const [year, month, date] = item.sessionDate.split('-');
-                const now = new Date();
+                const now = centerNowParts();
                 const past =
-                  item.sessionDate < localToday() ||
-                  (item.sessionDate === localToday() && item.startTime.slice(0, 5) <= now.toTimeString().slice(0, 5));
+                  item.sessionDate < now.date ||
+                  (item.sessionDate === now.date && item.startTime.slice(0, 5) <= now.time);
                 const unavailable = past || item.status !== 'scheduled';
                 const overlap = findOverlappingEnrollment(item, seatsInView, sessions);
                 const myBooking = activeBookings.find((b) => b.sessionId === item.id);
@@ -848,17 +665,6 @@ export function MemberClassesPage() {
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             Không thể đặt
                           </button>
-                        ) : item.bookedCount < item.capacity && bulkMode ? (
-                          <label className="member-class-select" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44 }}>
-                            <input
-                              type="checkbox"
-                              checked={selected.includes(item.id)}
-                              disabled={busyKey !== null}
-                              onChange={() => setSelected((list) => toggleIn(list, item.id))}
-                              aria-label={`Chọn ${item.className} ngày ${formatShortDate(item.sessionDate)} lúc ${item.startTime.slice(0, 5)}`}
-                            />
-                            <span>Chọn buổi này</span>
-                          </label>
                         ) : item.bookedCount < item.capacity ? (
                           <button
                             type="button"
@@ -868,7 +674,7 @@ export function MemberClassesPage() {
                             disabled={isBusy}
                             onClick={() => void handleBook(item)}
                           >
-                            <span aria-hidden="true">+</span><span className="sr-only">{isBusy ? 'Đang đặt chỗ...' : 'Đặt chỗ ngay'}</span>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? 'Đang đặt chỗ...' : 'Đặt chỗ ngay'}</span>
                           </button>
                         ) : (
                           <button type="button" className="btn-secondary btn-sm" disabled>
@@ -1058,7 +864,6 @@ export function MemberClassesPage() {
       )}
       {bulkResult && (
         <BulkBookingResultModal
-          mode={bulkResult.mode}
           done={bulkResult.done}
           skipped={bulkResult.skipped}
           onClose={() => setBulkResult(null)}

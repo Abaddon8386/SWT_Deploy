@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassesPage } from './MemberClassesPage';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { ApiError } from '../../shared/api/client';
 import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 
@@ -128,7 +129,7 @@ describe('MemberClassesPage', () => {
     const plus = host.querySelector<HTMLButtonElement>('.member-class-enroll')!;
     expect(plus).not.toBeNull();
     expect(plus.getAttribute('aria-label')).toContain('Yoga Flow');
-    expect(plus.querySelector('[aria-hidden="true"]')?.textContent).toBe('+');
+    expect(plus.querySelector('svg[aria-hidden="true"]')?.getAttribute('viewBox')).toBe('0 0 24 24');
     await act(async () => plus.click());
     expect(mocks.book).toHaveBeenCalledExactlyOnceWith(8);
   });
@@ -278,8 +279,7 @@ describe('MemberClassesPage', () => {
   });
 
   it('marks a session that has started today unavailable', async () => {
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const today = centerNowParts().date;
     mocks.sessions.mockResolvedValue([{ ...session, sessionDate: today, startTime: '00:00:00', endTime: '23:59:59', bookedCount: 2 }]);
     await render();
     expect(host.textContent).toContain('Không thể đặt');
@@ -433,26 +433,33 @@ describe('MemberClassesPage', () => {
     expect(bookBtn.disabled).toBe(false);
   });
 
-  it('filters favorite disciplines and toggles favorite status', async () => {
-    // Yoga has disciplineId: 2, Boxing has disciplineId: 4
-    mocks.favoriteDisciplines.mockResolvedValue([2]);
-    mocks.sessions.mockResolvedValue([
-      session,
-      { ...session, id: 9, className: 'Boxing Basics', disciplineId: 4, disciplineName: 'Boxing', sessionDate: '2099-10-20' },
-    ]);
-    await render();
-
+  it('removes favorites without losing the selected discipline or calling favorites APIs', async () => {
+    mocks.sessions.mockResolvedValue([session, { ...session, id: 9, className: 'Gym sáng', disciplineName: 'Gym' }]);
+    await render('/member/classes?tab=list&discipline=Gym');
+    expect(host.querySelector('.btn-favorite-star')).toBeNull();
+    expect(host.textContent).not.toContain('yêu thích');
+    expect(mocks.favoriteDisciplines).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Gym sáng');
+    expect(host.textContent).not.toContain('Yoga Flow');
+    await clickText('Tất cả bộ môn');
     expect(host.textContent).toContain('Yoga Flow');
-    expect(host.textContent).toContain('Boxing Basics');
+  });
 
-    // Click quick filter ⭐ Bộ môn yêu thích
-    const favChip = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Bộ môn yêu thích'))!;
-    expect(favChip).not.toBeUndefined();
-    await act(async () => favChip.click());
-
-    // Only Yoga Flow (disciplineId: 2) is shown
-    expect(host.textContent).toContain('Yoga Flow');
-    expect(host.textContent).not.toContain('Boxing Basics');
+  it('offers only three calendar weeks and keeps the sport when changing weeks', async () => {
+    mocks.sessions.mockImplementation(async (offset = 0) => [{ ...session, className: 'Week ' + offset, disciplineName: 'Gym' }]);
+    await render('/member/classes?tab=list&discipline=Gym&week=month');
+    expect(host.textContent).not.toContain('30 ngày');
+    expect(host.textContent).toContain('Week 0');
+    await clickText('Tuần trước');
+    expect(mocks.sessions).toHaveBeenLastCalledWith(-1);
+    expect(host.textContent).toContain('Week -1');
+    await clickText('Tuần kế tiếp');
+    expect(mocks.sessions).toHaveBeenLastCalledWith(1);
+    expect(host.textContent).toContain('Week 1');
+    await clickText('Tuần này');
+    expect(host.textContent).toContain('Week 0');
+    expect(mocks.upcoming).not.toHaveBeenCalled();
+    expect(host.querySelector('[aria-label="Lọc theo bộ môn"] [aria-pressed="true"]')?.textContent).toBe('Gym');
   });
 
   it('renders coach 1:1 booking tab and switches correctly', async () => {
@@ -483,52 +490,19 @@ describe('MemberClassesPage', () => {
       { ...session, id: 10, classId: 5, className: 'Boxing Burn', startTime: '12:00:00', endTime: '13:00:00', bookedCount: 12 },
     ];
 
-    it('selects every bookable session of the displayed range and books them in one request', async () => {
+    it('has no multi-session booking controls and sends only the chosen session', async () => {
       mocks.sessions.mockResolvedValue(week());
-      mocks.bookMany.mockResolvedValue({
-        booked: [seat(1, 8, 'Yoga Flow', '08:00:00', '09:00:00')],
-        skipped: [{ id: 9, date: '2099-10-19', code: 'SCHEDULING_SESSION_FULL', message: 'Buổi học đã đầy chỗ' }],
-      });
+      mocks.book.mockResolvedValue({});
       await render();
+      expect(host.textContent).not.toContain('Đặt nhiều buổi');
+      expect(host.textContent).not.toContain('Chọn tất cả');
       expect(host.querySelector('input[type="checkbox"]')).toBeNull();
-      await clickText('Đặt nhiều buổi');
-      expect(host.textContent).toContain('Đã chọn 0 buổi');
-      expect(host.querySelector('.member-class-enroll')).toBeNull();
-      await clickText('Chọn tất cả 2 buổi có thể đặt');
-      expect(host.textContent).toContain('Đã chọn 2 buổi');
-      await clickText('Đặt 2 buổi');
-      expect(mocks.bookMany).toHaveBeenCalledExactlyOnceWith([8, 9]);
-      expect(mocks.book).not.toHaveBeenCalled();
-      expect(host.textContent).toContain('Kết quả đặt nhiều buổi');
-      expect(host.textContent).toContain('Đã đặt 1 buổi, chưa đặt được 1 buổi');
-      expect(host.textContent).toContain('19/10/2099: Buổi học đã đầy chỗ');
-      expect(host.textContent).toContain('Đã chọn 0 buổi');
-    });
-
-    it('lets the member untick sessions before booking and never selects full ones', async () => {
-      mocks.sessions.mockResolvedValue(week());
-      mocks.bookMany.mockResolvedValue({ booked: [], skipped: [] });
-      await render();
-      await clickText('Đặt nhiều buổi');
-      const boxes = () => [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
-      expect(boxes()).toHaveLength(2); // the full Boxing session offers no checkbox
-      await act(async () => boxes()[1].click());
-      expect(host.textContent).toContain('Đã chọn 1 buổi');
-      await clickText('Đặt 1 buổi');
-      expect(mocks.bookMany).toHaveBeenCalledExactlyOnceWith([9]);
-      expect(host.textContent).toContain('Không đặt được buổi nào');
-    });
-
-    it('loads the next 30 days for a monthly booking', async () => {
-      mocks.sessions.mockResolvedValue([]);
-      mocks.upcoming.mockResolvedValue(week());
-      await render();
-      await clickText('30 ngày tới');
-      expect(mocks.upcoming).toHaveBeenCalledTimes(1);
-      expect(host.textContent).toContain('30 ngày tới');
-      await clickText('Đặt nhiều buổi');
-      await clickText('Chọn tất cả 2 buổi có thể đặt');
-      expect(host.textContent).toContain('Đã chọn 2 buổi');
+      const buttons = host.querySelectorAll<HTMLButtonElement>('.member-class-enroll');
+      expect(buttons).toHaveLength(2);
+      await act(async () => buttons[1].click());
+      expect(mocks.book).toHaveBeenCalledExactlyOnceWith(9);
+      expect(mocks.bookMany).not.toHaveBeenCalled();
+      expect(noticeText()).toContain('thành công');
     });
 
     it('does not offer a session that clashes with a booked one and shows booked sessions as cancellable', async () => {
@@ -540,8 +514,7 @@ describe('MemberClassesPage', () => {
       await render();
       expect(host.textContent).toContain('Hủy buổi này');
       expect(host.querySelector('[data-testid="overlap-btn-9"]')).not.toBeNull();
-      await clickText('Đặt nhiều buổi');
-      expect(host.textContent).toContain('Chọn tất cả 0 buổi có thể đặt');
+      expect(host.querySelector('.member-class-enroll')).toBeNull();
     });
 
     it('cancels several booked sessions at once from my schedule', async () => {
