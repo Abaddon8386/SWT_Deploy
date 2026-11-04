@@ -156,7 +156,7 @@ describe('MemberClassesPage', () => {
     await render(); await clickText('Xem thêm');
     let finishNext!: (value: typeof session[]) => void;
     mocks.sessions.mockReturnValueOnce(new Promise(done => { finishNext = done; }));
-    await clickText('Tuần kế tiếp');
+    await clickText('Tuần sau');
     expect(host.textContent).toContain('Đang tải lịch học');
     mocks.sessions.mockResolvedValueOnce(manySessions());
     await clickText('Tuần này');
@@ -292,7 +292,7 @@ describe('MemberClassesPage', () => {
     const join = host.querySelector<HTMLButtonElement>('.member-class-enroll')!;
     await act(async () => join.click());
     expect(host.textContent).toContain('Hội viên đã có chỗ trong lớp học này.');
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tuần kế tiếp')!.click());
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tuần sau')!.click());
     expect(host.textContent).toContain('Chưa có lịch học');
     expect(host.textContent).not.toContain('Hội viên đã có chỗ trong lớp học này.');
     expect(mocks.book).toHaveBeenCalledExactlyOnceWith(8);
@@ -519,13 +519,13 @@ describe('MemberClassesPage', () => {
       expect(host.textContent).toContain('Không đặt được buổi nào');
     });
 
-    it('loads the next 30 days for a monthly booking', async () => {
+    it('loads the previous week when clicking Tuần trước', async () => {
       mocks.sessions.mockResolvedValue([]);
-      mocks.upcoming.mockResolvedValue(week());
+      mocks.sessions.mockResolvedValueOnce([]).mockResolvedValueOnce(week());
       await render();
-      await clickText('30 ngày tới');
-      expect(mocks.upcoming).toHaveBeenCalledTimes(1);
-      expect(host.textContent).toContain('30 ngày tới');
+      await clickText('Tuần trước');
+      expect(mocks.sessions).toHaveBeenCalledWith(-1);
+      expect(host.querySelector('.tt__range')?.textContent).toBeTruthy();
       await clickText('Đặt nhiều buổi');
       await clickText('Chọn tất cả 2 buổi có thể đặt');
       expect(host.textContent).toContain('Đã chọn 2 buổi');

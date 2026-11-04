@@ -21,14 +21,14 @@ import {
   getMyBookings,
   getMyEnrollments,
   getSessions,
-  getUpcomingSessions,
-  upcomingRange,
   type BulkSkipped,
   type ClassSessionDto,
   type EnrollmentDto,
   type SessionBookingDto,
 } from './memberClassesApi';
 import { BulkBookingResultModal } from './components/BulkBookingResultModal';
+import { weekRangeLabel } from '../schedule/timetable';
+import '../schedule/timetable.css';
 import './member-classes.css';
 import { notify } from '../../shared/lib/portalNotices';
 
@@ -66,9 +66,9 @@ function bookingAsEnrollment(booking: SessionBookingDto): EnrollmentDto {
   };
 }
 
-/** Week 0 / 1 are Monday-Sunday calendar weeks; 'month' is today plus the next 30 days. */
-function rangeBounds(range: 0 | 1 | 'month'): { fromDate: string; toDate: string } {
-  return range === 'month' ? upcomingRange() : currentWeek(range);
+/** Week offset: 0 is current Monday-Sunday calendar week; negative/positive offsets shift by 7 days. */
+function rangeBounds(range: number): { fromDate: string; toDate: string } {
+  return currentWeek(range);
 }
 
 function formatShortDate(iso: string): string {
@@ -149,7 +149,7 @@ export function MemberClassesPage() {
       ? 'schedule'
       : 'timetable',
   );
-  const [weekOffset, setWeekOffset] = useState<0 | 1 | 'month'>(0);
+  const [weekOffset, setWeekOffset] = useState<number>(0);
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
   const [bookings, setBookings] = useState<SessionBookingDto[]>([]);
@@ -237,8 +237,7 @@ export function MemberClassesPage() {
       setLoading(true);
       setError('');
       try {
-        const nextSessions = weekOffset === 'month' ? await getUpcomingSessions()
-          : weekOffset === 0 ? await getSessions() : await getSessions(weekOffset);
+        const nextSessions = await getSessions(weekOffset);
         if (active) setSessions(nextSessions);
       } catch (cause) {
         if (active) setError(errorMessage(cause));
@@ -559,14 +558,22 @@ export function MemberClassesPage() {
               gap: 14,
             }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <p className="row-card__meta" style={{ margin: 0 }}>
-                Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> ({weekOffset === 'month' ? '30 ngày tới' : 'Thứ 2–Chủ nhật'})
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
+            <div className="tt__toolbar" style={{ margin: 0 }}>
+              <div className="tt__nav" role="group" aria-label="Điều hướng tuần">
                 <button
                   type="button"
-                  className={`filter-chip ${weekOffset === 0 ? 'is-active' : ''}`}
+                  className="btn-secondary btn-sm"
+                  onClick={() => {
+                    clearActionFeedback();
+                    setWeekOffset((v) => v - 1);
+                  }}
+                >
+                  Tuần trước
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={weekOffset === 0}
                   onClick={() => {
                     clearActionFeedback();
                     setWeekOffset(0);
@@ -576,25 +583,16 @@ export function MemberClassesPage() {
                 </button>
                 <button
                   type="button"
-                  className={`filter-chip ${weekOffset === 1 ? 'is-active' : ''}`}
+                  className="btn-secondary btn-sm"
                   onClick={() => {
                     clearActionFeedback();
-                    setWeekOffset(1);
+                    setWeekOffset((v) => v + 1);
                   }}
                 >
-                  Tuần kế tiếp
-                </button>
-                <button
-                  type="button"
-                  className={`filter-chip ${weekOffset === 'month' ? 'is-active' : ''}`}
-                  onClick={() => {
-                    clearActionFeedback();
-                    setWeekOffset('month');
-                  }}
-                >
-                  30 ngày tới
+                  Tuần sau
                 </button>
               </div>
+              <strong className="tt__range" aria-live="polite">{weekRangeLabel(weekRange.fromDate)}</strong>
             </div>
 
             <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
@@ -686,8 +684,8 @@ export function MemberClassesPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <p className="row-card__meta" style={{ margin: 0 }}>
                 {bulkMode
-                  ? 'Chọn từng buổi hoặc bấm "Chọn tất cả" để đặt cả tuần (Tuần này) hay cả tháng (30 ngày tới). Có thể lọc theo bộ môn và thứ trước khi chọn.'
-                  : 'Bấm dấu + để đặt từng buổi, hoặc bật "Đặt nhiều buổi" để đặt cả tuần hay cả tháng một lượt.'}
+                  ? 'Chọn từng buổi hoặc bấm "Chọn tất cả" để đặt cả tuần (Tuần này / Tuần sau). Có thể lọc theo bộ môn và thứ trước khi chọn.'
+                  : 'Bấm dấu + để đặt từng buổi, hoặc bật "Đặt nhiều buổi" để đặt nhanh nhiều buổi một lượt.'}
               </p>
               <button
                 type="button"
@@ -762,7 +760,7 @@ export function MemberClassesPage() {
             {sessions.length === 0 ? (
               <div className="portal-card portal-empty">
                 <h3>Chưa có lịch học</h3>
-                <p>Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần kế tiếp.</p>
+                <p>Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần sau.</p>
                 {weekOffset === 0 && (
                   <button
                     type="button"
@@ -772,7 +770,7 @@ export function MemberClassesPage() {
                       setWeekOffset(1);
                     }}
                   >
-                    Xem lịch tuần kế tiếp
+                    Xem lịch tuần sau
                   </button>
                 )}
               </div>

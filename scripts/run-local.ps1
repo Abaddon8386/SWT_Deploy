@@ -129,6 +129,25 @@ if ($Only -in @("all", "web")) {
 
 # 3. Pre-flight check: Java & Maven
 if ($Only -in @("all", "api")) {
+    $knownJdks = @(
+        $env:JAVA_HOME,
+        "C:\Users\khoap\.jdks\corretto-21.0.10",
+        "E:\back-end\IntelliJ IDEA 2026.1\jbr",
+        "C:\Program Files\Java\jdk-21"
+    )
+    foreach ($cand in $knownJdks) {
+        try {
+            if ($cand -and (Test-Path -LiteralPath (Join-Path $cand "bin\java.exe") -ErrorAction SilentlyContinue)) {
+                $ver = (& (Join-Path $cand "bin\java.exe") -version 2>&1 | Out-String)
+                if ($ver -match 'version "(?:2[1-9]|[3-9][0-9])') {
+                    $env:JAVA_HOME = $cand
+                    $env:PATH = "$cand\bin;" + $env:PATH
+                    break
+                }
+            }
+        } catch {}
+    }
+    Get-ChildItem -Path (Join-Path $apiDir "target") -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.IsReadOnly } | ForEach-Object { $_.IsReadOnly = $false }
     $javaCmd = Get-Command java -ErrorAction SilentlyContinue
     if (-not $javaCmd) {
         Write-Host "[LOI] Khong tim thay Java trong he thong." -ForegroundColor Red
@@ -182,7 +201,8 @@ if ($Only -in @("all", "api") -and -not (Test-ScmsLocalService -Uri 'http://loca
         $mvnExecutable = "mvn"
     }
 
-    $apiProcessCmd = "cd /d `"$apiDir`" && title SCMS API (Spring Boot 8080) && $mvnExecutable spring-boot:run"
+    $setJavaHome = if ($env:JAVA_HOME) { "set `"JAVA_HOME=$($env:JAVA_HOME)`"&& set `"PATH=$($env:JAVA_HOME)\bin;%PATH%`"&& " } else { "" }
+    $apiProcessCmd = "cd /d `"$apiDir`" && title SCMS API (Spring Boot 8080) && ${setJavaHome}$mvnExecutable spring-boot:run"
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $apiProcessCmd -WindowStyle Hidden -RedirectStandardOutput (Join-Path $rootDir 'api.log') -RedirectStandardError (Join-Path $rootDir 'api-error.log')
     Write-Host "  [+] API dang khoi dong nen; xem api.log / api-error.log." -ForegroundColor Green
 }

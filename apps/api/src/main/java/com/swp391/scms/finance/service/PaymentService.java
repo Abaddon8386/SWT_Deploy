@@ -680,15 +680,17 @@ public class PaymentService {
                 && previous.getMembershipPackage().getId() != null
                 && !previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId());
 
-        if (isUpgrade && membershipSubscriptionRepository.findByMemberUserId(
-                subscription.getMember().getUserId()).stream()
-                .anyMatch(item -> item.getPreviousSubscription() != null
-                        && ("active".equalsIgnoreCase(item.getStatus())
-                            || "expired".equalsIgnoreCase(item.getStatus()))
-                        && item.getStartDate() != null && item.getStartDate().isAfter(today))) {
-            throw new ConflictException("MEMBERSHIP_FUTURE_PAID_RENEWAL",
-                    "error.membership.future_paid_renewal", null,
-                    "Paid future renewal requires manager review");
+        if (isUpgrade) {
+            // Cancel any future renewals of the old package so the new upgraded package becomes the active one
+            membershipSubscriptionRepository.findByMemberUserId(subscription.getMember().getUserId()).stream()
+                    .filter(item -> item.getPreviousSubscription() != null
+                            && "active".equalsIgnoreCase(item.getStatus())
+                            && item.getStartDate() != null && item.getStartDate().isAfter(today))
+                    .forEach(futureItem -> {
+                        futureItem.setStatus("cancelled");
+                        futureItem.setUpdatedAt(LocalDateTime.now(clock));
+                        membershipSubscriptionRepository.save(futureItem);
+                    });
         }
         if (isUpgrade && "active".equalsIgnoreCase(previous.getStatus())) {
             previous.setStatus("expired");

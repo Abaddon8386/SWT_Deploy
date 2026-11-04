@@ -8,6 +8,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.finance.repository.PaymentRepository;
+import com.swp391.scms.finance.repository.VnpayTransactionRepository;
 import com.swp391.scms.membership.dto.SubscriptionRequests;
 import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
@@ -63,6 +64,9 @@ public class MembershipSubscriptionService {
 
     @Autowired(required = false)
     private PaymentRepository paymentRepository;
+
+    @Autowired(required = false)
+    private VnpayTransactionRepository vnpayTransactionRepository;
 
     @Autowired(required = false)
     private EntitlementRevocationService entitlementRevocation;
@@ -379,7 +383,8 @@ public class MembershipSubscriptionService {
                     "Member already has a pending payment subscription");
         }
 
-        if (hasPaidFutureRenewal(current.getMember().getUserId(), today)) throw futurePaidConflict();
+        // Permit upgrading current package even if there were future renewals scheduled
+        // (the old future renewals will be replaced upon upgrade confirmation)
 
         MembershipPackage targetPackage = findActivePackage(request.packageId());
         MembershipPackage currentPackage = current.getMembershipPackage();
@@ -451,10 +456,26 @@ public class MembershipSubscriptionService {
                     "Only a pending payment subscription can be cancelled");
         }
 
-        if (paymentRepository != null && paymentRepository.findAllBySubscriptionId(subscriptionId).stream()
-                .anyMatch(payment -> !"failed".equalsIgnoreCase(payment.getStatus()))) {
-            throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
-                    "error.membership.cancel_payment_unsettled", null, null);
+        if (paymentRepository != null) {
+            List<com.swp391.scms.finance.entity.Payment> subPayments = paymentRepository.findAllBySubscriptionId(subscriptionId);
+            if (subPayments.stream().anyMatch(payment -> "success".equalsIgnoreCase(payment.getStatus()))) {
+                throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
+                        "error.membership.cancel_payment_unsettled", null, null);
+            }
+            subPayments.stream()
+                    .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
+                    .forEach(payment -> {
+                        payment.setStatus("failed");
+                        paymentRepository.save(payment);
+                        if (vnpayTransactionRepository != null) {
+                            vnpayTransactionRepository.findAllByPaymentId(payment.getId()).stream()
+                                    .filter(t -> "pending".equalsIgnoreCase(t.getStatus()))
+                                    .forEach(t -> {
+                                        t.setStatus("failed");
+                                        vnpayTransactionRepository.save(t);
+                                    });
+                        }
+                    });
         }
 
         subscription.setStatus("cancelled");
