@@ -1129,31 +1129,6 @@ paths:
         '409':
           description: Đã kích hoạt hoặc có payment đã hoàn tất/chưa đối soát
 
-  /memberships/cancellations/subscriptions/{subscriptionId}:
-    post:
-      summary: Member gửi yêu cầu hủy gói đang hoạt động; quyền lợi giữ nguyên khi chờ duyệt
-      tags: [Memberships]
-      parameters:
-        - name: subscriptionId
-          in: path
-          required: true
-          schema: {type: integer, format: int64}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [reason]
-              properties:
-                reason: {type: string, minLength: 1, maxLength: 500}
-      responses:
-        '201': {description: Đã gửi yêu cầu chờ quản lý duyệt}
-        '400': {description: Thiếu lý do}
-        '403': {description: Không phải chủ gói}
-        '404': {description: Không tìm thấy gói}
-        '409': {description: Gói không active hoặc đã có yêu cầu pending}
-
   /memberships/cancellations/my:
     get:
       summary: Lịch sử yêu cầu hủy của member đang đăng nhập

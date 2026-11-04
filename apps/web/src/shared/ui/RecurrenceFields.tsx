@@ -45,7 +45,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
 
   return (
     <fieldset disabled={disabled} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <legend style={{ fontSize: 15, fontWeight: 700, color: 'var(--portal-paper, #201b17)', marginBottom: 10, padding: 0 }}>
+      <legend style={{ fontSize: 15, fontWeight: 700, color: 'var(--portal-paper)', marginBottom: 10, padding: 0 }}>
         Tần suất buổi tập
       </legend>
       <div
@@ -56,7 +56,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
           alignItems: 'center',
           gap: 2,
           padding: 4,
-          background: 'var(--portal-surface-subtle, #edf1f5)',
+          background: 'var(--portal-raised)',
           borderRadius: 9999,
           maxWidth: '100%',
           flexWrap: 'wrap',
@@ -81,9 +81,9 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
                 borderRadius: 9999,
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 transition: 'all 160ms ease',
-                background: active ? 'var(--portal-salmon, #c86b43)' : 'transparent',
-                color: active ? '#ffffff' : 'var(--portal-paper, #201b17)',
-                boxShadow: active ? '0 2px 6px rgba(184, 84, 51, 0.25)' : 'none',
+                background: active ? 'var(--portal-salmon)' : 'transparent',
+                color: active ? 'var(--portal-on-accent)' : 'var(--portal-paper)',
+                boxShadow: active ? '0 2px 6px color-mix(in srgb, var(--portal-salmon) 25%, transparent)' : 'none',
               }}
             >
               {period.label}
@@ -133,9 +133,9 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
                     fontWeight: active ? 700 : 600,
                     cursor: disabled ? 'not-allowed' : 'pointer',
                     transition: 'all 160ms ease',
-                    background: active ? 'var(--portal-salmon, #c86b43)' : '#edf1f5',
-                    color: active ? '#ffffff' : '#2e384d',
-                    boxShadow: active ? '0 2px 6px rgba(184, 84, 51, 0.25)' : 'none',
+                    background: active ? 'var(--portal-salmon)' : 'var(--portal-raised)',
+                    color: active ? 'var(--portal-on-accent)' : 'var(--portal-paper)',
+                    boxShadow: active ? '0 2px 6px color-mix(in srgb, var(--portal-salmon) 25%, transparent)' : 'none',
                   }}
                 >
                   {label}
@@ -143,7 +143,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               );
             })}
           </div>
-          <div role="status" style={{ marginTop: 14, fontSize: 14, fontWeight: 700, color: 'var(--portal-paper, #201b17)', lineHeight: 1.4 }}>
+          <div role="status" style={{ marginTop: 14, fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)', lineHeight: 1.4 }}>
             {dates.length ? (
               <>
                 Lặp lại vào {selectedDayNames} {value.period === 'week' ? 'hàng tuần' : 'hàng tháng'} (Dự kiến: {projectedCount} buổi/tháng)
@@ -174,8 +174,8 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               marginTop: 14,
               padding: '12px 14px',
               borderRadius: 14,
-              background: '#fdf2eb',
-              border: '1px solid rgba(200, 107, 67, 0.15)',
+              background: 'var(--portal-tint)',
+              border: '1px solid var(--portal-border)',
               display: 'flex',
               alignItems: 'flex-start',
               gap: 10,
@@ -186,7 +186,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               height="18"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#b85433"
+              stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -197,7 +197,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               <line x1="12" y1="16" x2="12" y2="12" />
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
-            <div style={{ fontSize: 13, lineHeight: 1.45, color: '#201b17' }}>
+            <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--portal-paper)' }}>
               <strong>Lưu ý:</strong> {hint || 'Các buổi tập được đặt cùng lúc cho những ngày đã chọn. Bạn có thể hủy từng buổi trước giờ tập theo quy định của trung tâm.'}
             </div>
           </div>

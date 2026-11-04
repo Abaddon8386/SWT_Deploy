@@ -126,6 +126,19 @@ class CodeFirstSchemaTest {
     }
 
     @Test
+    void classUtilizationQueryCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
+        var method = com.swp391.scms.reports.repository.SessionAttendanceReportRepository.class.getMethod(
+                "classUtilization", java.time.LocalDate.class, java.time.LocalDate.class,
+                java.time.LocalDateTime.class, java.time.LocalDateTime.class, Long.class);
+        String jpql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
+        generateDdl(factory -> {
+            try (var session = factory.openSession()) {
+                session.createQuery(jpql, jakarta.persistence.Tuple.class);
+            }
+        });
+    }
+
+    @Test
     void authenticationProjectionCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
         var method = com.swp391.scms.users.UserRepository.class.getMethod("findAuthenticationById", Long.class);
         String jpql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();

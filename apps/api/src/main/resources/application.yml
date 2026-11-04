@@ -84,6 +84,8 @@ app:
   qr:
     secret: ${APP_QR_SECRET:${APP_JWT_SECRET}}
     ttl-seconds: ${APP_QR_TTL_SECONDS:60}
+  trial:
+    cccd-pepper: ${APP_TRIAL_CCCD_PEPPER:${APP_JWT_SECRET}}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
     web-origin: ${APP_WEB_ORIGIN:http://localhost:5173}

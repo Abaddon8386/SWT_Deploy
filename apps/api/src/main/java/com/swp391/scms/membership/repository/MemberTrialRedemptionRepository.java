@@ -8,9 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface MemberTrialRedemptionRepository extends JpaRepository<MemberTrialRedemption, Long> {
-    boolean existsByCccd(String cccd);
+    boolean existsByCccdHash(String cccdHash);
     boolean existsByMemberUserId(Long memberId);
     Optional<MemberTrialRedemption> findByMemberUserId(Long memberId);
-    Optional<MemberTrialRedemption> findByCccd(String cccd);
 }
 

@@ -36,6 +36,8 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
 
     boolean existsByMemberUserIdAndStatus(Long memberId, String status);
 
+    boolean existsByMemberUserId(Long memberId);
+
     boolean existsByPreviousSubscriptionIdAndStatusIn(Long previousId, java.util.Collection<String> statuses);
 
     @Query("""

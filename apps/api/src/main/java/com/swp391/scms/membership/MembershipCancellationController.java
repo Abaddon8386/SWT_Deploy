@@ -8,8 +8,6 @@ import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -29,16 +27,6 @@ public class MembershipCancellationController {
     public MembershipCancellationController(MembershipCancellationService service, MessageService messages) {
         this.service = service;
         this.messages = messages;
-    }
-
-    @Operation(summary = "Member requests cancellation of an active subscription; no rights change before approval")
-    @PostMapping("/subscriptions/{subscriptionId}")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<ApiResponse<CancellationDtos.Response>> request(
-            @AuthenticationPrincipal AuthenticatedPrincipal principal, @PathVariable Long subscriptionId,
-            @Valid @RequestBody CancellationDtos.Request body) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(
-                msg("membership.cancellation.requested"), service.request(principal, subscriptionId, body)));
     }
 
     @GetMapping("/my")

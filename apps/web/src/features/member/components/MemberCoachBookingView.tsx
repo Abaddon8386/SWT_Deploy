@@ -344,7 +344,7 @@ export function MemberCoachBookingView({
             alignItems: 'center',
           }}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}><strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{error}</strong>{errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED' && <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')} style={{ padding: '4px 10px', fontSize: 12 }}>Đăng ký / Kích hoạt gói tập</button>}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}><strong style={{ color: 'var(--portal-danger)' }}>{error}</strong>{errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED' && <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')} style={{ padding: '4px 10px', fontSize: 12 }}>Đăng ký / Kích hoạt gói tập</button>}</div>
           <button
             type="button"
             className="btn-secondary btn-sm"
@@ -379,7 +379,7 @@ export function MemberCoachBookingView({
                 textTransform: 'uppercase',
                 padding: '3px 10px',
                 borderRadius: 99,
-                background: 'var(--portal-salmon, #ce9180)',
+                background: 'var(--portal-salmon)',
                 color: 'var(--portal-on-accent)',
               }}
             >
@@ -390,12 +390,12 @@ export function MemberCoachBookingView({
             </span>
           </div>
 
-          <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--portal-muted, #71717a)' }}>
+          <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--portal-muted)' }}>
             {quotaStatus?.monthlyQuota && quotaStatus.monthlyQuota > 0 ? (
               <>
                 Gói {quotaStatus.packageName} được tặng <strong>{quotaStatus.monthlyQuota} lượt PT miễn phí/tháng</strong>.
                 Tháng này bạn đã dùng <strong>{quotaStatus.usedThisMonth} lượt</strong> (còn lại:{' '}
-                <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-danger)' }}>
+                <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
                   {quotaStatus.remainingQuota} lượt
                 </strong>
                 ).
@@ -404,7 +404,7 @@ export function MemberCoachBookingView({
             ) : (
               <>
                 {hasNoPackage ? 'Bạn chưa đăng ký gói tập hoặc gói tập chưa được kích hoạt (cần có gói tập đang hoạt động để đặt lịch HLV 1:1).' : `Gói ${quotaStatus?.packageName || 'hiện tại'} không bao gồm lượt tập PT 1:1 miễn phí.`} Phí đặt lịch HLV kèm riêng là{' '}
-                <strong style={{ color: 'var(--portal-salmon, #ce9180)' }}>200.000 đ / giờ</strong>. (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).
+                <strong style={{ color: 'var(--portal-salmon)' }}>200.000 đ / giờ</strong>. (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).
               </>
             )}
           </p>
@@ -466,9 +466,9 @@ export function MemberCoachBookingView({
                   display: 'flex',
                   gap: 14,
                   alignItems: 'center',
-                  borderColor: isSelected ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-border, #e4e2de)',
-                  background: isSelected ? 'color-mix(in srgb, var(--portal-salmon) 12%, transparent)' : 'var(--portal-surface, #ffffff)',
-                  boxShadow: isSelected ? '0 0 0 2px var(--portal-salmon, #ce9180)' : undefined,
+                  borderColor: isSelected ? 'var(--portal-salmon)' : 'var(--portal-border)',
+                  background: isSelected ? 'color-mix(in srgb, var(--portal-salmon) 12%, transparent)' : 'var(--portal-surface)',
+                  boxShadow: isSelected ? '0 0 0 2px var(--portal-salmon)' : undefined,
                   transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
                 }}
               >
@@ -492,15 +492,15 @@ export function MemberCoachBookingView({
                       {c.fullName}
                     </h4>
                     {isSelected && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon, #ce9180)' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon)' }}>
                         Đang chọn
                       </span>
                     )}
                   </div>
-                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-salmon, #ce9180)', fontWeight: 600 }}>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-salmon)', fontWeight: 600 }}>
                     {c.specialization || 'Huấn luyện cá nhân'}
                   </p>
-                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--portal-muted, #71717a)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--portal-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {c.bio || 'Chuyên gia huấn luyện thể hình và phục hồi thể lực.'}
                   </p>
                 </div>
@@ -551,27 +551,27 @@ export function MemberCoachBookingView({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: isSelected ? '1px solid transparent' : '1px solid var(--portal-border, #e5e0db)',
+                  border: isSelected ? '1px solid transparent' : '1px solid var(--portal-border)',
                   background: isSelected
-                    ? 'linear-gradient(155deg, #5c351c 0%, #3a2012 100%)'
-                    : 'var(--portal-surface, #ffffff)',
-                  color: isSelected ? '#ffffff' : 'var(--portal-paper, #201b17)',
+                    ? 'var(--portal-salmon)'
+                    : 'var(--portal-surface)',
+                  color: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-paper)',
                   boxShadow: isSelected
-                    ? '0 4px 12px rgba(78, 45, 25, 0.32)'
-                    : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                    ? '0 4px 12px color-mix(in srgb, var(--portal-salmon) 32%, transparent)'
+                    : '0 1px 3px color-mix(in srgb, var(--portal-paper) 4%, transparent)',
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
                     e.currentTarget.style.transform = 'translateY(-2px)';
                     e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--portal-salmon) 50%, transparent)';
-                    e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface, #ffffff))';
+                    e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface))';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSelected) {
                     e.currentTarget.style.transform = 'none';
-                    e.currentTarget.style.borderColor = 'var(--portal-border, #e5e0db)';
-                    e.currentTarget.style.background = 'var(--portal-surface, #ffffff)';
+                    e.currentTarget.style.borderColor = 'var(--portal-border)';
+                    e.currentTarget.style.background = 'var(--portal-surface)';
                   }
                 }}
                 title={`Còn trống: ${startFmt} – ${endFmt} (Nhấn để đặt lịch)`}
@@ -604,9 +604,9 @@ export function MemberCoachBookingView({
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid var(--portal-border, #e5e0db)',
-                background: 'var(--portal-raised, #f5f2ee)',
-                color: 'var(--portal-muted, #9c948c)',
+                border: '1px solid var(--portal-border)',
+                background: 'var(--portal-raised)',
+                color: 'var(--portal-muted)',
                 opacity: 0.5,
                 cursor: 'not-allowed',
               }}
@@ -623,7 +623,7 @@ export function MemberCoachBookingView({
             style={{
               padding: '24px 24px',
               borderRadius: 20,
-              background: 'var(--portal-surface, #ffffff)',
+              background: 'var(--portal-surface)',
               border: '1px solid var(--portal-border)',
               display: 'flex',
               flexDirection: 'column',
@@ -677,11 +677,11 @@ export function MemberCoachBookingView({
                         borderRadius: 16,
                         border: isSelected
                           ? '1px solid transparent'
-                          : '1px solid var(--portal-border, #e5e0db)',
+                          : '1px solid var(--portal-border)',
                         background: isSelected
-                          ? 'linear-gradient(155deg, #5c351c 0%, #3a2012 100%)'
-                          : 'var(--portal-surface, #ffffff)',
-                        color: isSelected ? '#ffffff' : 'var(--portal-paper, #201b17)',
+                          ? 'var(--portal-salmon)'
+                          : 'var(--portal-surface)',
+                        color: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-paper)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -690,8 +690,8 @@ export function MemberCoachBookingView({
                         cursor: 'pointer',
                         flexShrink: 0,
                         boxShadow: isSelected
-                          ? '0 6px 16px rgba(78, 45, 25, 0.32)'
-                          : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                          ? '0 6px 16px color-mix(in srgb, var(--portal-salmon) 32%, transparent)'
+                          : '0 1px 3px color-mix(in srgb, var(--portal-paper) 4%, transparent)',
                         transition: 'all 180ms ease',
                       }}
                       onMouseEnter={(e) => {
@@ -703,7 +703,7 @@ export function MemberCoachBookingView({
                       onMouseLeave={(e) => {
                         if (!isSelected) {
                           e.currentTarget.style.transform = 'none';
-                          e.currentTarget.style.borderColor = 'var(--portal-border, #e5e0db)';
+                          e.currentTarget.style.borderColor = 'var(--portal-border)';
                         }
                       }}
                     >
@@ -711,7 +711,7 @@ export function MemberCoachBookingView({
                         style={{
                           fontSize: 13,
                           fontWeight: 700,
-                          color: isSelected ? 'rgba(255, 255, 255, 0.85)' : 'var(--portal-muted, #736b63)',
+                          color: isSelected ? 'color-mix(in srgb, var(--portal-on-accent) 85%, transparent)' : 'var(--portal-muted)',
                           lineHeight: 1,
                           display: 'flex',
                           alignItems: 'center',
@@ -725,7 +725,7 @@ export function MemberCoachBookingView({
                               width: 5,
                               height: 5,
                               borderRadius: '50%',
-                              background: isSelected ? '#ffffff' : 'var(--portal-salmon)',
+                              background: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-salmon)',
                             }}
                             title="Hôm nay"
                           />
@@ -735,7 +735,7 @@ export function MemberCoachBookingView({
                         style={{
                           fontSize: 24,
                           fontWeight: 800,
-                          color: isSelected ? '#ffffff' : 'var(--portal-paper, #201b17)',
+                          color: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-paper)',
                           lineHeight: 1.1,
                         }}
                       >
@@ -745,7 +745,7 @@ export function MemberCoachBookingView({
                         style={{
                           fontSize: 11,
                           fontWeight: 500,
-                          color: isSelected ? 'rgba(255, 255, 255, 0.8)' : 'var(--portal-muted, #8a8279)',
+                          color: isSelected ? 'color-mix(in srgb, var(--portal-on-accent) 80%, transparent)' : 'var(--portal-muted)',
                           lineHeight: 1,
                         }}
                       >
@@ -774,7 +774,7 @@ export function MemberCoachBookingView({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {morningSlots.length > 0 && (
                   <div>
-                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper)' }}>
                       Buổi sáng
                     </h4>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -785,7 +785,7 @@ export function MemberCoachBookingView({
 
                 {afternoonSlots.length > 0 && (
                   <div>
-                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper)' }}>
                       Buổi chiều
                     </h4>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -796,7 +796,7 @@ export function MemberCoachBookingView({
 
                 {eveningSlots.length > 0 && (
                   <div>
-                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper)' }}>
                       Buổi tối
                     </h4>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -906,7 +906,7 @@ export function MemberCoachBookingView({
                       ? hasEnded
                         ? 'var(--portal-border-strong)'
                         : 'color-mix(in srgb, var(--portal-salmon) 35%, transparent)'
-                      : 'var(--portal-border, #e4e2de)',
+                      : 'var(--portal-border)',
                   }}
                 >
                   <div style={{ display: 'flex', flexWrap: 'wrap', minWidth: 0, gap: 14, alignItems: 'center' }}>
@@ -915,7 +915,7 @@ export function MemberCoachBookingView({
                         width: 44,
                         height: 44,
                         borderRadius: '50%',
-                        background: hasEnded ? 'var(--portal-raised)' : 'var(--portal-salmon, #ce9180)',
+                        background: hasEnded ? 'var(--portal-raised)' : 'var(--portal-salmon)',
                         color: hasEnded ? 'var(--portal-paper)' : 'var(--portal-on-accent)',
                         border: hasEnded ? '1px solid var(--portal-border-strong)' : 'none',
                         display: 'flex',
@@ -929,7 +929,7 @@ export function MemberCoachBookingView({
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--portal-paper, #202020)' }}>
+                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--portal-paper)' }}>
                           Tập 1:1 cùng HLV {coachDisplayName}
                         </h4>
                         {isCancelled ? (
@@ -963,7 +963,7 @@ export function MemberCoachBookingView({
                         Ngày <strong>{b.bookingDate}</strong> • <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? 'Quyền lợi gói tập' : `Trả phí: ${formatPrice(b.hourlyRate)}`}
                       </p>
                       {b.notes && (
-                        <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-muted, #71717a)', fontStyle: 'italic' }}>
+                        <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
                           Ghi chú: {b.notes}
                         </p>
                       )}
@@ -988,7 +988,7 @@ export function MemberCoachBookingView({
                             Đánh giá HLV
                           </button>
                         ) : (
-                          <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+                          <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
                             Đã gửi review
                           </span>
                         )
@@ -997,7 +997,7 @@ export function MemberCoachBookingView({
                           className="badge badge-neutral"
                           style={{
                             fontSize: 11,
-                            color: 'var(--portal-muted, #71717a)',
+                            color: 'var(--portal-muted)',
                             padding: '4px 8px',
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -1050,17 +1050,17 @@ export function MemberCoachBookingView({
               style={{
                 padding: 12,
                 borderRadius: 10,
-                background: 'var(--portal-raised, #f4f4f5)',
-                color: 'var(--portal-paper, #202020)',
+                background: 'var(--portal-raised)',
+                color: 'var(--portal-paper)',
                 fontSize: 13,
-                border: '1px solid var(--portal-border, #e4e2de)',
+                border: '1px solid var(--portal-border)',
               }}
             >
               Buổi tập 1:1 đã kết thúc ngày <strong>{reviewTargetBooking.bookingDate}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--portal-paper, #202020)' }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--portal-paper)' }}>
                 Mức độ hài lòng của bạn:
               </label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -1071,7 +1071,7 @@ export function MemberCoachBookingView({
                     onClick={() => setReviewRating(star)}
                     style={{
                       border: '1px solid',
-                      borderColor: star <= reviewRating ? 'var(--portal-star)' : 'var(--portal-border, #e4e2de)',
+                      borderColor: star <= reviewRating ? 'var(--portal-star)' : 'var(--portal-border)',
                       background: star <= reviewRating ? 'color-mix(in srgb, var(--portal-star) 15%, transparent)' : 'transparent',
                       borderRadius: 8,
                       padding: '8px 12px',
@@ -1097,20 +1097,20 @@ export function MemberCoachBookingView({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--portal-paper, #202020)' }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--portal-paper)' }}>
                 Nhận xét chi tiết (Gửi tới Quản lý và Huấn luyện viên):
               </label>
               <textarea
                 rows={4}
                 className="portal-input"
-                style={{ width: '100%', resize: 'vertical', color: 'var(--portal-paper, #202020)' }}
+                style={{ width: '100%', resize: 'vertical', color: 'var(--portal-paper)' }}
                 placeholder="Chia sẻ về tác phong, chuyên môn, sự nhiệt tình hoặc điểm cần cải thiện của HLV..."
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
               />
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--portal-paper, #202020)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--portal-paper)' }}>
               <input
                 type="checkbox"
                 checked={reviewAnonymous}
@@ -1152,27 +1152,27 @@ export function MemberCoachBookingView({
                   width: 44,
                   height: 44,
                   borderRadius: '50%',
-                  background: 'color-mix(in srgb, var(--portal-salmon) 20%, #f5e8df)',
+                  background: 'color-mix(in srgb, var(--portal-salmon) 20%, var(--portal-surface))',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60381e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
                   <line x1="3" y1="10" x2="21" y2="10"></line>
-                  <circle cx="8" cy="14" r="1.2" fill="#60381e"></circle>
-                  <circle cx="12" cy="14" r="1.2" fill="#60381e"></circle>
-                  <circle cx="16" cy="14" r="1.2" fill="#60381e"></circle>
-                  <circle cx="8" cy="18" r="1.2" fill="#60381e"></circle>
-                  <circle cx="12" cy="18" r="1.2" fill="#60381e"></circle>
-                  <circle cx="16" cy="18" r="1.2" fill="#60381e"></circle>
+                  <circle cx="8" cy="14" r="1.2" fill="var(--portal-salmon)"></circle>
+                  <circle cx="12" cy="14" r="1.2" fill="var(--portal-salmon)"></circle>
+                  <circle cx="16" cy="14" r="1.2" fill="var(--portal-salmon)"></circle>
+                  <circle cx="8" cy="18" r="1.2" fill="var(--portal-salmon)"></circle>
+                  <circle cx="12" cy="18" r="1.2" fill="var(--portal-salmon)"></circle>
+                  <circle cx="16" cy="18" r="1.2" fill="var(--portal-salmon)"></circle>
                 </svg>
               </span>
-              <span style={{ fontSize: 22, fontWeight: 750, color: 'var(--portal-paper, #201b17)', fontFamily: 'inherit' }}>
+              <span style={{ fontSize: 22, fontWeight: 750, color: 'var(--portal-paper)', fontFamily: 'inherit' }}>
                 Xác nhận đặt lịch
               </span>
             </span>
@@ -1185,8 +1185,8 @@ export function MemberCoachBookingView({
               style={{
                 padding: '16px 20px',
                 borderRadius: 18,
-                background: 'color-mix(in srgb, var(--portal-salmon) 6%, var(--portal-surface, #ffffff))',
-                border: '1px solid color-mix(in srgb, var(--portal-salmon) 22%, var(--portal-border, #e5dbd2))',
+                background: 'color-mix(in srgb, var(--portal-salmon) 6%, var(--portal-surface))',
+                border: '1px solid color-mix(in srgb, var(--portal-salmon) 22%, var(--portal-border))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1205,8 +1205,8 @@ export function MemberCoachBookingView({
                       height: 62,
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '2px solid #ffffff',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      border: '2px solid var(--portal-surface)',
+                      boxShadow: '0 2px 8px color-mix(in srgb, var(--portal-paper) 8%, transparent)',
                     }}
                   />
                   <div
@@ -1217,9 +1217,9 @@ export function MemberCoachBookingView({
                       width: 18,
                       height: 18,
                       borderRadius: '50%',
-                      background: '#5c351c',
-                      border: '2px solid #ffffff',
-                      color: '#ffffff',
+                      background: 'var(--portal-salmon)',
+                      border: '2px solid var(--portal-surface)',
+                      color: 'var(--portal-on-accent)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1231,13 +1231,13 @@ export function MemberCoachBookingView({
                   </div>
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: 'var(--portal-muted, #8c827a)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 2 }}>
                     Huấn luyện viên
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 750, color: 'var(--portal-paper, #201b17)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 16, fontWeight: 750, color: 'var(--portal-paper)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {selectedCoach.fullName}
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--portal-muted, #8c827a)' }}>
+                  <div style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
                     {selectedCoach.specialization || 'Fitness & Cardio'}
                   </div>
                 </div>
@@ -1245,7 +1245,7 @@ export function MemberCoachBookingView({
 
               {/* Time */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 140, flex: '1 1 auto' }}>
-                <span style={{ color: '#8c5b3e', marginTop: 2, flexShrink: 0 }}>
+                <span style={{ color: 'var(--portal-muted)', marginTop: 2, flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                     <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -1254,13 +1254,13 @@ export function MemberCoachBookingView({
                   </svg>
                 </span>
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--portal-muted, #8c827a)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 2 }}>
                     Thời gian
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--portal-paper, #201b17)' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)' }}>
                     {selectedDate}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper, #201b17)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>
                     {modalSlot.startTime.slice(0, 5)} – {modalSlot.endTime.slice(0, 5)}
                   </div>
                 </div>
@@ -1268,7 +1268,7 @@ export function MemberCoachBookingView({
 
               {/* Cost */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 140, flex: '1 1 auto' }}>
-                <span style={{ color: '#8c5b3e', marginTop: 2, flexShrink: 0 }}>
+                <span style={{ color: 'var(--portal-muted)', marginTop: 2, flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="9"></circle>
                     <path d="M14.5 9a2.5 2.5 0 0 0-5 0c0 4 5 2 5 6a2.5 2.5 0 0 1-5 0"></path>
@@ -1277,10 +1277,10 @@ export function MemberCoachBookingView({
                   </svg>
                 </span>
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--portal-muted, #8c827a)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 2 }}>
                     Chi phí buổi tập
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                  <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--portal-paper)' }}>
                     {formatPrice(selectedCoach.defaultHourlyRate || 200000)} / buổi
                   </div>
                 </div>
@@ -1290,11 +1290,11 @@ export function MemberCoachBookingView({
             {/* Payment Method Section */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60381e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
                   <line x1="1" y1="10" x2="23" y2="10"></line>
                 </svg>
-                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper)' }}>
                   Phương thức thanh toán
                 </h4>
               </div>
@@ -1310,11 +1310,11 @@ export function MemberCoachBookingView({
                     padding: '14px 16px',
                     borderRadius: 14,
                     border: paymentMethod === 'package_quota'
-                      ? '1.5px solid #60381e'
-                      : '1px solid var(--portal-border, #e7ded5)',
+                      ? '1.5px solid var(--portal-salmon)'
+                      : '1px solid var(--portal-border)',
                     background: paymentMethod === 'package_quota'
-                      ? 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface, #ffffff))'
-                      : 'var(--portal-surface, #ffffff)',
+                      ? 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface))'
+                      : 'var(--portal-surface)',
                     cursor: hasRemainingQuota ? 'pointer' : 'not-allowed',
                     opacity: hasRemainingQuota ? 1 : 0.7,
                     transition: 'all 160ms ease',
@@ -1325,7 +1325,7 @@ export function MemberCoachBookingView({
                       width: 20,
                       height: 20,
                       borderRadius: '50%',
-                      border: paymentMethod === 'package_quota' ? '2px solid #60381e' : '2px solid var(--portal-border, #c4b9af)',
+                      border: paymentMethod === 'package_quota' ? '2px solid var(--portal-salmon)' : '2px solid var(--portal-border)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1334,11 +1334,11 @@ export function MemberCoachBookingView({
                     }}
                   >
                     {paymentMethod === 'package_quota' && (
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#60381e' }} />
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--portal-salmon)' }} />
                     )}
                   </div>
 
-                  <span style={{ color: '#60381e', marginTop: 2, flexShrink: 0 }}>
+                  <span style={{ color: 'var(--portal-salmon)', marginTop: 2, flexShrink: 0 }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
                       <line x1="1" y1="10" x2="23" y2="10"></line>
@@ -1347,7 +1347,7 @@ export function MemberCoachBookingView({
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: 14, color: 'var(--portal-paper, #201b17)' }}>
+                      <strong style={{ fontSize: 14, color: 'var(--portal-paper)' }}>
                         Sử dụng quyền lợi PT trong gói tập (Gold / Platinum)
                       </strong>
                       {hasRemainingQuota ? (
@@ -1355,7 +1355,7 @@ export function MemberCoachBookingView({
                           style={{
                             fontSize: 11,
                             fontWeight: 700,
-                            color: 'var(--portal-success, #226442)',
+                            color: 'var(--portal-success)',
                             background: 'color-mix(in srgb, var(--portal-success) 12%, transparent)',
                             padding: '2px 8px',
                             borderRadius: 99,
@@ -1368,8 +1368,8 @@ export function MemberCoachBookingView({
                           style={{
                             fontSize: 11,
                             fontWeight: 600,
-                            color: '#a45338',
-                            background: '#f8eee7',
+                            color: 'var(--portal-salmon)',
+                            background: 'var(--portal-tint)',
                             padding: '2px 8px',
                             borderRadius: 99,
                           }}
@@ -1378,7 +1378,7 @@ export function MemberCoachBookingView({
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)', marginTop: 4, lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 4, lineHeight: 1.4 }}>
                       {hasRemainingQuota
                         ? 'Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn (0 đ).'
                         : 'Gói hiện tại không có lượt PT miễn phí hoặc bạn đã dùng hết quota tháng. Vui lòng chọn đóng phí ' + formatPrice(selectedCoach.defaultHourlyRate || 200000) + '.'}
@@ -1396,11 +1396,11 @@ export function MemberCoachBookingView({
                     padding: '14px 16px',
                     borderRadius: 14,
                     border: paymentMethod === 'hourly_pay'
-                      ? '1.5px solid #60381e'
-                      : '1px solid var(--portal-border, #e7ded5)',
+                      ? '1.5px solid var(--portal-salmon)'
+                      : '1px solid var(--portal-border)',
                     background: paymentMethod === 'hourly_pay'
-                      ? 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface, #ffffff))'
-                      : 'var(--portal-surface, #ffffff)',
+                      ? 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface))'
+                      : 'var(--portal-surface)',
                     cursor: 'pointer',
                     transition: 'all 160ms ease',
                   }}
@@ -1410,7 +1410,7 @@ export function MemberCoachBookingView({
                       width: 20,
                       height: 20,
                       borderRadius: '50%',
-                      border: paymentMethod === 'hourly_pay' ? '2px solid #60381e' : '2px solid var(--portal-border, #c4b9af)',
+                      border: paymentMethod === 'hourly_pay' ? '2px solid var(--portal-salmon)' : '2px solid var(--portal-border)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1419,11 +1419,11 @@ export function MemberCoachBookingView({
                     }}
                   >
                     {paymentMethod === 'hourly_pay' && (
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#60381e' }} />
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--portal-salmon)' }} />
                     )}
                   </div>
 
-                  <span style={{ color: '#60381e', marginTop: 2, flexShrink: 0 }}>
+                  <span style={{ color: 'var(--portal-salmon)', marginTop: 2, flexShrink: 0 }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 12 20 22 4 22 4 12"></polyline>
                       <rect x="2" y="7" width="20" height="5"></rect>
@@ -1435,7 +1435,7 @@ export function MemberCoachBookingView({
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: 14, color: 'var(--portal-paper, #201b17)' }}>
+                      <strong style={{ fontSize: 14, color: 'var(--portal-paper)' }}>
                         Đăng ký trả phí theo giờ ({formatPrice(selectedCoach.defaultHourlyRate || 200000)} / giờ)
                       </strong>
                       {!hasRemainingQuota && !hasNoPackage && (
@@ -1443,8 +1443,8 @@ export function MemberCoachBookingView({
                           style={{
                             fontSize: 11,
                             fontWeight: 600,
-                            color: '#a45338',
-                            background: '#f8eee7',
+                            color: 'var(--portal-salmon)',
+                            background: 'var(--portal-tint)',
                             padding: '2px 8px',
                             borderRadius: 99,
                           }}
@@ -1453,7 +1453,7 @@ export function MemberCoachBookingView({
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)', marginTop: 4, lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 4, lineHeight: 1.4 }}>
                       Thanh toán tại quầy lễ tân hoặc chuyển khoản theo thông tin do lễ tân cung cấp.
                     </div>
                   </div>
@@ -1463,7 +1463,7 @@ export function MemberCoachBookingView({
 
             {/* Recurrence Option (collapsible) */}
             <details style={{ cursor: 'pointer' }}>
-              <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--portal-muted, #8c827a)' }}>
+              <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--portal-muted)' }}>
                 Tùy chọn đặt lịch định kỳ (lặp lại hàng tuần/tháng)
               </summary>
               <div style={{ marginTop: 10 }}>
@@ -1480,10 +1480,10 @@ export function MemberCoachBookingView({
             {/* Notes Section */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 8 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60381e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                 </svg>
-                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #201b17)' }}>
+                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper)' }}>
                   Ghi chú
                 </h4>
               </div>
@@ -1491,8 +1491,8 @@ export function MemberCoachBookingView({
                 style={{
                   position: 'relative',
                   borderRadius: 14,
-                  border: '1px solid var(--portal-border, #e2dad2)',
-                  background: 'color-mix(in srgb, var(--portal-salmon) 4%, var(--portal-surface, #ffffff))',
+                  border: '1px solid var(--portal-border)',
+                  background: 'color-mix(in srgb, var(--portal-salmon) 4%, var(--portal-surface))',
                   padding: '12px 14px 28px',
                 }}
               >
@@ -1510,7 +1510,7 @@ export function MemberCoachBookingView({
                     resize: 'none',
                     fontFamily: 'inherit',
                     fontSize: 14,
-                    color: 'var(--portal-paper, #201b17)',
+                    color: 'var(--portal-paper)',
                     lineHeight: 1.5,
                   }}
                 />
@@ -1520,7 +1520,7 @@ export function MemberCoachBookingView({
                     bottom: 8,
                     right: 14,
                     fontSize: 12,
-                    color: 'var(--portal-muted, #a89f97)',
+                    color: 'var(--portal-muted)',
                     fontWeight: 500,
                   }}
                 >
@@ -1546,9 +1546,9 @@ export function MemberCoachBookingView({
                   flex: 1,
                   height: 48,
                   borderRadius: 9999,
-                  border: '1.5px solid #60381e',
+                  border: '1.5px solid var(--portal-salmon)',
                   background: 'transparent',
-                  color: 'var(--portal-paper, #201b17)',
+                  color: 'var(--portal-paper)',
                   fontSize: 15,
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -1573,8 +1573,8 @@ export function MemberCoachBookingView({
                   height: 48,
                   borderRadius: 9999,
                   border: 'none',
-                  background: 'linear-gradient(155deg, #6c3f21 0%, #4a2612 100%)',
-                  color: '#ffffff',
+                  background: 'linear-gradient(155deg, var(--portal-salmon) 0%, var(--portal-salmon) 100%)',
+                  color: 'var(--portal-on-accent)',
                   fontSize: 15,
                   fontWeight: 700,
                   cursor: submitting ? 'wait' : 'pointer',
@@ -1583,20 +1583,20 @@ export function MemberCoachBookingView({
                   justifyContent: 'center',
                   gap: 8,
                   fontFamily: 'inherit',
-                  boxShadow: '0 4px 14px rgba(78, 45, 25, 0.32)',
+                  boxShadow: '0 4px 14px color-mix(in srgb, var(--portal-salmon) 32%, transparent)',
                   transition: 'all 160ms ease',
                   opacity: submitting ? 0.7 : 1,
                 }}
                 onMouseEnter={(e) => {
                   if (!submitting) {
                     e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 6px 18px rgba(78, 45, 25, 0.4)';
+                    e.currentTarget.style.boxShadow = '0 6px 18px color-mix(in srgb, var(--portal-salmon) 40%, transparent)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!submitting) {
                     e.currentTarget.style.transform = 'none';
-                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(78, 45, 25, 0.32)';
+                    e.currentTarget.style.boxShadow = '0 4px 14px color-mix(in srgb, var(--portal-salmon) 32%, transparent)';
                   }
                 }}
               >
@@ -1648,7 +1648,7 @@ export function MemberCoachBookingView({
                 border: '1px solid color-mix(in srgb, var(--portal-success) 35%, transparent)',
               }}
             >
-              <h4 style={{ margin: '0 0 6px', color: 'var(--portal-success, #226442)', fontSize: 15, fontWeight: 750 }}>
+              <h4 style={{ margin: '0 0 6px', color: 'var(--portal-success)', fontSize: 15, fontWeight: 750 }}>
                 Lịch tập 1:1 đã được ghi nhận thành công!
               </h4>
               <p style={{ margin: 0, fontSize: 13 }}>
@@ -1665,14 +1665,14 @@ export function MemberCoachBookingView({
                 alignItems: 'center',
                 padding: 16,
                 borderRadius: 12,
-                background: 'var(--portal-raised, #f4f4f5)',
+                background: 'var(--portal-raised)',
               }}
             >
               <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
                 <div>Vui lòng liên hệ quầy Lễ tân để xác nhận thông tin và hoàn tất thanh toán.</div>
-                <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--portal-salmon, #ce9180)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
-                <div>Nội dung chuyển khoản: <strong style={{ color: 'var(--portal-salmon, #ce9180)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
-                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+                <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
+                <div>Nội dung chuyển khoản: <strong style={{ color: 'var(--portal-salmon)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted)' }}>
                   * Bạn cũng có thể thanh toán trực tiếp bằng tiền mặt hoặc thẻ tại quầy Lễ tân trước giờ tập.
                 </div>
               </div>

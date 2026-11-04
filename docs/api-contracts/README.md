@@ -15,3 +15,5 @@ Frontend may use a local mock matching the contract, but must remove the mock be
 - `openapi-sprint3-coaching-analytics.yaml`: Training plans, AI workout recommendations, session evaluations, and class utilization reports (`SCRUM-116`, `SCRUM-117`, `SCRUM-119`, `SCRUM-120`).
 - `openapi-sprint3-ai-chat.yaml`: Member AI Chatbot sessions and messages (`SCRUM-118`, `SCRUM-126`).
 - `openapi-sprint3-member-progress.yaml`: Member training item completion checklist (`SCRUM-129`).
+
+[`openapi-gym-rooms-equipment-trial.yaml`](openapi-gym-rooms-equipment-trial.yaml) defines room tiers (STANDARD/PLATINUM), equipment management and the 3-day Gold trial verified by CCCD. Member package cancellation requests can no longer be created (the `POST /memberships/cancellations/subscriptions/{id}` endpoint was removed); manager list/approve/reject remain only to resolve legacy pending requests.

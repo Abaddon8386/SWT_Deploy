@@ -39,6 +39,7 @@ public class MemberTrialService {
     private final NotificationService notifications;
     private final MessageService messageService;
     private final Clock clock;
+    private final CccdHasher cccdHasher;
 
     @Autowired
     public MemberTrialService(
@@ -48,7 +49,8 @@ public class MemberTrialService {
             MembershipPackageRepository packages,
             @Autowired(required = false) NotificationService notifications,
             @Autowired(required = false) MessageService messageService,
-            @Autowired(required = false) Clock clock
+            @Autowired(required = false) Clock clock,
+            CccdHasher cccdHasher
     ) {
         this.trialRedemptions = trialRedemptions;
         this.members = members;
@@ -57,6 +59,7 @@ public class MemberTrialService {
         this.notifications = notifications;
         this.messageService = messageService;
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
+        this.cccdHasher = cccdHasher;
     }
 
     private String msg(String key, Object... args) {
@@ -71,19 +74,18 @@ public class MemberTrialService {
             return new TrialStatusDto(
                     false,
                     true,
-                    maskCccd(r.getCccd()),
+                    cccdHasher.mask(r.getCccdLast4()),
                     r.getFullName(),
                     r.getRedeemedAt(),
                     r.getSubscription() != null ? r.getSubscription().getId() : null
             );
         }
 
-        LocalDate today = LocalDate.now(clock);
-        boolean hasActive = subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(
-                memberId, "active", today);
+        // Chỉ hội viên mới (chưa từng có gói nào) mới được nhận trải nghiệm.
+        boolean hasAnySubscription = subscriptions.existsByMemberUserId(memberId);
 
         return new TrialStatusDto(
-                !hasActive,
+                !hasAnySubscription,
                 false,
                 null,
                 null,
@@ -99,6 +101,7 @@ public class MemberTrialService {
         }
         Long memberId = principal.id();
         String cccd = request.cccd().trim();
+        String cccdHash = cccdHasher.hash(cccd);
         String fullName = request.fullName().trim();
 
         // 1. Kiểm tra hội viên đã từng nhận gói thử chưa
@@ -108,17 +111,17 @@ public class MemberTrialService {
         }
 
         // 2. Kiểm tra số CCCD đã từng được dùng nhận gói thử chưa
-        if (trialRedemptions.existsByCccd(cccd)) {
+        if (trialRedemptions.existsByCccdHash(cccdHash)) {
             throw new ConflictException("TRIAL_CCCD_ALREADY_USED", "trial.already_claimed.cccd", null,
                     msg("trial.already_claimed.cccd"));
         }
 
-        // 3. Kiểm tra xem hội viên có đang có gói tập active hay không
-        LocalDate today = LocalDate.now(clock);
-        if (subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(memberId, "active", today)) {
-            throw new ConflictException("TRIAL_ACTIVE_SUBSCRIPTION_EXISTS", "trial.has_active_subscription", null,
-                    msg("trial.has_active_subscription"));
+        // 3. Chỉ hội viên chưa từng có gói tập nào mới được nhận gói thử
+        if (subscriptions.existsByMemberUserId(memberId)) {
+            throw new ConflictException("TRIAL_NOT_NEW_MEMBER", "trial.not_new_member", null,
+                    msg("trial.not_new_member"));
         }
+        LocalDate today = LocalDate.now(clock);
 
         Member member = members.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
@@ -144,7 +147,7 @@ public class MemberTrialService {
             savedSub = subscriptions.saveAndFlush(subscription);
 
             // 6. Ghi nhận lượt nhận gói thử vào MemberTrialRedemption
-            MemberTrialRedemption redemption = new MemberTrialRedemption(member, cccd, fullName, savedSub);
+            MemberTrialRedemption redemption = new MemberTrialRedemption(member, cccdHash, cccdHasher.last4(cccd), fullName, savedSub);
             trialRedemptions.saveAndFlush(redemption);
         } catch (DataIntegrityViolationException e) {
             // Hai yêu cầu đồng thời cùng vượt qua bước kiểm tra: unique constraint member/cccd chặn bản thứ hai.
@@ -167,10 +170,6 @@ public class MemberTrialService {
         return toDto(savedSub);
     }
 
-    private String maskCccd(String cccd) {
-        if (cccd == null || cccd.length() < 6) return cccd;
-        return cccd.substring(0, 3) + "******" + cccd.substring(cccd.length() - 3);
-    }
 
     private SubscriptionDto toDto(MembershipSubscription s) {
         return new SubscriptionDto(

@@ -11,6 +11,7 @@ import com.swp391.scms.membership.entity.MemberTrialRedemption;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MemberTrialRedemptionRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.membership.service.CccdHasher;
 import com.swp391.scms.membership.service.MemberTrialService;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -54,6 +55,7 @@ class MemberTrialServiceTest {
     @Mock
     private NotificationService notifications;
 
+    private final CccdHasher hasher = new CccdHasher("test-pepper");
     private MemberTrialService service;
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-03T10:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
 
@@ -69,7 +71,8 @@ class MemberTrialServiceTest {
                 packages,
                 notifications,
                 null,
-                clock
+                clock,
+                hasher
         );
 
         User user = new User();
@@ -89,10 +92,10 @@ class MemberTrialServiceTest {
     }
 
     @Test
-    @DisplayName("getTrialStatus: Eligible when never claimed and no active sub")
+    @DisplayName("getTrialStatus: Eligible when never claimed and never held a subscription")
     void testGetTrialStatus_Eligible() {
         when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
-        when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any(LocalDate.class)))
+        when(subscriptions.existsByMemberUserId(10L))
                 .thenReturn(false);
 
         TrialStatusDto status = service.getTrialStatus(10L);
@@ -107,23 +110,23 @@ class MemberTrialServiceTest {
     void testGetTrialStatus_AlreadyClaimed() {
         MembershipSubscription sub = new MembershipSubscription();
         sub.setId(101L);
-        MemberTrialRedemption redemption = new MemberTrialRedemption(testMember, "001200001234", "Nguyen Van A", sub);
+        MemberTrialRedemption redemption = new MemberTrialRedemption(testMember, hasher.hash("001200001234"), "1234", "Nguyen Van A", sub);
         when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.of(redemption));
 
         TrialStatusDto status = service.getTrialStatus(10L);
 
         assertFalse(status.eligible());
         assertTrue(status.alreadyClaimed());
-        assertEquals("001******234", status.cccd());
+        assertEquals("********1234", status.cccd());
         assertEquals("Nguyen Van A", status.fullName());
         assertEquals(101L, status.subscriptionId());
     }
 
     @Test
-    @DisplayName("getTrialStatus: Ineligible when member has active subscription")
+    @DisplayName("getTrialStatus: Ineligible when member already had a subscription")
     void testGetTrialStatus_HasActiveSubscription() {
         when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
-        when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any(LocalDate.class)))
+        when(subscriptions.existsByMemberUserId(10L))
                 .thenReturn(true);
 
         TrialStatusDto status = service.getTrialStatus(10L);
@@ -139,8 +142,8 @@ class MemberTrialServiceTest {
         TrialClaimRequest request = new TrialClaimRequest("001200001234", "Nguyen Van A");
 
         when(trialRedemptions.existsByMemberUserId(10L)).thenReturn(false);
-        when(trialRedemptions.existsByCccd("001200001234")).thenReturn(false);
-        when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any(LocalDate.class)))
+        when(trialRedemptions.existsByCccdHash(hasher.hash("001200001234"))).thenReturn(false);
+        when(subscriptions.existsByMemberUserId(10L))
                 .thenReturn(false);
         when(members.findById(10L)).thenReturn(Optional.of(testMember));
         when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
@@ -183,25 +186,35 @@ class MemberTrialServiceTest {
         TrialClaimRequest request = new TrialClaimRequest("001200001234", "Nguyen Van A");
 
         when(trialRedemptions.existsByMemberUserId(10L)).thenReturn(false);
-        when(trialRedemptions.existsByCccd("001200001234")).thenReturn(true);
+        when(trialRedemptions.existsByCccdHash(hasher.hash("001200001234"))).thenReturn(true);
 
         assertThrows(ConflictException.class, () -> service.claimGoldTrial(principal, request));
         verify(subscriptions, never()).saveAndFlush(any());
     }
 
     @Test
-    @DisplayName("claimGoldTrial: Throws ConflictException when member has active subscription")
+    @DisplayName("claimGoldTrial: Throws ConflictException when member already had a subscription")
     void testClaimGoldTrial_ActiveSubExists() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
         TrialClaimRequest request = new TrialClaimRequest("001200001234", "Nguyen Van A");
 
         when(trialRedemptions.existsByMemberUserId(10L)).thenReturn(false);
-        when(trialRedemptions.existsByCccd("001200001234")).thenReturn(false);
-        when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any(LocalDate.class)))
+        when(trialRedemptions.existsByCccdHash(hasher.hash("001200001234"))).thenReturn(false);
+        when(subscriptions.existsByMemberUserId(10L))
                 .thenReturn(true);
 
         assertThrows(ConflictException.class, () -> service.claimGoldTrial(principal, request));
         verify(subscriptions, never()).saveAndFlush(any());
     }
-}
 
+    @Test
+    @DisplayName("CccdHasher: không lưu số gốc, ổn định và phụ thuộc pepper")
+    void testCccdHasher() {
+        String h = hasher.hash("001200001234");
+        assertEquals(64, h.length());
+        assertNotEquals("001200001234", h);
+        assertEquals(h, hasher.hash("001200001234"));
+        assertNotEquals(h, new CccdHasher("other").hash("001200001234"));
+        assertEquals("1234", hasher.last4("001200001234"));
+    }
+}

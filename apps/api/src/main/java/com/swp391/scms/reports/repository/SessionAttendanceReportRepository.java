@@ -33,19 +33,18 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
                    d.name AS disciplineName,
                    r.name AS roomName,
                    c.capacity AS capacity,
-                   GREATEST(
-                       (SELECT COUNT(DISTINCT e.member.id) FROM ClassEnrollment e
-                        WHERE e.gymClass.id = c.id
-                          AND LOWER(e.status) IN ('booked', 'completed')
-                          AND (:startTs IS NULL OR e.enrolledAt IS NULL OR e.enrolledAt >= :startTs)
-                          AND (:endTs IS NULL OR e.enrolledAt IS NULL OR e.enrolledAt < :endTs)),
-                       (SELECT COUNT(DISTINCT b.member.id) FROM SessionBooking b
-                        WHERE b.session.gymClass.id = c.id
-                          AND LOWER(b.status) IN ('booked', 'completed')
-                          AND (:startTs IS NULL OR b.bookedAt >= :startTs)
-                          AND (:endTs IS NULL OR b.bookedAt < :endTs))
-                   ) AS enrolledCount,
-                   (SELECT COUNT(DISTINCT a.member.id) FROM SessionAttendance a JOIN a.session s
+                   (SELECT COUNT(m) FROM Member m
+                    WHERE EXISTS (SELECT 1 FROM ClassEnrollment e
+                                  WHERE e.member = m AND e.gymClass.id = c.id
+                                    AND LOWER(e.status) IN ('booked', 'completed')
+                                    AND (:startTs IS NULL OR e.enrolledAt IS NULL OR e.enrolledAt >= :startTs)
+                                    AND (:endTs IS NULL OR e.enrolledAt IS NULL OR e.enrolledAt < :endTs))
+                       OR EXISTS (SELECT 1 FROM SessionBooking b
+                                  WHERE b.member = m AND b.session.gymClass.id = c.id
+                                    AND LOWER(b.status) IN ('booked', 'completed')
+                                    AND (:startTs IS NULL OR b.bookedAt >= :startTs)
+                                    AND (:endTs IS NULL OR b.bookedAt < :endTs))) AS enrolledCount,
+                   (SELECT COUNT(DISTINCT a.member.userId) FROM SessionAttendance a JOIN a.session s
                     WHERE s.gymClass.id = c.id
                       AND LOWER(a.status) IN ('present', 'late')
                       AND (:start IS NULL OR s.sessionDate >= :start)
@@ -53,7 +52,7 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
             FROM GymClass c
             LEFT JOIN c.discipline d
             LEFT JOIN c.room r
-            WHERE LOWER(c.status) = 'active'
+            WHERE LOWER(c.status) <> 'archived'
               AND (:disciplineId IS NULL OR d.id = :disciplineId)
             ORDER BY c.id
             """)

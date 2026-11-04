@@ -1,0 +1,177 @@
+openapi: 3.0.3
+info:
+  title: SCMS gym room tiers, equipment management and 3-day Gold trial
+  version: 1.0.0
+  description: >
+    Three related extensions. (1) Rooms carry a tier: STANDARD rooms are open to every active member, PLATINUM
+    (VIP) rooms only accept class enrollment and session booking from members whose active subscription covering
+    the session date is a PLATINUM package. (2) Managers maintain gym equipment per room. (3) A new member (one who
+    has never held a membership package) can claim a free 3-day GOLD trial once, verified by Citizen ID (CCCD).
+    The CCCD is never stored in clear text: the server keeps an HMAC-SHA256 digest (peppered by
+    app.trial.cccd-pepper) to detect reuse and only the last four digits for display. Trial subscriptions create no
+    payment, so they do not appear in revenue reports. All responses use the standard ApiResponse wrapper and all
+    messages are resolved from messages_vi/messages_en via Accept-Language.
+servers:
+  - url: /api/v1
+paths:
+  /rooms:
+    post:
+      summary: Create room with tier (CENTER_MANAGER, MANAGER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoomRequest' }
+      responses:
+        '201': { description: 'ApiResponse.data = Room (includes tier)' }
+        '400': { description: Validation error, e.g. tier not STANDARD|PLATINUM }
+  /rooms/{id}:
+    put:
+      summary: Update room including tier (CENTER_MANAGER, MANAGER)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoomRequest' }
+      responses:
+        '200': { description: 'ApiResponse.data = Room' }
+        '400': { description: Validation error }
+        '404': { description: Room not found }
+  /classes/sessions/{id}/bookings:
+    post:
+      summary: Book a session; extra rule for PLATINUM rooms
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '403': { description: SCHEDULING_ROOM_PLATINUM_REQUIRED when the room tier is PLATINUM and the member has no active PLATINUM package covering the session date }
+  /equipment:
+    get:
+      summary: List equipment, optionally filtered by room (any authenticated user)
+      parameters:
+        - { name: roomId, in: query, required: false, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: 'ApiResponse.data = Equipment[]' }
+    post:
+      summary: Create equipment (CENTER_MANAGER, MANAGER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EquipmentRequest' }
+      responses:
+        '201': { description: 'ApiResponse.data = Equipment' }
+        '400': { description: Validation error }
+        '404': { description: Room not found }
+        '409': { description: EQUIPMENT_CODE_EXISTS }
+  /equipment/{id}:
+    get:
+      summary: Equipment detail
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: 'ApiResponse.data = Equipment' }
+        '404': { description: Not found }
+    put:
+      summary: Update equipment (CENTER_MANAGER, MANAGER)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EquipmentRequest' }
+      responses:
+        '200': { description: 'ApiResponse.data = Equipment' }
+        '404': { description: Not found }
+        '409': { description: EQUIPMENT_CODE_EXISTS }
+    delete:
+      summary: Delete equipment (CENTER_MANAGER, MANAGER)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Deleted }
+        '404': { description: Not found }
+  /equipment/{id}/status:
+    patch:
+      summary: Quick status update (CENTER_MANAGER, MANAGER, STAFF, RECEPTIONIST)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, maintenance, broken, retired] }
+      responses:
+        '200': { description: 'ApiResponse.data = Equipment' }
+        '400': { description: EQUIPMENT_INVALID_STATUS }
+        '404': { description: Not found }
+  /memberships/trial/status:
+    get:
+      summary: Trial eligibility of the current member (MEMBER)
+      responses:
+        '200':
+          description: ApiResponse.data = TrialStatus
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrialStatus' }
+  /memberships/trial/claim:
+    post:
+      summary: Verify CCCD and activate the 3-day GOLD trial (MEMBER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TrialClaimRequest' }
+      responses:
+        '201': { description: 'ApiResponse.data = MembershipSubscription (GOLD, endDate = startDate + 3 days, upgradeCharge 0)' }
+        '400': { description: Validation error (CCCD must be 9 or 12 digits) }
+        '404': { description: No active GOLD package in the catalog }
+        '409': { description: TRIAL_ALREADY_CLAIMED, TRIAL_CCCD_ALREADY_USED or TRIAL_NOT_NEW_MEMBER }
+components:
+  schemas:
+    RoomRequest:
+      type: object
+      required: [name, capacity]
+      properties:
+        name: { type: string, maxLength: 100 }
+        location: { type: string, maxLength: 150 }
+        capacity: { type: integer, minimum: 1 }
+        status: { type: string, enum: [available, maintenance, closed] }
+        disciplineId: { type: integer, format: int64, nullable: true }
+        openTime: { type: string, format: time, nullable: true }
+        closeTime: { type: string, format: time, nullable: true }
+        tier: { type: string, enum: [STANDARD, PLATINUM], default: STANDARD, description: Case-insensitive on input; responses use upper case }
+    EquipmentRequest:
+      type: object
+      required: [name, quantity]
+      properties:
+        name: { type: string, maxLength: 150 }
+        code: { type: string, maxLength: 60, description: Unique when present }
+        category: { type: string, maxLength: 80 }
+        roomId: { type: integer, format: int64, nullable: true }
+        quantity: { type: integer, minimum: 1 }
+        status: { type: string, enum: [active, maintenance, broken, retired], default: active }
+        purchaseDate: { type: string, format: date, nullable: true }
+        maintenanceDate: { type: string, format: date, nullable: true }
+        note: { type: string, maxLength: 500 }
+    TrialClaimRequest:
+      type: object
+      required: [cccd, fullName]
+      properties:
+        cccd: { type: string, pattern: '^(\d{9}|\d{12})$' }
+        fullName: { type: string, maxLength: 150 }
+    TrialStatus:
+      type: object
+      properties:
+        eligible: { type: boolean, description: True only for a member who has never held a package and never claimed a trial }
+        alreadyClaimed: { type: boolean }
+        cccd: { type: string, nullable: true, description: 'Masked, e.g. ********1234' }
+        fullName: { type: string, nullable: true }
+        redeemedAt: { type: string, format: date-time, nullable: true }
+        subscriptionId: { type: integer, format: int64, nullable: true }
