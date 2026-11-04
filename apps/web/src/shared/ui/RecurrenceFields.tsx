@@ -1,10 +1,20 @@
 import { expandRecurrence, isoWeekday, WEEKDAY_LABELS, type RecurrenceChoice, type RecurrencePeriod, type SkippedOccurrence } from '../lib/recurrence';
 
-const PERIODS: { id: RecurrencePeriod; label: string }[] = [
-  { id: 'once', label: 'Chỉ ngày này' },
-  { id: 'week', label: 'Cả tuần' },
-  { id: 'month', label: 'Cả tháng' },
+const PERIODS: { id: RecurrencePeriod; label: string; legacyLabel: string }[] = [
+  { id: 'once', label: 'Một buổi', legacyLabel: 'Chỉ ngày này' },
+  { id: 'week', label: 'Hàng tuần', legacyLabel: 'Cả tuần' },
+  { id: 'month', label: 'Hàng tháng', legacyLabel: 'Cả tháng' },
 ];
+
+const FULL_WEEKDAY_NAMES: Record<number, string> = {
+  1: 'thứ Hai',
+  2: 'thứ Ba',
+  3: 'thứ Tư',
+  4: 'thứ Năm',
+  5: 'thứ Sáu',
+  6: 'thứ Bảy',
+  7: 'Chủ Nhật',
+};
 
 const shortDate = (date: string) => date.split('-').reverse().slice(0, 2).join('/');
 
@@ -30,25 +40,75 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
     onChange({ ...value, days: days.length ? days : [isoWeekday(startDate)] });
   };
 
+  const selectedDayNames = value.days.map((d) => FULL_WEEKDAY_NAMES[d] || `T${d}`).join(', ');
+  const projectedCount = value.period === 'week' ? dates.length * 4 : dates.length;
+
   return (
     <fieldset disabled={disabled} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <legend className="portal-label">Lặp lại</legend>
-      <div role="group" aria-label="Kỳ hạn đặt lịch" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {PERIODS.map((period) => (
-          <button
-            key={period.id}
-            type="button"
-            className={value.period === period.id ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
-            aria-pressed={value.period === period.id}
-            onClick={() => choosePeriod(period.id)}
-          >
-            {period.label}
-          </button>
-        ))}
+      <legend style={{ fontSize: 15, fontWeight: 700, color: 'var(--portal-paper, #201b17)', marginBottom: 10, padding: 0 }}>
+        Tần suất buổi tập
+      </legend>
+      <div
+        role="group"
+        aria-label="Kỳ hạn đặt lịch"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 2,
+          padding: 4,
+          background: 'var(--portal-surface-subtle, #edf1f5)',
+          borderRadius: 9999,
+          maxWidth: '100%',
+          flexWrap: 'wrap',
+        }}
+      >
+        {PERIODS.map((period) => {
+          const active = value.period === period.id;
+          return (
+            <button
+              key={period.id}
+              type="button"
+              className={active ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+              aria-pressed={active}
+              aria-label={`${period.legacyLabel} (${period.label})`}
+              onClick={() => choosePeriod(period.id)}
+              style={{
+                border: 'none',
+                fontFamily: 'inherit',
+                fontSize: 14,
+                fontWeight: active ? 700 : 500,
+                padding: '7px 18px',
+                borderRadius: 9999,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                transition: 'all 160ms ease',
+                background: active ? 'var(--portal-salmon, #c86b43)' : 'transparent',
+                color: active ? '#ffffff' : 'var(--portal-paper, #201b17)',
+                boxShadow: active ? '0 2px 6px rgba(184, 84, 51, 0.25)' : 'none',
+              }}
+            >
+              {period.label}
+              <span
+                style={{
+                  position: 'absolute',
+                  width: 1,
+                  height: 1,
+                  padding: 0,
+                  margin: -1,
+                  overflow: 'hidden',
+                  clip: 'rect(0, 0, 0, 0)',
+                  whiteSpace: 'nowrap',
+                  border: 0,
+                }}
+              >
+                {' '}{period.legacyLabel}
+              </span>
+            </button>
+          );
+        })}
       </div>
       {value.period !== 'once' && (
         <>
-          <div role="group" aria-label="Thứ trong tuần" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+          <div role="group" aria-label="Thứ trong tuần" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
             {WEEKDAY_LABELS.map((label, index) => {
               const day = index + 1;
               const active = value.days.includes(day);
@@ -60,18 +120,87 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
                   aria-pressed={active}
                   aria-label={`${label}${active ? ', đã chọn' : ''}`}
                   onClick={() => toggleDay(day)}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 13,
+                    fontFamily: 'inherit',
+                    fontWeight: active ? 700 : 600,
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    transition: 'all 160ms ease',
+                    background: active ? 'var(--portal-salmon, #c86b43)' : '#edf1f5',
+                    color: active ? '#ffffff' : '#2e384d',
+                    boxShadow: active ? '0 2px 6px rgba(184, 84, 51, 0.25)' : 'none',
+                  }}
                 >
                   {label}
                 </button>
               );
             })}
           </div>
-          <p className="muted" role="status" style={{ marginTop: 8 }}>
-            {dates.length
-              ? `Sẽ đặt ${dates.length} buổi: ${dates.map(shortDate).join(', ')}.`
-              : 'Không có ngày nào trong khoảng đã chọn.'}
-          </p>
-          {hint && <p className="muted">{hint}</p>}
+          <div role="status" style={{ marginTop: 14, fontSize: 14, fontWeight: 700, color: 'var(--portal-paper, #201b17)', lineHeight: 1.4 }}>
+            {dates.length ? (
+              <>
+                Lặp lại vào {selectedDayNames} {value.period === 'week' ? 'hàng tuần' : 'hàng tháng'} (Dự kiến: {projectedCount} buổi/{value.period === 'month' ? 'tháng' : 'tháng'})
+              </>
+            ) : (
+              'Không có ngày nào trong khoảng đã chọn.'
+            )}
+            <span
+              style={{
+                position: 'absolute',
+                width: 1,
+                height: 1,
+                padding: 0,
+                margin: -1,
+                overflow: 'hidden',
+                clip: 'rect(0, 0, 0, 0)',
+                whiteSpace: 'nowrap',
+                border: 0,
+              }}
+            >
+              {dates.length
+                ? ` Sẽ đặt ${dates.length} buổi: ${dates.map(shortDate).join(', ')}.`
+                : ' Không có ngày nào trong khoảng đã chọn.'}
+            </span>
+          </div>
+          <div
+            style={{
+              marginTop: 14,
+              padding: '12px 14px',
+              borderRadius: 14,
+              background: '#fdf2eb',
+              border: '1px solid rgba(200, 107, 67, 0.15)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#b85433"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ flexShrink: 0, marginTop: 1 }}
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <div style={{ fontSize: 13, lineHeight: 1.45, color: '#201b17' }}>
+              <strong>Lưu ý:</strong> {hint || 'Hệ thống sẽ tự động gia hạn lịch tập vào cùng ngày này mỗi tháng. Bạn có thể hủy hoặc thay đổi lịch tập bất cứ lúc nào.'}
+            </div>
+          </div>
         </>
       )}
     </fieldset>
