@@ -49,6 +49,7 @@ export function ManagerEquipmentPage() {
   const [error, setError] = useState('');
 
   // Filters
+  const [areaTab, setAreaTab] = useState<'ALL' | 'STANDARD' | 'VIP' | 'OTHER'>('ALL');
   const [filterRoom, setFilterRoom] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('Tất cả');
@@ -79,7 +80,30 @@ export function ManagerEquipmentPage() {
     void loadData();
   }, [loadData]);
 
+  const isVipItem = (item: Equipment) => {
+    const r = rooms.find((room) => room.id === item.roomId);
+    const roomName = (item.roomName || r?.name || '').toLowerCase();
+    return (
+      (r && r.tier === 'PLATINUM') ||
+      roomName.includes('vip') ||
+      (item.code && item.code.toLowerCase().includes('vip'))
+    );
+  };
+
+  const isStandardGymItem = (item: Equipment) => {
+    const r = rooms.find((room) => room.id === item.roomId);
+    const roomName = (item.roomName || r?.name || '').toLowerCase();
+    return (
+      !isVipItem(item) &&
+      (roomName.includes('tiêu chuẩn') || roomName.includes('gym'))
+    );
+  };
+
   const filteredItems = items.filter((item) => {
+    if (areaTab === 'STANDARD' && !isStandardGymItem(item)) return false;
+    if (areaTab === 'VIP' && !isVipItem(item)) return false;
+    if (areaTab === 'OTHER' && (isStandardGymItem(item) || isVipItem(item))) return false;
+
     if (filterRoom && String(item.roomId ?? '') !== filterRoom) return false;
     if (filterStatus && item.status !== filterStatus) return false;
     if (filterCategory !== 'Tất cả' && item.category !== filterCategory) return false;
@@ -90,6 +114,10 @@ export function ManagerEquipmentPage() {
   const activeCount = items.filter((i) => i.status === 'active').reduce((sum, i) => sum + i.quantity, 0);
   const maintenanceCount = items.filter((i) => i.status === 'maintenance').reduce((sum, i) => sum + i.quantity, 0);
   const brokenCount = items.filter((i) => i.status === 'broken').reduce((sum, i) => sum + i.quantity, 0);
+
+  const standardGymCount = items.filter(isStandardGymItem).reduce((sum, i) => sum + i.quantity, 0);
+  const vipGymCount = items.filter(isVipItem).reduce((sum, i) => sum + i.quantity, 0);
+  const otherAreaCount = totalQuantity - standardGymCount - vipGymCount;
 
   const openEditor = (id: number | null, item?: Equipment) => {
     setFormError('');
@@ -109,7 +137,16 @@ export function ManagerEquipmentPage() {
         },
       });
     } else {
-      setEditing({ id: null, form: emptyForm() });
+      // Default to standard or vip room if currently filtered
+      let defaultRoomId = '';
+      if (areaTab === 'VIP') {
+        const vip = rooms.find((r) => r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'));
+        if (vip) defaultRoomId = String(vip.id);
+      } else if (areaTab === 'STANDARD') {
+        const std = rooms.find((r) => r.name.toLowerCase().includes('tiêu chuẩn'));
+        if (std) defaultRoomId = String(std.id);
+      }
+      setEditing({ id: null, form: { ...emptyForm(), roomId: defaultRoomId } });
     }
   };
 
@@ -162,52 +199,119 @@ export function ManagerEquipmentPage() {
       return;
     }
     const qty = parseInt(f.quantity, 10);
-    if (isNaN(qty) || qty < 1) {
-      setFormError('Số lượng thiết bị phải từ 1 trở lên.');
+    if (isNaN(qty) || qty <= 0) {
+      setFormError('Số lượng thiết bị phải là số dương.');
       return;
     }
 
     setIsSubmitting(true);
     setFormError('');
-    try {
-      const payload: EquipmentInput = {
-        name: f.name.trim(),
-        code: f.code.trim() || null,
-        category: f.category.trim() || 'Khác',
-        roomId: f.roomId ? parseInt(f.roomId, 10) : null,
-        quantity: qty,
-        status: f.status,
-        purchaseDate: f.purchaseDate || null,
-        maintenanceDate: f.maintenanceDate || null,
-        note: f.note.trim() || null,
-      };
 
+    const payload: EquipmentInput = {
+      name: f.name.trim(),
+      code: f.code.trim() || undefined,
+      category: f.category,
+      roomId: f.roomId ? parseInt(f.roomId, 10) : undefined,
+      quantity: qty,
+      status: f.status,
+      purchaseDate: f.purchaseDate || undefined,
+      maintenanceDate: f.maintenanceDate || undefined,
+      note: f.note.trim() || undefined,
+    };
+
+    try {
       await equipmentApi.save(editing.id, payload);
-      toast(editing.id ? 'Đã cập nhật thiết bị thành công!' : 'Đã thêm thiết bị mới thành công!', 'success');
+      toast(editing.id ? `Đã cập nhật máy "${payload.name}" thành công.` : `Đã thêm mới thiết bị "${payload.name}" thành công.`, 'success');
       setEditing(null);
       await loadData();
     } catch (err) {
-      setFormError(errorMessage(err, 'Thao tác lưu thiết bị thất bại.'));
+      setFormError(errorMessage(err, 'Lưu thiết bị thất bại. Vui lòng kiểm tra lại.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const vipRooms = rooms.filter((r) => r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'));
+  const standardGymRooms = rooms.filter((r) => !vipRooms.includes(r) && (r.name.toLowerCase().includes('tiêu chuẩn') || r.name.toLowerCase().includes('gym')));
+  const otherRooms = rooms.filter((r) => !vipRooms.includes(r) && !standardGymRooms.includes(r));
+
   return (
-    <div className="portal-container">
+    <div className="portal-page">
       <PageHeader
         eyebrow="Vận hành cơ sở vật chất"
         title="Quản lý máy móc & thiết bị phòng gym"
+        subtitle="Quản lý chi tiết danh mục thiết bị, phân bổ khu vực Gym Tiêu chuẩn và Gym VIP Platinum"
         actions={
           <button
             type="button"
             className="btn-primary"
             onClick={() => openEditor(null)}
           >
-            + Thêm thiết bị máy
+            + Thêm thiết bị máy mới
           </button>
         }
       />
+
+      {/* Area Highlights: Tiêu chuẩn vs VIP */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 20 }}>
+        <div
+          className="portal-card"
+          style={{
+            padding: '18px 22px',
+            borderLeft: '5px solid #0284c7',
+            background: areaTab === 'STANDARD' ? 'rgba(2, 132, 199, 0.08)' : undefined,
+            cursor: 'pointer',
+          }}
+          onClick={() => {
+            setAreaTab(areaTab === 'STANDARD' ? 'ALL' : 'STANDARD');
+            setFilterRoom('');
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              🏋️ Khu vực Gym Tiêu chuẩn
+            </span>
+            <span style={{ fontSize: '0.78rem', background: '#e0f2fe', color: '#0284c7', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
+              Mọi hội viên
+            </span>
+          </div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-text)', marginTop: 6 }}>
+            {standardGymCount} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>thiết bị máy</span>
+          </div>
+          <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: 4 }}>
+            Tầng 1 - Khu Gym Chính • Máy chạy, xe đạp, Smith, tạ tay
+          </div>
+        </div>
+
+        <div
+          className="portal-card"
+          style={{
+            padding: '18px 22px',
+            borderLeft: '5px solid #f59e0b',
+            background: areaTab === 'VIP' ? 'rgba(245, 158, 11, 0.08)' : undefined,
+            cursor: 'pointer',
+          }}
+          onClick={() => {
+            setAreaTab(areaTab === 'VIP' ? 'ALL' : 'VIP');
+            setFilterRoom('');
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              👑 Khu vực Gym VIP Platinum
+            </span>
+            <span style={{ fontSize: '0.78rem', background: '#fef3c7', color: '#d97706', padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>
+              Đặc quyền Platinum
+            </span>
+          </div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#d97706', marginTop: 6 }}>
+            {vipGymCount} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>thiết bị máy cao cấp</span>
+          </div>
+          <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: 4 }}>
+            Tầng 2 - Khu VIP • Technogym Artis, Kinesis One, InBody 770
+          </div>
+        </div>
+      </div>
 
       {/* Metrics overview */}
       <div className="grid-4" style={{ marginBottom: 20 }}>
@@ -237,22 +341,101 @@ export function ManagerEquipmentPage() {
         </div>
       </div>
 
+      {/* Quick classification tabs: VIP vs Tiêu chuẩn */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-text-muted)', marginRight: 4 }}>
+          Phân loại khu vực:
+        </span>
+        <button
+          type="button"
+          className={`btn-sm ${areaTab === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => { setAreaTab('ALL'); setFilterRoom(''); }}
+          style={{ padding: '6px 16px', borderRadius: 20, fontWeight: 600 }}
+        >
+          Tất cả máy ({totalQuantity})
+        </button>
+        <button
+          type="button"
+          className={`btn-sm ${areaTab === 'STANDARD' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => { setAreaTab('STANDARD'); setFilterRoom(''); }}
+          style={{
+            padding: '6px 16px',
+            borderRadius: 20,
+            fontWeight: 600,
+            background: areaTab === 'STANDARD' ? '#0284c7' : undefined,
+            color: areaTab === 'STANDARD' ? '#ffffff' : undefined,
+          }}
+        >
+          🏋️ Gym Tiêu chuẩn ({standardGymCount} máy)
+        </button>
+        <button
+          type="button"
+          className={`btn-sm ${areaTab === 'VIP' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => { setAreaTab('VIP'); setFilterRoom(''); }}
+          style={{
+            padding: '6px 16px',
+            borderRadius: 20,
+            fontWeight: 700,
+            background: areaTab === 'VIP' ? '#d97706' : '#fffbeb',
+            color: areaTab === 'VIP' ? '#ffffff' : '#b45309',
+            borderColor: '#f59e0b',
+          }}
+        >
+          👑 Gym VIP Platinum ({vipGymCount} máy)
+        </button>
+        {otherAreaCount > 0 && (
+          <button
+            type="button"
+            className={`btn-sm ${areaTab === 'OTHER' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => { setAreaTab('OTHER'); setFilterRoom(''); }}
+            style={{ padding: '6px 16px', borderRadius: 20, fontWeight: 500 }}
+          >
+            Khu vực khác ({otherAreaCount})
+          </button>
+        )}
+      </div>
+
       {/* Filter toolbar */}
       <div className="portal-card" style={{ padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="portal-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Phòng tập:</span>
+          <span className="portal-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Phòng chi tiết:</span>
           <Select
             className="portal-select"
             value={filterRoom}
-            onChange={(e) => setFilterRoom(e.target.value)}
-            style={{ minWidth: 200 }}
+            onChange={(e) => {
+              setFilterRoom(e.target.value);
+              setAreaTab('ALL');
+            }}
+            style={{ minWidth: 230 }}
           >
             <option value="">Tất cả phòng tập</option>
-            {rooms.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} {r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip') ? '(VIP)' : ''}
-              </option>
-            ))}
+            {vipRooms.length > 0 && (
+              <optgroup label="-- 👑 KHU VỰC GYM VIP (PLATINUM) --">
+                {vipRooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    👑 {r.name} (VIP Platinum)
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {standardGymRooms.length > 0 && (
+              <optgroup label="-- 🏋️ KHU VỰC GYM TIÊU CHUẨN --">
+                {standardGymRooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    🏋️ {r.name} (Tiêu chuẩn)
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {otherRooms.length > 0 && (
+              <optgroup label="-- 🏊 CÁC PHÒNG BỘ MÔN KHÁC --">
+                {otherRooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </Select>
         </div>
 
@@ -286,11 +469,11 @@ export function ManagerEquipmentPage() {
           </Select>
         </div>
 
-        {(filterRoom || filterStatus || filterCategory !== 'Tất cả') && (
+        {(areaTab !== 'ALL' || filterRoom || filterStatus || filterCategory !== 'Tất cả') && (
           <button
             type="button"
             className="btn-secondary btn-sm"
-            onClick={() => { setFilterRoom(''); setFilterStatus(''); setFilterCategory('Tất cả'); }}
+            onClick={() => { setAreaTab('ALL'); setFilterRoom(''); setFilterStatus(''); setFilterCategory('Tất cả'); }}
           >
             Xóa bộ lọc
           </button>
@@ -332,8 +515,8 @@ export function ManagerEquipmentPage() {
               <thead>
                 <tr>
                   <th>Tên thiết bị & Mã máy</th>
+                  <th>Phân loại khu vực Gym</th>
                   <th>Nhóm máy</th>
-                  <th>Phòng tập lắp đặt</th>
                   <th>Số lượng</th>
                   <th>Trạng thái</th>
                   <th>Hạn bảo trì</th>
@@ -342,6 +525,9 @@ export function ManagerEquipmentPage() {
               </thead>
               <tbody>
                 {filteredItems.map((item) => {
+                  const vip = isVipItem(item);
+                  const standard = isStandardGymItem(item);
+
                   return (
                     <tr key={item.id}>
                       <td>
@@ -350,19 +536,54 @@ export function ManagerEquipmentPage() {
                         {item.note && <div className="muted" style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>{item.note}</div>}
                       </td>
                       <td>
-                        <span className="badge badge-secondary">{item.category || 'Chung'}</span>
+                        {vip ? (
+                          <div>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              background: '#fef3c7',
+                              color: '#92400e',
+                              padding: '3px 8px',
+                              borderRadius: 4,
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              border: '1px solid #fde68a',
+                            }}>
+                              👑 GYM VIP (PLATINUM)
+                            </span>
+                            <div className="muted" style={{ fontSize: '0.8rem', marginTop: 3 }}>
+                              {item.roomName || 'Phòng Gym VIP'}
+                            </div>
+                          </div>
+                        ) : standard ? (
+                          <div>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              background: '#e0f2fe',
+                              color: '#0369a1',
+                              padding: '3px 8px',
+                              borderRadius: 4,
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              border: '1px solid #bae6fd',
+                            }}>
+                              🏋️ GYM TIÊU CHUẨN
+                            </span>
+                            <div className="muted" style={{ fontSize: '0.8rem', marginTop: 3 }}>
+                              {item.roomName || 'Phòng Gym Tiêu chuẩn'}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="badge badge-secondary">{item.roomName || 'Chưa xếp phòng'}</span>
+                          </div>
+                        )}
                       </td>
                       <td>
-                        {item.roomName ? (
-                          <span>
-                            <strong>{item.roomName}</strong>
-                            {item.roomName.toLowerCase().includes('vip') && (
-                              <span className="badge badge-primary" style={{ marginLeft: 6, fontSize: '0.7rem' }}>VIP</span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="muted">Kho tổng / Chưa xếp</span>
-                        )}
+                        <span className="badge badge-secondary">{item.category || 'Chung'}</span>
                       </td>
                       <td>
                         <strong>{item.quantity}</strong> cái
@@ -412,25 +633,27 @@ export function ManagerEquipmentPage() {
         </div>
       )}
 
-      {/* Modal Dialog Form */}
+      {/* Editor Modal */}
       {editing && (
         <Modal
-          title={editing.id == null ? 'Thêm mới máy móc thiết bị' : 'Chỉnh sửa thông tin thiết bị'}
-          busy={isSubmitting}
+          title={editing.id ? 'Chỉnh sửa thiết bị máy móc' : 'Thêm thiết bị máy móc mới'}
           onClose={() => !isSubmitting && setEditing(null)}
         >
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
-            {formError && <p role="alert" className="portal-alert">{formError}</p>}
+          <form onSubmit={(e) => void handleSubmit(e)} className="portal-form">
+            {formError && (
+              <div className="portal-alert portal-alert--error" role="alert" style={{ marginBottom: 16 }}>
+                {formError}
+              </div>
+            )}
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="eq-name">Tên máy móc / thiết bị *</label>
+              <label className="portal-label" htmlFor="eq-name">Tên máy móc / Thiết bị *</label>
               <input
                 id="eq-name"
                 className="portal-input"
                 type="text"
                 required
-                autoFocus
-                placeholder="Vd: Máy chạy bộ điện Commercial Pro, Giàn tạ Smith..."
+                placeholder="Vd: Máy chạy bộ Technogym Artis, Giàn tạ Smith..."
                 value={editing.form.name}
                 onChange={(e) => setFormField('name', e.target.value)}
               />
@@ -469,7 +692,7 @@ export function ManagerEquipmentPage() {
 
             <div className="grid-2">
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="eq-room">Phòng tập lắp đặt</label>
+                <label className="portal-label" htmlFor="eq-room">Khu vực phòng tập lắp đặt *</label>
                 <Select
                   id="eq-room"
                   className="portal-select"
@@ -477,11 +700,33 @@ export function ManagerEquipmentPage() {
                   onChange={(e) => setFormField('roomId', e.target.value)}
                 >
                   <option value="">-- Kho tổng / Chưa xếp phòng --</option>
-                  {rooms.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} {r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip') ? '(VIP Platinum)' : ''}
-                    </option>
-                  ))}
+                  {vipRooms.length > 0 && (
+                    <optgroup label="-- 👑 KHU VỰC GYM VIP (PLATINUM) --">
+                      {vipRooms.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          👑 {r.name} (VIP Platinum)
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {standardGymRooms.length > 0 && (
+                    <optgroup label="-- 🏋️ KHU VỰC GYM TIÊU CHUẨN --">
+                      {standardGymRooms.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          🏋️ {r.name} (Tiêu chuẩn)
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {otherRooms.length > 0 && (
+                    <optgroup label="-- 🏊 CÁC PHÒNG BỘ MÔN KHÁC --">
+                      {otherRooms.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </Select>
               </div>
 
@@ -560,4 +805,3 @@ export function ManagerEquipmentPage() {
     </div>
   );
 }
-
