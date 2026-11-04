@@ -56,7 +56,7 @@ export function ManagerEquipmentPage() {
 
   // Modal editor
   const [editing, setEditing] = useState<{ id: number | null; form: FormState } | null>(null);
-  const [tierMode, setTierMode] = useState<'STANDARD' | 'VIP' | 'OTHER'>('STANDARD');
+  const [tierMode, setTierMode] = useState<'STANDARD' | 'VIP'>('STANDARD');
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
@@ -153,9 +153,7 @@ export function ManagerEquipmentPage() {
   const openEditor = (id: number | null, item?: Equipment) => {
     setFormError('');
     if (item) {
-      let mode: 'STANDARD' | 'VIP' | 'OTHER' = 'OTHER';
-      if (isVipItem(item)) mode = 'VIP';
-      else if (isStandardGymItem(item)) mode = 'STANDARD';
+      const mode: 'STANDARD' | 'VIP' = isVipItem(item) ? 'VIP' : 'STANDARD';
       setTierMode(mode);
 
       setEditing({
@@ -173,7 +171,7 @@ export function ManagerEquipmentPage() {
         },
       });
     } else {
-      let defaultMode: 'STANDARD' | 'VIP' | 'OTHER';
+      let defaultMode: 'STANDARD' | 'VIP';
       let defaultRoomId = '';
 
       if (areaTab === 'VIP') {
@@ -191,7 +189,7 @@ export function ManagerEquipmentPage() {
     }
   };
 
-  const handleSelectTier = async (mode: 'STANDARD' | 'VIP' | 'OTHER') => {
+  const handleSelectTier = async (mode: 'STANDARD' | 'VIP') => {
     setTierMode(mode);
     if (mode === 'VIP') {
       let vip = rooms.find((r) => r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'));
@@ -212,7 +210,7 @@ export function ManagerEquipmentPage() {
       if (vip) {
         setFormField('roomId', String(vip.id));
       }
-    } else if (mode === 'STANDARD') {
+    } else {
       let std = rooms.find((r) => r.name.toLowerCase().includes('tiêu chuẩn') || (r.name.toLowerCase().includes('gym') && r.tier !== 'PLATINUM'));
       if (!std) {
         try {
@@ -231,24 +229,16 @@ export function ManagerEquipmentPage() {
       if (std) {
         setFormField('roomId', String(std.id));
       }
-    } else {
-      setFormField('roomId', '');
     }
   };
 
   const onRoomChange = (newRoomId: string) => {
     setFormField('roomId', newRoomId);
-    if (!newRoomId) {
-      setTierMode('OTHER');
-      return;
-    }
     const r = rooms.find((room) => String(room.id) === newRoomId);
     if (r && (r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip'))) {
       setTierMode('VIP');
-    } else if (r && (r.name.toLowerCase().includes('tiêu chuẩn') || r.name.toLowerCase().includes('gym'))) {
-      setTierMode('STANDARD');
     } else {
-      setTierMode('OTHER');
+      setTierMode('STANDARD');
     }
   };
 
@@ -865,14 +855,14 @@ export function ManagerEquipmentPage() {
                 <label className="portal-label" htmlFor="eq-room">
                   Khu vực phòng tập lắp đặt *
                 </label>
-                {/* Phân loại phòng gym đặt trực tiếp bên trong khu vực phòng tập lắp đặt, không dùng icon */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                {/* 2 lựa chọn phân loại: Gym Tiêu chuẩn hoặc Gym VIP */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                   <button
                     type="button"
                     style={{
-                      padding: '7px 8px',
+                      padding: '8px 12px',
                       borderRadius: '6px',
-                      fontSize: '0.82rem',
+                      fontSize: '0.84rem',
                       fontWeight: tierMode === 'STANDARD' ? 700 : 500,
                       border: tierMode === 'STANDARD' ? '2px solid #0284c7' : '1px solid var(--color-border, #e5e7eb)',
                       background: tierMode === 'STANDARD' ? 'rgba(2, 132, 199, 0.12)' : 'var(--color-surface, #fff)',
@@ -890,9 +880,9 @@ export function ManagerEquipmentPage() {
                   <button
                     type="button"
                     style={{
-                      padding: '7px 8px',
+                      padding: '8px 12px',
                       borderRadius: '6px',
-                      fontSize: '0.82rem',
+                      fontSize: '0.84rem',
                       fontWeight: tierMode === 'VIP' ? 700 : 500,
                       border: tierMode === 'VIP' ? '2px solid #d97706' : '1px solid var(--color-border, #e5e7eb)',
                       background: tierMode === 'VIP' ? 'rgba(245, 158, 11, 0.12)' : 'var(--color-surface, #fff)',
@@ -906,26 +896,6 @@ export function ManagerEquipmentPage() {
                   >
                     Gym VIP
                   </button>
-
-                  <button
-                    type="button"
-                    style={{
-                      padding: '7px 8px',
-                      borderRadius: '6px',
-                      fontSize: '0.82rem',
-                      fontWeight: tierMode === 'OTHER' ? 700 : 500,
-                      border: tierMode === 'OTHER' ? '2px solid var(--color-primary, #e25845)' : '1px solid var(--color-border, #e5e7eb)',
-                      background: tierMode === 'OTHER' ? 'rgba(226, 88, 69, 0.1)' : 'var(--color-surface, #fff)',
-                      color: tierMode === 'OTHER' ? 'var(--color-primary, #e25845)' : 'inherit',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.15s ease',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onClick={() => void handleSelectTier('OTHER')}
-                  >
-                    Phòng khác
-                  </button>
                 </div>
 
                 <Select
@@ -934,7 +904,6 @@ export function ManagerEquipmentPage() {
                   value={editing.form.roomId}
                   onChange={(e) => onRoomChange(e.target.value)}
                 >
-                  <option value="">-- Kho tổng / Chưa xếp phòng --</option>
                   {vipRooms.length > 0 && (
                     <optgroup label="-- KHU VỰC GYM VIP (PLATINUM) --">
                       {vipRooms.map((r) => (
@@ -949,15 +918,6 @@ export function ManagerEquipmentPage() {
                       {standardGymRooms.map((r) => (
                         <option key={r.id} value={r.id}>
                           {r.name} (Tiêu chuẩn)
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {otherRooms.length > 0 && (
-                    <optgroup label="-- CÁC PHÒNG BỘ MÔN KHÁC --">
-                      {otherRooms.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
                         </option>
                       ))}
                     </optgroup>
