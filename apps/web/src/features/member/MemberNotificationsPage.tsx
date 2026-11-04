@@ -24,7 +24,9 @@ function errorMessage(error: unknown): string {
 }
 
 export function MemberNotificationsPage() {
-  return <Navigate to={getCurrentUser()?.role === 'COACH' ? '/coach/classes' : '/member/dashboard'} replace state={{ openNotifications: true }} />;
+  const role = getCurrentUser()?.role;
+  const redirectPath = role === 'COACH' ? '/coach/classes' : role === 'MANAGER' ? '/manager/reports' : role === 'STAFF' ? '/staff/reception' : role === 'ADMIN' ? '/admin/users' : '/member/dashboard';
+  return <Navigate to={redirectPath} replace state={{ openNotifications: true }} />;
 }
 
 export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => void }) {

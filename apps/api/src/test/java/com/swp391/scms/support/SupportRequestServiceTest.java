@@ -14,6 +14,7 @@ import com.swp391.scms.support.entity.SupportRequest;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.Member;
+import com.swp391.scms.users.entity.Role;
 import com.swp391.scms.users.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -101,6 +102,35 @@ class SupportRequestServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.subject()).isEqualTo("Lỗi tủ đồ");
         verify(supportRequestRepository).save(any(SupportRequest.class));
+    }
+
+    @Test
+    @DisplayName("Tạo yêu cầu hỗ trợ gửi thông báo cho cả Lễ tân và Quản lý")
+    void createRequest_notifiesBothReceptionistAndManager() {
+        CreateSupportRequestDto dto = new CreateSupportRequestDto("Khiếu nại dịch vụ", "Nước hồ bơi quá lạnh");
+        User manager = new User();
+        manager.setId(50L);
+        Role managerRole = new Role();
+        managerRole.setCode("CENTER_MANAGER");
+        manager.setRole(managerRole);
+
+        User receptionist = new User();
+        receptionist.setId(51L);
+        Role receptionistRole = new Role();
+        receptionistRole.setCode("RECEPTIONIST");
+        receptionist.setRole(receptionistRole);
+
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(sampleMember));
+        when(supportRequestRepository.save(any(SupportRequest.class))).thenReturn(sampleRequest);
+        when(userRepository.findActiveStaffUsers()).thenReturn(List.of(manager, receptionist));
+        when(supportRequestMapper.toDto(any(SupportRequest.class))).thenReturn(new SupportRequestDto(
+                1L, 10L, "Nguyễn Văn A", null, null, "Khiếu nại dịch vụ", "Nước hồ bơi quá lạnh", "open", LocalDateTime.now(), null
+        ));
+
+        supportRequestService.createRequest(10L, dto);
+
+        verify(notificationService).send(eq(51L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+        verify(notificationService).send(eq(50L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
     }
 
     @Test

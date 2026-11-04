@@ -30,7 +30,7 @@ export const router = createBrowserRouter([
 
       // Notifications (Shared between Member & Coach)
       {
-        element: <RoleGuard allowedRoles={['MEMBER', 'COACH']} />,
+        element: <RoleGuard allowedRoles={['MEMBER', 'COACH', 'MANAGER', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST', 'ADMIN']} />,
         children: [
           {
             path: '/member/notifications',
