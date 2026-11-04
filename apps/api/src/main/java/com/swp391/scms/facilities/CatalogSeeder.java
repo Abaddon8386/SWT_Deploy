@@ -139,9 +139,9 @@ public class CatalogSeeder implements ApplicationRunner {
         upsertDiscipline("Tennis", "Kỹ thuật đánh bóng, di chuyển và đánh đôi");
         upsertDiscipline("Cầu lông", "Bộ chân, phản xạ và kỹ thuật đánh cầu");
         upsertDiscipline("Yoga", "Hơi thở, thăng bằng và giãn cơ", "Mindful Yoga");
-        upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
-        upsertRoom("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", "PLATINUM");
-        if (rooms.list().size() <= 2) {
+        if (rooms.list().isEmpty()) {
+            rooms.create(new RoomRequest("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", null, null, null, "STANDARD"));
+            rooms.create(new RoomRequest("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", null, null, null, "PLATINUM"));
             rooms.create(new RoomRequest("Zen Garden Studio", "Penthouse", 18, "available", null, null, null, "STANDARD"));
             rooms.create(new RoomRequest("Ring Arena 01", "Level 1 - East Wing", 14, "maintenance", null, null, null, "STANDARD"));
             rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available", null, null, null, "STANDARD"));
