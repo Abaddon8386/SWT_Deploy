@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record TrialClaimRequest(
         @NotBlank(message = "{validation.trial.cccd.required}")
-        @Pattern(regexp = "^\\d{9,12}$", message = "{validation.trial.cccd.format}")
+        @Pattern(regexp = "^(\\d{9}|\\d{12})$", message = "{validation.trial.cccd.format}")
         String cccd,
 
         @NotBlank(message = "{validation.trial.full_name.required}")

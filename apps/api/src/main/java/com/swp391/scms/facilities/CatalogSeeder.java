@@ -145,8 +145,6 @@ public class CatalogSeeder implements ApplicationRunner {
             rooms.create(new RoomRequest("Zen Garden Studio", "Penthouse", 18, "available", null, null, null, "STANDARD"));
             rooms.create(new RoomRequest("Ring Arena 01", "Level 1 - East Wing", 14, "maintenance", null, null, null, "STANDARD"));
             rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available", null, null, null, "STANDARD"));
-        } else {
-            migrateGymRooms();
         }
 
         // Upsert 1-month base packages
@@ -173,10 +171,10 @@ public class CatalogSeeder implements ApplicationRunner {
     private void seedInitialEquipment() {
         var allRooms = roomRepository.findAll();
         com.swp391.scms.facilities.entity.Room standard = allRooms.stream()
-                .filter(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.getName()) || "Arena 02 (Strength)".equalsIgnoreCase(r.getName()))
+                .filter(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.getName()))
                 .findFirst().orElse(null);
         com.swp391.scms.facilities.entity.Room vip = allRooms.stream()
-                .filter(r -> "Phòng Gym VIP".equalsIgnoreCase(r.getName()) || "Studio 01".equalsIgnoreCase(r.getName()))
+                .filter(r -> "Phòng Gym VIP".equalsIgnoreCase(r.getName()))
                 .findFirst().orElse(null);
 
         if (standard != null) {
@@ -194,27 +192,6 @@ public class CatalogSeeder implements ApplicationRunner {
             equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Dàn tạ khối thông minh Technogym Kinesis One", "EQ-VIP-KIN-01", "Strength", vip, 2, "active"));
             equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Dàn tạ đơn Urethane bọc crôm VIP", "EQ-VIP-DUMB-01", "Free Weights", vip, 1, "active"));
             equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy đo chỉ số cơ thể chuyên sâu InBody 770", "EQ-VIP-INBODY-01", "Diagnostic", vip, 1, "active"));
-        }
-    }
-
-    private void migrateGymRooms() {
-        var existing = rooms.list();
-        boolean hasStandard = existing.stream().anyMatch(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.name()));
-        boolean hasVip = existing.stream().anyMatch(r -> "Phòng Gym VIP".equalsIgnoreCase(r.name()));
-
-        if (!hasStandard) {
-            var legacy = existing.stream().filter(r -> "Arena 02 (Strength)".equalsIgnoreCase(r.name())).findFirst();
-            if (legacy.isPresent()) {
-                var l = legacy.get();
-                rooms.update(l.id(), new RoomRequest("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, l.status(), l.disciplineId(), l.openTime(), l.closeTime(), "STANDARD"));
-            }
-        }
-        if (!hasVip) {
-            var legacy = existing.stream().filter(r -> "Studio 01".equalsIgnoreCase(r.name())).findFirst();
-            if (legacy.isPresent()) {
-                var l = legacy.get();
-                rooms.update(l.id(), new RoomRequest("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, l.status(), l.disciplineId(), l.openTime(), l.closeTime(), "PLATINUM"));
-            }
         }
     }
 

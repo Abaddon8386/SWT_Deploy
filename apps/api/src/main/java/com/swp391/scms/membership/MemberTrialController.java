@@ -40,7 +40,7 @@ public class MemberTrialController {
     @GetMapping("/status")
     public ApiResponse<TrialStatusDto> getTrialStatus(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
         TrialStatusDto status = trialService.getTrialStatus(principal.id());
-        return ApiResponse.ok("Thành công", status);
+        return ApiResponse.ok(msg("trial.status.loaded"), status);
     }
 
     @Operation(summary = "Xác minh CCCD và kích hoạt 3 ngày tập miễn phí đặc quyền Gold")

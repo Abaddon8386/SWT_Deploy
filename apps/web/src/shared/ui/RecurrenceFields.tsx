@@ -146,7 +146,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
           <div role="status" style={{ marginTop: 14, fontSize: 14, fontWeight: 700, color: 'var(--portal-paper, #201b17)', lineHeight: 1.4 }}>
             {dates.length ? (
               <>
-                Lặp lại vào {selectedDayNames} {value.period === 'week' ? 'hàng tuần' : 'hàng tháng'} (Dự kiến: {projectedCount} buổi/{value.period === 'month' ? 'tháng' : 'tháng'})
+                Lặp lại vào {selectedDayNames} {value.period === 'week' ? 'hàng tuần' : 'hàng tháng'} (Dự kiến: {projectedCount} buổi/tháng)
               </>
             ) : (
               'Không có ngày nào trong khoảng đã chọn.'
@@ -198,7 +198,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <div style={{ fontSize: 13, lineHeight: 1.45, color: '#201b17' }}>
-              <strong>Lưu ý:</strong> {hint || 'Hệ thống sẽ tự động gia hạn lịch tập vào cùng ngày này mỗi tháng. Bạn có thể hủy hoặc thay đổi lịch tập bất cứ lúc nào.'}
+              <strong>Lưu ý:</strong> {hint || 'Các buổi tập được đặt cùng lúc cho những ngày đã chọn. Bạn có thể hủy từng buổi trước giờ tập theo quy định của trung tâm.'}
             </div>
           </div>
         </>

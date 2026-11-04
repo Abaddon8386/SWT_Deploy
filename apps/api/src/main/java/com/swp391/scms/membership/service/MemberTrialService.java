@@ -4,6 +4,7 @@ import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.facilities.CatalogSeeder;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
@@ -18,6 +19,7 @@ import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -121,12 +123,11 @@ public class MemberTrialService {
         Member member = members.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
 
-        // 4. Tìm gói tập GOLD
-        MembershipPackage goldPkg = packages.findAll().stream()
-                .filter(p -> p.getName() != null && p.getName().toUpperCase().contains("GOLD"))
+        // 4. Tìm gói tập GOLD 1 tháng đang bán (không dùng gói đã retire hoặc gói khác làm fallback)
+        MembershipPackage goldPkg = packages.findByStatusOrderByPriceAsc("active").stream()
+                .filter(p -> CatalogSeeder.GOLD_NAME.equalsIgnoreCase(p.getName()))
                 .findFirst()
-                .orElseGet(() -> packages.findAll().stream().findFirst()
-                        .orElseThrow(() -> new ResourceNotFoundException("resource.package", "GOLD")));
+                .orElseThrow(() -> new ResourceNotFoundException("resource.package", CatalogSeeder.GOLD_NAME));
 
         // 5. Tạo MembershipSubscription 3 ngày kích hoạt ngay lập tức
         MembershipSubscription subscription = new MembershipSubscription();
@@ -138,17 +139,24 @@ public class MemberTrialService {
         subscription.setUpgradeCharge(BigDecimal.ZERO);
         subscription.setQrCode(UUID.randomUUID().toString());
 
-        MembershipSubscription savedSub = subscriptions.saveAndFlush(subscription);
+        MembershipSubscription savedSub;
+        try {
+            savedSub = subscriptions.saveAndFlush(subscription);
 
-        // 6. Ghi nhận lượt nhận gói thử vào MemberTrialRedemption
-        MemberTrialRedemption redemption = new MemberTrialRedemption(member, cccd, fullName, savedSub);
-        trialRedemptions.saveAndFlush(redemption);
+            // 6. Ghi nhận lượt nhận gói thử vào MemberTrialRedemption
+            MemberTrialRedemption redemption = new MemberTrialRedemption(member, cccd, fullName, savedSub);
+            trialRedemptions.saveAndFlush(redemption);
+        } catch (DataIntegrityViolationException e) {
+            // Hai yêu cầu đồng thời cùng vượt qua bước kiểm tra: unique constraint member/cccd chặn bản thứ hai.
+            throw new ConflictException("TRIAL_ALREADY_CLAIMED", "trial.already_claimed.member", null,
+                    msg("trial.already_claimed.member"));
+        }
 
         // 7. Gửi thông báo đến hội viên
         if (notifications != null) {
             notifications.send(
                     memberId,
-                    "Kích hoạt gói tập thử 3 ngày Gold thành công",
+                    msg("trial.claimed.title"),
                     msg("trial.claimed.success"),
                     "membership",
                     "memberships",

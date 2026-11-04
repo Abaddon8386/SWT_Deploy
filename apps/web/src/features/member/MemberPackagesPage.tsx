@@ -121,7 +121,7 @@ export function MemberPackagesPage() {
   const handleClaimTrial = async (e: React.FormEvent) => {
     e.preventDefault();
     const cccdClean = trialCccd.trim();
-    if (!/^\d{9,12}$/.test(cccdClean)) {
+    if (!/^(\d{9}|\d{12})$/.test(cccdClean)) {
       setTrialError('Số CCCD không hợp lệ (phải gồm 9 hoặc 12 chữ số).');
       return;
     }
@@ -715,7 +715,6 @@ export function MemberPackagesPage() {
         </section>
       )}
 
-      
 
       {frozenSubscription && (
         <section
@@ -1198,7 +1197,6 @@ export function MemberPackagesPage() {
         </Modal>
       )}
 
-      
 
       {isTrialModalOpen && (
         <Modal

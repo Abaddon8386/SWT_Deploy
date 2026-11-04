@@ -110,10 +110,9 @@ public class SupportRequestService {
 
         SupportRequest request = new SupportRequest(member, dto.subject(), dto.description());
         SupportRequest saved = supportRequestRepository.save(request);
-        // Both receptionists and managers are notified of a new complaint
+        // A new complaint reaches the receptionists first; managers are only notified once it is escalated
+        // (they are not allowed to open a complaint that has not been escalated).
         notifyStaff(RECEPTIONIST, "notifications.support.new_request.title", "notifications.support.new_request.body",
-                saved.getId(), dto.subject());
-        notifyStaff(MANAGER, "notifications.support.new_request.title", "notifications.support.new_request.body",
                 saved.getId(), dto.subject());
         return supportRequestMapper.toDto(saved).forMember();
     }

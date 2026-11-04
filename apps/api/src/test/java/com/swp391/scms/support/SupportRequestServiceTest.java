@@ -105,8 +105,8 @@ class SupportRequestServiceTest {
     }
 
     @Test
-    @DisplayName("Tạo yêu cầu hỗ trợ gửi thông báo cho cả Lễ tân và Quản lý")
-    void createRequest_notifiesBothReceptionistAndManager() {
+    @DisplayName("Tạo yêu cầu hỗ trợ chỉ thông báo Lễ tân, Quản lý chỉ nhận khi đã escalate")
+    void createRequest_notifiesReceptionistOnly() {
         CreateSupportRequestDto dto = new CreateSupportRequestDto("Khiếu nại dịch vụ", "Nước hồ bơi quá lạnh");
         User manager = new User();
         manager.setId(50L);
@@ -130,7 +130,7 @@ class SupportRequestServiceTest {
         supportRequestService.createRequest(10L, dto);
 
         verify(notificationService).send(eq(51L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
-        verify(notificationService).send(eq(50L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+        verify(notificationService, never()).send(eq(50L), any(), any(), any(), any(), any());
     }
 
     @Test

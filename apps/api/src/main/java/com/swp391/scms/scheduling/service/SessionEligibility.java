@@ -49,4 +49,24 @@ final class SessionEligibility {
                     "error.scheduling.membership_session_not_covered", new Object[]{sessionDate}, "Gói tập hiện tại không bao phủ ngày học " + sessionDate + ". Vui lòng chọn buổi học nằm trong thời hạn gói tập hoặc gia hạn thêm.");
         }
     }
+
+    /** Phòng hạng PLATINUM chỉ cho phép hội viên có gói PLATINUM đang hiệu lực bao phủ ngày học. */
+    static void ensurePlatinumRoomAccess(MembershipSubscriptionRepository subscriptions,
+                                         Long memberId, com.swp391.scms.facilities.entity.Room room, LocalDate sessionDate) {
+        if (room == null || !"PLATINUM".equalsIgnoreCase(room.getTier())) {
+            return;
+        }
+        boolean hasPlatinum = subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
+                .anyMatch(sub -> !sub.getStartDate().isAfter(sessionDate)
+                        && !sub.getEndDate().isBefore(sessionDate)
+                        && sub.getMembershipPackage() != null
+                        && sub.getMembershipPackage().getName() != null
+                        && sub.getMembershipPackage().getName().toUpperCase(java.util.Locale.ROOT)
+                                .contains(com.swp391.scms.facilities.CatalogSeeder.PLATINUM_NAME));
+        if (!hasPlatinum) {
+            throw new ForbiddenException("SCHEDULING_ROOM_PLATINUM_REQUIRED",
+                    "error.scheduling.room_platinum_required", null,
+                    "Phòng Gym VIP chỉ dành cho hội viên sở hữu gói Platinum");
+        }
+    }
 }

@@ -143,7 +143,7 @@ class MemberTrialServiceTest {
         when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any(LocalDate.class)))
                 .thenReturn(false);
         when(members.findById(10L)).thenReturn(Optional.of(testMember));
-        when(packages.findAll()).thenReturn(List.of(goldPackage));
+        when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
 
         when(subscriptions.saveAndFlush(any(MembershipSubscription.class))).thenAnswer(inv -> {
             MembershipSubscription s = inv.getArgument(0);

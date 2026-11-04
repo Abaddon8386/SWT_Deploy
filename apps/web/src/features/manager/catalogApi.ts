@@ -13,7 +13,6 @@ export interface Room {
   location: string | null;
   capacity: number;
   status: 'available' | 'maintenance' | 'closed';
-  tier?: string | null;
   disciplineId?: number | null;
   disciplineName?: string | null;
   openTime?: string | null;

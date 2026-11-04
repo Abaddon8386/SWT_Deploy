@@ -180,6 +180,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/staff-accounts", "/api/v1/staff-accounts/**").hasAnyRole("CENTER_MANAGER", "ADMIN")
                     .requestMatchers("/api/v1/users", "/api/v1/users/**", "/api/v1/roles", "/api/v1/roles/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/v1/members/lookup").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.PATCH, "/api/v1/equipment/*/status").hasAnyRole("CENTER_MANAGER", "MANAGER", "STAFF", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").authenticated()
                     .requestMatchers("/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .anyRequest().authenticated())

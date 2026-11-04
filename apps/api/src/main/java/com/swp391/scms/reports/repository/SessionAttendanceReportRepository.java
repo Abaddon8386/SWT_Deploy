@@ -20,7 +20,7 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
         String getClassName();
         Long getDisciplineId();
         String getDisciplineName();
-        default String getRoomName() { return null; }
+        String getRoomName();
         Integer getCapacity();
         Long getEnrolledCount();
         Long getPresentCount();

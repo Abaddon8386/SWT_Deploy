@@ -238,6 +238,7 @@ class RevenueReportServiceTest {
             @Override public String getClassName() { return "Morning Yoga"; }
             @Override public Long getDisciplineId() { return 2L; }
             @Override public String getDisciplineName() { return "Yoga"; }
+            @Override public String getRoomName() { return null; }
             @Override public Integer getCapacity() { return 20; }
             @Override public Long getEnrolledCount() { return 2L; }
             @Override public Long getPresentCount() { return 1L; }
@@ -247,6 +248,7 @@ class RevenueReportServiceTest {
             @Override public String getClassName() { return "Open Workshop"; }
             @Override public Long getDisciplineId() { return 2L; }
             @Override public String getDisciplineName() { return "Yoga"; }
+            @Override public String getRoomName() { return null; }
             @Override public Integer getCapacity() { return 0; }
             @Override public Long getEnrolledCount() { return 0L; }
             @Override public Long getPresentCount() { return 0L; }

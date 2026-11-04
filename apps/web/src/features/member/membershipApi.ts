@@ -64,11 +64,6 @@ export interface MembershipCancellationRequest {
 export const getMyMembershipCancellations = () =>
   apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations/my');
 
-export const requestMembershipCancellation = (subscriptionId: number, reason: string) =>
-  apiFetch<MembershipCancellationRequest>(`/memberships/cancellations/subscriptions/${subscriptionId}`, {
-    method: 'POST', body: JSON.stringify({ reason }),
-  });
-
 export const getMembershipPackages = () =>
   apiFetch<MembershipPackage[]>('/packages');
 

@@ -42,7 +42,7 @@ public class AuditController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
-    @Operation(summary = "Get audit logs with filters", description = "Restricted to CENTER_MANAGER. Supports filtering by userId, entityType, action, from, to.")
+    @Operation(summary = "Get audit logs with filters", description = "Restricted to CENTER_MANAGER and MANAGER. Supports filtering by userId, entityType, action, from, to.")
     public ApiResponse<Page<AuditLogDto>> getAuditLogs(
             @RequestParam(name = "user_id", required = false) Long userId,
             @RequestParam(name = "entity_type", required = false) String entityType,

@@ -20,7 +20,7 @@ public final class CatalogRequests {
             @Min(value = 1, message = "{validation.catalog.capacity.min}") int capacity,
             @Pattern(regexp = "available|maintenance|closed", message = "{validation.catalog.room_status.pattern}") String status,
             Long disciplineId, LocalTime openTime, LocalTime closeTime,
-            String tier) {
+            @Pattern(regexp = "(?i)STANDARD|PLATINUM", message = "{validation.catalog.room_tier.pattern}") String tier) {
         public RoomRequest(String name, String location, int capacity, String status) {
             this(name, location, capacity, status, null, null, null, "STANDARD");
         }
