@@ -117,6 +117,12 @@ public class CatalogSeeder implements ApplicationRunner {
     private final RoomService rooms;
     private final PackageService packages;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.facilities.repository.EquipmentRepository equipmentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.facilities.repository.RoomRepository roomRepository;
+
     public CatalogSeeder(DisciplineService disciplines, RoomService rooms, PackageService packages) {
         this.disciplines = disciplines;
         this.rooms = rooms;
@@ -157,6 +163,37 @@ public class CatalogSeeder implements ApplicationRunner {
         for (String retired : new String[] {SILVER_6M_NAME, GOLD_6M_NAME, PLATINUM_6M_NAME,
                 SILVER_12M_NAME, GOLD_12M_NAME, PLATINUM_12M_NAME}) {
             retirePackage(retired);
+        }
+
+        if (equipmentRepository != null && equipmentRepository.count() == 0 && roomRepository != null) {
+            seedInitialEquipment();
+        }
+    }
+
+    private void seedInitialEquipment() {
+        var allRooms = roomRepository.findAll();
+        com.swp391.scms.facilities.entity.Room standard = allRooms.stream()
+                .filter(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.getName()) || "Arena 02 (Strength)".equalsIgnoreCase(r.getName()))
+                .findFirst().orElse(null);
+        com.swp391.scms.facilities.entity.Room vip = allRooms.stream()
+                .filter(r -> "Phòng Gym VIP".equalsIgnoreCase(r.getName()) || "Studio 01".equalsIgnoreCase(r.getName()))
+                .findFirst().orElse(null);
+
+        if (standard != null) {
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy chạy bộ điện Commercial Pro", "EQ-RUN-01", "Cardio", standard, 8, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Xe đạp tập Upright Bike", "EQ-BIKE-01", "Cardio", standard, 6, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Giàn tạ đa năng Smith Machine", "EQ-SMI-01", "Strength", standard, 3, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy kéo xô đôi Dual Lat Pulldown", "EQ-LAT-01", "Strength", standard, 2, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Dàn tạ tay cao su Dumbbell (2.5-40kg)", "EQ-DUMB-01", "Free Weights", standard, 2, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Khung gánh tạ Squat Rack", "EQ-SQUAT-01", "Strength", standard, 2, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Ghế đẩy ngực đa năng Adjustable Bench", "EQ-BENCH-01", "Free Weights", standard, 6, "active"));
+        }
+        if (vip != null) {
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy chạy bộ cao cấp Technogym Artis Run", "EQ-VIP-RUN-01", "Cardio", vip, 4, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy tập toàn thân Synchro Elliptical VIP", "EQ-VIP-SYN-01", "Cardio", vip, 3, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Dàn tạ khối thông minh Technogym Kinesis One", "EQ-VIP-KIN-01", "Strength", vip, 2, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Dàn tạ đơn Urethane bọc crôm VIP", "EQ-VIP-DUMB-01", "Free Weights", vip, 1, "active"));
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy đo chỉ số cơ thể chuyên sâu InBody 770", "EQ-VIP-INBODY-01", "Diagnostic", vip, 1, "active"));
         }
     }
 
