@@ -28,30 +28,13 @@ import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { notify } from '../../../shared/lib/portalNotices';
 import { ApiError } from '../../../shared/api/client';
 import { errorMessage } from '../../../shared/lib/errorMessage';
-import { formatCoachName, isSessionCompleted } from '../coachBookingUtils';
-
-export const COACH_FILTER_DISCIPLINES = ['ALL', 'Gym', 'Boxing', 'Yoga'] as const;
-export type CoachDisciplineFilter = (typeof COACH_FILTER_DISCIPLINES)[number];
-
-const COACH_DISCIPLINE_PATTERNS: Record<'Gym' | 'Boxing' | 'Yoga', RegExp> = {
-  Gym: /\bgym\b|fitness|cardio|strength|olympic|thể hình|tập tạ|sức mạnh|thể lực/i,
-  Boxing: /boxing|kickfit|đấm bốc|võ|muay|combat/i,
-  Yoga: /yoga|pilates|mindful|thiền|dẻo dai|stretch|giãn cơ|movement/i,
-};
-
-export function matchesCoachDiscipline(coach: CoachPublicDto, filter: CoachDisciplineFilter): boolean {
-  if (filter === 'ALL') return true;
-  const pattern = COACH_DISCIPLINE_PATTERNS[filter];
-  if (!pattern) return true;
-  if (coach.specialization && pattern.test(coach.specialization)) {
-    return true;
-  }
-  const isGenericSpec = !coach.specialization || /huấn luyện|coach|personal|trainer|pt|chuyên gia/i.test(coach.specialization);
-  if (isGenericSpec && (pattern.test(coach.bio || '') || pattern.test(coach.certification || ''))) {
-    return true;
-  }
-  return false;
-}
+import {
+  formatCoachName,
+  isSessionCompleted,
+  COACH_FILTER_DISCIPLINES,
+  matchesCoachDiscipline,
+  type CoachDisciplineFilter,
+} from '../coachBookingUtils';
 
 function coachBookingErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {

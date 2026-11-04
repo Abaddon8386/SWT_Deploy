@@ -4,12 +4,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   MemberCoachBookingView,
-  COACH_FILTER_DISCIPLINES,
-  matchesCoachDiscipline,
 } from './MemberCoachBookingView';
 import {
   formatCoachName,
   isSessionCompleted,
+  COACH_FILTER_DISCIPLINES,
+  matchesCoachDiscipline,
 } from '../coachBookingUtils';
 
 const mocks = vi.hoisted(() => ({

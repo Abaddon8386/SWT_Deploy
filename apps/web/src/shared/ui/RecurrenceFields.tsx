@@ -1,4 +1,4 @@
-import { expandRecurrence, isoWeekday, WEEKDAY_LABELS, type RecurrenceChoice, type RecurrencePeriod, type SkippedOccurrence } from '../lib/recurrence';
+import { expandRecurrence, WEEKDAY_LABELS, type RecurrenceChoice, type RecurrencePeriod, type SkippedOccurrence } from '../lib/recurrence';
 
 const PERIODS: { id: RecurrencePeriod; label: string; legacyLabel: string }[] = [
   { id: 'once', label: 'Một buổi', legacyLabel: 'Chỉ ngày này' },
