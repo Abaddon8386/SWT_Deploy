@@ -52,6 +52,11 @@ vi.mock('./memberCardApi', () => ({
   getMySubscription: mocks.mySubscription,
 }));
 
+vi.mock('../coaching/coachReviewApi', () => ({
+  getMyCoachReviews: vi.fn().mockResolvedValue([]),
+  createCoachReview: vi.fn(),
+}));
+
 vi.mock('./coachBookingApi', () => ({
   getCoaches: mocks.coaches,
   getAvailableSlots: mocks.coachSlots,
@@ -472,7 +477,6 @@ describe('MemberClassesPage', () => {
     const ptTab = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Đặt lịch HLV 1:1'))!;
     expect(ptTab).not.toBeUndefined();
     await act(async () => ptTab.click());
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
 
     expect(host.textContent).toContain('Chọn Huấn luyện viên cá nhân (PT 1:1)');
     expect(host.textContent).toContain('Trần Văn Nam');

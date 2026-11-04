@@ -1,0 +1,190 @@
+{
+  "phase": "after",
+  "environment": "real localhost source; isolated UI fixtures; backend writes blocked",
+  "results": [
+    {
+      "theme": "light",
+      "width": 390,
+      "geometry": {
+        "button": {
+          "width": 52,
+          "height": 52
+        },
+        "icon": {
+          "tag": "svg",
+          "text": "",
+          "width": 36,
+          "height": 36,
+          "dx": 0,
+          "dy": 0
+        },
+        "path": {
+          "x": 4,
+          "y": 4,
+          "width": 16,
+          "height": 16,
+          "viewBox": "0 0 24 24"
+        },
+        "css": {
+          "display": "grid",
+          "padding": "0px",
+          "lineHeight": "22.4px",
+          "alignItems": "center",
+          "justifyItems": "center",
+          "transform": "none"
+        }
+      },
+      "ink": {
+        "minX": 14,
+        "maxX": 37,
+        "minY": 15,
+        "maxY": 38,
+        "dx": -0.5,
+        "dy": 0.5
+      },
+      "hasFavorite": 0,
+      "hasBulk": 0,
+      "hasMonth": 0,
+      "hasLastWeek": 1,
+      "errors": []
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "geometry": {
+        "button": {
+          "width": 52,
+          "height": 52
+        },
+        "icon": {
+          "tag": "svg",
+          "text": "",
+          "width": 36,
+          "height": 36,
+          "dx": 0,
+          "dy": 0
+        },
+        "path": {
+          "x": 4,
+          "y": 4,
+          "width": 16,
+          "height": 16,
+          "viewBox": "0 0 24 24"
+        },
+        "css": {
+          "display": "grid",
+          "padding": "0px",
+          "lineHeight": "22.4px",
+          "alignItems": "center",
+          "justifyItems": "center",
+          "transform": "none"
+        }
+      },
+      "ink": {
+        "minX": 14,
+        "maxX": 37,
+        "minY": 14,
+        "maxY": 37,
+        "dx": 0,
+        "dy": -0.5
+      },
+      "hasFavorite": 0,
+      "hasBulk": 0,
+      "hasMonth": 0,
+      "hasLastWeek": 1,
+      "errors": []
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "geometry": {
+        "button": {
+          "width": 52,
+          "height": 52
+        },
+        "icon": {
+          "tag": "svg",
+          "text": "",
+          "width": 36,
+          "height": 36,
+          "dx": 0,
+          "dy": 0
+        },
+        "path": {
+          "x": 4,
+          "y": 4,
+          "width": 16,
+          "height": 16,
+          "viewBox": "0 0 24 24"
+        },
+        "css": {
+          "display": "grid",
+          "padding": "0px",
+          "lineHeight": "22.4px",
+          "alignItems": "center",
+          "justifyItems": "center",
+          "transform": "none"
+        }
+      },
+      "ink": {
+        "minX": 14,
+        "maxX": 37,
+        "minY": 15,
+        "maxY": 38,
+        "dx": -0.5,
+        "dy": 0.5
+      },
+      "hasFavorite": 0,
+      "hasBulk": 0,
+      "hasMonth": 0,
+      "hasLastWeek": 1,
+      "errors": []
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "geometry": {
+        "button": {
+          "width": 52,
+          "height": 52
+        },
+        "icon": {
+          "tag": "svg",
+          "text": "",
+          "width": 36,
+          "height": 36,
+          "dx": 0,
+          "dy": 0
+        },
+        "path": {
+          "x": 4,
+          "y": 4,
+          "width": 16,
+          "height": 16,
+          "viewBox": "0 0 24 24"
+        },
+        "css": {
+          "display": "grid",
+          "padding": "0px",
+          "lineHeight": "22.4px",
+          "alignItems": "center",
+          "justifyItems": "center",
+          "transform": "none"
+        }
+      },
+      "ink": {
+        "minX": 14,
+        "maxX": 37,
+        "minY": 14,
+        "maxY": 37,
+        "dx": 0,
+        "dy": -0.5
+      },
+      "hasFavorite": 0,
+      "hasBulk": 0,
+      "hasMonth": 0,
+      "hasLastWeek": 1,
+      "errors": []
+    }
+  ]
+}
