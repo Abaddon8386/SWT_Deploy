@@ -205,7 +205,7 @@ public class CatalogSeeder implements ApplicationRunner {
         for (var r : rooms.list()) {
             if (name.equalsIgnoreCase(r.name())) {
                 if (tier != null && !tier.equalsIgnoreCase(r.tier())) {
-                    rooms.update(r.id(), new RoomRequest(r.name(), r.location(), r.capacity(), r.status(), r.openTime(), r.closeTime(), r.disciplineId(), tier));
+                    rooms.update(r.id(), new RoomRequest(r.name(), r.location(), r.capacity(), r.status(), r.disciplineId(), r.openTime(), r.closeTime(), tier));
                 }
                 return;
             }
