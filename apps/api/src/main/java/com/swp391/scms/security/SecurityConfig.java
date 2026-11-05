@@ -50,6 +50,9 @@ public class SecurityConfig {
                     .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/catalog").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/public/geo/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/public/product-categories", "/api/v1/public/products", "/api/v1/public/products/*", "/api/v1/public/shop/config").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/public/shop/quote").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                     .requestMatchers("/api/v1/payments/vnpay/**").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
@@ -191,6 +194,12 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").authenticated()
                     .requestMatchers("/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .requestMatchers("/api/v1/manager/coach-assignments/**", "/api/v1/manager/coach-assignments").hasAnyRole("CENTER_MANAGER", "MANAGER")
+                    // Supplement Shop (Sản phẩm)
+                    .requestMatchers("/api/v1/shop/addresses/**", "/api/v1/shop/addresses", "/api/v1/shop/orders/**", "/api/v1/shop/orders").hasRole("MEMBER")
+                    .requestMatchers("/api/v1/staff/product-orders/**", "/api/v1/staff/product-orders").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/manager/products/**", "/api/v1/manager/products",
+                            "/api/v1/manager/product-categories/**", "/api/v1/manager/product-categories",
+                            "/api/v1/manager/product-variants/**", "/api/v1/manager/product-orders/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .anyRequest().authenticated())
             .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
