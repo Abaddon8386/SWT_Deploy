@@ -6,6 +6,7 @@ import { dailyExercises, weeklyMeasurements, type WeeklyPoint } from './progress
 import './member-progress.css';
 import { centerNowParts } from '../../shared/lib/centerTime';
 import { CoachEvaluations } from './CoachEvaluations';
+import { WorkoutHistory } from './WorkoutHistory';
 
 type LoadState<T> = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: T };
 
@@ -37,6 +38,7 @@ function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; m
 }
 
 export function MemberProgressPage() {
+ const [tab, setTab] = useState<'progress' | 'history'>('progress');
  const [date, setDate] = useState(() => centerNowParts().date);
  useEffect(() => {
   const update = () => setDate(centerNowParts().date);
@@ -44,7 +46,15 @@ export function MemberProgressPage() {
   window.addEventListener('focus', update);
   return () => { window.clearInterval(timer); window.removeEventListener('focus', update); };
  }, []);
- return <DailyProgress key={date} today={date} />;
+ return <div className="portal-container member-progress">
+   <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" />
+   <div className="workout-tabs" role="group" aria-label="Nội dung tiến độ">
+     <button type="button" className={tab === 'progress' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'progress'} onClick={() => setTab('progress')}>Tiến độ & Giáo án</button>
+     <button type="button" className={tab === 'history' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'history'} onClick={() => setTab('history')}>Lịch sử tập luyện</button>
+   </div>
+   <div hidden={tab !== 'progress'}><DailyProgress key={date} today={date} /></div>
+   {tab === 'history' && <WorkoutHistory />}
+ </div>;
 }
 function DailyProgress({ today }: { today: string }) {
   const [metrics, setMetrics] = useState<LoadState<ProgressMetric[]>>({ kind: 'loading' });
@@ -96,8 +106,7 @@ function DailyProgress({ today }: { today: string }) {
 
   const points = metrics.kind === 'ready' ? weeklyMeasurements(metrics.data) : [];
   const exercises = plans.kind === 'ready' ? dailyExercises(plans.data, today) : [];
-  return <div className="portal-container member-progress">
-    <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" />
+  return <div className="member-progress">
     <CoachEvaluations />
     <section className="portal-card" aria-labelledby="progress-metrics-title">
       <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">Thay đổi qua các tuần</h2></div>
