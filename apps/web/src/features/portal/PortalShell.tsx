@@ -69,6 +69,21 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | 'notifications' | 'wallet' | null>(null);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const avatarMenuRef = useRef<HTMLDivElement | null>(null);
+  // Thanh công cụ nổi ở góc phải trên cùng; tiêu đề trang chừa đúng bề rộng của nó để nội dung bắt đầu từ đầu trang.
+  const appMainRef = useRef<HTMLDivElement | null>(null);
+  const topbarActionsRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const actions = topbarActionsRef.current;
+    const main = appMainRef.current;
+    if (!actions || !main || typeof ResizeObserver === 'undefined') return;
+    // Khoảng từ mép phải vùng nội dung tới mép trái cụm thao tác.
+    const sync = () => main.style.setProperty('--portal-topbar-width', `${Math.ceil(main.getBoundingClientRect().right - actions.getBoundingClientRect().left)}px`);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(actions);
+    observer.observe(main);
+    return () => observer.disconnect();
+  }, []);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileEmail, setProfileEmail] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -326,15 +341,12 @@ function PortalShellContent({ user }: { user: UserSession }) {
         </div>
       </aside>
 
-      <div className="app-main">
+      <div className="app-main" ref={appMainRef}>
         <header className="app-topbar">
           <div className="portal-workspace">
             <button type="button" className="portal-icon-button portal-mobile-menu" aria-label={t('Mở điều hướng', 'Open navigation')} onClick={() => openNavigation('menu')}><PortalIcon name="menu" /></button>
-            <Link to="/portal" className="portal-wordmark" aria-label={t('SÖL Fitness · Trang đầu portal', 'SÖL Fitness · Portal home')}>SÖL<span>Fitness</span></Link>
-            <span className="portal-workspace-divider" />
-            <span className="portal-workspace-role">{roleLabel}</span>
           </div>
-          <div className="portal-topbar-actions">
+          <div className="portal-topbar-actions" ref={topbarActionsRef}>
             <ThemeToggle />
             {canReceiveNotifications && <button type="button" onClick={openNotifications} aria-haspopup="dialog" aria-expanded={dialog === 'notifications'} aria-controls="portal-notifications" className="member-notification-bell" aria-label={notificationError ? t('Thông báo · Không thể cập nhật số chưa đọc', 'Notifications · Unable to update unread count') : t(`Thông báo · ${totalUnread} chưa đọc`, `Notifications · ${totalUnread} unread`)} title={notificationError ? t('Không thể cập nhật số thông báo', 'Unable to update notifications') : t('Thông báo', 'Notifications')}>
               <PortalIcon name="bell" size={19} />
@@ -354,7 +366,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                 onClick={() => setAvatarMenuOpen((current) => !current)}
               >
                 <span className="portal-avatar" style={{ overflow: 'hidden' }}>{renderAvatarContent()}</span>
-                <span className="portal-account-name">{user.name}<small>{roleLabel}</small></span>
+                <span className="portal-account-name">{user.name}</span>
               </button>
               {avatarMenuOpen && (
                 <div
@@ -377,6 +389,10 @@ function PortalShellContent({ user }: { user: UserSession }) {
                     color: 'var(--portal-paper, #faf9f6)',
                   }}
                 >
+                  <div className="portal-avatar-dropdown__brand">
+                    <Link to="/portal" className="portal-wordmark" role="menuitem" aria-label={t('SÖL Fitness · Trang đầu portal', 'SÖL Fitness · Portal home')} onClick={() => setAvatarMenuOpen(false)}>SÖL<span>Fitness</span></Link>
+                    <span className="portal-workspace-role">{roleLabel}</span>
+                  </div>
                   <div
                     className="portal-avatar-dropdown__summary"
                     style={{
@@ -394,9 +410,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {user.name}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--portal-salmon, #ce9180)', fontWeight: 600 }}>
-                        {roleLabel}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--portal-muted, #bcb8b5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {profileEmail || user.identifier}
