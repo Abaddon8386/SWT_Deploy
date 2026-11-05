@@ -653,7 +653,9 @@
   .chat-widget__trigger { background: #212328; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 
-/* Canvas WebGL liquid-glass (khúc xạ viền) nằm dưới nội dung, không chặn thao tác. */
+/* Canvas WebGL liquid-glass (dashersw/liquid-glass-js): shader khúc xạ ảnh chụp thật
+   của trang phía sau. Khi chưa chụp xong / không có WebGL, canvas ẩn và kính CSS ở trên
+   làm dự phòng. Nằm dưới nội dung, không chặn thao tác. */
 .chat-widget__panel > .chat-widget__glass.glass-container {
   position: absolute;
   inset: 0;
@@ -661,6 +663,47 @@
   padding: 0;
   gap: 0;
   display: block;
+  border-radius: inherit;
   pointer-events: none;
 }
-.chat-widget__glass canvas { opacity: 0.36; box-shadow: none; }
+.chat-widget__glass canvas { opacity: 0; box-shadow: none; transition: none; }
+.chat-widget__glass.is-ready canvas { opacity: 1; filter: blur(3px); }
+
+/* Đã có khúc xạ thật: bỏ blur CSS, chỉ giữ lớp phủ tối mỏng để chữ trắng luôn đọc được. */
+.chat-widget__panel:has(> .chat-widget__glass.is-ready) {
+  background: linear-gradient(160deg, rgba(26, 25, 25, 0.3) 0%, rgba(16, 15, 15, 0.4) 100%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* Chữ phụ xám #a8a8a8 chìm khi nền khúc xạ sáng: nâng lên trắng bán trong suốt trên kính. */
+.chat-widget__panel :is(.chat-widget__login p, .chat-widget__status.is-reconnecting, .direct-chat__role,
+  .direct-chat__person-sub, .direct-chat__preview, .direct-chat__dot, .direct-chat__person time,
+  .direct-chat__person-arrow, .direct-chat__thread-header p, .direct-chat__older, .direct-chat__empty,
+  .direct-chat__muted, .direct-chat__search .portal-label, .direct-chat__intro) {
+  color: rgba(245, 245, 245, 0.86);
+}
+.chat-widget__panel .direct-chat .direct-chat__input::placeholder { color: rgba(245, 245, 245, 0.62); }
+
+/* Nút pill "Tin nhắn": cùng lớp kính WebGL khi panel đóng; kính CSS ở trên làm dự phòng. */
+.chat-widget__trigger > .chat-widget__trigger-glass.glass-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  gap: 0;
+  display: block;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+.chat-widget__trigger-glass canvas { opacity: 0; box-shadow: none; transition: none; }
+.chat-widget__trigger-glass.is-ready canvas { opacity: 1; filter: blur(2px); }
+.chat-widget__trigger > :not(.chat-widget__trigger-glass) { position: relative; z-index: 1; }
+.chat-widget__trigger:has(> .chat-widget__trigger-glass.is-ready) {
+  background: linear-gradient(160deg, rgba(28, 27, 27, 0.14) 0%, rgba(16, 15, 15, 0.24) 100%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}

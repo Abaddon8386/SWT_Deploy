@@ -73,7 +73,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
   }, [open]);
 
   const label = unread > 0 ? `Tin nhắn · ${unread} chưa đọc` : 'Tin nhắn';
-  return <div className="chat-widget">
+  return <div className="chat-widget" data-liquid-glass-ignore="">
     <button
       ref={trigger}
       type="button"
@@ -89,6 +89,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
         setOpen(value => !value);
       }}
     >
+      <LiquidGlassContainer shape="pill" tintOpacity={0.04} blurRadius={4} active={!open} className="chat-widget__trigger-glass" />
       <span className="chat-widget__trigger-main" aria-hidden="true">
         <span className="chat-widget__trigger-icon">
           <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -118,7 +119,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
       </span>
     </button>
     {visited && <section ref={panel} id="sol-direct-chat" className={`chat-widget__panel${expanded ? ' is-expanded' : ''}`} role="dialog" aria-label="Tin nhắn SÖL" hidden={!open}>
-      <LiquidGlassContainer shape="rounded" borderRadius={16} tintOpacity={0.12} className="chat-widget__glass" />
+      <LiquidGlassContainer shape="rounded" borderRadius={16} tintOpacity={0.04} blurRadius={8} active={open} className="chat-widget__glass" />
       <header className="chat-widget__header">
         <div className="chat-widget__header-title">
           <strong>Tin nhắn</strong>

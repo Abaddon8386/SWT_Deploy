@@ -42,22 +42,85 @@ export interface GLProgramRefs {
   lastSnapshot?: HTMLCanvasElement | null;
 }
 
+interface GlassRenderer {
+  render: () => void;
+  /** Chỉ chụp lại trang khi có ít nhất một lớp kính đang hiển thị. */
+  isActive: () => boolean;
+}
+
+/** Phần tử có thuộc tính này (và chính lớp kính) không được chụp vào nền khúc xạ. */
+export const LIQUID_GLASS_IGNORE_ATTR = 'data-liquid-glass-ignore';
+
+// html2canvas 1.4 chỉ hiểu rgb/hsl: màu computed dạng color(srgb …), oklch, oklab, lab, lch
+// (sinh ra từ color-mix/oklch trong CSS) làm nó ném lỗi. Đổi về rgba trong bản clone.
+const MODERN_COLOR = /\b(?:color|oklch|oklab|lab|lch)\([^()]*\)/g;
+const COLOR_PROPS = [
+  'color', 'background-color', 'background-image', 'border-top-color', 'border-right-color',
+  'border-bottom-color', 'border-left-color', 'outline-color', 'text-decoration-color',
+  'box-shadow', 'text-shadow', 'fill', 'stroke', 'caret-color', 'column-rule-color',
+];
+const colorCache = new Map<string, string>();
+let colorCtx: CanvasRenderingContext2D | null = null;
+
+function toRgba(value: string): string {
+  const cached = colorCache.get(value);
+  if (cached) return cached;
+  if (!colorCtx) {
+    const c = document.createElement('canvas');
+    c.width = 1;
+    c.height = 1;
+    colorCtx = c.getContext('2d', { willReadFrequently: true });
+  }
+  let result = 'rgba(0, 0, 0, 0)';
+  if (colorCtx) {
+    colorCtx.clearRect(0, 0, 1, 1);
+    colorCtx.fillStyle = '#000';
+    colorCtx.fillStyle = value;
+    colorCtx.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = colorCtx.getImageData(0, 0, 1, 1).data;
+    result = `rgba(${r}, ${g}, ${b}, ${+(a / 255).toFixed(3)})`;
+  }
+  colorCache.set(value, result);
+  return result;
+}
+
+function normalizeModernColors(doc: Document) {
+  const view = doc.defaultView;
+  if (!view) return;
+  doc.querySelectorAll<HTMLElement | SVGElement>('*').forEach((el) => {
+    const computed = view.getComputedStyle(el);
+    for (const prop of COLOR_PROPS) {
+      const value = computed.getPropertyValue(prop);
+      if (value && MODERN_COLOR.test(value)) {
+        MODERN_COLOR.lastIndex = 0;
+        el.style.setProperty(prop, value.replace(MODERN_COLOR, toRgba), 'important');
+      }
+      MODERN_COLOR.lastIndex = 0;
+    }
+  });
+}
+
 class LiquidGlassEngine {
   private static instance: LiquidGlassEngine;
   public params: LiquidGlassParams = { ...DEFAULT_GLASS_PARAMS };
   private listeners: Set<ParamListener> = new Set();
-  
+
+  /** Ảnh chụp viewport thật (html2canvas) mà shader khúc xạ, giống liquid-glass-js. */
   public pageSnapshot: HTMLCanvasElement | null = null;
+  /** Vị trí cuộn của cửa sổ tại thời điểm chụp, để dịch nền khi người dùng cuộn tiếp. */
+  public snapshotScrollX = 0;
+  public snapshotScrollY = 0;
   public isCapturing = false;
-  private waitingInstances: Array<() => void> = [];
-  private activeRenderers: Set<() => void> = new Set();
-  private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+  private pendingCapture: Promise<boolean> | null = null;
+  private recaptureRequested = false;
+  private activeRenderers: Set<GlassRenderer> = new Set();
+  private recaptureTimeout: ReturnType<typeof setTimeout> | null = null;
   private animFrameId: number | null = null;
 
   private constructor() {
     if (typeof window !== 'undefined') {
-      this.pageSnapshot = this.createFallbackTexture();
-      window.addEventListener('scroll', this.handleScroll, { passive: true });
+      // capture: true để bắt cả vùng cuộn bên trong (portal, landing) chứ không chỉ window.
+      document.addEventListener('scroll', this.handleScroll, { passive: true, capture: true });
       window.addEventListener('resize', this.handleResize, { passive: true });
     }
   }
@@ -82,10 +145,11 @@ class LiquidGlassEngine {
     };
   }
 
-  public registerRenderer(renderFn: () => void) {
-    this.activeRenderers.add(renderFn);
+  public registerRenderer(render: () => void, isActive: () => boolean = () => true) {
+    const entry: GlassRenderer = { render, isActive };
+    this.activeRenderers.add(entry);
     return () => {
-      this.activeRenderers.delete(renderFn);
+      this.activeRenderers.delete(entry);
     };
   }
 
@@ -93,60 +157,90 @@ class LiquidGlassEngine {
     if (this.animFrameId) return;
     this.animFrameId = requestAnimationFrame(() => {
       this.animFrameId = null;
-      this.activeRenderers.forEach((render) => render());
+      this.activeRenderers.forEach((entry) => entry.render());
     });
   }
 
-  private handleScroll = () => {
+  private hasActiveGlass() {
+    for (const entry of this.activeRenderers) if (entry.isActive()) return true;
+    return false;
+  }
+
+  private scheduleRecapture(delay: number) {
+    if (!this.hasActiveGlass()) return;
+    if (this.recaptureTimeout) clearTimeout(this.recaptureTimeout);
+    this.recaptureTimeout = setTimeout(() => {
+      this.recaptureTimeout = null;
+      void this.captureSnapshot();
+    }, delay);
+  }
+
+  private handleScroll = (event: Event) => {
+    const target = event.target;
+    // Cuộn bên trong chính lớp kính (danh sách tin nhắn) không đổi nền phía sau.
+    if (target instanceof Element && target.closest(`[${LIQUID_GLASS_IGNORE_ATTR}]`)) return;
+    if (!this.hasActiveGlass()) return;
     this.requestAllRender();
+    this.scheduleRecapture(180);
   };
 
   private handleResize = () => {
-    if (this.resizeTimeout) clearTimeout(this.resizeTimeout);
-    this.resizeTimeout = setTimeout(() => {
-      this.pageSnapshot = this.createFallbackTexture();
-      this.requestAllRender();
-    }, 250);
+    this.requestAllRender();
+    this.scheduleRecapture(250);
   };
 
-  public captureSnapshot(onComplete?: () => void) {
-    if (typeof window === 'undefined') return;
-
-    if (!this.pageSnapshot) {
-      this.pageSnapshot = this.createFallbackTexture();
+  /**
+   * Chụp viewport hiện tại bằng html2canvas (bỏ qua lớp kính) làm texture khúc xạ.
+   * Trả về false nếu không chụp được; khi đó giao diện giữ kính CSS dự phòng.
+   */
+  public captureSnapshot(): Promise<boolean> {
+    if (typeof window === 'undefined') return Promise.resolve(false);
+    if (this.pendingCapture) {
+      this.recaptureRequested = true;
+      return this.pendingCapture;
     }
-
-    if (onComplete) onComplete();
-    this.requestAllRender();
-  }
-
-  private createFallbackTexture(): HTMLCanvasElement {
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(window.innerWidth, 1200);
-    canvas.height = Math.max(window.innerHeight * 2, 2000);
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      // Create rich organic ambient gradient representing Söl Sanctuary
-      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      grad.addColorStop(0, '#1A1614');
-      grad.addColorStop(0.3, '#2A231F');
-      grad.addColorStop(0.6, '#3A302A');
-      grad.addColorStop(1, '#1A1614');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Gold warm ambient orbs
-      ctx.fillStyle = 'rgba(194, 166, 132, 0.15)';
-      ctx.beginPath();
-      ctx.arc(canvas.width * 0.3, 400, 300, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = 'rgba(212, 184, 150, 0.12)';
-      ctx.beginPath();
-      ctx.arc(canvas.width * 0.7, 900, 400, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    return canvas;
+    this.isCapturing = true;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const run = async () => {
+      try {
+        const { default: html2canvas } = await import('html2canvas');
+        const bodyBg = getComputedStyle(document.body).backgroundColor;
+        const rootBg = getComputedStyle(document.documentElement).backgroundColor;
+        const transparent = (c: string) => c === 'transparent' || c === 'rgba(0, 0, 0, 0)';
+        const snapshot = await html2canvas(document.body, {
+          x: scrollX,
+          y: scrollY,
+          width: window.innerWidth,
+          height: window.innerHeight,
+          windowWidth: document.documentElement.clientWidth,
+          windowHeight: window.innerHeight,
+          scale: 1,
+          logging: false,
+          useCORS: true,
+          backgroundColor: !transparent(bodyBg) ? bodyBg : !transparent(rootBg) ? rootBg : '#1c1c1c',
+          onclone: (doc) => normalizeModernColors(doc),
+          ignoreElements: (el) => el.hasAttribute?.(LIQUID_GLASS_IGNORE_ATTR) ?? false,
+        });
+        this.pageSnapshot = snapshot;
+        this.snapshotScrollX = scrollX;
+        this.snapshotScrollY = scrollY;
+        this.requestAllRender();
+        return true;
+      } catch (error) {
+        if (import.meta.env.DEV) console.warn('[liquid-glass] snapshot failed', error);
+        return false;
+      } finally {
+        this.isCapturing = false;
+        this.pendingCapture = null;
+        if (this.recaptureRequested) {
+          this.recaptureRequested = false;
+          this.scheduleRecapture(0);
+        }
+      }
+    };
+    this.pendingCapture = run();
+    return this.pendingCapture;
   }
 
   public setupWebGL(
