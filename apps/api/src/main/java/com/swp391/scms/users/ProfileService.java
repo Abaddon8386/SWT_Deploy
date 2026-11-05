@@ -66,7 +66,13 @@ public class ProfileService {
             user.setPhone(phone);
         }
         user.setDob(request.dob());
-        user.setGender(request.gender());
+        String gender = request.gender() == null || request.gender().isBlank()
+                ? null
+                : request.gender().trim().toLowerCase(java.util.Locale.ROOT);
+        if (gender != null && !List.of("male", "female", "other").contains(gender)) {
+            gender = null;
+        }
+        user.setGender(gender);
         user.setAvatarUrl(request.avatarUrl() == null || request.avatarUrl().isBlank() ? User.DEFAULT_AVATAR_URL : request.avatarUrl().trim());
         user.setAddress(request.address());
 
@@ -74,8 +80,11 @@ public class ProfileService {
         if (member != null) {
             member.setHealthNotes(request.healthNotes());
             member.setFitnessGoal(request.fitnessGoal());
-            if (request.fitnessLevel() != null) {
-                member.setFitnessLevel(request.fitnessLevel());
+            if (request.fitnessLevel() != null && !request.fitnessLevel().isBlank()) {
+                String level = request.fitnessLevel().trim().toLowerCase(java.util.Locale.ROOT);
+                if (List.of("beginner", "intermediate", "advanced").contains(level)) {
+                    member.setFitnessLevel(level);
+                }
             }
             member.setEmergencyContactName(request.emergencyContactName());
             member.setEmergencyContactPhone(request.emergencyContactPhone());

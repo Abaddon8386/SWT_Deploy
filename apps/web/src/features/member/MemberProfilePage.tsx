@@ -1,7 +1,7 @@
 import { Select } from '../../shared/ui/Select';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as profileApi from './profileApi';
-import { getProfile, updateProfile, type Profile } from './profileApi';
+import { getProfile, updateProfile, uploadAvatar, type Profile } from './profileApi';
 import { getCurrentUser } from '../../shared/api/client';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { notify } from '../../shared/lib/portalNotices';
@@ -129,8 +129,7 @@ export function MemberProfilePage() {
     try {
       const rawDataUrl = await readFileAsDataUrl(file);
       const validDataUrl = await validateAndProcessImage(rawDataUrl, file.type);
-      const nextProfile: Profile = { ...profile, avatarUrl: validDataUrl };
-      const updated = await updateProfile(nextProfile);
+      const updated = await uploadAvatar(validDataUrl);
       setProfile(updated);
       window.dispatchEvent(new Event('profile-updated'));
       notify('Đã cập nhật ảnh đại diện.', 'success');
@@ -146,8 +145,7 @@ export function MemberProfilePage() {
     setError('');
     setAvatarBusy(true);
     try {
-      const nextProfile: Profile = { ...profile, avatarUrl: '/images/default-avatar.png' };
-      const updated = await updateProfile(nextProfile);
+      const updated = await uploadAvatar(null);
       setProfile(updated);
       window.dispatchEvent(new Event('profile-updated'));
       notify('Đã đặt lại ảnh đại diện mặc định.', 'success');
