@@ -1,13 +1,32 @@
 openapi: 3.0.3
 info:
   title: SÖL Portal PWA gate check-in (SCRUM-75/83/87 extension)
-  version: 1.0.0
+  version: 1.1.0
   description: Member scans a short-lived gate challenge displayed by reception. Existing staff scan and checkout contracts remain unchanged. QR challenges do not establish physical proximity or control barrier hardware.
 servers:
   - url: /api/v1
 security:
   - bearerAuth: []
 paths:
+  /check-in/streak:
+    get:
+      summary: Get the signed-in member's workout streak and 13-week activity grid
+      description: MEMBER only; identity comes exclusively from the authenticated principal. Counts distinct dates of GRANTED center check-ins in Asia/Ho_Chi_Minh, up to server time. Multiple visits on one day count once. The current streak ends today if checked in today, otherwise yesterday (today remains available to continue it). If neither today nor yesterday has a granted visit, currentStreak is zero; a new visit today after a missed day starts a new streak of one. Longest streak covers all history. Active dates and workoutDays cover the Monday 12 weeks before the current week through today, with future days omitted. No database schema changes.
+      responses:
+        '200':
+          description: Workout streak retrieved; empty history returns zero counters and no active dates
+          headers:
+            Cache-Control: { schema: { type: string, example: no-store } }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, description: Localized using Accept-Language (vi default or en) }
+                  data: { $ref: '#/components/schemas/WorkoutStreak' }
+        '401': { description: Authentication required }
+        '403': { description: Member role required }
   /check-in/gate-qr:
     get:
       summary: Create a 60-second signed gate challenge
@@ -75,6 +94,19 @@ components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
   schemas:
+    WorkoutStreak:
+      type: object
+      required: [currentStreak, longestStreak, workoutDays, startDate, endDate, activeDates]
+      properties:
+        currentStreak: { type: integer, minimum: 0, example: 3 }
+        longestStreak: { type: integer, minimum: 0, example: 12 }
+        workoutDays: { type: integer, minimum: 0, maximum: 91, example: 24 }
+        startDate: { type: string, format: date, description: Monday starting the 13-week grid }
+        endDate: { type: string, format: date, description: Today's date at the center }
+        activeDates:
+          type: array
+          uniqueItems: true
+          items: { type: string, format: date }
     GateQr:
       type: object
       required: [qrCode, gateId, gate, generatedAt, expiresAt, expiresInSeconds]

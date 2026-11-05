@@ -26,6 +26,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(CenterCheckinController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class, JsonAccessDeniedHandler.class})
 class CenterCheckinAccessTest {
+    @Test void streakIsPrivateToTheMemberAndNeverCached() throws Exception {
+        var today = java.time.LocalDate.of(2026, 11, 5);
+        when(service.streak(any())).thenReturn(new CheckinResponses.StreakDto(2, 5, 8, today.minusWeeks(12), today, List.of(today)));
+        mvc.perform(get("/api/v1/check-in/streak").with(authentication(actor("MEMBER"))))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.data.currentStreak").value(2));
+        verify(service).streak(new AuthenticatedPrincipal(10L, "actor", "MEMBER"));
+        for (String role : List.of("COACH", "RECEPTIONIST", "CENTER_MANAGER", "ADMIN")) {
+            mvc.perform(get("/api/v1/check-in/streak").with(authentication(actor(role)))).andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/api/v1/check-in/streak")).andExpect(status().isUnauthorized());
+    }
     @Autowired MockMvc mvc;
     @MockitoBean CenterCheckinService service;
     @MockitoBean JwtService jwt;

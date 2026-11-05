@@ -2,6 +2,8 @@ package com.swp391.scms.attendance.service;
 
 import com.swp391.scms.attendance.dto.CheckinRequests;
 import com.swp391.scms.attendance.dto.CheckinResponses.CheckinDto;
+import com.swp391.scms.attendance.dto.CheckinResponses.StreakDto;
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.attendance.entity.CenterCheckin;
 import com.swp391.scms.attendance.repository.CenterCheckinRepository;
 import com.swp391.scms.common.exception.BadRequestException;
@@ -28,6 +30,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
 
 /**
  * Service managing center access QR check-in, checkout, audit trail and daily history (SCRUM-75).
@@ -346,6 +352,35 @@ public class CenterCheckinService {
         }
 
         throw new ForbiddenException("CHECKIN_FORBIDDEN", "error.forbidden", null, "Access denied");
+    }
+
+    @Transactional(readOnly = true)
+    public StreakDto streak(AuthenticatedPrincipal principal) {
+        if (principal == null || !"MEMBER".equalsIgnoreCase(principal.role())) {
+            throw new ForbiddenException("CHECKIN_FORBIDDEN", "error.forbidden", null, "Access denied");
+        }
+        LocalDateTime now = LocalDateTime.now(clock.withZone(CenterTime.ZONE));
+        LocalDate today = now.toLocalDate();
+        var days = checkins.findGrantedVisitTimes(principal.id(), now).stream()
+                .map(LocalDateTime::toLocalDate)
+                .collect(Collectors.toCollection(TreeSet::new));
+        int longest = 0;
+        int run = 0;
+        LocalDate previous = null;
+        for (LocalDate day : days) {
+            run = previous != null && previous.plusDays(1).equals(day) ? run + 1 : 1;
+            longest = Math.max(longest, run);
+            previous = day;
+        }
+        int current = 0;
+        LocalDate cursor = days.contains(today) ? today : today.minusDays(1);
+        while (days.contains(cursor)) {
+            current++;
+            cursor = cursor.minusDays(1);
+        }
+        LocalDate start = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(12);
+        var recent = List.copyOf(days.tailSet(start));
+        return new StreakDto(current, longest, recent.size(), start, today, recent);
     }
 
     private void ensureStaff(AuthenticatedPrincipal principal) {

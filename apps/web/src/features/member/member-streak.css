@@ -1,0 +1,29 @@
+.portal-v2 .member-streak-page { max-width: 720px; }
+.member-streak { margin: 0; padding: 0; }
+.member-streak__title { margin: 0 0 8px; color: var(--portal-paper); font-size: 12px; font-weight: 650; }
+.member-streak__stats { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.member-streak__stats > div:first-child { display: flex; align-items: baseline; gap: 7px; }
+.member-streak__count { color: var(--portal-salmon); font-size: 34px; font-weight: 750; line-height: 1.2; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
+.member-streak__stats span { color: var(--portal-muted); font-size: 12px; }
+.member-streak__record { display: grid; gap: 2px; text-align: right; }
+.member-streak__record strong { color: var(--portal-paper); font-size: 12px; font-weight: 650; }
+.member-streak__grid { display: block; width: 100%; max-width: 440px; height: auto; margin: 16px auto 12px; overflow: hidden; }
+.member-streak__day { fill: color-mix(in srgb, var(--portal-muted) 12%, var(--portal-surface)); }
+.member-streak__day.is-active { fill: color-mix(in srgb, var(--portal-salmon) 70%, var(--portal-surface)); }
+.member-streak__day.is-future { opacity: .3; }
+.member-streak__day.is-today { stroke: var(--portal-salmon); stroke-width: 1; }
+.member-streak__snake { fill: var(--portal-salmon); pointer-events: none; }
+.member-streak__snake rect { offset-anchor: 5px 5px; offset-rotate: 0deg; animation: member-streak-snake 24s linear infinite; }
+@keyframes member-streak-snake { to { offset-distance: 100%; } }
+.member-streak__caption { display: flex; justify-content: space-between; gap: 8px; color: var(--portal-muted); font-size: 12px; }
+.member-streak__hint, .member-streak__error p { margin: 8px 0 0; color: var(--portal-muted); font-size: 12px; line-height: 1.6; }
+.member-streak__error button { min-height: 44px; padding: 8px 0; border: 0; background: transparent; color: var(--portal-salmon); font: 600 12px var(--font-sans); cursor: pointer; }
+.member-streak .loading-skeleton__item { padding: 12px 0; }
+@media (prefers-reduced-motion: reduce) {
+  .member-streak__snake { display: none; }
+  .member-streak__snake rect { animation: none; }
+}
+@media (max-width: 767px) {
+  .portal-v2 .member-streak-page .portal-card { padding: 16px; }
+  .member-streak__grid { max-height: 144px; margin-block: 8px; }
+}
