@@ -1,5 +1,8 @@
 package com.swp391.scms.coaching.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swp391.scms.audit.AuditLog;
+import com.swp391.scms.audit.AuditLogRepository;
 import com.swp391.scms.coaching.dto.*;
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.entity.TrainingPlan;
@@ -10,464 +13,269 @@ import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
-import com.swp391.scms.scheduling.entity.ClassEnrollment;
-import com.swp391.scms.scheduling.entity.GymClass;
+import com.swp391.scms.operations.repository.StaffInternalRequestRepository;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
-import com.swp391.scms.scheduling.repository.GymClassRepository;
+import com.swp391.scms.scheduling.repository.ClassSessionRepository;
+import com.swp391.scms.scheduling.repository.SessionBookingRepository;
+import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.swp391.scms.users.entity.User;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 
 @Service
 @Transactional
 public class CoachAssignmentService {
-
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
     private final CoachRepository coachRepository;
     private final MemberRepository memberRepository;
     private final TrainingPlanRepository trainingPlanRepository;
     private final CoachBookingRepository coachBookingRepository;
-    private final GymClassRepository gymClassRepository;
     private final ClassEnrollmentRepository classEnrollmentRepository;
+    private final SessionBookingRepository sessionBookingRepository;
+    private final ClassSessionRepository classSessionRepository;
+    private final StaffInternalRequestRepository staffRequestRepository;
     private final MembershipSubscriptionRepository subscriptionRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
+    private final AuditLogRepository auditRepository;
+    private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    @Autowired
-    public CoachAssignmentService(
-            CoachRepository coachRepository,
-            MemberRepository memberRepository,
-            TrainingPlanRepository trainingPlanRepository,
-            CoachBookingRepository coachBookingRepository,
-            GymClassRepository gymClassRepository,
-            ClassEnrollmentRepository classEnrollmentRepository,
-            MembershipSubscriptionRepository subscriptionRepository,
-            NotificationService notificationService,
-            @Autowired(required = false) MessageService messageService,
-            @Autowired(required = false) Clock clock
-    ) {
+    public CoachAssignmentService(CoachRepository coachRepository, MemberRepository memberRepository,
+            TrainingPlanRepository trainingPlanRepository, CoachBookingRepository coachBookingRepository,
+            ClassEnrollmentRepository classEnrollmentRepository, SessionBookingRepository sessionBookingRepository,
+            ClassSessionRepository classSessionRepository, StaffInternalRequestRepository staffRequestRepository,
+            MembershipSubscriptionRepository subscriptionRepository, NotificationService notificationService,
+            MessageService messageService, AuditLogRepository auditRepository, ObjectMapper objectMapper, Clock clock) {
         this.coachRepository = coachRepository;
         this.memberRepository = memberRepository;
         this.trainingPlanRepository = trainingPlanRepository;
         this.coachBookingRepository = coachBookingRepository;
-        this.gymClassRepository = gymClassRepository;
         this.classEnrollmentRepository = classEnrollmentRepository;
+        this.sessionBookingRepository = sessionBookingRepository;
+        this.classSessionRepository = classSessionRepository;
+        this.staffRequestRepository = staffRequestRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.notificationService = notificationService;
         this.messageService = messageService;
-        this.clock = clock != null ? clock : Clock.systemDefaultZone();
+        this.auditRepository = auditRepository;
+        this.objectMapper = objectMapper;
+        this.clock = clock;
     }
 
-    private LocalDate today() {
-        return LocalDate.now(clock);
-    }
+    private LocalDate today() { return LocalDate.now(clock); }
+    private String msg(String key, Object... args) { return messageService == null ? "manager.coach_assignments." + key : messageService.getMessage("manager.coach_assignments." + key, args); }
+    private BadRequestException invalid(String code, String key) { return new BadRequestException(code, "manager.coach_assignments." + key, null, msg(key)); }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getOverview(Long filterCoachId, String search, String assignmentType) {
-        List<Coach> allCoaches = coachRepository.findActiveWithUser();
-        if (filterCoachId != null) {
-            allCoaches = allCoaches.stream()
-                    .filter(c -> c.getUserId().equals(filterCoachId))
-                    .toList();
-        }
-
-        LocalDate currentDate = today();
-        String normalizedSearch = (search != null && !search.isBlank()) ? search.trim().toLowerCase() : null;
-        String normalizedType = (assignmentType != null && !assignmentType.isBlank()) ? assignmentType.trim().toUpperCase() : null;
-
-        List<CoachAssignmentOverviewDto> overviewList = new ArrayList<>();
-        int totalPtStudentsAll = 0;
-        int totalPlanStudentsAll = 0;
-        int totalClassStudentsAll = 0;
-        Set<Long> uniqueAssignedMembersAll = new HashSet<>();
-
-        for (Coach coach : allCoaches) {
+        List<Coach> availableCoaches = coachRepository.findActiveWithUser();
+        LocalDate date = today();
+        LocalTime time = LocalTime.now(clock);
+        String query = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        String type = assignmentType == null ? "ALL" : assignmentType.trim().toUpperCase(Locale.ROOT);
+        if (!Set.of("ALL", "TRAINING_PLAN", "PT_1_1", "CLASS").contains(type)) throw invalid("INVALID_ASSIGNMENT_TYPE", "invalid_type");
+        List<CoachAssignmentOverviewDto> coaches = new ArrayList<>();
+        Set<Long> allStudents = new HashSet<>(), allPt = new HashSet<>(), allPlans = new HashSet<>(), allClasses = new HashSet<>();
+        for (Coach coach : availableCoaches) {
+            if (filterCoachId != null && !filterCoachId.equals(coach.getUserId())) continue;
             Long coachId = coach.getUserId();
-            String coachName = coach.getUser() != null ? coach.getUser().getFullName() : "HLV #" + coachId;
-            String coachEmail = coach.getUser() != null ? coach.getUser().getEmail() : "";
-            String coachPhone = coach.getUser() != null ? coach.getUser().getPhone() : "";
-            String specialization = coach.getSpecialization() != null ? coach.getSpecialization() : "Thể hình & Thể lực";
-            String bio = coach.getBio();
-            String status = coach.getEmploymentStatus();
-
-            List<CoachAssignmentStudentDto> studentList = new ArrayList<>();
-            Set<Long> coachUniqueStudents = new HashSet<>();
-            int ptCount = 0;
-            int planCount = 0;
-            int classCount = 0;
-
-            // 1. Training Plans for this coach
-            List<TrainingPlan> plans = trainingPlanRepository.findByCoachUserIdOrderByCreatedAtDesc(coachId);
-            for (TrainingPlan plan : plans) {
-                if ("cancelled".equalsIgnoreCase(plan.getStatus())) {
-                    continue;
-                }
-                Member member = plan.getMember();
-                if (member == null || member.getUser() == null || member.getUser().getDeletedAt() != null) {
-                    continue;
-                }
-
-                String memberName = member.getUser().getFullName();
-                String memberCode = member.getMembershipCode();
-                String memberPhone = member.getUser().getPhone();
-                String memberEmail = member.getUser().getEmail();
-
-                CoachAssignmentStudentDto studentDto = new CoachAssignmentStudentDto(
-                        member.getUserId(),
-                        memberCode,
-                        memberName,
-                        memberPhone,
-                        memberEmail,
-                        member.getUser().getAvatarUrl(),
-                        member.getFitnessGoal() != null ? member.getFitnessGoal() : plan.getGoal(),
-                        member.getFitnessLevel(),
-                        member.getHealthNotes(),
-                        "TRAINING_PLAN",
-                        "Theo giáo án riêng",
-                        plan.getGoal() != null ? plan.getGoal() : "Kế hoạch rèn luyện thể lực",
-                        plan.getStartDate(),
-                        plan.getEndDate(),
-                        plan.getEndDate() != null ? "Hạn: " + plan.getEndDate().format(DATE_FORMATTER) : null,
-                        plan.getStatus(),
-                        plan.getId()
-                );
-
-                if (matchesFilters(studentDto, coachName, normalizedSearch, normalizedType)) {
-                    studentList.add(studentDto);
-                    coachUniqueStudents.add(member.getUserId());
-                    uniqueAssignedMembersAll.add(member.getUserId());
-                    planCount++;
-                    totalPlanStudentsAll++;
+            List<CoachAssignmentStudentDto> rows = new ArrayList<>();
+            for (TrainingPlan plan : trainingPlanRepository.findCurrentAssignments(coachId, date)) {
+                rows.add(student(plan.getMember(), "TRAINING_PLAN", plan.getGoal(), plan.getStartDate(),
+                        plan.getEndDate(), plan.getEndDate().toString(), plan.getStatus(), plan.getId()));
+            }
+            for (CoachBooking booking : coachBookingRepository.findCurrentAssignments(coachId, date, time)) {
+                rows.add(student(booking.getMember(), "PT_1_1", booking.getDiscipline() == null ? null : booking.getDiscipline().getName(),
+                        booking.getBookingDate(), booking.getBookingDate(), booking.getBookingDate() + " " + booking.getStartTime(),
+                        booking.getStatus(), booking.getId()));
+            }
+            // Collapse series enrollment and session bookings into one class/member relationship.
+            Set<String> classMembers = new HashSet<>();
+            for (var enrollment : classEnrollmentRepository.findCurrentCoachAssignments(coachId, date, time)) {
+                if (classMembers.add(enrollment.getGymClass().getId() + ":" + enrollment.getMember().getUserId())) rows.add(student(enrollment.getMember(), "CLASS", enrollment.getGymClass().getName(), null, null, null,
+                        enrollment.getStatus(), enrollment.getGymClass().getId()));
+            }
+            for (var booking : sessionBookingRepository.findCurrentCoachAssignments(coachId, date, time)) {
+                var session = booking.getSession();
+                if (classMembers.add(session.getGymClass().getId() + ":" + booking.getMember().getUserId())) {
+                    rows.add(student(booking.getMember(), "CLASS", session.getGymClass().getName(), session.getSessionDate(),
+                            session.getSessionDate(), session.getSessionDate() + " " + session.getStartTime(), booking.getStatus(), session.getGymClass().getId()));
                 }
             }
-
-            // 2. 1-on-1 PT Bookings
-            List<CoachBooking> ptBookings = coachBookingRepository.findByCoachId(coachId);
-            for (CoachBooking booking : ptBookings) {
-                if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
-                    continue;
-                }
-                Member member = booking.getMember();
-                if (member == null || member.getUser() == null || member.getUser().getDeletedAt() != null) {
-                    continue;
-                }
-
-                String memberName = member.getUser().getFullName();
-                String memberCode = member.getMembershipCode();
-                String memberPhone = member.getUser().getPhone();
-                String memberEmail = member.getUser().getEmail();
-                String disciplineName = booking.getDiscipline() != null ? booking.getDiscipline().getName() : "Thể hình 1:1";
-                String nextSessionStr = (booking.getBookingDate() != null && booking.getStartTime() != null)
-                        ? booking.getStartTime() + " " + booking.getBookingDate().format(DATE_FORMATTER)
-                        : null;
-
-                CoachAssignmentStudentDto studentDto = new CoachAssignmentStudentDto(
-                        member.getUserId(),
-                        memberCode,
-                        memberName,
-                        memberPhone,
-                        memberEmail,
-                        member.getUser().getAvatarUrl(),
-                        member.getFitnessGoal(),
-                        member.getFitnessLevel(),
-                        member.getHealthNotes(),
-                        "PT_1_1",
-                        "Tập 1:1 với HLV",
-                        "Buổi tập PT: " + disciplineName,
-                        booking.getBookingDate(),
-                        booking.getBookingDate(),
-                        nextSessionStr,
-                        booking.getStatus(),
-                        booking.getId()
-                );
-
-                if (matchesFilters(studentDto, coachName, normalizedSearch, normalizedType)) {
-                    studentList.add(studentDto);
-                    coachUniqueStudents.add(member.getUserId());
-                    uniqueAssignedMembersAll.add(member.getUserId());
-                    ptCount++;
-                    totalPtStudentsAll++;
-                }
-            }
-
-            // 3. Classes taught by this coach
-            List<GymClass> classes = gymClassRepository.findByCoachUserId(coachId);
-            for (GymClass gymClass : classes) {
-                if ("inactive".equalsIgnoreCase(gymClass.getStatus())) {
-                    continue;
-                }
-                List<ClassEnrollment> enrollments = classEnrollmentRepository.findByGymClassIdAndStatus(gymClass.getId(), "booked");
-                for (ClassEnrollment enrollment : enrollments) {
-                    Member member = enrollment.getMember();
-                    if (member == null || member.getUser() == null || member.getUser().getDeletedAt() != null) {
-                        continue;
-                    }
-
-                    String memberName = member.getUser().getFullName();
-                    String memberCode = member.getMembershipCode();
-                    String memberPhone = member.getUser().getPhone();
-                    String memberEmail = member.getUser().getEmail();
-
-                    CoachAssignmentStudentDto studentDto = new CoachAssignmentStudentDto(
-                            member.getUserId(),
-                            memberCode,
-                            memberName,
-                            memberPhone,
-                            memberEmail,
-                            member.getUser().getAvatarUrl(),
-                            member.getFitnessGoal(),
-                            member.getFitnessLevel(),
-                            member.getHealthNotes(),
-                            "CLASS",
-                            "Lớp học nhóm",
-                            "Lớp: " + gymClass.getName() + " (" + (gymClass.getDiscipline() != null ? gymClass.getDiscipline().getName() : "") + ")",
-                            null,
-                            null,
-                            "Lớp đang hoạt động",
-                            "active",
-                            enrollment.getId()
-                    );
-
-                    if (matchesFilters(studentDto, coachName, normalizedSearch, normalizedType)) {
-                        studentList.add(studentDto);
-                        coachUniqueStudents.add(member.getUserId());
-                        uniqueAssignedMembersAll.add(member.getUserId());
-                        classCount++;
-                        totalClassStudentsAll++;
-                    }
-                }
-            }
-
-            overviewList.add(new CoachAssignmentOverviewDto(
-                    coachId,
-                    coachName,
-                    coachEmail,
-                    coachPhone,
-                    specialization,
-                    bio,
-                    status,
-                    coachUniqueStudents.size(),
-                    ptCount,
-                    planCount,
-                    classCount,
-                    studentList
-            ));
+            List<CoachAssignmentStudentDto> filtered = rows.stream()
+                    .filter(s -> "ALL".equals(type) || type.equals(s.assignmentType()))
+                    .filter(s -> query.isEmpty() || searchable(s, coach).contains(query)).toList();
+            Set<Long> pt = studentsOfType(filtered, "PT_1_1"), plans = studentsOfType(filtered, "TRAINING_PLAN"), classes = studentsOfType(filtered, "CLASS");
+            Set<Long> distinct = new HashSet<>();
+            filtered.forEach(s -> distinct.add(s.memberId()));
+            allStudents.addAll(distinct); allPt.addAll(pt); allPlans.addAll(plans); allClasses.addAll(classes);
+            coaches.add(new CoachAssignmentOverviewDto(coachId, coach.getUser().getFullName(), coach.getUser().getEmail(),
+                    coach.getUser().getPhone(), coach.getSpecialization(), coach.getBio(), coach.getEmploymentStatus(),
+                    distinct.size(), pt.size(), plans.size(), classes.size(), filtered));
         }
-
-        CoachAssignmentSummaryStatsDto stats = new CoachAssignmentSummaryStatsDto(
-                coachRepository.findAll().size(),
-                allCoaches.size(),
-                uniqueAssignedMembersAll.size(),
-                totalPtStudentsAll,
-                totalPlanStudentsAll,
-                totalClassStudentsAll
-        );
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("coaches", overviewList);
-        result.put("stats", stats);
-        return result;
+        return Map.of("coaches", coaches, "availableCoaches", availableCoaches.stream()
+                        .map(c -> new CoachAssignmentCoachOptionDto(c.getUserId(), c.getUser().getFullName(), c.getSpecialization())).toList(),
+                "stats", new CoachAssignmentSummaryStatsDto(availableCoaches.size(), availableCoaches.size(), allStudents.size(), allPt.size(), allPlans.size(), allClasses.size()));
     }
 
-    private boolean matchesFilters(
-            CoachAssignmentStudentDto student,
-            String coachName,
-            String normalizedSearch,
-            String normalizedType
-    ) {
-        if (normalizedType != null && !normalizedType.equals("ALL") && !student.assignmentType().equalsIgnoreCase(normalizedType)) {
-            return false;
-        }
+    private Set<Long> studentsOfType(List<CoachAssignmentStudentDto> rows, String type) {
+        Set<Long> ids = new HashSet<>();
+        rows.stream().filter(s -> type.equals(s.assignmentType())).forEach(s -> ids.add(s.memberId()));
+        return ids;
+    }
 
-        if (normalizedSearch != null) {
-            boolean inStudent = (student.fullName() != null && student.fullName().toLowerCase().contains(normalizedSearch))
-                    || (student.membershipCode() != null && student.membershipCode().toLowerCase().contains(normalizedSearch))
-                    || (student.phone() != null && student.phone().contains(normalizedSearch))
-                    || (student.email() != null && student.email().toLowerCase().contains(normalizedSearch));
-            boolean inCoach = coachName != null && coachName.toLowerCase().contains(normalizedSearch);
-            boolean inDetail = student.detail() != null && student.detail().toLowerCase().contains(normalizedSearch);
-            return inStudent || inCoach || inDetail;
-        }
+    private String searchable(CoachAssignmentStudentDto row, Coach coach) {
+        return String.join(" ", Objects.toString(row.fullName(), ""), Objects.toString(row.membershipCode(), ""),
+                Objects.toString(row.phone(), ""), Objects.toString(row.email(), ""), Objects.toString(row.detail(), ""),
+                Objects.toString(coach.getUser().getFullName(), "")).toLowerCase(Locale.ROOT);
+    }
 
-        return true;
+    private CoachAssignmentStudentDto student(Member member, String type, String detail, LocalDate start, LocalDate end,
+            String nextSession, String status, Long referenceId) {
+        var user = member.getUser();
+        return new CoachAssignmentStudentDto(member.getUserId(), member.getMembershipCode(), user.getFullName(), user.getPhone(),
+                user.getEmail(), user.getAvatarUrl(), member.getFitnessGoal(), member.getFitnessLevel(), member.getHealthNotes(),
+                type, msg("type." + type), detail, start, end, nextSession, status, referenceId);
     }
 
     public CoachAssignmentStudentDto assignStudent(CoachAssignmentAssignDto dto) {
-        Coach coach = coachRepository.findById(dto.coachId())
-                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", dto.coachId()));
-
-        Member member = memberRepository.findById(dto.memberId())
-                .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.memberId()));
-
-        if (dto.startDate().isAfter(dto.endDate())) {
-            throw new BadRequestException("INVALID_DATE_RANGE", "Ngày bắt đầu không được sau ngày kết thúc.");
+        if (!"TRAINING_PLAN".equals(dto.assignmentType())) throw invalid("INVALID_ASSIGNMENT_TYPE", "invalid_type");
+        Coach coach = activeCoach(dto.coachId());
+        Member member = activeMember(dto.memberId());
+        if (dto.startDate() == null || dto.endDate() == null || dto.startDate().isAfter(dto.endDate()) || dto.endDate().isBefore(today())) {
+            throw invalid("INVALID_DATE_RANGE", "invalid_dates");
         }
-
-        boolean hasActiveSubscription = subscriptionRepository.existsEntitlementEndingOnOrAfter(member.getUserId(), today());
-        if (!hasActiveSubscription) {
-            throw new BadRequestException("NO_ACTIVE_SUBSCRIPTION", "Hội viên chưa có gói tập hợp lệ hoặc đã hết hạn, không thể phân công HLV.");
-        }
-
-        String goal = (dto.goal() != null && !dto.goal().isBlank())
-                ? dto.goal().trim()
-                : (member.getFitnessGoal() != null ? member.getFitnessGoal() : "Rèn luyện thể lực và vóc dáng với HLV");
-
+        requireMembership(member.getUserId());
+        String goal = dto.goal() != null && !dto.goal().isBlank() ? dto.goal().trim()
+                : member.getFitnessGoal() != null ? member.getFitnessGoal() : msg("default_goal");
         TrainingPlan plan = new TrainingPlan();
-        plan.setCoach(coach);
-        plan.setMember(member);
-        plan.setGoal(goal);
-        plan.setStartDate(dto.startDate());
-        plan.setEndDate(dto.endDate());
-        plan.setStatus("active");
+        plan.setCoach(coach); plan.setMember(member); plan.setGoal(goal); plan.setStartDate(dto.startDate());
+        plan.setEndDate(dto.endDate()); plan.setStatus("active");
         plan = trainingPlanRepository.save(plan);
-
-        // Send notifications
-        String coachName = coach.getUser() != null ? coach.getUser().getFullName() : "HLV";
-        String memberName = member.getUser() != null ? member.getUser().getFullName() : "Học viên";
-        String dateRange = dto.startDate().format(DATE_FORMATTER) + " - " + dto.endDate().format(DATE_FORMATTER);
-
-        notificationService.send(
-                coach.getUserId(),
-                "Phân công học viên mới",
-                "Quản lý đã phân công học viên " + memberName + " (" + member.getMembershipCode() + ") cho bạn phụ trách từ ngày " + dateRange + ".",
-                "system",
-                "training_plan",
-                plan.getId(),
-                "/coach/training-plans"
-        );
-
-        notificationService.send(
-                member.getUserId(),
-                "Phân công huấn luyện viên",
-                "Bạn đã được trung tâm sắp xếp HLV " + coachName + " đồng hành phụ trách luyện tập (" + dateRange + ").",
-                "system",
-                "training_plan",
-                plan.getId(),
-                "/member/progress"
-        );
-
-        return new CoachAssignmentStudentDto(
-                member.getUserId(),
-                member.getMembershipCode(),
-                memberName,
-                member.getUser() != null ? member.getUser().getPhone() : null,
-                member.getUser() != null ? member.getUser().getEmail() : null,
-                member.getUser() != null ? member.getUser().getAvatarUrl() : null,
-                goal,
-                member.getFitnessLevel(),
-                member.getHealthNotes(),
-                "TRAINING_PLAN",
-                "Theo giáo án riêng",
-                goal,
-                plan.getStartDate(),
-                plan.getEndDate(),
-                "Hạn: " + plan.getEndDate().format(DATE_FORMATTER),
-                plan.getStatus(),
-                plan.getId()
-        );
+        notificationService.send(coach.getUserId(), msg("notice.assigned.title"), msg("notice.assigned.coach", member.getUser().getFullName(), goal),
+                "system", "training_plan", plan.getId(), "/coach/training-plans");
+        notificationService.send(member.getUserId(), msg("notice.assigned.title"), msg("notice.assigned.member", coach.getUser().getFullName(), goal),
+                "system", "training_plan", plan.getId(), "/member/progress");
+        return student(member, "TRAINING_PLAN", goal, plan.getStartDate(), plan.getEndDate(), plan.getEndDate().toString(), plan.getStatus(), plan.getId());
     }
 
     public void reassignStudent(CoachAssignmentReassignDto dto) {
-        if (dto.fromCoachId().equals(dto.toCoachId())) {
-            throw new BadRequestException("SAME_COACH", "Không thể điều chuyển sang cùng một huấn luyện viên.");
+        if (dto.referenceId() == null || dto.assignmentType() == null || !Set.of("TRAINING_PLAN", "PT_1_1").contains(dto.assignmentType())) {
+            throw invalid("INVALID_ASSIGNMENT_TYPE", "invalid_type");
         }
-
-        Coach fromCoach = coachRepository.findById(dto.fromCoachId())
-                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", dto.fromCoachId()));
-
-        Coach toCoach = coachRepository.findById(dto.toCoachId())
-                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", dto.toCoachId()));
-
-        Member member = memberRepository.findById(dto.memberId())
-                .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.memberId()));
-
-        // 1. Reassign training plans
-        List<TrainingPlan> plans = trainingPlanRepository.findByMemberUserIdOrderByCreatedAtDesc(member.getUserId());
-        for (TrainingPlan plan : plans) {
-            if (plan.getCoach() != null && plan.getCoach().getUserId().equals(fromCoach.getUserId()) && "active".equalsIgnoreCase(plan.getStatus())) {
-                plan.setCoach(toCoach);
-                trainingPlanRepository.save(plan);
+        if (Objects.equals(dto.fromCoachId(), dto.toCoachId())) throw invalid("SAME_COACH", "same_coach");
+        Coach from = coachRepository.findById(dto.fromCoachId()).orElseThrow(() -> new ResourceNotFoundException("resource.coach", dto.fromCoachId()));
+        Coach to = activeCoach(dto.toCoachId());
+        Member member = activeMember(dto.memberId());
+        requireMembership(member.getUserId());
+        String entityType;
+        String coachPath;
+        if ("TRAINING_PLAN".equals(dto.assignmentType())) {
+            TrainingPlan plan = trainingPlanRepository.findByIdForUpdate(dto.referenceId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", dto.referenceId()));
+            requireRelationship(plan.getMember(), plan.getCoach(), dto);
+            requireActivePlan(plan);
+            plan.setCoach(to);
+            trainingPlanRepository.save(plan);
+            entityType = "training_plan"; coachPath = "/coach/training-plans";
+        } else {
+            CoachBooking booking = coachBookingRepository.findByIdForUpdate(dto.referenceId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.coach_booking", dto.referenceId()));
+            requireRelationship(booking.getMember(), booking.getCoach(), dto);
+            if (!"confirmed".equals(booking.getStatus()) || booking.getBookingDate() == null || booking.getStartTime() == null
+                    || !booking.getBookingDate().atTime(booking.getStartTime()).isAfter(LocalDateTime.now(clock))) {
+                throw invalid("ASSIGNMENT_NOT_CURRENT", "not_current");
             }
-        }
-
-        // 2. Reassign future confirmed bookings
-        List<CoachBooking> bookings = coachBookingRepository.findByMemberId(member.getUserId());
-        LocalDate currentDate = today();
-        for (CoachBooking booking : bookings) {
-            if (booking.getCoach() != null && booking.getCoach().getUserId().equals(fromCoach.getUserId())
-                    && "confirmed".equalsIgnoreCase(booking.getStatus())
-                    && booking.getBookingDate() != null && !booking.getBookingDate().isBefore(currentDate)) {
-                booking.setCoach(toCoach);
-                coachBookingRepository.save(booking);
+            if (!subscriptionRepository.hasActiveMembershipCoveringSession(member.getUserId(), today(), booking.getBookingDate())) {
+                throw invalid("NO_ACTIVE_SUBSCRIPTION", "no_membership");
             }
+            requireCoachAvailable(to.getUserId(), booking);
+            booking.setCoach(to);
+            coachBookingRepository.save(booking);
+            entityType = null; coachPath = "/coach/classes";
         }
+        recordTransfer(dto);
+        notificationService.send(to.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.coach", member.getUser().getFullName(), dto.referenceId()),
+                "system", entityType, dto.referenceId(), coachPath);
+        notificationService.send(from.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.from", member.getUser().getFullName(), to.getUser().getFullName(), dto.referenceId()),
+                "system", entityType, dto.referenceId(), coachPath);
+        notificationService.send(member.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.member", to.getUser().getFullName(), dto.referenceId()),
+                "system", entityType, dto.referenceId(), "TRAINING_PLAN".equals(dto.assignmentType()) ? "/member/progress" : "/member/classes?tab=coach_booking");
+    }
 
-        // 3. Send notifications
-        String fromCoachName = fromCoach.getUser() != null ? fromCoach.getUser().getFullName() : "HLV cũ";
-        String toCoachName = toCoach.getUser() != null ? toCoach.getUser().getFullName() : "HLV mới";
-        String memberName = member.getUser() != null ? member.getUser().getFullName() : "Học viên";
-        String reasonStr = (dto.reason() != null && !dto.reason().isBlank()) ? " (Lý do: " + dto.reason().trim() + ")" : "";
+    private void requireRelationship(Member member, Coach coach, CoachAssignmentReassignDto dto) {
+        if (member == null || coach == null || !Objects.equals(member.getUserId(), dto.memberId()) || !Objects.equals(coach.getUserId(), dto.fromCoachId())) {
+            throw invalid("ASSIGNMENT_MISMATCH", "relationship_mismatch");
+        }
+    }
 
-        notificationService.send(
-                toCoach.getUserId(),
-                "Tiếp nhận học viên mới",
-                "Quản lý đã điều chuyển học viên " + memberName + " từ HLV " + fromCoachName + " sang bạn phụ trách" + reasonStr + ".",
-                "system",
-                "member",
-                member.getUserId(),
-                "/coach/classes"
-        );
+    private void requireCoachAvailable(Long coachId, CoachBooking booking) {
+        if (staffRequestRepository.existsApprovedLeaveOn(coachId, booking.getBookingDate())) throw invalid("COACH_ON_LEAVE", "coach_unavailable");
+        boolean classConflict = classSessionRepository.findActiveByCoachAndDate(coachId, booking.getBookingDate()).stream()
+                .anyMatch(s -> overlaps(booking, s.getStartTime(), s.getEndTime()));
+        boolean ptConflict = coachBookingRepository.findActiveByCoachAndDate(coachId, booking.getBookingDate()).stream()
+                .anyMatch(b -> overlaps(booking, b.getStartTime(), b.getEndTime()));
+        if (classConflict || ptConflict) throw invalid("COACH_SCHEDULE_CONFLICT", "coach_unavailable");
+    }
 
-        notificationService.send(
-                fromCoach.getUserId(),
-                "Điều chuyển học viên",
-                "Học viên " + memberName + " của bạn đã được chuyển giao cho HLV " + toCoachName + " phụ trách" + reasonStr + ".",
-                "system",
-                "member",
-                member.getUserId(),
-                "/coach/classes"
-        );
+    private boolean overlaps(CoachBooking booking, LocalTime start, LocalTime end) {
+        return booking.getStartTime().isBefore(end) && booking.getEndTime().isAfter(start);
+    }
 
-        notificationService.send(
-                member.getUserId(),
-                "Thay đổi huấn luyện viên phụ trách",
-                "HLV phụ trách luyện tập của bạn đã được chuyển từ HLV " + fromCoachName + " sang HLV " + toCoachName + reasonStr + ".",
-                "system",
-                "coach",
-                toCoach.getUserId(),
-                "/member/progress"
-        );
+    private void recordTransfer(CoachAssignmentReassignDto dto) {
+        // The existing coach audit stream stores both sides of the exact plan / PT relationship.
+        var oldValue = objectMapper.createObjectNode().put("assignmentType", dto.assignmentType()).put("referenceId", dto.referenceId())
+                .put("memberId", dto.memberId()).put("coachId", dto.fromCoachId());
+        var newValue = oldValue.deepCopy().put("coachId", dto.toCoachId()).put("reason", dto.reason());
+        AuditLog entry = new AuditLog();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof AuthenticatedPrincipal principal) entry.setUserId(principal.id());
+        entry.setAction("COACH_ASSIGNMENT_TRANSFER"); entry.setEntityType("coaches"); entry.setEntityId(dto.fromCoachId());
+        entry.setOldValue(oldValue.toString()); entry.setNewValue(newValue.toString());
+        auditRepository.save(entry);
     }
 
     public void removeAssignment(Long planId) {
-        TrainingPlan plan = trainingPlanRepository.findById(planId)
+        TrainingPlan plan = trainingPlanRepository.findByIdForUpdate(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
-
-        plan.setStatus("completed");
+        requireActivePlan(plan);
+        plan.setStatus("cancelled");
         trainingPlanRepository.save(plan);
+        notificationService.send(plan.getCoach().getUserId(), msg("notice.ended.title"), msg("notice.ended.body", plan.getMember().getUser().getFullName()),
+                "system", "training_plan", plan.getId(), "/coach/training-plans");
+    }
 
-        if (plan.getMember() != null && plan.getCoach() != null) {
-            String memberName = plan.getMember().getUser() != null ? plan.getMember().getUser().getFullName() : "Học viên";
-            notificationService.send(
-                    plan.getCoach().getUserId(),
-                    "Hoàn thành kế hoạch phụ trách",
-                    "Kế hoạch phụ trách học viên " + memberName + " (" + plan.getGoal() + ") đã được quản lý đánh dấu hoàn thành.",
-                    "system",
-                    "training_plan",
-                    plan.getId(),
-                    "/coach/training-plans"
-            );
+    private void requireActivePlan(TrainingPlan plan) {
+        if (!"active".equals(plan.getStatus()) || plan.getEndDate() == null || plan.getEndDate().isBefore(today())) {
+            throw invalid("ASSIGNMENT_NOT_CURRENT", "not_current");
         }
+    }
+
+    private Coach activeCoach(Long id) {
+        Coach coach = coachRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.coach", id));
+        if (!"active".equals(coach.getEmploymentStatus()) || !activeAccount(coach.getUser())) throw invalid("COACH_INACTIVE", "coach_inactive");
+        return coach;
+    }
+
+    private Member activeMember(Long id) {
+        Member member = memberRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.member", id));
+        if (!activeAccount(member.getUser())) throw invalid("MEMBER_INACTIVE", "member_inactive");
+        return member;
+    }
+
+    private boolean activeAccount(User user) { return user != null && user.getDeletedAt() == null && "active".equals(user.getStatus()); }
+    private void requireMembership(Long memberId) {
+        if (!subscriptionRepository.hasActiveMembership(memberId, today())) throw invalid("NO_ACTIVE_SUBSCRIPTION", "no_membership");
     }
 }

@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -103,16 +102,13 @@ public class NotificationService {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
         
-        String localizedTitle = NotificationLocalizer.localizeTitle(title);
-        String localizedMessage = NotificationLocalizer.localizeMessage(message);
-
-        Notification notification = new Notification(user, localizedTitle, localizedMessage, type, relatedEntityType, relatedEntityId);
+        Notification notification = new Notification(user, title, message, type, relatedEntityType, relatedEntityId);
         notification.setActionPath(actionPath);
         notificationRepository.save(notification);
         if (notificationDispatcher != null) {
             Runnable dispatch = () -> {
                 try {
-                    notificationDispatcher.dispatch(userId, localizedTitle, localizedMessage, type,
+                    notificationDispatcher.dispatch(userId, title, message, type,
                             relatedEntityType, relatedEntityId, Set.of(NotificationChannel.EMAIL, NotificationChannel.PUSH));
                 } catch (RuntimeException e) {
                     log.warn("Could not submit external notification for user {}", userId, e);
@@ -132,12 +128,10 @@ public class NotificationService {
      * Dispatches notification asynchronously across multiple channels (Port & Adapter) (SCRUM-108).
      */
     public void dispatchMultiChannel(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
-        String localizedTitle = NotificationLocalizer.localizeTitle(title);
-        String localizedMessage = NotificationLocalizer.localizeMessage(message);
         if (notificationDispatcher != null) {
-            notificationDispatcher.dispatch(userId, localizedTitle, localizedMessage, type, relatedEntityType, relatedEntityId);
+            notificationDispatcher.dispatch(userId, title, message, type, relatedEntityType, relatedEntityId);
         } else {
-            send(userId, localizedTitle, localizedMessage, type, relatedEntityType, relatedEntityId);
+            send(userId, title, message, type, relatedEntityType, relatedEntityId);
         }
     }
 }

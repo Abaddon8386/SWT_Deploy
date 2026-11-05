@@ -47,7 +47,7 @@ export function localizeMessage(message?: string | null): string {
     return `Gói tập "${pkgExpiryMatch1[1]}" của bạn sẽ hết hạn vào ngày ${pkgExpiryMatch1[2]}. Vui lòng gia hạn để tiếp tục sử dụng dịch vụ.`;
   }
 
-  const pkgExpiryMatch2 = message.match(/^Your membership package ([^ ]+) will expire in (\d+) day\(s\) \(([^)]+)\)\. Please renew to avoid workout interruption\.$/i);
+  const pkgExpiryMatch2 = message.match(/^Your membership package (.+?) will expire in (\d+) day\(s\) \(([^)]+)\)\. Please renew to avoid workout interruption\.$/i);
   if (pkgExpiryMatch2) {
     return `Gói tập ${pkgExpiryMatch2[1]} của bạn sẽ hết hạn sau ${pkgExpiryMatch2[2]} ngày (${pkgExpiryMatch2[3]}). Vui lòng gia hạn để không gián đoạn tập luyện.`;
   }
@@ -57,17 +57,17 @@ export function localizeMessage(message?: string | null): string {
     return `Yêu cầu hỗ trợ "${supportStatusMatch[1]}" của bạn đã chuyển sang trạng thái ${supportStatusMatch[2]}.`;
   }
 
-  const supportMsgMatch = message.match(/^You have a new message from ([^ ]+) in support request "([^"]+)"\.$/i);
+  const supportMsgMatch = message.match(/^You have a new message from (.+?) in support request "([^"]+)"\.$/i);
   if (supportMsgMatch) {
     return `Bạn có tin nhắn mới từ ${supportMsgMatch[1]} trong yêu cầu "${supportMsgMatch[2]}".`;
   }
 
-  const enrolledMatch = message.match(/^You have enrolled in class ([^ ]+) on ([0-9/-]+)$/i);
+  const enrolledMatch = message.match(/^You have enrolled in class (.+?) on ([0-9/-]+)$/i);
   if (enrolledMatch) {
     return `Bạn đã đăng ký tham gia lớp ${enrolledMatch[1]} vào ngày ${enrolledMatch[2]}`;
   }
 
-  const sessionBookedMatch = message.match(/^You booked class ([^ ]+) on ([0-9/-]+) \(([^)]+)\)\.$/i);
+  const sessionBookedMatch = message.match(/^You booked class (.+?) on ([0-9/-]+) \(([^)]+)\)\.$/i);
   if (sessionBookedMatch) {
     return `Bạn đã đặt chỗ lớp ${sessionBookedMatch[1]} ngày ${sessionBookedMatch[2]} (${sessionBookedMatch[3]}).`;
   }
@@ -77,7 +77,7 @@ export function localizeMessage(message?: string | null): string {
     return `Bạn đã đặt chỗ ${bulkBookedMatch[1]} buổi học.`;
   }
 
-  const sessionCancelledMatch = message.match(/^Your seat in class ([^ ]+) on ([0-9/-]+) was cancelled\.$/i);
+  const sessionCancelledMatch = message.match(/^Your seat in class (.+?) on ([0-9/-]+) was cancelled\.$/i);
   if (sessionCancelledMatch) {
     return `Chỗ của bạn ở lớp ${sessionCancelledMatch[1]} ngày ${sessionCancelledMatch[2]} đã được hủy.`;
   }
@@ -87,17 +87,17 @@ export function localizeMessage(message?: string | null): string {
     return `${bulkCancelledMatch[1]} buổi học của bạn đã được hủy.`;
   }
 
-  const ptCoachMatch = message.match(/^Member ([^ ]+) booked a PT session on ([0-9/-]+) \(([^ ]+) - ([^)]+)\)\.$/i);
+  const ptCoachMatch = message.match(/^Member (.+?) booked a PT session on ([0-9/-]+) \(([^ ]+) - ([^)]+)\)\.$/i);
   if (ptCoachMatch) {
     return `Hội viên ${ptCoachMatch[1]} đã đặt lịch tập 1:1 ngày ${ptCoachMatch[2]} (${ptCoachMatch[3]} - ${ptCoachMatch[4]}).`;
   }
 
-  const ptMemberMatch = message.match(/^You booked a PT session with ([^ ]+) on ([0-9/-]+) \(([^ ]+) - ([^)]+)\)\.$/i);
+  const ptMemberMatch = message.match(/^You booked a PT session with (.+?) on ([0-9/-]+) \(([^ ]+) - ([^)]+)\)\.$/i);
   if (ptMemberMatch) {
     return `Bạn đã đặt lịch tập 1:1 với HLV ${ptMemberMatch[1]} ngày ${ptMemberMatch[2]} (${ptMemberMatch[3]} - ${ptMemberMatch[4]}).`;
   }
 
-  const ptCancelledMatch = message.match(/^Member ([^ ]+) cancelled the PT session on ([0-9/-]+) \(([^ ]+) - ([^)]+)\)\.$/i);
+  const ptCancelledMatch = message.match(/^Member (.+?) cancelled the PT session on ([0-9/-]+) \(([^ ]+) - ([^)]+)\)\.$/i);
   if (ptCancelledMatch) {
     return `Hội viên ${ptCancelledMatch[1]} đã hủy lịch tập 1:1 ngày ${ptCancelledMatch[2]} (${ptCancelledMatch[3]} - ${ptCancelledMatch[4]}).`;
   }

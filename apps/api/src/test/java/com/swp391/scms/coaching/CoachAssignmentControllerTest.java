@@ -70,7 +70,7 @@ class CoachAssignmentControllerTest {
     void testAssign() throws Exception {
         CoachAssignmentAssignDto dto = new CoachAssignmentAssignDto(
                 100L, 10L, "TRAINING_PLAN", "Tập tăng cơ",
-                LocalDate.of(2026, 11, 10), LocalDate.of(2026, 12, 10), "Ghi chú"
+                LocalDate.of(2026, 11, 10), LocalDate.of(2026, 12, 10)
         );
 
         CoachAssignmentStudentDto studentDto = new CoachAssignmentStudentDto(
@@ -93,7 +93,7 @@ class CoachAssignmentControllerTest {
     @DisplayName("POST /api/v1/manager/coach-assignments/reassign transfers student")
     void testReassign() throws Exception {
         CoachAssignmentReassignDto dto = new CoachAssignmentReassignDto(
-                100L, 10L, 20L, null, "HLV đổi ca làm"
+                100L, 10L, 20L, 888L, "TRAINING_PLAN", "HLV đổi ca làm"
         );
 
         mockMvc.perform(post("/api/v1/manager/coach-assignments/reassign")

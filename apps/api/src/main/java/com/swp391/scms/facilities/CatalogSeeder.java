@@ -163,12 +163,14 @@ public class CatalogSeeder implements ApplicationRunner {
             retirePackage(retired);
         }
 
-        if (equipmentRepository != null && roomRepository != null) {
+        if (equipmentRepository != null && roomRepository != null && equipmentRepository.count() == 0) {
             seedInitialEquipment();
         }
     }
 
     private void seedInitialEquipment() {
+        upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
+        upsertRoom("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", "PLATINUM");
         var allRooms = roomRepository.findAll();
         com.swp391.scms.facilities.entity.Room standard = allRooms.stream()
                 .filter(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.getName()))

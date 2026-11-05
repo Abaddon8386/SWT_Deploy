@@ -6,7 +6,7 @@ import { Select } from '../../shared/ui/Select';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { MemberTimetable } from './components/MemberTimetable';
-import { centerNowParts } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { getMySubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
 import { DISCIPLINES } from '../../shared/lib/disciplines';
@@ -809,20 +809,6 @@ export function MemberClassesPage() {
                           <div className="member-booking-card__content">
                             <div className="member-booking-card__header-line">
                               <span className="badge badge-success member-booking-card__badge">
-                                <svg
-                                  width="14"
-                                  height="14"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  aria-hidden="true"
-                                >
-                                  <circle cx="12" cy="12" r="10" />
-                                  <polyline points="16 10 11 15 8 12" />
-                                </svg>
                                 <span>Đã xác nhận chỗ</span>
                               </span>
                               <span className="member-booking-card__divider" aria-hidden="true">|</span>
@@ -835,39 +821,12 @@ export function MemberClassesPage() {
 
                             <div className="member-booking-card__footer-line">
                               <span className="member-booking-card__meta-item">
-                                <svg
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  aria-hidden="true"
-                                >
-                                  <circle cx="12" cy="12" r="10" />
-                                  <polyline points="12 6 12 12 16 14" />
-                                </svg>
                                 <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
                               </span>
                               {item.roomName && (
                                 <>
                                   <span className="member-booking-card__divider" aria-hidden="true">|</span>
                                   <span className="member-booking-card__meta-item">
-                                    <svg
-                                      width="17"
-                                      height="17"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      aria-hidden="true"
-                                    >
-                                      <path d="M6 7v10M18 7v10M3 9v6M21 9v6M6 12h12" />
-                                    </svg>
                                     <span>{item.roomName}</span>
                                   </span>
                                 </>
@@ -904,41 +863,10 @@ export function MemberClassesPage() {
                       className="portal-card portal-card--list member-booking-card"
                     >
                       <div className="member-booking-card__main">
-                        <div
-                          className="member-booking-card__check-icon is-checked"
-                          aria-hidden="true"
-                        >
-                          <svg
-                            width="22"
-                            height="22"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        </div>
 
                         <div className="member-booking-card__content">
                           <div className="member-booking-card__header-line">
                             <span className="badge badge-success member-booking-card__badge">
-                              <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                aria-hidden="true"
-                              >
-                                <circle cx="12" cy="12" r="10" />
-                                <polyline points="16 10 11 15 8 12" />
-                              </svg>
                               <span>Đã xác nhận chỗ</span>
                             </span>
                             {item.sessionDate && (
@@ -956,26 +884,12 @@ export function MemberClassesPage() {
                           <div className="member-booking-card__footer-line">
                             {item.startTime && item.endTime && (
                               <span className="member-booking-card__meta-item">
-                                <svg
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  aria-hidden="true"
-                                >
-                                  <circle cx="12" cy="12" r="10" />
-                                  <polyline points="12 6 12 12 16 14" />
-                                </svg>
                                 <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
                               </span>
                             )}
                             <span className="member-booking-card__divider" aria-hidden="true">|</span>
                             <span className="member-booking-card__meta-item">
-                              <span>Đăng ký lúc: {item.enrolledAt.replace('T', ' ').slice(0, 16)}</span>
+                              <span>Đăng ký lúc: {formatCenterDateTime(item.enrolledAt)}</span>
                             </span>
                           </div>
                         </div>

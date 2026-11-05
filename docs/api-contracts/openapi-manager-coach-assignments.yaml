@@ -1,0 +1,221 @@
+openapi: 3.0.3
+info:
+  title: Manager coach assignments (PR97 corrections)
+  version: 1.1.0
+  description: |
+    Center manager screen, UI owner Khoa; related backlog SCRUM-121 and SCRUM-124.
+    All operations require CENTER_MANAGER (legacy MANAGER alias accepted).
+    Accept-Language selects vi (default) or en for messages and assignment labels.
+    Only the explicitly selected training-plan or future PT relationship can be transferred.
+    CLASS relationships are read-only. No request changes unrelated assignments.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /manager/coach-assignments:
+    get:
+      summary: Current coach/member relationships and independent active coach choices
+      description: |
+        Plans are active with startDate <= center today <= endDate. PT sessions are confirmed
+        and start strictly after the current center time. Classes are active and have a future
+        scheduled session; both booked ClassEnrollment and booked SessionBooking members count.
+        Accounts must be active and non-deleted; coaches must also be employed as active.
+        A class/member pair appears once even with both enrollment sources. Student counters
+        count distinct member IDs, including per-type counters. Filters apply to displayed
+        relationships and student counters. availableCoaches is always the full independent
+        active coach list; coach counters describe that list and remain unaffected by filters.
+      parameters:
+        - name: coachId
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: search
+          in: query
+          description: Case-insensitive member name/code/phone/email, coach name or relationship detail
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, enum: [ALL, TRAINING_PLAN, PT_1_1, CLASS], default: ALL }
+      responses:
+        '200':
+          description: Current assignments; an empty coaches or students list is valid
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Overview' }
+        '400': { description: Invalid assignment type, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Authentication required }
+        '403': { description: Manager role required }
+  /manager/coach-assignments/assign:
+    post:
+      summary: Create an active training-plan assignment
+      description: |
+        Requires a currently active, non-deleted member account, an active employed coach
+        account, and a membership with status active covering center today. A held, expired
+        or future-only subscription is insufficient. startDate must not follow endDate and
+        endDate must not precede today. Notifications are stored for the coach and member.
+        The goal is saved on the training plan; there is no separate notes field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignRequest' }
+      responses:
+        '201':
+          description: Created relationship
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Student' }
+        '400': { description: Invalid dates/type, inactive account/coach or no current active membership }
+        '401': { description: Authentication required }
+        '403': { description: Manager role required }
+        '404': { description: Member or coach not found }
+  /manager/coach-assignments/reassign:
+    post:
+      summary: Transfer exactly one training plan or future PT session
+      description: |
+        assignmentType and referenceId are mandatory. referenceId identifies the TrainingPlan
+        for TRAINING_PLAN, or CoachBooking for PT_1_1. Its actual member and coach must match
+        memberId and fromCoachId. The destination must differ, be actively employed and have
+        an active non-deleted account. The member must have an active non-deleted account and
+        a currently active membership. Plans must be active and unexpired. PT must be confirmed
+        and strictly in the future, membership must cover its date, and the receiving coach
+        must have no approved leave or overlapping scheduled class/confirmed PT session.
+        Existing database schedule triggers remain enabled. A missing or stale relationship
+        fails without success notifications. Audit logs preserve actor, assignment type,
+        reference ID, member ID, old/new coach IDs and optional reason. No plan items,
+        lifecycle dates or unrelated relationships change. Only after a valid transfer are
+        the member and both coaches notified. PT notices open the PT booking tab.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReassignRequest' }
+      responses:
+        '200': { description: Selected relationship transferred; envelope data is omitted }
+        '400': { description: Validation failure, CLASS type, mismatched relationship, historical relationship, invalid membership or unavailable destination coach }
+        '401': { description: Authentication required }
+        '403': { description: Manager role required }
+        '404': { description: Referenced assignment, member or coach not found }
+        '409': { description: Database schedule conflict detected while committing }
+  /manager/coach-assignments/{planId}:
+    delete:
+      summary: End an active unexpired training-plan assignment by cancelling it
+      description: |
+        The plan remains stored with status cancelled. Coach/member attribution, dates,
+        goal and plan items remain intact. Completed, cancelled, draft and expired plans
+        are rejected without changing their historical lifecycle. This operation never
+        marks a plan completed and does not cancel PT sessions or class relationships.
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200': { description: Assignment cancelled; envelope data is omitted }
+        '400': { description: Plan is not active or has expired }
+        '401': { description: Authentication required }
+        '403': { description: Manager role required }
+        '404': { description: Training plan not found }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { nullable: true }
+    Error:
+      type: object
+      description: Shared global error envelope with localized message and code
+      properties:
+        code: { type: string }
+        message: { type: string }
+    AssignRequest:
+      type: object
+      required: [memberId, coachId, assignmentType, startDate, endDate]
+      properties:
+        memberId: { type: integer, format: int64, description: The userId returned by members/lookup }
+        coachId: { type: integer, format: int64 }
+        assignmentType: { type: string, enum: [TRAINING_PLAN] }
+        goal: { type: string, maxLength: 255, nullable: true }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+    ReassignRequest:
+      type: object
+      required: [memberId, fromCoachId, toCoachId, referenceId, assignmentType]
+      properties:
+        memberId: { type: integer, format: int64 }
+        fromCoachId: { type: integer, format: int64 }
+        toCoachId: { type: integer, format: int64 }
+        referenceId: { type: integer, format: int64 }
+        assignmentType: { type: string, enum: [TRAINING_PLAN, PT_1_1] }
+        reason: { type: string, maxLength: 500, nullable: true }
+    Student:
+      type: object
+      properties:
+        memberId: { type: integer, format: int64 }
+        membershipCode: { type: string, nullable: true }
+        fullName: { type: string }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        avatarUrl: { type: string, nullable: true }
+        fitnessGoal: { type: string, nullable: true }
+        fitnessLevel: { type: string, nullable: true }
+        healthNotes: { type: string, nullable: true }
+        assignmentType: { type: string, enum: [TRAINING_PLAN, PT_1_1, CLASS] }
+        assignmentTypeLabel: { type: string }
+        detail: { type: string, nullable: true }
+        startDate: { type: string, format: date, nullable: true }
+        endDate: { type: string, format: date, nullable: true }
+        nextSession: { type: string, nullable: true }
+        status: { type: string }
+        referenceId: { type: integer, format: int64, description: Plan ID, PT booking ID or read-only class ID, according to assignmentType }
+    Overview:
+      type: object
+      properties:
+        availableCoaches:
+          type: array
+          items:
+            type: object
+            properties:
+              coachId: { type: integer, format: int64 }
+              coachName: { type: string }
+              specialization: { type: string, nullable: true }
+        stats:
+          type: object
+          properties:
+            totalCoaches: { type: integer }
+            activeCoaches: { type: integer }
+            totalAssignedStudents: { type: integer }
+            totalPtStudents: { type: integer }
+            totalPlanStudents: { type: integer }
+            totalClassStudents: { type: integer }
+        coaches:
+          type: array
+          items:
+            type: object
+            properties:
+              coachId: { type: integer, format: int64 }
+              coachName: { type: string }
+              coachEmail: { type: string, nullable: true }
+              coachPhone: { type: string, nullable: true }
+              specialization: { type: string, nullable: true }
+              bio: { type: string, nullable: true }
+              employmentStatus: { type: string }
+              totalStudentsCount: { type: integer }
+              ptStudentsCount: { type: integer }
+              planStudentsCount: { type: integer }
+              classStudentsCount: { type: integer }
+              students: { type: array, items: { $ref: '#/components/schemas/Student' } }

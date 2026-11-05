@@ -46,24 +46,25 @@ export interface CoachAssignmentSummaryStats {
 
 export interface CoachAssignmentData {
   coaches: CoachAssignmentOverview[];
+  availableCoaches: { coachId: number; coachName: string; specialization: string | null }[];
   stats: CoachAssignmentSummaryStats;
 }
 
 export interface AssignStudentRequest {
   memberId: number;
   coachId: number;
-  assignmentType?: string;
+  assignmentType: 'TRAINING_PLAN';
   goal?: string;
   startDate: string;
   endDate: string;
-  notes?: string;
 }
 
 export interface ReassignStudentRequest {
   memberId: number;
   fromCoachId: number;
   toCoachId: number;
-  referenceId?: number | null;
+  referenceId: number;
+  assignmentType: 'TRAINING_PLAN' | 'PT_1_1';
   reason?: string;
 }
 

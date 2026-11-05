@@ -1,4 +1,4 @@
-import { expandRecurrence, WEEKDAY_LABELS, type RecurrenceChoice, type RecurrencePeriod, type SkippedOccurrence } from '../lib/recurrence';
+import { expandRecurrence, isoWeekday, WEEKDAY_LABELS, type RecurrenceChoice, type RecurrencePeriod, type SkippedOccurrence } from '../lib/recurrence';
 
 const PERIODS: { id: RecurrencePeriod; label: string; legacyLabel: string }[] = [
   { id: 'once', label: 'Một buổi', legacyLabel: 'Chỉ ngày này' },
@@ -33,23 +33,23 @@ interface FieldsProps {
 /** Lets a member repeat one booking over a week or a month on chosen weekdays instead of booking day by day. */
 export function RecurrenceFields({ startDate, value, onChange, disabled = false, hint, allowedPeriods }: FieldsProps) {
   const visiblePeriods = allowedPeriods ? PERIODS.filter((p) => allowedPeriods.includes(p.id)) : PERIODS;
-  const activeDays = value.period !== 'once' && value.days.length === 0 ? [1] : value.days;
+  const activeDays = value.period !== 'once' && value.days.length === 0 ? [isoWeekday(startDate)] : value.days;
   const effectiveValue: RecurrenceChoice = { ...value, days: activeDays };
   const dates = expandRecurrence(startDate, effectiveValue);
   const choosePeriod = (period: RecurrencePeriod) => {
     if (allowedPeriods && !allowedPeriods.includes(period)) return;
     onChange({
       period,
-      days: period === 'once' ? [] : value.days.length ? value.days : [1],
+      days: period === 'once' ? [] : value.days.length ? value.days : [isoWeekday(startDate)],
     });
   };
   const toggleDay = (day: number) => {
-    const currentDays = value.days.length ? value.days : [1];
+    const currentDays = value.days.length ? value.days : [isoWeekday(startDate)];
     const nextDays = currentDays.includes(day)
       ? currentDays.filter((item) => item !== day)
       : [...currentDays, day].sort();
-    // Khi không chọn gì (bỏ chọn hết) thì thứ 2 (1) sẽ là mặc định
-    onChange({ ...value, days: nextDays.length ? nextDays : [1] });
+    // Keep the preview and recurrenceRequest on the selected start weekday.
+    onChange({ ...value, days: nextDays.length ? nextDays : [isoWeekday(startDate)] });
   };
 
   const selectedDayNames = activeDays.map((d) => FULL_WEEKDAY_NAMES[d] || `T${d}`).join(', ');

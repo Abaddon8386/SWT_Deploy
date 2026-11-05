@@ -35,14 +35,8 @@ public class CoachAssignmentController {
         this.messageService = messageService;
     }
 
-    private String msg(String code, String fallback) {
-        if (messageService == null) return fallback;
-        try {
-            String resolved = messageService.getMessage(code);
-            return (resolved != null && !resolved.equals(code)) ? resolved : fallback;
-        } catch (Exception e) {
-            return fallback;
-        }
+    private String msg(String code) {
+        return messageService == null ? code : messageService.getMessage(code);
     }
 
     @Operation(summary = "Xem danh sách và tổng quan các HLV kèm học viên phụ trách")
@@ -54,7 +48,7 @@ public class CoachAssignmentController {
     ) {
         Map<String, Object> data = coachAssignmentService.getOverview(coachId, search, type);
         return ResponseEntity.ok(ApiResponse.ok(
-                msg("manager.coach_assignments.loaded", "Tải danh sách học viên phụ trách của HLV thành công"),
+                msg("manager.coach_assignments.loaded"),
                 data
         ));
     }
@@ -66,31 +60,31 @@ public class CoachAssignmentController {
     ) {
         CoachAssignmentStudentDto student = coachAssignmentService.assignStudent(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(
-                msg("manager.coach_assignments.assigned", "Phân công học viên cho huấn luyện viên thành công"),
+                msg("manager.coach_assignments.assigned"),
                 student
         ));
     }
 
-    @Operation(summary = "Điều chuyển học viên từ HLV này sang HLV khác")
+    @Operation(summary = "Điều chuyển đúng giáo án hoặc buổi PT đã chọn; lớp học chỉ đọc")
     @PostMapping("/reassign")
     public ResponseEntity<ApiResponse<Void>> reassign(
             @Valid @RequestBody CoachAssignmentReassignDto dto
     ) {
         coachAssignmentService.reassignStudent(dto);
         return ResponseEntity.ok(ApiResponse.ok(
-                msg("manager.coach_assignments.reassigned", "Điều chuyển học viên sang huấn luyện viên mới thành công"),
+                msg("manager.coach_assignments.reassigned"),
                 null
         ));
     }
 
-    @Operation(summary = "Đánh dấu kết thúc phân công phụ trách học viên")
+    @Operation(summary = "Hủy phân công giáo án active chưa hết hạn, giữ lịch sử")
     @DeleteMapping("/{planId}")
     public ResponseEntity<ApiResponse<Void>> removeAssignment(
             @PathVariable Long planId
     ) {
         coachAssignmentService.removeAssignment(planId);
         return ResponseEntity.ok(ApiResponse.ok(
-                msg("manager.coach_assignments.removed", "Đã kết thúc phân công phụ trách học viên"),
+                msg("manager.coach_assignments.removed"),
                 null
         ));
     }

@@ -14,6 +14,16 @@ import java.util.Optional;
 
 @Repository
 public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment, Long> {
+    @Query("""
+            select e from ClassEnrollment e join fetch e.member m join fetch m.user u join fetch e.gymClass c
+            where c.coach.userId = :coachId and c.status = 'active' and e.status = 'booked'
+              and u.deletedAt is null and u.status = 'active'
+              and exists (select s.id from ClassSession s where s.gymClass = c and s.status = 'scheduled'
+                and (s.sessionDate > :today or (s.sessionDate = :today and s.startTime > :now)))
+            order by c.id, e.id
+            """)
+    List<ClassEnrollment> findCurrentCoachAssignments(@Param("coachId") Long coachId,
+            @Param("today") java.time.LocalDate today, @Param("now") java.time.LocalTime now);
 
     @Query("select e.gymClass.id from ClassEnrollment e where e.id = :id")
     Optional<Long> findClassIdById(@Param("id") Long id);

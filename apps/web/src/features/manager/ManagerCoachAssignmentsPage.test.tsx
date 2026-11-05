@@ -3,6 +3,10 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ManagerCoachAssignmentsPage } from './ManagerCoachAssignmentsPage';
 import { coachAssignmentsApi, type CoachAssignmentData } from './coachAssignmentsApi';
+import { apiFetch } from '../../shared/api/client';
+import { notify } from '../../shared/lib/portalNotices';
+
+vi.mock('../../shared/lib/portalNotices', () => ({ notify: vi.fn() }));
 
 vi.mock('./coachAssignmentsApi', () => ({
   coachAssignmentsApi: {
@@ -22,6 +26,10 @@ describe('ManagerCoachAssignmentsPage', () => {
   let root: Root;
 
   const mockData: CoachAssignmentData = {
+    availableCoaches: [
+      { coachId: 10, coachName: 'HLV Trần Văn A', specialization: 'Fitness & Bulking' },
+      { coachId: 11, coachName: 'HLV Nguyễn Thị B', specialization: 'Pilates & Yoga' },
+    ],
     stats: {
       totalCoaches: 2,
       activeCoaches: 2,
@@ -130,6 +138,7 @@ describe('ManagerCoachAssignmentsPage', () => {
       if (params?.search === 'Lê Thị Hoa') {
         return {
           stats: mockData.stats,
+          availableCoaches: mockData.availableCoaches,
           coaches: [
             {
               ...mockData.coaches[0],
@@ -148,6 +157,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     host.remove();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   async function renderComponent() {
@@ -235,5 +245,79 @@ describe('ManagerCoachAssignmentsPage', () => {
 
     expect(host.textContent).toContain('Phân công học viên mới cho Huấn luyện viên');
     expect(host.textContent).toContain('Chọn Huấn luyện viên phụ trách');
+  });
+
+  it('submits the real lookup userId and displays rejected assignment inside the dialog', async () => {
+    vi.mocked(apiFetch).mockResolvedValue([{ userId: 305, fullName: 'Hội viên thật', membershipCode: 'SOL305' }]);
+    vi.mocked(coachAssignmentsApi.assignStudent).mockRejectedValue(new Error('Gói tập không còn hiệu lực'));
+    await renderComponent();
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('+ Phân công'))?.click(); });
+    const input = host.querySelector('#assign-member-search') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, 'Hội viên');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Hội viên thật'))?.click(); });
+    await act(async () => { host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(coachAssignmentsApi.assignStudent).toHaveBeenCalledWith(expect.objectContaining({ memberId: 305 }));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Gói tập không còn hiệu lực');
+  });
+
+  it('keeps class assignments read-only', async () => {
+    await renderComponent();
+    const row = [...host.querySelectorAll('.coach-student-row')].find(r => r.textContent?.includes('Phạm Minh Tuấn'));
+    expect(row?.textContent).not.toContain('Điều chuyển HLV');
+    expect(row?.textContent).not.toContain('Kết thúc');
+  });
+
+  it('uses center dates in the form and formats assignment deadlines and PT times', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-04T18:05:00Z'));
+    await renderComponent();
+    expect(host.textContent).toContain('09:00 10/11/2026');
+    expect(host.textContent).toContain('Hạn: 05/12/2026');
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('+ Phân công'))?.click(); });
+    expect((host.querySelector('#assign-start-date') as HTMLInputElement).value).toBe('2026-11-05');
+    expect((host.querySelector('#assign-end-date') as HTMLInputElement).value).toBe('2026-12-05');
+  });
+
+  it('keeps target coach options after filtering and sends the selected PT relationship only', async () => {
+    await renderComponent();
+    const filter = host.querySelector('select[aria-label="Lọc theo Huấn luyện viên"]') as HTMLSelectElement;
+    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({ ...mockData, coaches: [mockData.coaches[0]] });
+    await act(async () => { filter.value = '10'; filter.dispatchEvent(new Event('change', { bubbles: true })); });
+    await act(async () => { await new Promise(r => setTimeout(r, 260)); });
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent === 'Điều chuyển HLV')?.click(); });
+    const target = host.querySelector('#reassign-target-coach') as HTMLSelectElement;
+    expect([...target.options].map(o => o.value)).toContain('11');
+    await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
+    await act(async () => { host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(coachAssignmentsApi.reassignStudent).toHaveBeenCalledWith(expect.objectContaining({ assignmentType: 'PT_1_1', referenceId: 501, memberId: 101, fromCoachId: 10, toCoachId: 11 }));
+    expect(notify).toHaveBeenCalledWith(expect.any(String), 'success');
+  });
+
+  it('locks the assignment dialog and fields while submission is pending', async () => {
+    vi.mocked(apiFetch).mockResolvedValue([{ userId: 305, fullName: 'Hội viên thật', membershipCode: 'SOL305' }]);
+    let finish!: () => void;
+    vi.mocked(coachAssignmentsApi.assignStudent).mockImplementation(() => new Promise(resolve => { finish = () => resolve(mockData.coaches[0].students[0]); }));
+    await renderComponent();
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('+ Phân công'))?.click(); });
+    const input = host.querySelector('#assign-member-search') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, 'Hội viên');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Hội viên thật'))?.click(); });
+    await act(async () => { host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.getAttribute('aria-busy')).toBe('true');
+    expect(host.querySelector('dialog fieldset')?.hasAttribute('disabled')).toBe(true);
+    await act(async () => { dialog.dispatchEvent(new Event('cancel', { bubbles: false, cancelable: true })); });
+    expect(host.querySelector('dialog')).toBe(dialog);
+    await act(async () => { finish(); });
+    expect(host.querySelector('dialog')).toBeNull();
+    expect(notify).toHaveBeenCalledWith(expect.any(String), 'success');
   });
 });

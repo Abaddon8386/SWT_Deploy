@@ -24,7 +24,7 @@
 
 .coach-stat-card__label {
   font-size: 0.85rem;
-  color: var(--portal-text-muted, #9ca3af);
+  color: var(--portal-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
@@ -33,13 +33,13 @@
 .coach-stat-card__value {
   font-size: 1.85rem;
   font-weight: 700;
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
   line-height: 1;
 }
 
 .coach-stat-card__hint {
   font-size: 0.8rem;
-  color: var(--portal-accent, #ff7a59);
+  color: var(--portal-salmon);
 }
 
 .coach-assignments-toolbar {
@@ -63,11 +63,11 @@
 }
 
 .coach-search-input {
-  background: var(--portal-bg, #121216);
+  background: var(--portal-ink);
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.12));
   border-radius: 8px;
   padding: 0.6rem 0.9rem;
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
   font-size: 0.9rem;
   min-width: 240px;
   flex: 1;
@@ -75,15 +75,15 @@
 
 .coach-search-input:focus {
   outline: none;
-  border-color: var(--portal-accent, #ff7a59);
+  border-color: var(--portal-salmon);
 }
 
 .coach-filter-select {
-  background: var(--portal-bg, #121216);
+  background: var(--portal-ink);
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.12));
   border-radius: 8px;
   padding: 0.6rem 0.9rem;
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
   font-size: 0.9rem;
   cursor: pointer;
 }
@@ -91,7 +91,7 @@
 .coach-view-toggle {
   display: flex;
   gap: 0.35rem;
-  background: var(--portal-bg, #121216);
+  background: var(--portal-ink);
   padding: 0.25rem;
   border-radius: 8px;
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.08));
@@ -103,14 +103,14 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--portal-text-muted, #9ca3af);
+  color: var(--portal-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .coach-view-button--active {
-  background: var(--portal-surface-elevated, #2a2a32);
-  color: var(--portal-accent, #ff7a59);
+  background: var(--portal-raised);
+  color: var(--portal-salmon);
   font-weight: 600;
 }
 
@@ -149,8 +149,8 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--portal-accent-muted, rgba(255, 122, 89, 0.15));
-  color: var(--portal-accent, #ff7a59);
+  background: var(--portal-tint);
+  color: var(--portal-salmon);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,7 +163,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
 }
 
 .coach-meta-row {
@@ -171,13 +171,13 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   font-size: 0.85rem;
-  color: var(--portal-text-muted, #9ca3af);
+  color: var(--portal-muted);
   margin-top: 0.25rem;
 }
 
 .coach-badge-spec {
   background: rgba(255, 122, 89, 0.12);
-  color: var(--portal-accent, #ff7a59);
+  color: var(--portal-salmon);
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
   font-weight: 500;
@@ -193,13 +193,13 @@
   font-size: 0.8rem;
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
-  background: var(--portal-bg, #121216);
+  background: var(--portal-ink);
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.1));
-  color: var(--portal-text-muted, #9ca3af);
+  color: var(--portal-muted);
 }
 
 .student-count-pill strong {
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
   margin-right: 0.2rem;
 }
 
@@ -217,7 +217,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  background: var(--portal-bg, #121216);
+  background: var(--portal-ink);
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.05));
   border-radius: 8px;
   padding: 0.85rem 1rem;
@@ -240,18 +240,18 @@
   justify-content: center;
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
 }
 
 .student-name-block strong {
   display: block;
   font-size: 0.95rem;
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
 }
 
 .student-name-block small {
   font-size: 0.8rem;
-  color: var(--portal-text-muted, #9ca3af);
+  color: var(--portal-muted);
 }
 
 .coach-student-type-pill {
@@ -264,19 +264,19 @@
 
 .coach-student-type-pill--pt {
   background: rgba(255, 122, 89, 0.15);
-  color: var(--portal-accent, #ff7a59);
+  color: var(--portal-salmon);
   border: 1px solid rgba(255, 122, 89, 0.3);
 }
 
 .coach-student-type-pill--plan {
   background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  color: var(--portal-success);
   border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 .coach-student-type-pill--class {
   background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
+  color: var(--portal-info);
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
@@ -284,7 +284,7 @@
   flex: 1;
   min-width: 200px;
   font-size: 0.85rem;
-  color: var(--portal-text-muted, #9ca3af);
+  color: var(--portal-muted);
 }
 
 .coach-student-actions {
@@ -297,35 +297,35 @@
   font-size: 0.8rem;
   border-radius: 6px;
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.15));
-  background: var(--portal-surface-elevated, #2a2a32);
-  color: var(--portal-text-primary, #ffffff);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .coach-action-btn:hover:not(:disabled) {
-  border-color: var(--portal-accent, #ff7a59);
-  color: var(--portal-accent, #ff7a59);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
 }
 
 .coach-action-btn--primary {
-  background: var(--portal-accent, #ff7a59);
-  color: #0f0f12;
+  background: var(--portal-salmon);
+  color: var(--portal-on-accent);
   border: none;
   font-weight: 600;
 }
 
 .coach-action-btn--primary:hover:not(:disabled) {
-  background: #ff8f73;
-  color: #0f0f12;
+  background: var(--portal-salmon);
+  color: var(--portal-on-accent);
 }
 
 .coach-action-btn--danger {
-  color: #f87171;
+  color: var(--portal-danger);
 }
 
 .coach-action-btn--danger:hover:not(:disabled) {
-  border-color: #f87171;
+  border-color: var(--portal-danger);
   background: rgba(239, 68, 68, 0.1);
 }
 
@@ -348,7 +348,7 @@
   padding: 0.9rem 1rem;
   background: rgba(255, 255, 255, 0.02);
   border-bottom: 1px solid var(--portal-border, rgba(255, 255, 255, 0.08));
-  color: var(--portal-text-muted, #9ca3af);
+  color: var(--portal-muted);
   font-weight: 600;
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -357,7 +357,7 @@
 .coach-table td {
   padding: 0.9rem 1rem;
   border-bottom: 1px solid var(--portal-border, rgba(255, 255, 255, 0.04));
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
 }
 
 .coach-table tr:hover td {
@@ -380,21 +380,21 @@
 .coach-form-group label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--portal-text-muted, #9ca3af);
+  color: var(--portal-muted);
 }
 
 .coach-form-control {
-  background: var(--portal-bg, #121216);
+  background: var(--portal-ink);
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.15));
   border-radius: 8px;
   padding: 0.65rem 0.85rem;
-  color: var(--portal-text-primary, #ffffff);
+  color: var(--portal-paper);
   font-size: 0.9rem;
 }
 
 .coach-form-control:focus {
   outline: none;
-  border-color: var(--portal-accent, #ff7a59);
+  border-color: var(--portal-salmon);
 }
 
 .coach-form-row {
@@ -410,3 +410,17 @@
   margin-top: 1rem;
 }
 
+
+.coach-member-result { width: 100%; border: 0; background: transparent; text-align: left; }
+.coach-member-result:focus-visible, .coach-action-btn:focus-visible, .coach-view-button:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+.coach-action-btn:disabled { opacity: .55; cursor: wait; }
+@media (max-width: 600px) {
+  .coach-form-row { grid-template-columns: 1fr; }
+  .coach-student-actions { flex-wrap: wrap; }
+  .coach-search-input { min-width: 0; width: 100%; }
+  .coach-filter-select { min-width: 0; max-width: 100%; }
+  .coach-assignments-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coach-info-main, .coach-text-details { min-width: 0; overflow-wrap: anywhere; }
+}
+
+.coach-modal-form > fieldset { display: contents; }

@@ -99,11 +99,11 @@ const sample = (id, name, discipline, date) => ({ id, classId: id, className: na
     await page.getByRole('heading', { name: 'Bơi chiều', exact: true }).waitFor();
     assert.equal(await page.getByRole('heading', { name: 'Gym sáng', exact: true }).count(), 0);
     await page.getByRole('button', { name: 'Tuần trước', exact: true }).click();
-    await page.getByText('26/10/2026', { exact: true }).waitFor();
+    await page.locator('.tt__range').filter({ hasText: '26/10' }).waitFor();
     await page.getByRole('button', { name: 'Tuần kế tiếp', exact: true }).click();
-    await page.getByText('09/11/2026', { exact: true }).waitFor();
+    await page.locator('.tt__range').filter({ hasText: '09/11' }).waitFor();
     await page.getByRole('button', { name: 'Tuần này', exact: true }).click();
-    await page.getByText('02/11/2026', { exact: true }).waitFor();
+    await page.locator('.tt__range').filter({ hasText: '02/11' }).waitFor();
     assert.ok(requests.includes('/api/v1/classes/sessions?fromDate=2026-10-26&toDate=2026-11-01'));
     assert.ok(requests.includes('/api/v1/classes/sessions?fromDate=2026-11-09&toDate=2026-11-15'));
     releaseBook = null;

@@ -140,12 +140,12 @@ public class NotificationScheduler {
                     : "Gói tập";
             String expiryDateStr = sub.getEndDate() != null ? sub.getEndDate().format(DATE_FORMATTER) : "";
 
-            String title = NotificationLocalizer.localizeTitle(resolveMessage("notifications.package_expiry.title", "Gói tập sắp hết hạn"));
-            String message = NotificationLocalizer.localizeMessage(resolveMessage("notifications.package_expiry.body",
+            String title = resolveMessage("notifications.package_expiry.title", "Gói tập sắp hết hạn");
+            String message = resolveMessage("notifications.package_expiry.body",
                     "Gói tập \"" + packageName + "\" của bạn sẽ hết hạn vào ngày " + expiryDateStr + " (còn 7 ngày). Vui lòng gia hạn để tiếp tục sử dụng dịch vụ.",
                     packageName,
                     expiryDateStr
-            ));
+            );
 
             notificationService.send(
                     userId,
@@ -215,13 +215,13 @@ public class NotificationScheduler {
             String startTimeStr = session.getStartTime().format(TIME_FORMATTER);
             String sessionDateStr = session.getSessionDate().format(DATE_FORMATTER);
 
-            String title = NotificationLocalizer.localizeTitle(resolveMessage("notifications.class_reminder.title", "Nhắc nhở lịch học sắp diễn ra"));
-            String message = NotificationLocalizer.localizeMessage(resolveMessage("notifications.class_reminder.body",
+            String title = resolveMessage("notifications.class_reminder.title", "Nhắc nhở lịch học sắp diễn ra");
+            String message = resolveMessage("notifications.class_reminder.body",
                     "Lớp học \"" + className + "\" của bạn sẽ bắt đầu lúc " + startTimeStr + " ngày " + sessionDateStr + ". Hãy chuẩn bị sẵn sàng!",
                     className,
                     startTimeStr,
                     sessionDateStr
-            ));
+            );
 
             java.util.Set<Long> recipients = new java.util.LinkedHashSet<>();
             for (ClassEnrollment enrollment : enrollments) {

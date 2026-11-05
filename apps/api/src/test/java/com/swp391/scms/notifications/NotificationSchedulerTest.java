@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -86,9 +88,13 @@ class NotificationSchedulerTest {
     // Job 1: Membership Subscription Expiry Tests
     // =========================================================================
 
-    @Test
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "Gói tập sắp hết hạn|Gói tập Platinum sắp hết hạn",
+            "Membership package expiring soon|Your membership package \"Gold 1 Month\" will expire on 29/10/2026 (in 7 days). Please renew to continue using our services."
+    })
     @DisplayName("Job 1: Sends package_expiry notification when subscription expires in 7 days")
-    void scanAndNotifyExpiringSubscriptions_Success() {
+    void scanAndNotifyExpiringSubscriptions_Success(String resolvedTitle, String resolvedBody) {
         LocalDate targetDate = LocalDate.of(2026, 10, 29);
 
         MembershipSubscription subscription = new MembershipSubscription();
@@ -103,17 +109,17 @@ class NotificationSchedulerTest {
         when(notificationRepository.existsNotification(101L, "package_expiry", "membership_subscription", 201L))
                 .thenReturn(false);
         when(messageService.getMessage(eq("notifications.package_expiry.title"), any(Object[].class)))
-                .thenReturn("Gói tập sắp hết hạn");
+                .thenReturn(resolvedTitle);
         when(messageService.getMessage(eq("notifications.package_expiry.body"), any(Object[].class)))
-                .thenReturn("Gói tập Platinum sắp hết hạn");
+                .thenReturn(resolvedBody);
 
         int sentCount = notificationScheduler.scanAndNotifyExpiringSubscriptions(targetDate);
 
         assertThat(sentCount).isEqualTo(1);
         verify(notificationService).send(
                 eq(101L),
-                eq("Gói tập sắp hết hạn"),
-                eq("Gói tập Platinum sắp hết hạn"),
+                eq(resolvedTitle),
+                eq(resolvedBody),
                 eq("package_expiry"),
                 eq("membership_subscription"),
                 eq(201L)
@@ -172,9 +178,13 @@ class NotificationSchedulerTest {
     // Job 2: Upcoming Class Reminder Tests
     // =========================================================================
 
-    @Test
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "Nhắc nhở lịch học|Lớp học sắp bắt đầu",
+            "Upcoming class reminder|Your class \"Yoga Vinyasa\" is starting at 11:00 on 22/10/2026. Get ready!"
+    })
     @DisplayName("Job 2: Sends class_reminder notification for booked members within 2 hours")
-    void scanAndNotifyUpcomingClasses_Success() {
+    void scanAndNotifyUpcomingClasses_Success(String resolvedTitle, String resolvedBody) {
         LocalDateTime referenceTime = LocalDateTime.of(2026, 10, 22, 10, 0); // 10:00
         LocalDate sessionDate = LocalDate.of(2026, 10, 22);
         LocalTime startTime = LocalTime.of(11, 0); // 11:00 (1 hour later, within 2h)
@@ -215,15 +225,15 @@ class NotificationSchedulerTest {
                 .thenReturn(false);
 
         when(messageService.getMessage(eq("notifications.class_reminder.title"), any(Object[].class)))
-                .thenReturn("Nhắc nhở lịch học");
+                .thenReturn(resolvedTitle);
         when(messageService.getMessage(eq("notifications.class_reminder.body"), any(Object[].class)))
-                .thenReturn("Lớp học sắp bắt đầu");
+                .thenReturn(resolvedBody);
 
         int sentCount = notificationScheduler.scanAndNotifyUpcomingClasses(referenceTime);
 
         assertThat(sentCount).isEqualTo(2);
-        verify(notificationService).send(eq(101L), eq("Nhắc nhở lịch học"), eq("Lớp học sắp bắt đầu"), eq("class_reminder"), eq("class_session"), eq(301L));
-        verify(notificationService).send(eq(102L), eq("Nhắc nhở lịch học"), eq("Lớp học sắp bắt đầu"), eq("class_reminder"), eq("class_session"), eq(301L));
+        verify(notificationService).send(eq(101L), eq(resolvedTitle), eq(resolvedBody), eq("class_reminder"), eq("class_session"), eq(301L));
+        verify(notificationService).send(eq(102L), eq(resolvedTitle), eq(resolvedBody), eq("class_reminder"), eq("class_session"), eq(301L));
     }
 
     @Test

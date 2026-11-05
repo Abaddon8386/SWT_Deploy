@@ -144,4 +144,19 @@ describe('SCRUM-127 member notifications', () => {
     expect(host.textContent).toContain('Nhắc nhở lịch học sắp diễn ra');
     expect(host.textContent).toContain('Lớp học "Lớp boxing" của bạn sẽ bắt đầu lúc 09:00 ngày 04/11/2026. Hãy chuẩn bị sẵn sàng!');
   });
+
+  it.each([
+    ['You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).', 'Bạn đã đặt chỗ lớp Sunrise Yoga ngày 2026-11-14 (07:00-08:30).'],
+    ['You have enrolled in class Sunrise Yoga on 2026-11-14', 'Bạn đã đăng ký tham gia lớp Sunrise Yoga vào ngày 2026-11-14'],
+    ['Your seat in class Sunrise Yoga on 2026-11-14 was cancelled.', 'Chỗ của bạn ở lớp Sunrise Yoga ngày 2026-11-14 đã được hủy.'],
+    ['Member Nguyễn Văn An booked a PT session on 2026-11-14 (07:00 - 08:30).', 'Hội viên Nguyễn Văn An đã đặt lịch tập 1:1 ngày 2026-11-14 (07:00 - 08:30).'],
+    ['You booked a PT session with Trần Minh Quân on 2026-11-14 (07:00 - 08:30).', 'Bạn đã đặt lịch tập 1:1 với HLV Trần Minh Quân ngày 2026-11-14 (07:00 - 08:30).'],
+    ['Member Nguyễn Văn An cancelled the PT session on 2026-11-14 (07:00 - 08:30).', 'Hội viên Nguyễn Văn An đã hủy lịch tập 1:1 ngày 2026-11-14 (07:00 - 08:30).'],
+    ['You have a new message from Trần Minh Quân in support request "Booking help".', 'Bạn có tin nhắn mới từ Trần Minh Quân trong yêu cầu "Booking help".'],
+    ['Your membership package Gold 1 Month will expire in 3 day(s) (10/11/2026). Please renew to avoid workout interruption.', 'Gói tập Gold 1 Month của bạn sẽ hết hạn sau 3 ngày (10/11/2026). Vui lòng gia hạn để không gián đoạn tập luyện.'],
+  ])('translates legacy multiword names in the portal: %s', async (message, expected) => {
+    api.list.mockResolvedValue({ content: [{ id: 8, title: 'Class session booked', message, type: 'system', relatedEntityType: null, relatedEntityId: null, isRead: false, createdAt: '2026-11-04T07:00:00' }], number: 0, totalPages: 1 });
+    await render();
+    expect(host.textContent).toContain(expected);
+  });
 });

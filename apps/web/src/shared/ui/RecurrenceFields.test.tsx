@@ -70,7 +70,7 @@ it('filters out disallowed periods such as month when allowedPeriods is specifie
   expect(host.textContent).not.toContain('Cả tháng');
 });
 
-it('defaults to Monday (T2) when no days are selected or all days are toggled off', async () => {
+it('keeps the selected start weekday when the last weekday is toggled off', async () => {
   let currentVal: RecurrenceChoice = { period: 'week', days: [4] };
   await act(async () => {
     root.render(
@@ -82,5 +82,12 @@ it('defaults to Monday (T2) when no days are selected or all days are toggled of
     );
   });
   await press('T5');
-  expect(currentVal.days).toEqual([1]);
+  expect(currentVal.days).toEqual([4]);
+});
+
+
+it('previews the selected start weekday when a recurring choice has no explicit days', async () => {
+  await act(async () => root.render(<RecurrenceFields startDate="2026-11-05" value={{ period: 'week', days: [] }} onChange={() => {}} />));
+  expect(host.textContent).toContain('Sẽ đặt 1 buổi: 05/11');
+  expect(host.querySelector('button[aria-label="T5, đã chọn"]')).not.toBeNull();
 });

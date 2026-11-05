@@ -150,13 +150,19 @@ public class MemberTrialService {
             MemberTrialRedemption redemption = new MemberTrialRedemption(member, cccdHash, cccdHasher.last4(cccd), fullName, savedSub);
             trialRedemptions.saveAndFlush(redemption);
         } catch (DataIntegrityViolationException e) {
-            String msgStr = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-            if (msgStr.contains("cccd")) {
-                throw new ConflictException("TRIAL_CCCD_ALREADY_USED", "trial.already_claimed.cccd", null,
-                        msg("trial.already_claimed.cccd"));
+            for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+                if (cause instanceof org.hibernate.exception.ConstraintViolationException constraint) {
+                    if ("uq_trial_cccd_hash".equalsIgnoreCase(constraint.getConstraintName())) {
+                        throw new ConflictException("TRIAL_CCCD_ALREADY_USED", "trial.already_claimed.cccd", null,
+                                msg("trial.already_claimed.cccd"));
+                    }
+                    if ("uq_trial_member".equalsIgnoreCase(constraint.getConstraintName())) {
+                        throw new ConflictException("TRIAL_ALREADY_CLAIMED", "trial.already_claimed.member", null,
+                                msg("trial.already_claimed.member"));
+                    }
+                }
             }
-            throw new ConflictException("TRIAL_ALREADY_CLAIMED", "trial.already_claimed.member", null,
-                    msg("trial.already_claimed.member"));
+            throw e;
         }
 
         // 7. Gửi thông báo đến hội viên
