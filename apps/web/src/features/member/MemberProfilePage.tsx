@@ -130,7 +130,7 @@ export function MemberProfilePage() {
       const rawDataUrl = await readFileAsDataUrl(file);
       const validDataUrl = await validateAndProcessImage(rawDataUrl, file.type);
       const updated = await uploadAvatar(validDataUrl);
-      setProfile(updated);
+      setProfile(current => current ? { ...current, avatarUrl: updated.avatarUrl } : updated);
       window.dispatchEvent(new Event('profile-updated'));
       notify('Đã cập nhật ảnh đại diện.', 'success');
     } catch (err) {
@@ -146,7 +146,7 @@ export function MemberProfilePage() {
     setAvatarBusy(true);
     try {
       const updated = await uploadAvatar(null);
-      setProfile(updated);
+      setProfile(current => current ? { ...current, avatarUrl: updated.avatarUrl } : updated);
       window.dispatchEvent(new Event('profile-updated'));
       notify('Đã đặt lại ảnh đại diện mặc định.', 'success');
     } catch (err) {
