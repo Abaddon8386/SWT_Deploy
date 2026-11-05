@@ -767,41 +767,131 @@ export function MemberClassesPage() {
                       {busyKey === 'bulk-cancel' ? 'Đang hủy...' : `Hủy ${cancelSelected.length} buổi`}
                     </button>
                   </div>
-                  {activeBookings.map((item) => (
-                    <div key={`booking-${item.id}`} className="portal-card portal-card--list">
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <input
-                          type="checkbox"
-                          checked={cancelSelected.includes(item.id)}
-                          disabled={busyKey !== null}
-                          onChange={() => setCancelSelected((list) => toggleIn(list, item.id))}
-                          aria-label={`Chọn hủy ${item.className} ngày ${formatShortDate(item.sessionDate)}`}
-                          style={{ marginTop: 6 }}
-                        />
-                        <div>
-                          <div className="row-card__meta row-card__meta--inline">
-                            <span className="badge badge-success">Đã xác nhận chỗ</span>
-                            <span>Ngày học: {formatShortDate(item.sessionDate)}</span>
-                          </div>
-                          <h3 className="row-card__title">{item.className}</h3>
-                          <div className="row-card__meta row-card__meta--inline">
-                            <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
-                            {item.roomName && <span>{item.roomName}</span>}
+                  {activeBookings.map((item) => {
+                    const isSelected = cancelSelected.includes(item.id);
+                    return (
+                      <div
+                        key={`booking-${item.id}`}
+                        className={`portal-card portal-card--list member-booking-card ${isSelected ? 'is-selected' : ''}`}
+                      >
+                        <div className="member-booking-card__main">
+                          <label
+                            className="member-booking-card__select"
+                            title={isSelected ? 'Bỏ chọn buổi này' : 'Chọn để hủy buổi này'}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={busyKey !== null}
+                              onChange={() => setCancelSelected((list) => toggleIn(list, item.id))}
+                              aria-label={`Chọn hủy ${item.className} ngày ${formatShortDate(item.sessionDate)}`}
+                              className="member-booking-card__checkbox"
+                            />
+                            <span
+                              className={`member-booking-card__check-icon ${isSelected ? 'is-checked' : ''}`}
+                              aria-hidden="true"
+                            >
+                              <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </span>
+                          </label>
+
+                          <div className="member-booking-card__content">
+                            <div className="member-booking-card__header-line">
+                              <span className="badge badge-success member-booking-card__badge">
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="16 10 11 15 8 12" />
+                                </svg>
+                                <span>Đã xác nhận chỗ</span>
+                              </span>
+                              <span className="member-booking-card__divider" aria-hidden="true">|</span>
+                              <span className="member-booking-card__date">
+                                Ngày học: <strong>{formatShortDate(item.sessionDate)}</strong>
+                              </span>
+                            </div>
+
+                            <h3 className="row-card__title member-booking-card__title">{item.className}</h3>
+
+                            <div className="member-booking-card__footer-line">
+                              <span className="member-booking-card__meta-item">
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
+                              </span>
+                              {item.roomName && (
+                                <>
+                                  <span className="member-booking-card__divider" aria-hidden="true">|</span>
+                                  <span className="member-booking-card__meta-item">
+                                    <svg
+                                      width="17"
+                                      height="17"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden="true"
+                                    >
+                                      <path d="M6 7v10M18 7v10M3 9v6M21 9v6M6 12h12" />
+                                    </svg>
+                                    <span>{item.roomName}</span>
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
+
+                        <div className="member-booking-card__action">
+                          <button
+                            type="button"
+                            className="member-booking-card__cancel-btn"
+                            disabled={busyKey !== null}
+                            onClick={(event) => {
+                              cancelFocusRef.current = event.currentTarget;
+                              setCancelTarget({ id: item.id, className: item.className, kind: 'booking' });
+                            }}
+                          >
+                            {busyKey === `booking-${item.id}` ? 'Đang hủy...' : 'Hủy buổi này'}
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn-secondary btn-sm"
-                          disabled={busyKey !== null}
-                          onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: item.id, className: item.className, kind: 'booking' }); }}
-                        >
-                          {busyKey === `booking-${item.id}` ? 'Đang hủy...' : 'Hủy buổi này'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </>
               )}
 
@@ -809,24 +899,97 @@ export function MemberClassesPage() {
                 <>
                   <h3 className="row-card__title">Buổi học đã đặt chỗ ({activeEnrollments.length})</h3>
                   {activeEnrollments.map((item) => (
-                    <div key={item.id} className="portal-card portal-card--list">
-                      <div>
-                        <div className="row-card__meta row-card__meta--inline">
-                          <span className="badge badge-success">Đã xác nhận chỗ</span>
-                          {item.sessionDate && <span>Ngày học: {formatShortDate(item.sessionDate)}</span>}
+                    <div
+                      key={item.id}
+                      className="portal-card portal-card--list member-booking-card"
+                    >
+                      <div className="member-booking-card__main">
+                        <div
+                          className="member-booking-card__check-icon is-checked"
+                          aria-hidden="true"
+                        >
+                          <svg
+                            width="22"
+                            height="22"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
                         </div>
-                        <h3 className="row-card__title">{item.className}</h3>
-                        <div className="row-card__meta row-card__meta--inline">
-                          {item.startTime && item.endTime && <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>}
-                          <span>Đăng ký lúc: {item.enrolledAt.replace('T', ' ').slice(0, 16)}</span>
+
+                        <div className="member-booking-card__content">
+                          <div className="member-booking-card__header-line">
+                            <span className="badge badge-success member-booking-card__badge">
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="16 10 11 15 8 12" />
+                              </svg>
+                              <span>Đã xác nhận chỗ</span>
+                            </span>
+                            {item.sessionDate && (
+                              <>
+                                <span className="member-booking-card__divider" aria-hidden="true">|</span>
+                                <span className="member-booking-card__date">
+                                  Ngày học: <strong>{formatShortDate(item.sessionDate)}</strong>
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          <h3 className="row-card__title member-booking-card__title">{item.className}</h3>
+
+                          <div className="member-booking-card__footer-line">
+                            {item.startTime && item.endTime && (
+                              <span className="member-booking-card__meta-item">
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
+                              </span>
+                            )}
+                            <span className="member-booking-card__divider" aria-hidden="true">|</span>
+                            <span className="member-booking-card__meta-item">
+                              <span>Đăng ký lúc: {item.enrolledAt.replace('T', ' ').slice(0, 16)}</span>
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
+
+                      <div className="member-booking-card__action">
                         <button
                           type="button"
-                          className="btn-secondary btn-sm"
+                          className="member-booking-card__cancel-btn"
                           disabled={busyKey === `enroll-${item.id}`}
-                          onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: item.id, className: item.className, kind: 'enrollment' }); }}
+                          onClick={(event) => {
+                            cancelFocusRef.current = event.currentTarget;
+                            setCancelTarget({ id: item.id, className: item.className, kind: 'enrollment' });
+                          }}
                         >
                           {busyKey === `enroll-${item.id}` ? 'Đang hủy...' : 'Hủy đặt chỗ'}
                         </button>
