@@ -218,7 +218,6 @@ export function ManagerCoachAssignmentsPage() {
       <PageHeader
         eyebrow="Vận hành & Huấn luyện"
         title="Quản lý HLV & Học viên phụ trách"
-        subtitle="Theo dõi danh sách học viên, phân công và điều chuyển học viên giữa các huấn luyện viên trong trung tâm"
         actions={
           <button
             type="button"
@@ -244,22 +243,18 @@ export function ManagerCoachAssignmentsPage() {
         <div className="coach-stat-card">
           <span className="coach-stat-card__label">Tổng số Huấn luyện viên</span>
           <span className="coach-stat-card__value">{data?.stats.activeCoaches ?? 0}</span>
-          <span className="coach-stat-card__hint">Đang làm việc tại trung tâm</span>
         </div>
         <div className="coach-stat-card">
           <span className="coach-stat-card__label">Tổng học viên đang theo kèm</span>
           <span className="coach-stat-card__value">{data?.stats.totalAssignedStudents ?? 0}</span>
-          <span className="coach-stat-card__hint">Đang có HLV phụ trách</span>
         </div>
         <div className="coach-stat-card">
           <span className="coach-stat-card__label">Học viên tập 1:1 (PT)</span>
           <span className="coach-stat-card__value">{data?.stats.totalPtStudents ?? 0}</span>
-          <span className="coach-stat-card__hint">Lịch tập cá nhân</span>
         </div>
         <div className="coach-stat-card">
           <span className="coach-stat-card__label">Theo giáo án riêng</span>
           <span className="coach-stat-card__value">{data?.stats.totalPlanStudents ?? 0}</span>
-          <span className="coach-stat-card__hint">Kế hoạch rèn luyện cá nhân hóa</span>
         </div>
       </section>
 

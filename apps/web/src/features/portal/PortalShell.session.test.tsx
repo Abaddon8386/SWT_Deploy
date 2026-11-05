@@ -89,14 +89,18 @@ it('remounts the portal for a new identity so the previous account never leaks i
   try {
     await act(async () => root.render(<RouterProvider router={router} />));
     const before = host.querySelector('h1')?.getAttribute('data-draft');
-    expect(host.querySelector('.portal-workspace-role')?.textContent).toContain('Hội viên');
+    // Vai trò chỉ hiện trong menu avatar, không còn ở thanh trên cùng.
+    expect(host.querySelector('.portal-workspace-role')).toBeNull();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!.click());
+    expect(host.querySelector('.portal-avatar-dropdown .portal-workspace-role')?.textContent).toContain('Hội viên');
 
     await act(async () => changeSessionFromAnotherTab('member02', 'MEMBER'));
     expect(host.querySelector('.portal-account-name')?.textContent).toContain('member02');
     expect(host.querySelector('h1')?.getAttribute('data-draft')).not.toBe(before);
 
     await act(async () => changeSessionFromAnotherTab('coach01', 'COACH'));
-    expect(host.querySelector('.portal-workspace-role')?.textContent).toContain('Huấn luyện viên');
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!.click());
+    expect(host.querySelector('.portal-avatar-dropdown .portal-workspace-role')?.textContent).toContain('Huấn luyện viên');
     expect(host.querySelector('.portal-account-name')?.textContent).toContain('coach01');
     expect(host.querySelector('.portal-account-name')?.textContent).not.toContain('member');
   } finally {

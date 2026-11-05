@@ -223,11 +223,10 @@ export function ManagerEquipmentPage() {
   const standardGymRooms = rooms.filter(isStandardGymRoom);
 
   return (
-    <div className="portal-page">
+    <div className="portal-container">
       <PageHeader
         eyebrow="Vận hành cơ sở vật chất"
         title="Quản lý máy móc & thiết bị phòng gym"
-        subtitle="Quản lý chi tiết danh mục thiết bị, phân bổ khu vực Gym Tiêu chuẩn và Gym VIP Platinum"
         actions={
           <button
             type="button"

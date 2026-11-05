@@ -899,11 +899,6 @@ export function StaffClassesPage() {
       <PageHeader
         eyebrow="Huấn luyện"
         title={isManager ? 'Quản lý lớp học & xếp lịch' : 'Lịch học trung tâm'}
-        subtitle={
-          !isManager
-            ? 'Chế độ xem lịch học dành cho Lễ tân & Huấn luyện viên (Chỉ Quản lý trung tâm mới được tạo, sửa, đổi lịch hoặc xóa lớp học).'
-            : undefined
-        }
         actions={
           isManager ? (
             <button

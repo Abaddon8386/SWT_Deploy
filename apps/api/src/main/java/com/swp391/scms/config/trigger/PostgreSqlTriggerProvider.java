@@ -24,7 +24,6 @@ public class PostgreSqlTriggerProvider implements DatabaseTriggerProvider {
     @Override
     public void applyTriggers(JdbcTemplate jdbcTemplate) {
         CenterCheckinSchemaUpgrade.relaxMemberNullability(jdbcTemplate);
-        CenterCheckinSchemaUpgrade.upgradeAvatarUrlType(jdbcTemplate);
         ClassPathResource resource = new ClassPathResource("db/triggers/postgresql-triggers.sql");
         if (!resource.exists()) {
             throw new IllegalStateException("Mandatory PostgreSQL trigger script is missing");

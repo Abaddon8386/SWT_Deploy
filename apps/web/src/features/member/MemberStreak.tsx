@@ -70,7 +70,6 @@ export function MemberStreak() {
       </svg>
       <div className="member-streak__caption"><span>{data.workoutDays} ngày tập</span><span>13 tuần gần nhất</span></div>
       {data.workoutDays === 0 && <p className="member-streak__hint">Check-in để bắt đầu chuỗi ngày tập.</p>}
-      {data.currentStreak > 0 && !activeDates.has(data.endDate) && <p className="member-streak__hint">Check-in hôm nay để nối dài streak.</p>}
     </>}
   </section>;
 }

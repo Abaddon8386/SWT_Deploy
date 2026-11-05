@@ -41,7 +41,7 @@ public class User {
     private String gender;
 
     @Column(name = "avatar_url", columnDefinition = "TEXT")
-    private String avatarUrl = DEFAULT_AVATAR_URL;
+    private String avatarUrl;
 
     @Column(length = 255)
     private String address;
@@ -105,9 +105,7 @@ public class User {
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
 
-    public String getAvatarUrl() {
-        return avatarUrl != null && !avatarUrl.isBlank() ? avatarUrl : DEFAULT_AVATAR_URL;
-    }
+    public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
     public String getAddress() { return address; }

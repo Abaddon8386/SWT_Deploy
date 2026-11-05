@@ -75,7 +75,7 @@ export function StaffAccountsPage() {
   }
 
   return <div className="portal-container">
-    <PageHeader eyebrow="Quản lý" title="Tài khoản nhân sự" subtitle="Tạo tài khoản huấn luyện viên và lễ tân bằng email họ sẽ dùng để đăng nhập." />
+    <PageHeader eyebrow="Quản lý" title="Tài khoản nhân sự" />
     <section className="portal-card" aria-labelledby="staff-create-heading">
       <h2 id="staff-create-heading" className="portal-card-title">Thêm nhân sự</h2>
       <form onSubmit={event => void submit(event)}>

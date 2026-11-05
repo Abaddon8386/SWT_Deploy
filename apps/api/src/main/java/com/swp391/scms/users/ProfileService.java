@@ -222,7 +222,7 @@ public class ProfileService {
                 user.getPhone(),
                 user.getDob(),
                 user.getGender(),
-                user.getAvatarUrl(),
+                user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank() ? user.getAvatarUrl() : User.DEFAULT_AVATAR_URL,
                 user.getAddress(),
                 member != null ? member.getMembershipCode() : null,
                 member != null ? member.getHealthNotes() : null,

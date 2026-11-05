@@ -568,7 +568,6 @@ export function MemberPackagesPage() {
       <PageHeader
         eyebrow="Hội viên"
         title="Gói tập"
-        subtitle="Chọn gói, gia hạn và theo dõi yêu cầu của bạn."
       />
 
       {/* Unified Skeleton for Status Area (replaces piecemeal text lines) */}
@@ -632,9 +631,6 @@ export function MemberPackagesPage() {
               <h2 className="portal-card-title" style={{ marginTop: 6, fontSize: '1.25rem' }}>
                 Trải nghiệm 3 ngày tập miễn phí với đặc quyền Gold
               </h2>
-              <p className="row-card__meta" style={{ marginTop: 4 }}>
-                Xác thực số Căn cước công dân (CCCD) để kích hoạt ngay 3 ngày tập miễn phí tại toàn bộ cơ sở và lớp học Gold.
-              </p>
             </div>
             <button
               type="button"

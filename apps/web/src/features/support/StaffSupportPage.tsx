@@ -135,7 +135,7 @@ export function StaffSupportPage() {
     void actOnTicket(async () => { const updated = await escalateSupportTicket(ticket.id, reason); if (alive.current) { setEscalating(false); setEscalationReason(''); } return updated; }, undefined, 'Đã chuyển khiếu nại lên quản lý.');
   }
   return <div className="portal-container member-support staff-support">
-    <PageHeader eyebrow={isManager ? 'Quản lý' : 'Lễ tân'} title={isManager ? 'Khiếu nại chuyển lên quản lý' : 'Hộp thư hỗ trợ'} subtitle={isManager ? 'Các khiếu nại lễ tân chưa xử lý được. Xem lý do chuyển cấp, phản hồi và quyết định.' : 'Tiếp nhận và xử lý khiếu nại của hội viên. Việc lễ tân không xử lý được thì chuyển lên quản lý.'} />
+    <PageHeader eyebrow={isManager ? 'Quản lý' : 'Lễ tân'} title={isManager ? 'Khiếu nại chuyển lên quản lý' : 'Hộp thư hỗ trợ'} />
     <p role="status" className="member-support-context">{connections[connection]}</p>
     <section className="portal-card" ref={listFocus} tabIndex={-1}>
       <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">Trạng thái</label><select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">Tất cả</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><RefreshButton disabled={loading} onClick={() => void loadList()} /></div>

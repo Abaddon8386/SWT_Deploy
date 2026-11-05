@@ -385,9 +385,6 @@ export function ManagerReportsPage() {
             <h2 className="portal-card-title">
               Duyệt yêu cầu hủy gói tập &amp; Hoàn tiền về Ví ({cancellationRequests.filter((r) => r.status === 'PENDING').length})
             </h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
-              Yêu cầu do Lễ tân tiếp nhận từ hội viên tại quầy. Khi phê duyệt, gói tập sẽ được hủy và số tiền hoàn sẽ cộng trực tiếp vào Ví hội viên.
-            </p>
           </div>
           <RefreshButton label="Làm mới yêu cầu hủy" onClick={() => void loadCancellations()} disabled={loadingCancellations} />
         </div>
@@ -687,7 +684,6 @@ export function ManagerReportsPage() {
         <div className="portal-card">
           <div className="portal-card-header" style={{ marginBottom: '16px' }}>
             <h2 className="portal-card-title">Giao dịch gần đây</h2>
-            <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>10 thanh toán thành công gần nhất trong kỳ</span>
           </div>
 
           {summary.recentTransactions.length === 0 ? (

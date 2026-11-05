@@ -74,7 +74,7 @@ export function MemberInvoicesPage() {
 
   return (
     <div className="portal-container member-invoices">
-      <PageHeader eyebrow="Hội viên" title="Giao dịch & hóa đơn" subtitle="Theo dõi khoản chờ thanh toán và hóa đơn của bạn." />
+      <PageHeader eyebrow="Hội viên" title="Giao dịch & hóa đơn" />
       {!loading && !error && pending.length > 0 && <section className="portal-card stack" aria-label="Khoản chờ thanh toán">
         <h2 className="portal-card-title">Khoản chờ thanh toán</h2>
         {pending.map(payment => <div className="row-card" key={payment.id}><span>Giao dịch #{payment.id} · {formatPrice(payment.amount)}</span><VnpayPayButton target={{ paymentId: payment.id }} onPaid={() => setReload((n) => n + 1)} /></div>)}

@@ -5,7 +5,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
-import { MemberTimetable } from './components/MemberTimetable';
+import { MemberCalendar } from './components/MemberCalendar';
 import { centerNowParts, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { getMySubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
@@ -402,7 +402,6 @@ export function MemberClassesPage() {
       <PageHeader
         eyebrow="Hội viên"
         title="Lịch học & đặt chỗ"
-        subtitle="Đặt lịch tập cùng Huấn luyện viên, quản lý chỗ ngồi theo thời gian thực."
       />
 
       <div className="portal-tabs" role="tablist" aria-label="Lịch học" style={{ marginBottom: 18 }}>
@@ -413,7 +412,7 @@ export function MemberClassesPage() {
           className={`portal-tab ${tab === 'timetable' ? 'active' : ''}`}
           onClick={() => handleSelectTab('timetable')}
         >
-          Thời khóa biểu
+          Lịch của tôi
         </button>
         <button
           type="button"
@@ -460,27 +459,7 @@ export function MemberClassesPage() {
       )}
 
       {tab === 'timetable' ? (
-        <div className="stack">
-          <div className="filter-chips tt-chips" role="group" aria-label="Lọc theo bộ môn">
-            {['ALL', ...disciplines].map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
-                aria-pressed={discipline === value}
-                onClick={() => setDiscipline(value)}
-              >
-                {value === 'ALL' ? 'Tất cả bộ môn' : value}
-              </button>
-            ))}
-          </div>
-          {hasActivePackage === false && (
-            <p className="row-card__meta" style={{ margin: 0 }}>
-              Cần gói tập đang hoạt động để đặt chỗ. <Link className="member-classes-package-link" to="/member/packages">Xem gói tập</Link>
-            </p>
-          )}
-          <MemberTimetable discipline={discipline} onBookingChange={() => { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }} />
-        </div>
+        <MemberCalendar onBookingChange={() => { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }} />
       ) : tab === 'coach_booking' ? (
         <MemberCoachBookingView onBookingSuccess={() => { setRetry(v => v + 1); setMyScheduleRetry(v => v + 1); }} />
       ) : tab === 'schedule' ? (
