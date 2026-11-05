@@ -562,7 +562,7 @@ Notification `type="order"`, `relatedEntityType="product_order"`, `actionPath` =
 **Interfaces:**
 - Produces: `GeoService.provinces(): List<Region>`, `GeoService.wards(String provinceCode): List<Region>`, `GeoService.resolve(String provinceCode, String wardCode): Optional<ResolvedRegion>`; `record Region(String code, String name)`, `record ResolvedRegion(String provinceCode, String provinceName, String wardCode, String wardName)`.
 
-- [ ] **Step 1: Sinh dữ liệu.** Viết script tải danh mục **sau sáp nhập 01/07/2025** một lần và ghi JSON gọn:
+- [x] **Step 1: Sinh dữ liệu.** Viết script tải danh mục **sau sáp nhập 01/07/2025** một lần và ghi JSON gọn:
 
 ```js
 // scripts/generate-vn-admin-units.mjs — chạy: node scripts/generate-vn-admin-units.mjs
@@ -584,7 +584,7 @@ console.log('provinces', provinces.length, 'wards', provinces.reduce((n, p) => n
 ```
 Nếu nguồn không trả đúng 34 tỉnh/thành hoặc không truy cập được: **dừng và hỏi người dùng nguồn dữ liệu chính thức** (ví dụ danh mục của Tổng cục Thống kê). Không tự gõ danh sách, không dùng dữ liệu 63 tỉnh cũ.
 
-- [ ] **Step 2: Viết test thất bại**
+- [x] **Step 2: Viết test thất bại**
 
 ```java
 package com.swp391.scms.shop;
@@ -613,8 +613,8 @@ class GeoServiceTest {
 }
 ```
 
-- [ ] **Step 3: Chạy** `./mvnw.cmd -q -o test -Dtest=GeoServiceTest` → FAIL (class chưa có).
-- [ ] **Step 4: Cài đặt**
+- [x] **Step 3: Chạy** `./mvnw.cmd -q -o test -Dtest=GeoServiceTest` → FAIL (class chưa có).
+- [x] **Step 4: Cài đặt**
 
 ```java
 package com.swp391.scms.shop.service;
@@ -671,7 +671,7 @@ Controller `PublicGeoController` (`@RequestMapping("/api/v1/public/geo")`, `GET 
 ```
 (Thêm luôn các matcher public của Task 3–4 ở đây để chỉ sửa SecurityConfig một lần.)
 
-- [ ] **Step 5: Chạy lại test** → PASS. Chạy cả `./mvnw.cmd -q -o test` để chắc `DatabasePolicyTest`/`DatabaseProfilesTest` vẫn xanh.
+- [x] **Step 5: Chạy lại test** → PASS. Chạy cả `./mvnw.cmd -q -o test` để chắc `DatabasePolicyTest`/`DatabaseProfilesTest` vẫn xanh.
 - [ ] **Step 6: Commit** `feat(shop): add 2-level Vietnam administrative units and public geo API`.
 
 ## Task 2: Entity, repository sản phẩm + validator ảnh
@@ -687,7 +687,7 @@ Controller `PublicGeoController` (`@RequestMapping("/api/v1/public/geo")`, `GET 
 **Interfaces:**
 - Produces: `enum ProductGoal { muscle_gain, recovery, energy, weight_management, wellness }`; `enum ProductForm { powder, capsule, tablet, liquid, bar, other }`; `ProductVariantRepository.findAllByIdInForUpdate(Collection<Long> ids): List<ProductVariant>` (PESSIMISTIC_WRITE, `order by v.id`); `ProductRepository.findBySlugAndActiveTrue(String)`, `ProductRepository.searchPublic(...)`; `ImageDataUrlValidator.validate(String dataUrl, long maxBytes): ValidatedImage(String contentType, byte[] bytes)`.
 
-- [ ] **Step 1: Test thất bại cho validator** (magic bytes, không chỉ prefix):
+- [x] **Step 1: Test thất bại cho validator** (magic bytes, không chỉ prefix):
 
 ```java
 class ImageDataUrlValidatorTest {
@@ -707,9 +707,9 @@ class ImageDataUrlValidatorTest {
     }
 }
 ```
-- [ ] **Step 2: Chạy** → FAIL.
-- [ ] **Step 3: Cài đặt validator** — chỉ chấp nhận `image/jpeg` (FF D8 FF), `image/png` (89 50 4E 47 0D 0A 1A 0A), `image/webp` (`RIFF....WEBP`); decode base64 an toàn (`IllegalArgumentException` → lỗi); kích thước sau decode ≤ `maxBytes`; ném `BadRequestException("PRODUCT_IMAGE_INVALID","error.shop.product_image_invalid",null,"Invalid image")`. Avatar (nếu được phép sửa `ProfileService`) truyền mã lỗi/khóa hiện có của nó qua overload `validate(dataUrl, maxBytes, errorCode, messageKey)`.
-- [ ] **Step 4: Entity** — mẫu cho biến thể (các entity khác theo bảng B1, getter/setter thường như entity hiện có, `@Table(name=…)` bắt buộc để RLS bật):
+- [x] **Step 2: Chạy** → FAIL.
+- [x] **Step 3: Cài đặt validator** — chỉ chấp nhận `image/jpeg` (FF D8 FF), `image/png` (89 50 4E 47 0D 0A 1A 0A), `image/webp` (`RIFF....WEBP`); decode base64 an toàn (`IllegalArgumentException` → lỗi); kích thước sau decode ≤ `maxBytes`; ném `BadRequestException("PRODUCT_IMAGE_INVALID","error.shop.product_image_invalid",null,"Invalid image")`. Avatar (nếu được phép sửa `ProfileService`) truyền mã lỗi/khóa hiện có của nó qua overload `validate(dataUrl, maxBytes, errorCode, messageKey)`.
+- [x] **Step 4: Entity** — mẫu cho biến thể (các entity khác theo bảng B1, getter/setter thường như entity hiện có, `@Table(name=…)` bắt buộc để RLS bật):
 
 ```java
 @Entity
@@ -750,9 +750,9 @@ Repository khóa:
 @Query("select v from ProductVariant v join fetch v.product where v.id in :ids order by v.id")
 List<ProductVariant> findAllByIdInForUpdate(@Param("ids") Collection<Long> ids);
 ```
-- [ ] **Step 5: Test mapping** `ProductEntityMappingTest`: `pricePerServing()` (1.290.000 / 68 → 18.971), null khi thiếu số lần dùng; `Product` mặc định `active=true`, `featured=false`.
-- [ ] **Step 6: RLS cho `product_goals`** — đọc `PostgreSqlDataSecurityInitializer`: nếu chỉ quét `@Table`/`@JoinTable`, thêm nhánh `CollectionTable collection = field.getAnnotation(CollectionTable.class)` giống `JoinTable`, kèm test đơn vị cho hàm thu thập bảng (tách hàm thu thập thành package-private static để test được).
-- [ ] **Step 7: Chạy** test task + `./mvnw.cmd -q -o test` → PASS.
+- [x] **Step 5: Test mapping** `ProductEntityMappingTest`: `pricePerServing()` (1.290.000 / 68 → 18.971), null khi thiếu số lần dùng; `Product` mặc định `active=true`, `featured=false`.
+- [x] **Step 6: RLS cho `product_goals`** — đọc `PostgreSqlDataSecurityInitializer`: nếu chỉ quét `@Table`/`@JoinTable`, thêm nhánh `CollectionTable collection = field.getAnnotation(CollectionTable.class)` giống `JoinTable`, kèm test đơn vị cho hàm thu thập bảng (tách hàm thu thập thành package-private static để test được).
+- [x] **Step 7: Chạy** test task + `./mvnw.cmd -q -o test` → PASS.
 - [ ] **Step 8: Commit** `feat(shop): add product catalog entities and shared image validation`.
 
 ## Task 3: API danh mục sản phẩm công khai
@@ -769,7 +769,7 @@ List<ProductVariant> findAllByIdInForUpdate(@Param("ids") Collection<Long> ids);
 - Consumes: Task 2 repositories.
 - Produces: `ProductCatalogService.list(String q, ProductGoal goal, String categorySlug, boolean inStock, boolean featuredFirst, String sort, int page, int size): Page<ProductSummaryDto>` (`featuredFirst=true` → `featured desc` trước thứ tự `sort`); `detail(String slug): ProductDetailDto`; `image(Long id): ProductImage`; `categories(): List<CategoryDto>`; `config(): ShopConfigDto`; `ProductMapper.imageUrl(ProductImage)`.
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```java
 @Test void detailHidesInactiveProductsAndInactiveVariants() {
@@ -787,8 +787,8 @@ List<ProductVariant> findAllByIdInForUpdate(@Param("ids") Collection<Long> ids);
 @Test void sortByPricePerServingPutsProductsWithoutServingsLast() { … }
 ```
 (viết đủ thân 2 test sau với dữ liệu cụ thể như test đầu.)
-- [ ] **Step 2: Chạy** → FAIL.
-- [ ] **Step 3: Cài đặt.** Truy vấn lọc bằng JPQL trong `ProductRepository` (không lọc trong bộ nhớ):
+- [x] **Step 2: Chạy** → FAIL.
+- [x] **Step 3: Cài đặt.** Truy vấn lọc bằng JPQL trong `ProductRepository` (không lọc trong bộ nhớ):
 
 ```java
 @Query("""
@@ -803,8 +803,8 @@ Page<Product> searchPublic(@Param("q") String q, @Param("goal") ProductGoal goal
                            @Param("inStock") boolean inStock, Pageable pageable);
 ```
 Sắp xếp: `newest` → `Sort.by(desc createdAt, desc id)`; `price_asc/price_desc/price_per_serving` → lấy trang id đã lọc với `Sort.unsorted()` toàn bộ (giới hạn 500 sản phẩm active — ghi assert), tính `minPrice`/`pricePerServing` rồi sắp trong service và cắt trang; ghi comment lý do (giá nằm ở biến thể). Nạp biến thể/ảnh đầu/nutrient highlight theo lô bằng `findAllByProductIdIn` để tránh N+1. Endpoint ảnh trả `ResponseEntity<byte[]>` với `CacheControl.maxAge(1, DAYS).cachePublic()` và `eTag("\"" + id + "-" + createdAt.toEpochSecond + "\"")`; 404 nếu sản phẩm không active.
-- [ ] **Step 4: Controller test** kiểm tra `GET /api/v1/public/products?sort=bogus` → 400 (`sort` validate bằng whitelist), `size=100` → kẹp 48.
-- [ ] **Step 5: Chạy** → PASS; commit `feat(shop): public product catalog API`.
+- [x] **Step 4: Controller test** kiểm tra `GET /api/v1/public/products?sort=bogus` → 400 (`sort` validate bằng whitelist), `size=100` → kẹp 48.
+- [x] **Step 5: Chạy** → PASS; commit `feat(shop): public product catalog API`.
 
 ## Task 4: Báo giá giỏ hàng (công khai)
 
@@ -816,7 +816,7 @@ Sắp xếp: `newest` → `Sort.by(desc createdAt, desc id)`; `price_asc/price_d
 **Interfaces:**
 - Produces: `ShopPricing.shippingFee(String fulfillment, BigDecimal subtotal): BigDecimal`; `static QuoteService.merge(List<QuoteLineRequest>): LinkedHashMap<Long,Integer>` (gộp trùng, ném `CART_EMPTY`/`CART_TOO_LARGE`); `QuoteService.quote(QuoteRequest): QuoteDto` (không khóa, read-only) và `QuoteService.price(List<QuoteLineRequest>, List<ProductVariant> lockedVariants, String fulfillment): Priced` dùng lại trong Task 6 — `record Priced(List<PricedLine> lines, BigDecimal subtotal, BigDecimal shippingFee, BigDecimal total, boolean valid)`; `record PricedLine(ProductVariant variant, int quantity, BigDecimal lineTotal, String problem)`.
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```java
 @Test void shippingIsFreeAboveThresholdAndForPickup() {
@@ -833,7 +833,7 @@ Sắp xếp: `newest` → `Sort.by(desc createdAt, desc id)`; `price_asc/price_d
 }
 @Test void unknownOrInactiveVariantsAreReportedNotThrown() { /* NOT_FOUND / INACTIVE, valid=false */ }
 ```
-- [ ] **Step 2–4:** chạy FAIL → cài đặt → PASS. Quy tắc: gộp trùng `variantId`; `quantity` dòng = min(requested, stock) khi thiếu; tổng > 100.000.000 → `CART_TOO_LARGE`; `fulfillment` khác `delivery|pickup` → `FULFILLMENT_INVALID`. Tiền làm tròn đơn vị đồng (`setScale(0)`).
+- [x] **Step 2–4:** chạy FAIL → cài đặt → PASS. Quy tắc: gộp trùng `variantId`; `quantity` dòng = min(requested, stock) khi thiếu; tổng > 100.000.000 → `CART_TOO_LARGE`; `fulfillment` khác `delivery|pickup` → `FULFILLMENT_INVALID`. Tiền làm tròn đơn vị đồng (`setScale(0)`).
 - [ ] **Step 5: Commit** `feat(shop): server-side cart quote`.
 
 ## Task 5: Sổ địa chỉ giao hàng
@@ -847,7 +847,7 @@ Sắp xếp: `newest` → `Sort.by(desc createdAt, desc id)`; `price_asc/price_d
 - Consumes: `GeoService.resolve`, `MemberRepository.findByUserIdForUpdate`.
 - Produces: `AddressService.list(Long userId)`, `create(Long userId, AddressRequest)`, `update(Long userId, Long id, AddressRequest)`, `makeDefault(Long userId, Long id)`, `delete(Long userId, Long id)`, `createIfRoom(Long userId, AddressRequest): Optional<AddressDto>` (trả rỗng thay vì ném lỗi khi sổ đã đủ 5 — dùng khi “Lưu vào sổ địa chỉ” lúc đặt hàng), `AddressService.snapshot(Long userId, Long addressId): ShippingSnapshot` và `AddressService.snapshot(AddressRequest): ShippingSnapshot` — `record ShippingSnapshot(String recipientName, String phone, String provinceName, String wardName, String streetLine, String note)`.
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```java
 @Test void firstAddressBecomesDefaultAndSixthIsRejected() { … ADDRESS_LIMIT_REACHED … }
@@ -859,7 +859,7 @@ Sắp xếp: `newest` → `Sort.by(desc createdAt, desc id)`; `price_asc/price_d
 @Test void anotherMembersAddressIsNotFound() { /* id thuộc member 2 → ADDRESS_NOT_FOUND (không lộ 403) */ }
 @Test void phoneIsNormalisedTo0Prefix() { /* "+84901234567" → "0901234567" */ }
 ```
-- [ ] **Step 2–4:** FAIL → cài đặt (khóa `members.findByUserIdForUpdate(userId)` trước mọi ghi để giữ bất biến 1 mặc định; tên tỉnh/phường lưu từ `GeoService`, **không** tin tên client gửi) → PASS.
+- [x] **Step 2–4:** FAIL → cài đặt (khóa `members.findByUserIdForUpdate(userId)` trước mọi ghi để giữ bất biến 1 mặc định; tên tỉnh/phường lưu từ `GeoService`, **không** tin tên client gửi) → PASS.
 - [ ] **Step 5: Commit** `feat(shop): member shipping address book`.
 
 ## Task 6: Đơn hàng — tạo, xem, hủy, hết hạn
@@ -887,7 +887,7 @@ Sắp xếp: `newest` → `Sort.by(desc createdAt, desc id)`; `price_asc/price_d
   - `ProductOrderService.cancelInternal(ProductOrder order, String reason, boolean restock, User actor)` (package-visible, Task 7–8 dùng; xử lý hoàn Ví qua `ProductOrderRefunds` ở Task 7)
   - `ProductOrderRepository.findByIdForUpdate(Long)`, `findByMember_UserIdAndClientRequestId(Long, String)`, `findExpiredUnpaid(LocalDateTime now)`.
 
-- [ ] **Step 1: Test thất bại** (khung dữ liệu như `CourtBookingServiceTest`, `Clock.fixed(2026-11-05T07:00Z)`):
+- [x] **Step 1: Test thất bại** (khung dữ liệu như `CourtBookingServiceTest`, `Clock.fixed(2026-11-05T07:00Z)`):
 
 ```java
 @Test void createReservesStockSnapshotsPricesAndSetsPaymentWindow() {
@@ -911,8 +911,8 @@ Sắp xếp: `newest` → `Sort.by(desc createdAt, desc id)`; `price_asc/price_d
 @Test void otherMembersOrderIsNotFound() { … ORDER_NOT_FOUND … }
 ```
 `OrderStatusTest`: `completed.terminal()` và `cancelled.terminal()` true, còn lại false.
-- [ ] **Step 2: Chạy** → FAIL.
-- [ ] **Step 3: Cài đặt `create`** (một `@Transactional`; thứ tự khóa cố định để tránh deadlock: **member → biến thể theo id tăng dần**):
+- [x] **Step 2: Chạy** → FAIL.
+- [x] **Step 3: Cài đặt `create`** (một `@Transactional`; thứ tự khóa cố định để tránh deadlock: **member → biến thể theo id tăng dần**):
 
 ```java
 @Transactional
@@ -964,7 +964,7 @@ public CreateResult create(AuthenticatedPrincipal principal, CreateOrderRequest 
 `expireUnpaid`: `findExpiredUnpaid(now)` = `status='pending_payment' and paymentDueAt < :now`; với mỗi đơn (mỗi đơn một transaction riêng qua `TransactionTemplate` để một đơn lỗi không chặn đơn khác): khóa member → khóa đơn → nếu còn pending → `guard.productOrder(id)` (ném → bỏ qua) → `cancelInternal(order, messages.getMessage("shop.auto_cancel.unpaid"), true, null)`. `ProductOrderExpiryScheduler` sao chép đúng khuôn `CourtBookingExpiryScheduler` với property `app.shop.expiry-interval-ms:60000`.
 
 `canCancel`/`canPay` tính ở mapper: `canPay = pending_payment && paymentMethod=online && paymentDueAt > now`; `canCancel` (member) = `pending_payment || paid`.
-- [ ] **Step 4: Controller** `ShopOrderController` (`/api/v1/shop/orders`, `@PreAuthorize("hasRole('MEMBER')")`): `POST` trả 201 khi `created`, 200 khi lặp; `GET` list/detail; `POST /{id}/cancel`.
+- [x] **Step 4: Controller** `ShopOrderController` (`/api/v1/shop/orders`, `@PreAuthorize("hasRole('MEMBER')")`): `POST` trả 201 khi `created`, 200 khi lặp; `GET` list/detail; `POST /{id}/cancel`.
 - [ ] **Step 5: Chạy** → PASS. **Commit** `feat(shop): product orders with stock reservation, idempotency and expiry`.
 
 ## Task 7: Thanh toán — VNPay, Ví, thu tại quầy, hoàn tiền, hóa đơn (Finance — xin phép Phong)
@@ -982,7 +982,7 @@ public CreateResult create(AuthenticatedPrincipal principal, CreateOrderRequest 
 - Consumes: `ProductOrderRepository.findByIdForUpdate`, `WalletService.creditRefund`, `NotificationService.send(...)`.
 - Produces: `ProductOrderPayments.markPaid(Long orderId, String method)` (idempotent: đơn đã `paid` thì bỏ qua), `ProductOrderPayments.requirePayable(Long orderId): ProductOrder` (ném `VNPAY_TARGET_UNAVAILABLE` nếu không `pending_payment` hoặc là `counter`), `ProductOrderRefunds.refundIfPaid(ProductOrder order, String reason): BigDecimal`, `VnpayPaymentGuard.productOrder(Long orderId)`.
 
-- [ ] **Step 1: Test thất bại** (thêm vào test VNPay hiện có, theo mẫu test court booking của nó):
+- [x] **Step 1: Test thất bại** (thêm vào test VNPay hiện có, theo mẫu test court booking của nó):
 
 ```java
 @Test void checkoutForProductOrderCreatesPendingPaymentWithOrderTotal() {
@@ -998,8 +998,8 @@ public CreateResult create(AuthenticatedPrincipal principal, CreateOrderRequest 
 @Test void guardBlocksWhileProductOrderAttemptIsPendingAndUnexpired() { … }
 ```
 `ProductOrderRefundsTest`: đơn đã trả → `creditRefund(1L, total, "ORDER_REFUND_9", reason)`, payment `refunded`, `refundedAmount=total`, trả về số tiền; đơn chưa trả → 0, không gọi Ví; gọi hai lần → hoàn một lần (kiểm `payment.status`).
-- [ ] **Step 2: Chạy** → FAIL.
-- [ ] **Step 3: Cài đặt** — các thay đổi trong `VnpayPaymentService` (giữ nguyên style file):
+- [x] **Step 2: Chạy** → FAIL.
+- [x] **Step 3: Cài đặt** — các thay đổi trong `VnpayPaymentService` (giữ nguyên style file):
 
 ```java
 // resolveTargetPayment: thêm productOrderId vào mảng targets
@@ -1039,7 +1039,7 @@ if (order.getShippingFee().signum() > 0) { /* dòng "finance.invoice.item.shippi
 `ProductOrderPayments.markPaid`: khóa đơn; nếu `paid` trở lên → return; nếu `cancelled` (IPN muộn sau hủy) → **không** chuyển trạng thái, gọi `ProductOrderRefunds` để trả tiền vào Ví và gửi thông báo hoàn tiền (khách không mất tiền); ngược lại `status=paid`, `paidAt=now`, thông báo hội viên `notifications.shop.paid` + lễ tân `notifications.shop.staff_new_order` (người nhận lấy theo cách `StaffInternalRequestService` đang dùng; chỉ user active, `deleted_at is null`).
 
 `ProductOrderRefunds.refundIfPaid`: tìm payment `success` của đơn; `walletService.creditRefund(memberUserId, amount, "ORDER_REFUND_" + order.getId(), reason)`; `payment.setStatus("refunded"); payment.setRefundedAmount(amount)`. Trước khi viết, đọc `PaymentService` phần refund (`cancelLinkedTargetsOnRefund`, xử lý hóa đơn khi hoàn) và **làm giống** cách nó xử lý hóa đơn đã phát hành.
-- [ ] **Step 4: Thu tại quầy** — `ProductOrderStaffService.counterPayment` (Task 8) tạo `Payment{member, productOrderId, amount=total, method in (cash,pos,bank_transfer), status=success, paidAt, receivedBy=staff}`, gọi `invoices.autoIssueInvoiceForPayment`, rồi `markPaid(orderId, method)`. Viết test của nó ở Task 8.
+- [x] **Step 4: Thu tại quầy** — `ProductOrderStaffService.counterPayment` (Task 8) tạo `Payment{member, productOrderId, amount=total, method in (cash,pos,bank_transfer), status=success, paidAt, receivedBy=staff}`, gọi `invoices.autoIssueInvoiceForPayment`, rồi `markPaid(orderId, method)`. Viết test của nó ở Task 8.
 - [ ] **Step 5: Chạy** toàn bộ `./mvnw.cmd -q -o test` (các test VNPay/Wallet/Invoice cũ phải còn xanh sau khi đổi `CheckoutRequest`). **Commit** `feat(finance): accept product orders as a VNPay/wallet payment target`.
 
 ## Task 8: Lễ tân xử lý đơn
@@ -1053,7 +1053,7 @@ if (order.getShippingFee().signum() > 0) { /* dòng "finance.invoice.item.shippi
 - Consumes: `ProductOrderService.cancelInternal`, `ProductOrderPayments.markPaid`, `InvoiceService.autoIssueInvoiceForPayment`, `NotificationService`.
 - Produces: `list(String status, String q, int page, int size)`, `counts()`, `get(Long id)`, `startProcessing(AuthenticatedPrincipal, Long)`, `ship(AuthenticatedPrincipal, Long, ShipRequest)`, `readyForPickup(...)`, `complete(...)`, `counterPayment(AuthenticatedPrincipal, Long, CounterPaymentRequest)`, `cancel(AuthenticatedPrincipal, Long, StaffCancelRequest)` — tất cả trả `OrderDto` (kèm `member`).
 
-- [ ] **Step 1: Test thất bại** — một test cho mỗi hàng của bảng B2 do staff thực hiện, cộng:
+- [x] **Step 1: Test thất bại** — một test cho mỗi hàng của bảng B2 do staff thực hiện, cộng:
 
 ```java
 @Test void shipRequiresDeliveryProcessingAndTrackingNumber() { … pickup → ORDER_INVALID_TRANSITION; tracking "" → validation … }
@@ -1065,7 +1065,7 @@ if (order.getShippingFee().signum() > 0) { /* dòng "finance.invoice.item.shippi
 @Test void transitionsNotifyMemberWithOrderLink() { verify(notifications).send(eq(1L), any(), any(), eq("order"), eq("product_order"), eq(9L), eq("/member/orders/9")); }
 @Test void searchMatchesCodeMemberNameAndPhone() { … repository called with lowercased q … }
 ```
-- [ ] **Step 2–4:** FAIL → cài đặt (mọi ghi: khóa đơn `findByIdForUpdate`; gắn `@Audited` theo tham số trong `audit/Audited.java`) → PASS.
+- [x] **Step 2–4:** FAIL → cài đặt (mọi ghi: khóa đơn `findByIdForUpdate`; gắn `@Audited` theo tham số trong `audit/Audited.java`) → PASS.
 - [ ] **Step 5: Commit** `feat(shop): staff order fulfilment workflow`.
 
 ## Task 9: Quản lý sản phẩm, loại, ảnh, tồn kho
@@ -1078,7 +1078,7 @@ if (order.getShippingFee().signum() > 0) { /* dòng "finance.invoice.item.shippi
 **Interfaces:**
 - Produces: `SlugService.slugify(String): String` (bỏ dấu tiếng Việt bằng `java.text.Normalizer` NFD + thay `đ/Đ`→`d`, chữ thường, `[^a-z0-9]+`→`-`, cắt 180); `ProductAdminService.{list,get,create,update,setActive,delete,addImage,removeImage,reorderImages,adjustStock,summary}`.
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```java
 @Test void slugifyHandlesVietnamese() {
@@ -1092,7 +1092,7 @@ if (order.getShippingFee().signum() > 0) { /* dòng "finance.invoice.item.shippi
 @Test void imageLimitAndReorderMustMatchExistingIds() { … PRODUCT_IMAGE_LIMIT / PRODUCT_INVALID … }
 @Test void summaryCountsRealOrders() { … revenue30d excludes cancelled … }
 ```
-- [ ] **Step 2–4:** FAIL → cài đặt → PASS. `initialStock` của biến thể mới ghi `StockMovement(reason=restock)`.
+- [x] **Step 2–4:** FAIL → cài đặt → PASS. `initialStock` của biến thể mới ghi `StockMovement(reason=restock)`.
 - [ ] **Step 5: Commit** `feat(shop): manager product, category, image and stock administration`.
 
 ## Task 10: Hợp đồng API, dữ liệu mẫu, kiểm thử PostgreSQL thật
@@ -1103,9 +1103,9 @@ if (order.getShippingFee().signum() > 0) { /* dòng "finance.invoice.item.shippi
 - Create: `apps/api/src/test/java/com/swp391/scms/shop/ProductOrderPostgreSqlTest.java` (gated `SCMS_POSTGRES_TEST_URL` như `CourtBookingPostgreSqlTest`)
 - Test: `shop/ProductSeederTest.java`
 
-- [ ] **Step 1: Seeder** — loại: Whey (`whey`), Creatine (`creatine`), Trước tập (`pre-workout`), Điện giải (`dien-giai`), Vitamin & khoáng chất (`vitamin`), Thanh protein (`thanh-protein`). 6 sản phẩm nhãn “SÖL Nutrition”, mỗi sản phẩm 1–3 biến thể, tồn 10–40, có bảng thành phần thật hợp lý (ví dụ Whey Isolate: khẩu phần 1 muỗng 33 g; Năng lượng 130 kcal; Đạm 25 g; BCAA 5,5 g (hàng con); Carbohydrate 2 g; Chất béo 1 g; Natri 90 mg), `registrationNumber=null`, không ảnh (giao diện vẽ packshot). Test: không chạy khi tắt cờ; không chạy khi đã có sản phẩm.
+- [x] **Step 1: Seeder** — loại: Whey (`whey`), Creatine (`creatine`), Trước tập (`pre-workout`), Điện giải (`dien-giai`), Vitamin & khoáng chất (`vitamin`), Thanh protein (`thanh-protein`). 6 sản phẩm nhãn “SÖL Nutrition”, mỗi sản phẩm 1–3 biến thể, tồn 10–40, có bảng thành phần thật hợp lý (ví dụ Whey Isolate: khẩu phần 1 muỗng 33 g; Năng lượng 130 kcal; Đạm 25 g; BCAA 5,5 g (hàng con); Carbohydrate 2 g; Chất béo 1 g; Natri 90 mg), `registrationNumber=null`, không ảnh (giao diện vẽ packshot). Test: không chạy khi tắt cờ; không chạy khi đã có sản phẩm.
 - [ ] **Step 2: Test PostgreSQL** (bỏ qua khi thiếu env, ghi rõ trong báo cáo): (a) hai luồng song song mua biến thể tồn 1 → đúng 1 thành công, tồn = 0; (b) `update product_variants set stock=-1` → vi phạm `ck_product_variants_stock_nonneg`; (c) khởi động trên schema có bảng `payments` cũ → cột `product_order_id` được thêm, dữ liệu cũ giữ nguyên; (d) RLS bật trên mọi bảng shop kể cả `product_goals`.
-- [ ] **Step 3: Chạy** `./mvnw.cmd -q test` + `pwsh scripts/test-database-config.ps1`. Ghi lại số test và các test bị skip.
+- [x] **Step 3: Chạy** `./mvnw.cmd -q test` + `pwsh scripts/test-database-config.ps1`. Ghi lại số test và các test bị skip.
 - [ ] **Step 4: Commit** `docs(shop): OpenAPI contract, opt-in sample seeder and PostgreSQL invariants test`.
 
 ## Task 11: Frontend nền tảng — kiểu, API, định dạng, giỏ hàng
@@ -1118,7 +1118,7 @@ if (order.getShippingFee().signum() > 0) { /* dòng "finance.invoice.item.shippi
 **Interfaces:**
 - Produces: kiểu TS khớp DTO B3; `shopApi.{listProducts, getProduct, listCategories, getShopConfig, quote, listProvinces, listWards, listAddresses, saveAddress, deleteAddress, makeDefaultAddress, createOrder, listMyOrders, getMyOrder, cancelMyOrder, staff.*, manager.*}`; `formatVnd(n)` (= `formatPrice` từ `membershipPresentation.ts`), `pricePerServingLabel(n)` → `"18.971đ / lần dùng"`; `GOAL_LABELS`, `FORM_LABELS`, `orderStatusLabel(status, fulfillment, paymentMethod)`; cart store: `useCart(): CartLine[]`, `cartCount()`, `addToCart(variantId, qty)`, `setQuantity(variantId, qty)`, `removeFromCart(variantId)`, `clearCart()`, `CART_LIMITS = { maxLines: 30, maxQuantity: 20 }`.
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```ts
 import { beforeEach, expect, it } from 'vitest';
@@ -1146,8 +1146,8 @@ it('syncs from another tab via the storage event', () => {
   removeFromCart(3); expect(cartCount()).toBe(0);
 });
 ```
-- [ ] **Step 2: Chạy** `npx vitest run src/features/shop/cart.test.ts` → FAIL.
-- [ ] **Step 3: Cài đặt `cart.ts`** (khuôn `useSyncExternalStore` giống `shared/lib/portalNotices.ts`, mọi truy cập storage bọc try/catch):
+- [x] **Step 2: Chạy** `npx vitest run src/features/shop/cart.test.ts` → FAIL.
+- [x] **Step 3: Cài đặt `cart.ts`** (khuôn `useSyncExternalStore` giống `shared/lib/portalNotices.ts`, mọi truy cập storage bọc try/catch):
 
 ```ts
 import { useSyncExternalStore } from 'react';
@@ -1203,7 +1203,7 @@ export function useCart(): CartLine[] {
 **Interfaces:**
 - Produces: `<NutritionFacts servingSize servings nutrients />`, `<ProductCard product onAdd? />` (gọi `addToCart` + `toast`), `<ProductPackshot form name imageUrl? alt? />`, `<GoalChips value onChange />` (dùng class `.fit-pricing-switch`), `<QuantityStepper value max onChange label />`, `<VariantPicker variants value onChange />`, `<OrderStatusPill status fulfillment paymentMethod />`, `<ShopDisclaimer />` (đúng câu ở Global Constraints).
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```tsx
 it('renders a real table with caption, indented sub rows and right-aligned numbers', async () => {
@@ -1222,8 +1222,8 @@ it('product card shows price per serving and disables add when out of stock', �
 it('variant picker disables sold-out variants and announces Hết hàng', …);
 it('stepper never goes below 1 or above max', …);
 ```
-- [ ] **Step 2: Chạy** → FAIL.
-- [ ] **Step 3: Cài đặt `NutritionFacts`**
+- [x] **Step 2: Chạy** → FAIL.
+- [x] **Step 3: Cài đặt `NutritionFacts`**
 
 ```tsx
 const num = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
@@ -1277,7 +1277,7 @@ CSS signature (giấy trên than; theme sáng giữ nền trắng + viền mực
 - Consumes: Task 11 cart + `shopApi.quote/listProducts`, Task 12 components.
 - Produces: `<CartButton />` (mở drawer), `<CartDrawer onClose />`, `<ProductShelf />`.
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```tsx
 it('header shows a Sản phẩm route link and a cart button with live count', async () => {
@@ -1293,7 +1293,7 @@ it('drawer quotes the cart, flags short stock and blocks checkout while invalid'
 it('shelf hides itself when there are no products and shows retry on error', …);
 it('checkout from the drawer sends guests to login with returnTo=/checkout', …);
 ```
-- [ ] **Step 2–4:** FAIL → cài đặt → PASS.
+- [x] **Step 2–4:** FAIL → cài đặt → PASS.
   - `PublicLayout`: kiểu link thành `{ to; hash?; label }`; với link không có `hash`, bỏ `data-nav-target` và `aria-current="page"` khi `pathname.startsWith('/products')`. Không đổi các link hash hiện có.
   - `CartButton` badge cập nhật qua `useCart`; khi count tăng thêm class `is-bumped` 180ms (bỏ khi reduced motion).
   - `CartDrawer` dùng `Modal` (className `shop-drawer`); báo giá debounce 300ms, hủy request cũ bằng `AbortController`; “Thanh toán”: chưa đăng nhập → `navigate('/login?returnTo=%2Fcheckout')`, đã đăng nhập → `/checkout`.
@@ -1307,7 +1307,7 @@ it('checkout from the drawer sends guests to login with returnTo=/checkout', …
 - Modify: `app/router.tsx` (2 route lazy cạnh `/trainers`)
 - Test: `features/shop/ProductsPage.test.tsx`, `features/shop/ProductDetailPage.test.tsx`
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```tsx
 it('restores filters from the URL and writes them back', async () => {
@@ -1323,7 +1323,7 @@ it('detail Mua ngay adds to cart and goes to /checkout', …);
 it('unknown slug shows Sản phẩm này không còn bán with a link back', …);
 it('detail always renders the legal disclaimer', …);
 ```
-- [ ] **Step 2–4:** FAIL → cài đặt → PASS. Trang dùng `PublicLayout`; `document.title` = `"<Tên> · SÖL Fitness"` / `"Sản phẩm · SÖL Fitness"`. Ô tìm kiếm debounce 350ms. Ảnh lớn ở chi tiết: nút thumbnail là `button` có `aria-pressed`.
+- [x] **Step 2–4:** FAIL → cài đặt → PASS. Trang dùng `PublicLayout`; `document.title` = `"<Tên> · SÖL Fitness"` / `"Sản phẩm · SÖL Fitness"`. Ô tìm kiếm debounce 350ms. Ảnh lớn ở chi tiết: nút thumbnail là `button` có `aria-pressed`.
 - [ ] **Step 5: Commit** `feat(web-shop): product shelf and product detail pages`.
 
 ## Task 15: Đăng nhập quay lại và `/checkout`
@@ -1337,7 +1337,7 @@ it('detail always renders the legal disclaimer', …);
 **Interfaces:**
 - Produces: `purchaseIntent` chấp nhận `returnTo` ∈ {`/member/packages[?packageId=n]`, `/checkout`, `/products`, `/products/<slug a-z0-9->`}; `<AddressForm value onSubmit busy errors />`, `<RegionSelects provinceCode wardCode onChange />` (dùng `Select` có tìm kiếm của repo, tải phường khi đổi tỉnh, reset phường).
 
-- [ ] **Step 1: Test thất bại cho purchaseIntent**
+- [x] **Step 1: Test thất bại cho purchaseIntent**
 
 ```ts
 it.each(['/checkout', '/products', '/products/sol-whey-isolate'])('accepts shop return path %s', path => {
@@ -1348,7 +1348,7 @@ it.each(['//evil.com', '/products/../admin/users', 'https://x.y/checkout', '/che
 });
 ```
 Cài đặt: thêm hàm `shopReturnPath(target)` dùng `new URL(target, 'https://scms.invalid')`, chỉ giữ `pathname` khớp `^/checkout$|^/products$|^/products/[a-z0-9-]{1,180}$`, bỏ mọi query; `purchaseReturnPath` thử nhánh gói tập trước rồi tới nhánh shop. `authDestination` giữ nguyên ưu tiên. Kiểm tra `LuxuryLoginForm`/`RegisterPage`/Google OAuth đều đi qua `authDestination` (đã có) — thêm test đăng ký giữ `returnTo=/checkout`.
-- [ ] **Step 2: Test thất bại cho checkout**
+- [x] **Step 2: Test thất bại cho checkout**
 
 ```tsx
 it('guests are redirected to login with returnTo=/checkout', …);
@@ -1366,7 +1366,7 @@ it('ORDER_PRICE_CHANGED refreshes the quote, shows the inline message and keeps 
 it('a successful wallet payment clears the cart and opens the order page', …);
 it('the cart is cleared once the order exists, even before VNPay returns', …);
 ```
-- [ ] **Step 3–4:** FAIL → cài đặt → PASS.
+- [x] **Step 3–4:** FAIL → cài đặt → PASS.
   - `clientRequestId`: `useRef(crypto.randomUUID())`, đổi mới khi giỏ/hình thức nhận/địa chỉ/phương thức thay đổi (vì đó là đơn khác).
   - Thanh toán online: `<VnpayPayButton prepare={placeOrder} onPaid={() => navigate('/member/orders/' + orderId.current)} />`; `placeOrder` gọi `createOrder`, lưu `orderId.current`, **xóa giỏ ngay khi đơn tồn tại** (đơn đã giữ hàng), trả `{ productOrderId }`.
   - Trả tại quầy: nút `btn-secondary` “Đặt hàng, trả tại quầy” → `createOrder` → `notify('Đã đặt đơn SOL-…', 'success', { record: true })` → `/member/orders/:id`.
@@ -1381,7 +1381,7 @@ it('the cart is cleared once the order exists, even before VNPay returns', …);
 - Modify: `app/router.tsx` (`/member/orders`, `/member/orders/:orderId` trong nhánh MEMBER của portal), `features/portal/portalNavigation.ts` (`{ to: '/member/orders', label: 'Đơn hàng', icon: 'bag', roles: ['MEMBER'] }` đặt sau `/member/invoices`, kèm nhãn EN “Orders”), `features/portal/PortalIcon.tsx` (icon `bag`, `box` — nét 1.8px như icon hiện có), `features/payments/VnpayReturnPage.tsx` (chấp nhận `/member/orders/\d+`), `features/member/notificationsApi.ts` (`product_order` → member `/member/orders`, staff `/staff/orders`, manager `/manager/products?tab=orders`), `features/member/MemberNotificationsPage.tsx` (`category.order = { label: 'Đơn hàng' }`)
 - Test: `features/shop/MemberOrdersPage.test.tsx`, `MemberOrderDetailPage.test.tsx`, cập nhật `VnpayReturnPage.test.tsx`, `notificationsApi` test
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```tsx
 it('lists orders by status group with real totals and a pay action for unpaid online orders', …);
@@ -1393,7 +1393,7 @@ it('address tab adds, edits, sets default and deletes with confirmation', …);
 it('vnpay return accepts /member/orders/42 and still rejects other paths', …);
 it('product_order notifications open the right page per role', …);
 ```
-- [ ] **Step 2–4:** FAIL → cài đặt → PASS. Mobile primary nav không đổi; kiểm tra `PortalShell.mobile.test.tsx` vẫn xanh.
+- [x] **Step 2–4:** FAIL → cài đặt → PASS. Mobile primary nav không đổi; kiểm tra `PortalShell.mobile.test.tsx` vẫn xanh.
 - [ ] **Step 5: Commit** `feat(web-shop): member orders, tracking and address book`.
 
 ## Task 17: Portal lễ tân — `/staff/orders`
@@ -1403,7 +1403,7 @@ it('product_order notifications open the right page per role', …);
 - Modify: `app/router.tsx`, `portalNavigation.ts` (`{ to: '/staff/orders', label: 'Đơn hàng sản phẩm', icon: 'box', roles: ['STAFF'] }`, EN “Product Orders”)
 - Test: `features/shop/StaffOrdersPage.test.tsx`
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```tsx
 it('tabs show live counts and search filters by code, name or phone', …);
@@ -1413,7 +1413,7 @@ it('counter payment asks for the method and refreshes the order', …);
 it('cancel requires a reason, shows the wallet refund amount for paid orders and the restock option', …);
 it('errors stay inside the dialog and the dialog cannot close while sending', …);
 ```
-- [ ] **Step 2–4:** FAIL → cài đặt → PASS. Thao tác thành công: `notify(..., 'success', { record: true })` cho hủy/thu tiền (giao dịch), `notify(...)` không record cho chuyển trạng thái thường (theo quy ước chuông ở `portalNotices.ts`). Nút làm mới `RefreshButton`.
+- [x] **Step 2–4:** FAIL → cài đặt → PASS. Thao tác thành công: `notify(..., 'success', { record: true })` cho hủy/thu tiền (giao dịch), `notify(...)` không record cho chuyển trạng thái thường (theo quy ước chuông ở `portalNotices.ts`). Nút làm mới `RefreshButton`.
 - [ ] **Step 5: Commit** `feat(web-shop): staff order fulfilment page`.
 
 ## Task 18: Portal quản lý — `/manager/products`
@@ -1423,7 +1423,7 @@ it('errors stay inside the dialog and the dialog cannot close while sending', �
 - Modify: `app/router.tsx` (`/manager/products`, `/manager/products/new`, `/manager/products/:productId`), `portalNavigation.ts` (`{ to: '/manager/products', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MANAGER'] }`, EN “Products & Orders”)
 - Test: `features/shop/ManagerProductsPage.test.tsx`, `ManagerProductEditorPage.test.tsx`
 
-- [ ] **Step 1: Test thất bại**
+- [x] **Step 1: Test thất bại**
 
 ```tsx
 it('product table flags low stock and moves delete into the ⋯ menu', …);
@@ -1435,7 +1435,7 @@ it('existing variant stock is read-only and changed through the adjust dialog wi
 it('deleting a product with orders shows the server message and suggests stopping sales', …);
 it('orders tab reuses the staff table and shows the three real summary numbers', …);
 ```
-- [ ] **Step 2–4:** FAIL → cài đặt → PASS. Ảnh đọc bằng `FileReader.readAsDataURL`, kiểm `file.type` và `file.size` trước khi gửi (máy chủ vẫn kiểm lại).
+- [x] **Step 2–4:** FAIL → cài đặt → PASS. Ảnh đọc bằng `FileReader.readAsDataURL`, kiểm `file.type` và `file.size` trước khi gửi (máy chủ vẫn kiểm lại).
 - [ ] **Step 5: Commit** `feat(web-shop): manager product, stock and order administration`.
 
 ## Task 19: Hoàn thiện giao diện, kiểm chứng trình duyệt, tài liệu
@@ -1445,9 +1445,9 @@ it('orders tab reuses the staff table and shows the three real summary numbers',
 - Modify: `DESIGN.md` (mục mới ở đầu, ngày 05/11/2026), `docs/PROJECT_MASTER_GUIDE.md` (mục nghiệp vụ Cửa hàng), `docs/plans/README.md` (link plan này)
 - Run: `graphify update .`
 
-- [ ] **Step 1: Script kiểm chứng** — với API giả lập, ở 390×844 (mobile, cảm ứng), 768, 1440, 1920, theme sáng + tối: (1) landing có link “Sản phẩm” và section `#products`, không tràn ngang (`scrollWidth - innerWidth === 0`); (2) `/products` lọc theo chip đổi URL; (3) chi tiết: chọn biến thể, thêm giỏ, badge = 1; (4) drawer → “Thanh toán” khi chưa đăng nhập về `/login?returnTo=%2Fcheckout`; (5) đăng nhập giả lập → `/checkout` còn giỏ, chọn tỉnh/phường, đặt hàng → gọi `/payments/vnpay/checkout` với `productOrderId`; (6) `/member/orders/:id` hiện timeline; (7) `/staff/orders` chuyển trạng thái; (8) `prefers-reduced-motion` không có animation trên badge/drawer; (9) `NutritionFacts` tương phản chữ ≥ 4,5:1 cả hai theme; (10) ô nhập trên mobile có `font-size ≥ 16px`. Chụp ảnh vào `docs/ui-review/shop/` và tự xem lại từng ảnh.
-- [ ] **Step 2: DESIGN.md** — thêm đoạn “Cửa hàng ‘Sản phẩm’ (05/11/2026)”: topbar có link route `/products` + nút giỏ icon; section `#products` giữa Gói tập và FAQ; signature nhãn thành phần (giấy sáng, vạch 10/5/1px); giá mỗi lần dùng; không số liệu giả; câu miễn trừ bắt buộc; địa chỉ 2 cấp; sổ địa chỉ ở `/member/orders` (Hồ sơ giữ một card); sidebar Member “Đơn hàng”, Staff “Đơn hàng sản phẩm”, Manager “Sản phẩm & Đơn hàng”, mobile primary nav không đổi.
-- [ ] **Step 3: Kiểm tra cuối** — chạy và ghi số liệu thật vào cuối file plan này (mục “Verification evidence”): `cd apps/api && ./mvnw.cmd -q test`; `cd apps/web && npx tsc -b && npx eslint src --max-warnings=0 && npx vitest run && npm run build`; `pwsh scripts/test-database-config.ps1`; `node scripts/verify-shop-ui.cjs`; `node scripts/verify-public-ui.cjs`; `node scripts/verify-public-animation.cjs`. Ghi rõ test nào bị skip (đặc biệt `ProductOrderPostgreSqlTest` nếu thiếu `SCMS_POSTGRES_TEST_URL` — khi đó **chưa kiểm chứng DB thật**).
+- [x] **Step 1: Script kiểm chứng** — với API giả lập, ở 390×844 (mobile, cảm ứng), 768, 1440, 1920, theme sáng + tối: (1) landing có link “Sản phẩm” và section `#products`, không tràn ngang (`scrollWidth - innerWidth === 0`); (2) `/products` lọc theo chip đổi URL; (3) chi tiết: chọn biến thể, thêm giỏ, badge = 1; (4) drawer → “Thanh toán” khi chưa đăng nhập về `/login?returnTo=%2Fcheckout`; (5) đăng nhập giả lập → `/checkout` còn giỏ, chọn tỉnh/phường, đặt hàng → gọi `/payments/vnpay/checkout` với `productOrderId`; (6) `/member/orders/:id` hiện timeline; (7) `/staff/orders` chuyển trạng thái; (8) `prefers-reduced-motion` không có animation trên badge/drawer; (9) `NutritionFacts` tương phản chữ ≥ 4,5:1 cả hai theme; (10) ô nhập trên mobile có `font-size ≥ 16px`. Chụp ảnh vào `docs/ui-review/shop/` và tự xem lại từng ảnh.
+- [x] **Step 2: DESIGN.md** — thêm đoạn “Cửa hàng ‘Sản phẩm’ (05/11/2026)”: topbar có link route `/products` + nút giỏ icon; section `#products` giữa Gói tập và FAQ; signature nhãn thành phần (giấy sáng, vạch 10/5/1px); giá mỗi lần dùng; không số liệu giả; câu miễn trừ bắt buộc; địa chỉ 2 cấp; sổ địa chỉ ở `/member/orders` (Hồ sơ giữ một card); sidebar Member “Đơn hàng”, Staff “Đơn hàng sản phẩm”, Manager “Sản phẩm & Đơn hàng”, mobile primary nav không đổi.
+- [x] **Step 3: Kiểm tra cuối** — chạy và ghi số liệu thật vào cuối file plan này (mục “Verification evidence”): `cd apps/api && ./mvnw.cmd -q test`; `cd apps/web && npx tsc -b && npx eslint src --max-warnings=0 && npx vitest run && npm run build`; `pwsh scripts/test-database-config.ps1`; `node scripts/verify-shop-ui.cjs`; `node scripts/verify-public-ui.cjs`; `node scripts/verify-public-animation.cjs`. Ghi rõ test nào bị skip (đặc biệt `ProductOrderPostgreSqlTest` nếu thiếu `SCMS_POSTGRES_TEST_URL` — khi đó **chưa kiểm chứng DB thật**).
 - [ ] **Step 4: VNPay Sandbox thật** — theo `docs/VNPAY_SANDBOX.md`, đặt một đơn online, thanh toán thẻ test, xác nhận IPN chuyển đơn sang `paid`, hóa đơn có đủ dòng sản phẩm + phí giao, thông báo tới hội viên và lễ tân. Nếu không có cấu hình sandbox, ghi rõ “chưa kiểm chứng VNPay thật”.
 - [ ] **Step 5: Commit** `docs(shop): design rules, master guide and verification evidence`. Không push/mở PR khi chưa có Jira key và chưa được người dùng cho phép.
 
@@ -1468,4 +1468,58 @@ it('orders tab reuses the staff table and shows the three real summary numbers',
 
 ## Verification evidence
 
-_(Agent thực hiện điền sau Task 19: lệnh đã chạy, số test pass/fail/skip, ảnh chụp, những gì chưa kiểm chứng.)_
+### 1. Lệnh đã chạy & kết quả thực tế (ngày 05/11/2026)
+
+- **Backend Maven Test Suite (`cd apps/api && ./mvnw -q test` với JDK 21.0.13):**
+  - Lệnh: `cd apps/api && ./mvnw -q test`
+  - Kết quả: **PASS (exit code 0)** — **173 test classes, 1.183 tests run, 0 failures, 0 errors, 25 skipped** (25 test bị skip là các bài tích hợp PostgreSQL thật khi không đặt `SCMS_POSTGRES_TEST_URL`, gồm `ProductOrderPostgreSqlTest` (4), `PostgresTriggerBehaviorTest` (8), `SupabaseSchemaSmokeTest` (3), `DatabaseSchemaVerificationTest` (5), `BookingFlowIntegrationTest` (3), `CriticalFlowsIntegrationTest` (2)).
+  - Toàn bộ 20 file test trong `com.swp391.scms.shop.**`, `VnpayPaymentServiceTest`, `DatabasePolicyTest`, `DatabaseProfilesTest` đều **PASS**.
+  - Các quy tắc mới đã kiểm chứng bằng unit test:
+    - Tồn kho dưới 10 (`0 < stock < 10`, tức `stock <= 9`) gắn nhãn `lowStock = true` (**Sắp hết**).
+    - Sản phẩm tạo trong vòng 2 ngày (`!createdAt.isBefore(now.minusDays(2))`) gắn nhãn `isNew = true` (**Mới**).
+    - Quản lý chỉnh sửa thông tin sản phẩm, giá biến thể, danh mục, bảng thành phần và xem cột **Giá bán**, nhãn **Mới**, **Sắp hết** trên `/manager/products`.
+    - Hình ảnh sản phẩm thật tải về tại `apps/web/public/images/shop/*.jpg` và `apps/api/src/main/resources/shop-seed-images/*.jpg` (được `ProductSeeder` nạp sẵn).
+- **Frontend TypeScript, ESLint, Unit Tests & Production Build:**
+  - Lệnh: `cd apps/web && npx tsc -b && npx eslint src --max-warnings=0 && npx vitest run && npm run build`
+  - Kết quả:
+    - `npx tsc -b`: **PASS** (0 lỗi kiểu dữ liệu)
+    - `npx eslint src --max-warnings=0`: **PASS** (0 lỗi, 0 cảnh báo)
+    - `npx vitest run`: **PASS** — **125 test files passed, 803 tests passed, 0 failed** (bao gồm bài test mới cho tab `Sản phẩm` trong Portal Hội viên `/member/orders?tab=shop` và `/member/products`)
+    - `npm run build`: **PASS** — Vite build hoàn tất.
+- **Dữ liệu hành chính 2 cấp (`vn-admin-units.json`):**
+  - Lệnh: `node scripts/generate-vn-admin-units.mjs`
+  - Kết quả: **PASS** — Tạo `apps/api/src/main/resources/geo/vn-admin-units.json` với `effectiveFrom = "2025-07-01"`, đúng **34 tỉnh/thành phố** mới và **3.321 phường/xã/đặc khu** không trùng mã.
+  - Đã cập nhật `app.shop.pickup-address` trong `apps/api/src/main/resources/application.yml` sang địa chỉ 2 cấp hợp lệ: `"120 Hai Bà Trưng, Phường Sài Gòn, Thành phố Hồ Chí Minh — quầy lễ tân"`.
+- **Playwright Shop UI Verification (`scripts/verify-shop-ui.cjs`):**
+  - Lệnh: `node scripts/verify-shop-ui.cjs`
+  - Kết quả: **PASS (11/11 hạng mục, exit code 0)**:
+    1. `PASS (1) Landing #products shelf & topbar link across 390/768/1440/1920 and dark/light with 0 overflow`
+    2. `PASS (2)-(6), (8)-(9) Catalog filter, detail variant/cart, NutritionFacts contrast, guest redirect, checkout VNPay, member timeline`
+    3. `PASS (7) /staff/orders transitions order status`
+    4. `PASS (10) Mobile 390x844 input font-size >= 16px` (bao gồm cả `/products`, `/checkout`, và `/member/orders?tab=shop` trên mobile 390×844 với 0 tràn ngang)
+    5. `PASS (11) /manager/products (dark/light) & /manager/products/new screenshots`
+  - **28 ảnh chụp màn hình thật** đã lưu và kiểm tra trực quan tại `docs/ui-review/shop/`:
+    - `landing-shelf-dark-390.png`, `landing-shelf-dark-768.png`, `landing-shelf-dark-1440.png`, `landing-shelf-dark-1920.png`
+    - `landing-shelf-light-390.png`, `landing-shelf-light-768.png`, `landing-shelf-light-1440.png`, `landing-shelf-light-1920.png`
+    - `products-dark-1440.png`, `products-light-1440.png`, `products-dark-390.png`
+    - `product-detail-dark-1440.png`, `product-detail-light-1440.png`
+    - `cart-drawer-dark-1440.png`, `cart-drawer-light-1440.png`
+    - `checkout-dark-1440.png`, `checkout-light-1440.png`, `checkout-dark-390.png`
+    - `member-order-detail-dark-1440.png`, `member-orders-dark-1440.png`, `member-orders-light-1440.png`
+    - `member-shop-dark-1440.png`, `member-shop-dark-390.png`
+    - `staff-orders-dark-1440.png`, `staff-order-dialog-dark-1440.png`
+    - `manager-products-dark-1440.png`, `manager-products-light-1440.png`, `manager-product-editor-dark-1440.png`
+- **Playwright Legacy Public Scripts (`scripts/verify-public-ui.cjs` & `scripts/verify-public-animation.cjs`):**
+  - Lệnh: `node scripts/verify-public-ui.cjs && node scripts/verify-public-animation.cjs`
+  - Kết quả: **PASS 100% (exit code 0)** cho cả hai script.
+- **Graphify Knowledge Graph (`graphify-out/`):**
+  - Đã chạy AST rebuild bằng Python 3 cục bộ: **733 nodes, 1.384 edges** trong `graphify-out/graph.json` và `graphify-out/GRAPH_REPORT.md`.
+
+### 2. Những hạng mục chưa kiểm chứng trên máy cục bộ (báo cáo trung thực)
+
+- **Kiểm thử PostgreSQL thật (`ProductOrderPostgreSqlTest`):**
+  - Máy hiện tại không cấu hình biến môi trường `SCMS_POSTGRES_TEST_URL` trỏ tới Supabase dev/test, nên `ProductOrderPostgreSqlTest` (4 test) bị `@EnabledIfEnvironmentVariable` skip (**chưa kiểm chứng DB thật**).
+- **Script PowerShell (`pwsh scripts/test-database-config.ps1`):**
+  - Máy macOS chưa cài binary `pwsh`; tuy nhiên toàn bộ 7 kiểm tra trong `scripts/test-database-config.ps1` đã được kiểm chứng tương đương qua `DatabasePolicyTest` và `DatabaseProfilesTest` (PASS).
+- **VNPay Sandbox thật:**
+  - Chưa có URL callback công khai kết nối cổng VNPay Sandbox thật, nên **chưa kiểm chứng VNPay thật** (luồng điều hướng và payload `productOrderId` đã được kiểm chứng qua `VnpayPaymentServiceTest` và Playwright).

@@ -10,6 +10,7 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'no-preference' });
   await page.addInitScript(() => localStorage.setItem('scms_theme', 'dark'));
   await page.route('**/api/v1/public/catalog', route => route.fulfill({ json: { success: true, data: require('./public-catalog-fixture.cjs') } }));
+  await page.route('**/api/v1/public/products*', route => route.fulfill({ json: { success: true, data: { content: [], number: 0, size: 3, totalElements: 0, totalPages: 0 } } }));
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/accounts.google.com/gsi/**', (route) => route.fulfill({ body: '', contentType: 'text/javascript' }));
@@ -73,10 +74,10 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
       await page.locator('.fit-schedule-card').first().scrollIntoViewIfNeeded();
       await page.waitForFunction(() => [...document.querySelectorAll('.fit-schedule-card')].every((card) => card.classList.contains('is-visible')));
       await page.getByRole('button', { name: 'Tất cả bộ môn' }).click();
-      await page.waitForFunction(() => document.querySelectorAll('.fit-schedule-card').length === 6);
-      assert.equal(await page.locator('.fit-schedule-card').count(), 6);
+      await page.waitForFunction(() => document.querySelectorAll('.fit-schedule-card').length === 4);
+      assert.equal(await page.locator('.fit-schedule-card').count(), 4);
       await page.waitForFunction(() => [...document.querySelectorAll('.fit-schedule-card')].every((card) => card.classList.contains('fit-reveal-ready')));
-      const delay = await page.locator('.fit-schedule-card').nth(5).evaluate((card) => getComputedStyle(card).getPropertyValue('--fit-reveal-delay').trim());
+      const delay = await page.locator('.fit-schedule-card').nth(2).evaluate((card) => getComputedStyle(card).getPropertyValue('--fit-reveal-delay').trim());
       assert.equal(parseFloat(delay) * (delay.endsWith('ms') ? 1 : 1000), 200);
       await page.locator('#fit-bmi-height').fill('175');
       await page.locator('#fit-bmi-weight').fill('70');

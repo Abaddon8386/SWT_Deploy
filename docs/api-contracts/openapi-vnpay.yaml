@@ -11,7 +11,7 @@ paths:
         '200': { description: 'ApiResponse containing {enabled: boolean}' }
   /api/v1/payments/vnpay/checkout:
     post:
-      summary: Member pays their pending membership, PT, court or existing payment; amount is resolved by the server
+      summary: Member pays their pending membership, PT, court, product order or existing payment; amount is resolved by the server
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -19,11 +19,12 @@ paths:
           application/json:
             schema:
               type: object
-              description: Exactly one of subscriptionId, coachBookingId, courtBookingId or paymentId is required.
+              description: Exactly one of subscriptionId, coachBookingId, courtBookingId, productOrderId or paymentId is required.
               properties:
                 subscriptionId: { type: integer, format: int64, minimum: 1 }
                 coachBookingId: { type: integer, format: int64, minimum: 1 }
                 courtBookingId: { type: integer, format: int64, minimum: 1 }
+                productOrderId: { type: integer, format: int64, minimum: 1 }
                 paymentId: { type: integer, format: int64, minimum: 1 }
       responses:
         '200': { description: 'ApiResponse of reference, paymentUrl, amount and expiresAt; reuses an unexpired pending attempt' }
