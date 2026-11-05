@@ -116,7 +116,7 @@ public class ProductAdminService {
     public Page<ProductAdminSummaryDto> list(String q, Boolean active, Boolean lowStock, int page, int size) {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(Math.max(1, size), 50);
-        String normQ = (q == null || q.isBlank()) ? null : q.trim();
+        String normQ = (q == null || q.isBlank()) ? "" : q.trim().toLowerCase(Locale.ROOT);
         boolean lowStockOnly = Boolean.TRUE.equals(lowStock);
         Page<Product> found = products.searchAdmin(
                 normQ,

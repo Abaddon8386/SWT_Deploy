@@ -103,8 +103,8 @@ public class ProductCatalogService {
         }
         int safePage = Math.max(0, page);
         int safeSize = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
-        String normQ = (q == null || q.isBlank()) ? null : q.trim();
-        String normCat = (categorySlug == null || categorySlug.isBlank()) ? null : categorySlug.trim();
+        String normQ = (q == null || q.isBlank()) ? "" : q.trim().toLowerCase(java.util.Locale.ROOT);
+        String normCat = (categorySlug == null || categorySlug.isBlank()) ? "" : categorySlug.trim();
         LocalDateTime current = now();
 
         if ("newest".equals(resolvedSort)) {

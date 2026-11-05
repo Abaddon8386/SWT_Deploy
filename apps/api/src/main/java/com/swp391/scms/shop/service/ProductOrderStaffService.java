@@ -103,9 +103,9 @@ public class ProductOrderStaffService {
         int safeSize = Math.clamp(size, 1, 50);
         boolean counterPending = "counter_pending".equalsIgnoreCase(status);
         String normalizedStatus = (status == null || status.isBlank() || "all".equalsIgnoreCase(status) || counterPending)
-                ? null
+                ? ""
                 : status.trim().toLowerCase(Locale.ROOT);
-        String normalizedQ = (q == null || q.isBlank()) ? null : q.trim().toLowerCase(Locale.ROOT);
+        String normalizedQ = (q == null || q.isBlank()) ? "" : q.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(
                 safePage,
                 safeSize,

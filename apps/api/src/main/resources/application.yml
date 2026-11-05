@@ -112,5 +112,5 @@ app:
     payment-window-minutes: ${APP_SHOP_RESERVATION_MINUTES:30}
     counter-hold-hours: ${APP_SHOP_COUNTER_HOLD_HOURS:48}
     pickup-address: "120 Hai Bà Trưng, Phường Sài Gòn, TP. Hồ Chí Minh — quầy lễ tân"
-    seed-samples: ${APP_SHOP_SEED_ENABLED:false}
+    seed-samples: ${APP_SHOP_SEED_ENABLED:true}
     expiry-interval-ms: ${APP_SHOP_EXPIRY_INTERVAL_MS:60000}

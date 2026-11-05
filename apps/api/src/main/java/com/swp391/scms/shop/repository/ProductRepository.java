@@ -21,11 +21,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     long countByCategory_Id(Long categoryId);
 
     @Query("""
-        select distinct p from Product p join p.category c left join p.goals g
+        select p from Product p join p.category c
         where p.active = true and c.active = true
-          and (:q is null or lower(p.name) like lower(concat('%', :q, '%')) or lower(p.shortDescription) like lower(concat('%', :q, '%')))
-          and (:goal is null or g = :goal)
-          and (:category is null or c.slug = :category)
+          and (:q = '' or lower(p.name) like concat('%', :q, '%') or lower(p.shortDescription) like concat('%', :q, '%'))
+          and (:goal is null or :goal member of p.goals)
+          and (:category = '' or c.slug = :category)
           and (:inStock = false or exists (select 1 from ProductVariant v where v.product = p and v.active = true and v.stock > 0))
         """)
     Page<Product> searchPublic(
@@ -46,8 +46,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Pageable pageable);
 
     @Query("""
-        select distinct p from Product p join p.category c
-        where (:q is null or lower(p.name) like lower(concat('%', :q, '%')) or lower(p.slug) like lower(concat('%', :q, '%')))
+        select p from Product p join p.category c
+        where (:q = '' or lower(p.name) like concat('%', :q, '%') or lower(p.slug) like concat('%', :q, '%'))
           and (:active is null or p.active = :active)
           and (:lowStock = false or exists (select 1 from ProductVariant v where v.product = p and v.active = true and v.stock < 10))
         """)

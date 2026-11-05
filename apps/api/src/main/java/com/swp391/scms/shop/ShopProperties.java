@@ -13,7 +13,7 @@ public class ShopProperties {
     private int paymentWindowMinutes = 30;
     private int counterHoldHours = 48;
     private String pickupAddress = "120 Hai Bà Trưng, Phường Sài Gòn, TP. Hồ Chí Minh — quầy lễ tân";
-    private boolean seedSamples = false;
+    private boolean seedSamples = true;
 
     public BigDecimal getShippingFee() { return shippingFee; }
     public void setShippingFee(BigDecimal shippingFee) { this.shippingFee = shippingFee; }

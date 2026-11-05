@@ -40,9 +40,9 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
 
     @Query("""
         select o from ProductOrder o join o.member m join m.user u
-        where (:status is null or o.status = :status)
+        where (:status = '' or o.status = :status)
           and (:counterPending = false or (o.status = 'pending_payment' and o.paymentMethod = 'counter'))
-          and (:q is null
+          and (:q = ''
                or lower(o.code) like concat('%', :q, '%')
                or lower(u.fullName) like concat('%', :q, '%')
                or lower(coalesce(u.phone, '')) like concat('%', :q, '%')
