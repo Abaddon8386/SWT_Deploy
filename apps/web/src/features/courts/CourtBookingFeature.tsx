@@ -11,7 +11,7 @@ import { RecurrenceFields, RecurrenceSummary } from '../../shared/ui/RecurrenceF
 import { recurrenceRequest, type RecurrenceChoice } from '../../shared/lib/recurrence';
 import { matchesDiscipline } from '../../shared/lib/disciplines';
 import { CourtBookingList, CourtLoadError } from './CourtBookingList';
-import { courtsApi, type RecurringCourtResult, type CourtQuota, type CourtPaymentMethod, PAYMENT_METHODS, formatVnd, COURT_DISCIPLINES, centerDate, dateAfter, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
+import { courtsApi, type RecurringCourtResult, type CourtQuota, type CourtPaymentMethod, PAYMENT_METHODS, formatVnd, COURT_DISCIPLINES, centerDate, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
 import './courts.css';
 
 const SLOT_LABELS = { free: 'Trống', booked: 'Đã đặt', class: 'Đang có lớp', past: 'Đã qua' };
@@ -34,7 +34,7 @@ export function CourtBookingFeature() {
   const [method, setMethod] = useState<CourtPaymentMethod>('vnpay');
   const gridHeading = useRef<HTMLHeadingElement>(null);
   const today = centerDate();
-  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= today && date <= dateAfter(today, 7);
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= today;
   const reload = () => setRefresh(value => value + 1);
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function CourtBookingFeature() {
         notify(result.booked.length ? `Đã đặt ${result.booked.length} buổi sân định kỳ.` : 'Không đặt được buổi nào.', result.booked.length ? 'success' : 'error');
       } else {
         await courtsApi.book({ roomId: selection.court.id, date: selection.date, startTime: selection.slot.startTime, ...(covered ? {} : { paymentMethod: method }) });
-        setSelection(null); reload(); notify(covered ? 'Đã đặt sân thành công.' : `Đã thanh toán ${formatVnd(price)} và đặt sân thành công.`, 'success');
+        setSelection(null); reload(); notify(covered ? 'Đã đặt sân thành công.' : `Đã đặt sân (phụ phí ${formatVnd(price)}). Vui lòng hoàn tất thanh toán.`, 'success');
       }
     } catch (reason) {
       setActionError(courtError(reason));
@@ -82,10 +82,10 @@ export function CourtBookingFeature() {
     <div className="portal-tabs" aria-label="Bộ môn có sân">
       {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`portal-tab ${item.name === discipline ? 'active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
     </div>
-    <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">Ngày đặt</span><input id="court-date" type="date" className="portal-input" min={today} max={dateAfter(today, 7)} value={date} onChange={event => setDate(event.target.value)} /></label></div>
+    <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">Ngày đặt</span><input id="court-date" type="date" className="portal-input" min={today} value={date} onChange={event => setDate(event.target.value)} /></label></div>
     <section aria-labelledby="court-grid-title">
       <h2 id="court-grid-title" className="portal-card-title" tabIndex={-1} ref={gridHeading}>Khung giờ theo sân</h2>
-      {!validDate ? <p role="alert">Chọn ngày từ hôm nay đến {displayDate(dateAfter(today, 7))}.</p> : loading ? <LoadingSkeleton label="Đang tải sân" variant="cards" count={2} /> : error ? <CourtLoadError message={error} retry={reload} /> : !rows.length ? <div className="portal-card portal-state">Chưa có sân cho bộ môn này</div> : <div className="court-grid">
+      {!validDate ? <p role="alert">Chọn ngày từ hôm nay trở đi.</p> : loading ? <LoadingSkeleton label="Đang tải sân" variant="cards" count={2} /> : error ? <CourtLoadError message={error} retry={reload} /> : !rows.length ? <div className="portal-card portal-state">Chưa có sân cho bộ môn này</div> : <div className="court-grid">
         {rows.map(({ court, slots }) => <article className="portal-card court-card" key={court.id}>
           <h3 className="portal-card-title">{court.name}</h3>
           <p className="muted">{court.location ? `${court.location} · ` : ''}{shortTime(court.openTime)}–{shortTime(court.closeTime)}</p>
@@ -109,7 +109,7 @@ export function CourtBookingFeature() {
       </div>
       {!covered && method === 'vnpay' && <p className="muted">Sau khi đặt, chọn “Thanh toán VNPay Sandbox” tại lượt đặt của bạn để hoàn tất. Mỗi buổi định kỳ được thanh toán riêng. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.</p>}
       {!covered && method === 'cash' && <p className="muted">Thanh toán tiền mặt tại quầy lễ tân. Lượt đặt chưa được xác nhận thu tiền khi đến giờ bắt đầu sẽ tự hủy.</p>}
-      <p className="muted">Tối đa 4 lượt/ngày; hủy trước giờ bắt đầu ít nhất 2 giờ.</p></>}
+      <p className="muted">Hủy trước giờ bắt đầu ít nhất 2 giờ.</p></>}
       {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{actionError}</p>{needsMembership && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">Xem / Đăng ký gói tập</Link></div>}</div>}
       <div className="court-modal-actions">{outcome ? <button type="button" className="btn-primary" onClick={() => setSelection(null)}>Đóng</button> : <><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>Quay lại</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? 'Đang đặt…' : recurrence.period !== 'once' ? 'Xác nhận đặt định kỳ' : covered ? 'Xác nhận đặt' : method === 'vnpay' ? 'Đặt sân & Thanh toán sau qua VNPay' : 'Đặt sân & thanh toán tại quầy'}</button></>}</div>
     </Modal>}

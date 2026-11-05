@@ -1,14 +1,22 @@
 package com.swp391.scms.scheduling.service;
 
+import com.swp391.scms.attendance.repository.SessionAttendanceRepository;
 import com.swp391.scms.audit.Audited;
+import com.swp391.scms.coaching.repository.CoachReviewRepository;
+import com.swp391.scms.coaching.repository.SessionEvaluationRepository;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.facilities.repository.RoomRepository;
+import com.swp391.scms.finance.repository.PaymentRepository;
+import com.swp391.scms.notifications.NotificationService;
+import com.swp391.scms.notifications.event.SessionCancelledEvent;
+import com.swp391.scms.operations.repository.StaffInternalRequestRepository;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.RescheduleSessionRequest;
@@ -20,15 +28,19 @@ import com.swp391.scms.scheduling.dto.SchedulingResponses.GymClassDto;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.GymClass;
+import com.swp391.scms.scheduling.entity.SessionBooking;
 import com.swp391.scms.scheduling.mapper.SchedulingMapper;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
+import com.swp391.scms.scheduling.repository.SessionBookingRepository;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +48,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -53,14 +66,35 @@ public class ClassService {
     private static final String COACH_ACTIVE = "active";
     private static final String SESSION_SCHEDULED = "scheduled";
     private static final String CLASS_ACTIVE = "active";
+    private static final String CLASS_INACTIVE = "inactive";
     private static final String ENROLLMENT_BOOKED = "booked";
+    private static final String CLASS_DEACTIVATED_REASON = "Lớp học ngừng hoạt động";
 
     private final GymClassRepository gymClasses;
     private final ClassSessionRepository sessions;
     private final ClassEnrollmentRepository enrollments;
 
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
+    @Autowired(required = false)
+    private SessionBookingRepository sessionBookings;
+    @Autowired(required = false)
+    private SessionAttendanceRepository sessionAttendances;
+    @Autowired(required = false)
+    private SessionEvaluationRepository sessionEvaluations;
+    @Autowired(required = false)
+    private CoachReviewRepository coachReviews;
+    @Autowired(required = false)
+    private PaymentRepository payments;
+    @Autowired(required = false)
+    private StaffInternalRequestRepository staffInternalRequestRepository;
+    @Autowired(required = false)
+    private NotificationService notificationService;
+    @Autowired(required = false)
+    private ApplicationEventPublisher eventPublisher;
+    @Autowired(required = false)
+    private MessageService messageService;
+    @Autowired(required = false)
+    private EntityManager entityManager;
+
     private final DisciplineRepository disciplines;
     private final CoachRepository coaches;
     private final RoomRepository rooms;
@@ -270,7 +304,9 @@ public class ClassService {
     }
 
     /**
-     * SCRUM-131 AC: Manager deletes a class (after double confirmation on UI).
+     * SCRUM-131 AC & A4: Manager deletes a class (after double confirmation on UI).
+     * If historical/dependent records exist, soft-deactivates the class, cancels upcoming
+     * scheduled sessions with reason "Lớp học ngừng hoạt động", and notifies booked members.
      */
     @Transactional
     @Audited(action = "CLASS_DELETE", entity = "classes")
@@ -278,10 +314,164 @@ public class ClassService {
         GymClass gymClass = gymClasses.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
 
+        List<ClassEnrollment> classEnrollments = enrollments.findByGymClassId(classId);
+        List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId);
+
+        if (hasDependentRecords(classId, classEnrollments, classSessions)) {
+            LocalDateTime now = LocalDateTime.now(clock);
+            String className = gymClass.getName() != null ? gymClass.getName() : "";
+
+            if (classSessions != null) {
+                for (ClassSession session : classSessions) {
+                    if (session == null || !SESSION_SCHEDULED.equalsIgnoreCase(session.getStatus())) {
+                        continue;
+                    }
+                    session.setStatus("cancelled");
+                    session.setCancelReason(CLASS_DEACTIVATED_REASON);
+                    session.setUpdatedAt(now);
+                    sessions.saveAndFlush(session);
+
+                    List<Long> affectedMemberUserIds = new ArrayList<>();
+                    String sessionDateStr = session.getSessionDate() != null ? session.getSessionDate().toString() : "";
+
+                    if (classEnrollments != null) {
+                        for (ClassEnrollment enrollment : classEnrollments) {
+                            if (enrollment != null && ENROLLMENT_BOOKED.equalsIgnoreCase(enrollment.getStatus())
+                                    && enrollment.getMember() != null && enrollment.getMember().getUserId() != null) {
+                                Long memberId = enrollment.getMember().getUserId();
+                                affectedMemberUserIds.add(memberId);
+                                if (notificationService != null) {
+                                    notificationService.send(
+                                            memberId,
+                                            msg("notifications.session.cancelled.title"),
+                                            msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
+                                            "schedule_change",
+                                            "class_session",
+                                            session.getId());
+                                }
+                            }
+                        }
+                    }
+
+                    if (sessionBookings != null && session.getId() != null) {
+                        for (SessionBooking booking : sessionBookings.findBySessionIdAndStatus(session.getId(), ENROLLMENT_BOOKED)) {
+                            booking.setStatus("cancelled");
+                            booking.setCancelledAt(now);
+                            booking.setCancelReason(CLASS_DEACTIVATED_REASON);
+                            sessionBookings.save(booking);
+                            Member member = booking.getMember();
+                            if (member != null && member.getUserId() != null) {
+                                if (!affectedMemberUserIds.contains(member.getUserId())) {
+                                    affectedMemberUserIds.add(member.getUserId());
+                                }
+                                if (notificationService != null) {
+                                    notificationService.send(
+                                            member.getUserId(),
+                                            msg("notifications.session.cancelled.title"),
+                                            msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
+                                            "schedule_change",
+                                            "class_session",
+                                            session.getId());
+                                }
+                            }
+                        }
+                    }
+
+                    if (eventPublisher != null) {
+                        eventPublisher.publishEvent(new SessionCancelledEvent(
+                                session.getId(),
+                                classId,
+                                className,
+                                session.getSessionDate(),
+                                session.getStartTime(),
+                                CLASS_DEACTIVATED_REASON,
+                                affectedMemberUserIds));
+                    }
+                }
+            }
+
+            if (classEnrollments != null) {
+                for (ClassEnrollment enrollment : classEnrollments) {
+                    if (enrollment != null && ENROLLMENT_BOOKED.equalsIgnoreCase(enrollment.getStatus())) {
+                        enrollment.setStatus("cancelled");
+                        enrollment.setCancelledAt(now);
+                        enrollment.setCancelReason(CLASS_DEACTIVATED_REASON);
+                        enrollments.save(enrollment);
+                    }
+                }
+            }
+
+            gymClass.setStatus(CLASS_INACTIVE);
+            gymClass.setUpdatedAt(now);
+            gymClasses.save(gymClass);
+            gymClasses.flush();
+            return;
+        }
+
         enrollments.deleteByGymClassId(classId);
         sessions.deleteByGymClassId(classId);
         gymClasses.delete(gymClass);
         gymClasses.flush();
+    }
+
+    private boolean hasDependentRecords(Long classId,
+                                        List<ClassEnrollment> classEnrollments,
+                                        List<ClassSession> classSessions) {
+        if (classEnrollments != null && !classEnrollments.isEmpty()) {
+            return true;
+        }
+        if (sessionBookings != null && !sessionBookings.findBookedByClassId(classId).isEmpty()) {
+            return true;
+        }
+        if (classSessions != null) {
+            for (ClassSession s : classSessions) {
+                if (s == null) {
+                    continue;
+                }
+                if (s.getStatus() != null && !SESSION_SCHEDULED.equalsIgnoreCase(s.getStatus())) {
+                    return true;
+                }
+                Long sid = s.getId();
+                if (sid != null) {
+                    if (sessionBookings != null && (
+                            !sessionBookings.findBySessionIdAndStatus(sid, ENROLLMENT_BOOKED).isEmpty()
+                                    || !sessionBookings.findBySessionIdAndStatus(sid, "cancelled").isEmpty())) {
+                        return true;
+                    }
+                    if (sessionAttendances != null && !sessionAttendances.findBySessionId(sid).isEmpty()) {
+                        return true;
+                    }
+                    if (sessionEvaluations != null && !sessionEvaluations.findBySessionIdOrderByEvaluatedAtDesc(sid).isEmpty()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        if (entityManager != null) {
+            if (countQuery("SELECT COUNT(sb) FROM SessionBooking sb WHERE sb.session.gymClass.id = :cid", classId) > 0
+                    || countQuery("SELECT COUNT(ce) FROM ClassEnrollment ce WHERE ce.gymClass.id = :cid", classId) > 0
+                    || countQuery("SELECT COUNT(sa) FROM SessionAttendance sa WHERE sa.session.gymClass.id = :cid", classId) > 0
+                    || countQuery("SELECT COUNT(se) FROM SessionEvaluation se WHERE se.session.gymClass.id = :cid", classId) > 0
+                    || countQuery("SELECT COUNT(cr) FROM CoachReview cr WHERE cr.classSession.gymClass.id = :cid", classId) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private long countQuery(String jpql, Long classId) {
+        try {
+            Long count = entityManager.createQuery(jpql, Long.class)
+                    .setParameter("cid", classId)
+                    .getSingleResult();
+            return count != null ? count : 0L;
+        } catch (RuntimeException ignored) {
+            return 0L;
+        }
+    }
+
+    private String msg(String key, Object... args) {
+        return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
     /**
@@ -416,7 +606,7 @@ public class ClassService {
 
     /**
      * SCRUM-132: Pre-check that no scheduled session on the same date overlaps in time
-     * for the same room or the same coach.
+     * for the same room or the same coach, and the coach is not on approved leave.
      */
     private void ensureNoSessionConflict(Long coachId,
                                          Long roomId,
@@ -427,6 +617,14 @@ public class ClassService {
                                          Long idempotentClassId) {
         if (sessionDate == null || startTime == null || endTime == null) {
             return;
+        }
+        if (staffInternalRequestRepository != null && coachId != null
+                && staffInternalRequestRepository.existsApprovedLeaveOn(coachId, sessionDate)) {
+            throw new ConflictException(
+                    "COACH_ON_LEAVE",
+                    "error.coach_booking.coach_on_leave",
+                    new Object[]{sessionDate},
+                    "The coach is on approved leave that day.");
         }
         if (courtBookings != null && roomId != null
                 && courtBookings.existsRoomOverlap(roomId, sessionDate, startTime, endTime)) {
@@ -544,7 +742,7 @@ public class ClassService {
         if (sessionBookings != null) {
             java.util.Set<Long> seen = new java.util.HashSet<>();
             students.forEach(s -> seen.add(s.memberId()));
-            for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBookedByClassId(classId)) {
+            for (SessionBooking booking : sessionBookings.findBookedByClassId(classId)) {
                 if (booking.getMember() != null && seen.add(booking.getMember().getUserId())) {
                     students.add(toStudentDto(booking));
                 }
@@ -564,7 +762,7 @@ public class ClassService {
         if (sessionBookings != null) {
             java.util.Set<Long> seen = new java.util.HashSet<>();
             students.forEach(s -> seen.add(s.memberId()));
-            for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(sessionId, "booked")) {
+            for (SessionBooking booking : sessionBookings.findBySessionIdAndStatus(sessionId, "booked")) {
                 if (booking.getMember() != null && seen.add(booking.getMember().getUserId())) {
                     students.add(toStudentDto(booking));
                 }
@@ -608,7 +806,7 @@ public class ClassService {
                 .mapToLong(com.swp391.scms.scheduling.dto.SessionBookingCount::bookedCount).max().orElse(0);
     }
 
-    private EnrolledStudentDto toStudentDto(com.swp391.scms.scheduling.entity.SessionBooking booking) {
+    private EnrolledStudentDto toStudentDto(SessionBooking booking) {
         Member member = booking.getMember();
         User user = member != null ? member.getUser() : null;
         return new EnrolledStudentDto(

@@ -1,5 +1,7 @@
 package com.swp391.scms.scheduling.service;
 
+import com.swp391.scms.coaching.entity.CoachBooking;
+import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.common.exception.AppException;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
@@ -36,6 +38,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,10 +68,22 @@ public class SessionBookingService {
     private final MessageService messageService;
     private final Clock clock;
 
+    @Autowired(required = false)
+    private CoachBookingRepository coachBookingRepository;
+
     public SessionBookingService(SessionBookingRepository bookings, ClassSessionRepository sessions,
                                  ClassEnrollmentRepository enrollments, GymClassRepository gymClasses,
                                  MembershipSubscriptionRepository subscriptions, MemberRepository members,
                                  NotificationService notifications, MessageService messageService, Clock clock) {
+        this(bookings, sessions, enrollments, gymClasses, subscriptions, members, notifications, messageService, clock, null);
+    }
+
+    @Autowired
+    public SessionBookingService(SessionBookingRepository bookings, ClassSessionRepository sessions,
+                                 ClassEnrollmentRepository enrollments, GymClassRepository gymClasses,
+                                 MembershipSubscriptionRepository subscriptions, MemberRepository members,
+                                 NotificationService notifications, MessageService messageService, Clock clock,
+                                 @Autowired(required = false) CoachBookingRepository coachBookingRepository) {
         this.bookings = bookings;
         this.sessions = sessions;
         this.enrollments = enrollments;
@@ -78,6 +93,7 @@ public class SessionBookingService {
         this.notifications = notifications;
         this.messageService = messageService;
         this.clock = clock;
+        this.coachBookingRepository = coachBookingRepository;
     }
 
     private String msg(String key, Object... args) {
@@ -186,21 +202,35 @@ public class SessionBookingService {
         return bookings.saveAndFlush(booking);
     }
 
-    /** A member cannot hold two sessions that overlap in time, whether booked per session or through a class. */
+    /** A member cannot hold two sessions that overlap in time, whether booked per session, through a class, or 1:1 PT. */
     private void ensureNoOverlap(Long memberId, ClassSession target) {
         List<ClassSession> sameDay = sessions.findActiveByMemberAndDate(memberId, target.getSessionDate());
-        if (sameDay == null) {
-            return;
-        }
-        for (ClassSession other : sameDay) {
-            if (other == null || other.getId() == null || other.getId().equals(target.getId())) {
-                continue;
+        if (sameDay != null) {
+            for (ClassSession other : sameDay) {
+                if (other == null || other.getId() == null || other.getId().equals(target.getId())) {
+                    continue;
+                }
+                if (target.getStartTime().isBefore(other.getEndTime()) && target.getEndTime().isAfter(other.getStartTime())) {
+                    throw new ConflictException("SCHEDULING_MEMBER_TIME_OVERLAP", "error.scheduling.member_time_overlap",
+                            new Object[]{other.getGymClass().getName(), target.getSessionDate().toString(),
+                                    hhmm(other.getStartTime()), hhmm(other.getEndTime())},
+                            "Member already has an overlapping booking");
+                }
             }
-            if (target.getStartTime().isBefore(other.getEndTime()) && target.getEndTime().isAfter(other.getStartTime())) {
-                throw new ConflictException("SCHEDULING_MEMBER_TIME_OVERLAP", "error.scheduling.member_time_overlap",
-                        new Object[]{other.getGymClass().getName(), target.getSessionDate().toString(),
-                                hhmm(other.getStartTime()), hhmm(other.getEndTime())},
-                        "Member already has an overlapping booking");
+        }
+        if (coachBookingRepository != null && target.getSessionDate() != null) {
+            List<CoachBooking> ptBookings = coachBookingRepository.findActiveByMemberAndDate(memberId, target.getSessionDate());
+            if (ptBookings != null) {
+                for (CoachBooking pt : ptBookings) {
+                    if (pt == null || pt.getStartTime() == null || pt.getEndTime() == null) {
+                        continue;
+                    }
+                    if (target.getStartTime().isBefore(pt.getEndTime()) && target.getEndTime().isAfter(pt.getStartTime())) {
+                        throw new ConflictException("SCHEDULE_CONFLICT", "error.scheduling.session_conflict",
+                                new Object[]{target.getSessionDate().toString(), hhmm(pt.getStartTime()), hhmm(pt.getEndTime())},
+                                "Member already has an overlapping 1:1 PT session");
+                    }
+                }
             }
         }
     }

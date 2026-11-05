@@ -39,7 +39,7 @@ public class CoachBookingService {
 
     private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 hours
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
-            java.util.Set.of("package_quota", "cash");
+            java.util.Set.of("package_quota", "cash", "bank_transfer");
     private static final int MAX_UNPAID_UPCOMING = 2;
     private static final java.util.Set<String> DESK_ROLES = java.util.Set.of("RECEPTIONIST", "CENTER_MANAGER");
 

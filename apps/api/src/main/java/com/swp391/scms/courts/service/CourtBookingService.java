@@ -38,8 +38,7 @@ public class CourtBookingService {
     private final MemberRepository members;
     private final Clock clock;
     private static final int RECURRING_MAX_DAYS = 31;
-    /** Must match trg_court_bookings_check_limit. */
-    private static final int MAX_BOOKINGS_PER_DAY = 4;
+    private static final int MAX_ADVANCE_DAYS = 365;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private MessageService messages;
@@ -86,11 +85,11 @@ public class CourtBookingService {
         return new AppException(HttpStatus.NOT_FOUND, "COURT_BOOKING_NOT_FOUND", "error.courts.not_found", null, null);
     }
     private void dateWindow(LocalDate date) { dateWindow(date, false); }
-    /** One-off bookings open 7 days ahead; a standing booking may reach one month ahead. */
+    /** One-off bookings open up to 365 days ahead; a standing booking may reach one month ahead. */
     private void dateWindow(LocalDate date, boolean recurring) {
         if (date == null) throw invalid("invalid_slot");
         if (date.isBefore(now().toLocalDate())) throw invalid("past_slot");
-        if (date.isAfter(now().toLocalDate().plusDays(recurring ? RECURRING_MAX_DAYS : 7))) throw invalid("too_far");
+        if (date.isAfter(now().toLocalDate().plusDays(recurring ? RECURRING_MAX_DAYS : MAX_ADVANCE_DAYS))) throw invalid("too_far");
     }
     private Room court(Long id) {
         if (id == null) throw invalid("invalid_court");
@@ -183,9 +182,9 @@ public class CourtBookingService {
         if (bookings.existsRoomOverlap(room.getId(), date, start, end)
                 || bookings.existsClassOverlap(room.getId(), date, start, end)
                 || bookings.existsMemberOverlap(principal.id(), date, start, end)) throw conflict("slot_taken");
-        // Mirrors trg_court_bookings_check_limit so the member gets a readable error instead of a trigger failure.
-        if (bookings.countByMemberIdAndBookingDateAndStatus(principal.id(), date, "booked") >= MAX_BOOKINGS_PER_DAY) throw conflict("limit_reached");
-        String method = paymentMethod == null || paymentMethod.isBlank() ? null : paymentMethod.trim().toLowerCase(Locale.ROOT);
+        String method = paymentMethod == null || paymentMethod.isBlank()
+                || CourtPricing.PACKAGE_QUOTA.equalsIgnoreCase(paymentMethod.trim())
+                ? null : paymentMethod.trim().toLowerCase(Locale.ROOT);
         if (method != null && !PAYMENT_METHODS.contains(method)) throw invalid("invalid_payment_method");
         BigDecimal price = CourtPricing.priceFor(start);
         // The plan covers the first bookings of the month; every extra court or hour is paid when booking.

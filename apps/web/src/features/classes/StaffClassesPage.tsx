@@ -130,6 +130,11 @@ export function StaffClassesPage() {
   const [deleteConfirmStep, setDeleteConfirmStep] = useState<1 | 2>(1);
   const [deleteModalError, setDeleteModalError] = useState<string | null>(null);
 
+  // State Modal Hủy buổi học (Manager)
+  const [cancellingSession, setCancellingSession] = useState<ClassSessionItem | null>(null);
+  const [cancelSessionReason, setCancelSessionReason] = useState<string>('');
+  const [cancelSessionError, setCancelSessionError] = useState<string | null>(null);
+
   // Kiểm tra trùng tên lớp học theo thời gian thực (không phân biệt hoa thường)
   const normalizedInputName = formData.name.trim().toLowerCase();
   const isDuplicateClassName =
@@ -435,6 +440,7 @@ export function StaffClassesPage() {
 
       let targetClassId =
         pendingClassId && pendingClassSignature === currentClassSignature ? pendingClassId : null;
+      const reusedPendingClass = Boolean(targetClassId);
 
       if (!targetClassId) {
         const createdClass = await classesApi.createClass({
@@ -456,7 +462,7 @@ export function StaffClassesPage() {
         }
       }
 
-      if (targetClassId && formData.sessionDate && formData.startTime && formData.endTime) {
+      if (reusedPendingClass && targetClassId && formData.sessionDate && formData.startTime && formData.endTime) {
         await classesApi.createSession({
           classId: targetClassId,
           sessionDate: formData.sessionDate,
@@ -766,6 +772,51 @@ export function StaffClassesPage() {
       const apiErr = err as { message?: string };
       const errMessage = apiErr?.message || 'Không thể xóa lớp học này.';
       setDeleteModalError(errMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenCancelSessionModal = (session: ClassSessionItem) => {
+    if (!isManager) return;
+    setCancelSessionError(null);
+    setCancelSessionReason('');
+    setCancellingSession(session);
+  };
+
+  const handleCloseCancelSessionModal = () => {
+    if (isSubmitting) return;
+    setCancelSessionError(null);
+    setCancelSessionReason('');
+    setCancellingSession(null);
+  };
+
+  const handleConfirmCancelSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancellingSession || isSubmitting || !isManager) return;
+    const reason = cancelSessionReason.trim();
+    if (!reason) {
+      setCancelSessionError('Vui lòng nhập lý do hủy buổi học.');
+      return;
+    }
+    setCancelSessionError(null);
+    setIsSubmitting(true);
+    try {
+      const apiWithCancel = classesApi as { cancelSession?: (id: number, reason: string) => Promise<unknown> };
+      if (typeof apiWithCancel.cancelSession === 'function') {
+        await apiWithCancel.cancelSession(cancellingSession.id, reason);
+      } else {
+        await apiFetch<ClassSessionItem>(`/classes/sessions/${cancellingSession.id}/cancel`, {
+          method: 'POST',
+          body: JSON.stringify({ reason }),
+        });
+      }
+      notify('Đã hủy buổi học thành công!', 'success');
+      setCancellingSession(null);
+      setCancelSessionReason('');
+      await loadData();
+    } catch (err: unknown) {
+      setCancelSessionError(errorMessage(err, 'Không thể hủy buổi học này.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -1105,17 +1156,28 @@ export function StaffClassesPage() {
                           {s.status === 'scheduled' ? 'Sắp diễn ra' : s.status === 'completed' ? 'Đã hoàn thành' : 'Đã hủy'}
                         </span>
                         {isManager && s.status === 'scheduled' && (
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            onClick={() => {
-                              const cls = selectedClassDetail;
-                              setSelectedClassDetail(null);
-                              handleOpenRescheduleModal(cls, s);
-                            }}
-                          >
-                            Đổi lịch
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              onClick={() => {
+                                const cls = selectedClassDetail;
+                                setSelectedClassDetail(null);
+                                handleOpenRescheduleModal(cls, s);
+                              }}
+                            >
+                              Đổi lịch
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              style={{ color: 'var(--portal-danger, #fca5a5)' }}
+                              onClick={() => handleOpenCancelSessionModal(s)}
+                              data-testid={`cancel-session-${s.id}`}
+                            >
+                              Hủy buổi
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -1156,6 +1218,45 @@ export function StaffClassesPage() {
               <button type="button" className="btn-secondary" onClick={() => setSelectedClassDetail(null)}>Đóng</button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Modal: Hủy buổi học (Manager Only) */}
+      {isManager && cancellingSession && (
+        <Modal
+          title={`Hủy buổi học: ${cancellingSession.sessionDate} (${cancellingSession.startTime.slice(0, 5)} – ${cancellingSession.endTime.slice(0, 5)})`}
+          onClose={handleCloseCancelSessionModal}
+        >
+          <form onSubmit={handleConfirmCancelSession} style={{ display: 'grid', gap: 12 }}>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="cancel-session-reason">
+                Lý do hủy buổi học *
+              </label>
+              <textarea
+                id="cancel-session-reason"
+                rows={3}
+                required
+                className="portal-textarea"
+                placeholder="Nhập lý do hủy buổi học để thông báo cho học viên..."
+                value={cancelSessionReason}
+                onChange={(e) => setCancelSessionReason(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+            {cancelSessionError && (
+              <div role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+                {cancelSessionError}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="btn-secondary" onClick={handleCloseCancelSessionModal} disabled={isSubmitting}>
+                Quay lại
+              </button>
+              <button type="submit" className="btn-danger" disabled={isSubmitting} data-testid="confirm-cancel-session-btn">
+                {isSubmitting ? 'Đang hủy...' : 'Xác nhận hủy buổi'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 

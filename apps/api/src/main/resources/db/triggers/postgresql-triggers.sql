@@ -147,10 +147,6 @@ BEGIN
         RAISE EXCEPTION 'trg_court_bookings_check_past'
             USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_past';
     END IF;
-    IF NEW.booking_date > business_now::date + 7 THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_horizon'
-            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_horizon';
-    END IF;
     IF EXTRACT(MINUTE FROM NEW.start_time) <> 0 OR EXTRACT(SECOND FROM NEW.start_time) <> 0
        OR NEW.end_time - NEW.start_time <> INTERVAL '1 hour'
        OR NEW.start_time < court.open_time OR NEW.end_time > court.close_time
@@ -184,12 +180,6 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'trg_court_bookings_check_conflict'
             USING ERRCODE = '23P01', CONSTRAINT = 'trg_court_bookings_check_conflict';
-    END IF;
-    IF (SELECT count(*) FROM court_bookings b
-        WHERE b.member_id = NEW.member_id AND b.booking_date = NEW.booking_date
-          AND b.status = 'booked' AND b.id IS DISTINCT FROM NEW.id) >= 4 THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_limit'
-            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_limit';
     END IF;
     RETURN NEW;
 END;
@@ -530,13 +520,24 @@ BEGIN
               AND s.start_time < NEW.end_time AND s.end_time > NEW.start_time
               AND (c.coach_id = NEW.coach_id OR EXISTS (
                   SELECT 1 FROM class_enrollments e WHERE e.class_id = c.id
-                    AND e.member_id = NEW.member_id AND e.status = 'booked'))
+                    AND e.member_id = NEW.member_id AND e.status = 'booked')
+                  OR EXISTS (
+                  SELECT 1 FROM session_bookings sb WHERE sb.session_id = s.id
+                    AND sb.member_id = NEW.member_id AND sb.status = 'booked'))
         ) INTO schedule_conflict;
     ELSIF TG_TABLE_NAME = 'class_enrollments' THEN
         IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
         SELECT EXISTS (
             SELECT 1 FROM class_sessions s JOIN coach_bookings b ON b.booking_date = s.session_date
             WHERE s.class_id = NEW.class_id AND s.status = 'scheduled'
+              AND b.member_id = NEW.member_id AND b.status = 'confirmed'
+              AND b.start_time < s.end_time AND b.end_time > s.start_time
+        ) INTO schedule_conflict;
+    ELSIF TG_TABLE_NAME = 'session_bookings' THEN
+        IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
+        SELECT EXISTS (
+            SELECT 1 FROM class_sessions s JOIN coach_bookings b ON b.booking_date = s.session_date
+            WHERE s.id = NEW.session_id AND s.status = 'scheduled'
               AND b.member_id = NEW.member_id AND b.status = 'confirmed'
               AND b.start_time < s.end_time AND b.end_time > s.start_time
         ) INTO schedule_conflict;
@@ -549,7 +550,10 @@ BEGIN
               AND b.start_time < NEW.end_time AND b.end_time > NEW.start_time
               AND (b.coach_id = target_coach OR EXISTS (
                   SELECT 1 FROM class_enrollments e WHERE e.class_id = NEW.class_id
-                    AND e.member_id = b.member_id AND e.status = 'booked'))
+                    AND e.member_id = b.member_id AND e.status = 'booked')
+                  OR EXISTS (
+                  SELECT 1 FROM session_bookings sb WHERE sb.session_id = NEW.id
+                    AND sb.member_id = b.member_id AND sb.status = 'booked'))
         ) INTO schedule_conflict;
     ELSIF TG_TABLE_NAME = 'classes' THEN
         SELECT EXISTS (
@@ -572,6 +576,9 @@ CREATE TRIGGER trg_pt_schedule_booking BEFORE INSERT OR UPDATE ON coach_bookings
 FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
 DROP TRIGGER IF EXISTS trg_pt_schedule_enrollment ON class_enrollments;
 CREATE TRIGGER trg_pt_schedule_enrollment BEFORE INSERT OR UPDATE ON class_enrollments
+FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
+DROP TRIGGER IF EXISTS trg_pt_schedule_session_booking ON session_bookings;
+CREATE TRIGGER trg_pt_schedule_session_booking BEFORE INSERT OR UPDATE ON session_bookings
 FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
 DROP TRIGGER IF EXISTS trg_pt_schedule_session ON class_sessions;
 CREATE TRIGGER trg_pt_schedule_session BEFORE INSERT OR UPDATE ON class_sessions

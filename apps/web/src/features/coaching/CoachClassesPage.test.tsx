@@ -173,6 +173,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     expect(host.textContent).toContain('Tuần trước');
     expect(host.textContent).toContain('Tuần sau');
     expect(host.querySelectorAll('.tt__day')).toHaveLength(7);
+    // Bảng chỉ xem thu gọn theo lịch tuần; bấm "Hiện đủ" để xem 06:00–22:00.
+    await act(async () => { host.querySelector<HTMLButtonElement>('.tt__span')?.click(); });
     expect(host.querySelector('.tt__gutter')!.textContent).toContain('06:00');
     expect(host.querySelector('.tt__gutter')!.textContent).toContain('21:00');
     expect(host.textContent).toContain('Thứ 2');
