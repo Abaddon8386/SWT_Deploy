@@ -34,7 +34,9 @@ export function CartButton() {
         onClick={() => setOpen(true)}
       >
         <svg
-          viewBox="0 0 20 20"
+          viewBox="0 0 24 24"
+          width="22"
+          height="22"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.8"
@@ -42,8 +44,9 @@ export function CartButton() {
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          <path d="M5.5 6.5h9l.9 9.5a1.5 1.5 0 0 1-1.5 1.65H6.1A1.5 1.5 0 0 1 4.6 16l.9-9.5Z" />
-          <path d="M7.5 6.5V5a2.5 2.5 0 0 1 5 0v1.5" />
+          <circle cx="9" cy="20" r="1.4" />
+          <circle cx="18" cy="20" r="1.4" />
+          <path d="M2.5 3.5h2.6l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.55-1.2L20.8 8H6" />
         </svg>
         {count > 0 && (
           <span className={`shop-cart-btn__badge fit-cart-badge${bumped ? ' is-bumped' : ''}`} aria-hidden="true">
