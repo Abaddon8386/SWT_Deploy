@@ -459,6 +459,7 @@ export function getFallbackAdminProduct(id: number): ProductAdminDto | null {
     id: d.id,
     categoryId: cat.id,
     categoryName: d.categoryName,
+    categorySlug: d.categorySlug,
     name: d.name,
     slug: d.slug,
     brand: d.brand,
@@ -478,7 +479,9 @@ export function getFallbackAdminProduct(id: number): ProductAdminDto | null {
       label: v.label,
       price: v.price,
       servingsPerContainer: v.servingsPerContainer,
+      pricePerServing: v.pricePerServing,
       stock: v.stock,
+      available: v.available,
       active: true,
       sortOrder: idx + 1,
     })),
@@ -495,6 +498,7 @@ export function getFallbackAdminProduct(id: number): ProductAdminDto | null {
     images: d.images.map((img, idx) => ({
       id: img.id,
       url: img.url,
+      alt: img.alt,
       altText: img.alt,
       sortOrder: idx + 1,
     })),
@@ -510,11 +514,9 @@ export function buildFallbackQuote(request: QuoteRequest): QuoteDto {
         const qty = Math.min(Math.max(1, item.quantity), v.stock);
         lines.push({
           variantId: v.id,
-          productId: prod.id,
           slug: prod.slug,
           productName: prod.name,
           variantLabel: v.label,
-          form: prod.form,
           imageUrl: prod.images[0]?.url ?? null,
           unitPrice: v.price,
           requestedQuantity: item.quantity,
@@ -537,7 +539,6 @@ export function buildFallbackQuote(request: QuoteRequest): QuoteDto {
     subtotal,
     shippingFee,
     total: subtotal + shippingFee,
-    freeShippingThreshold: FALLBACK_SHOP_CONFIG.freeShippingThreshold,
     valid: lines.length > 0 && lines.every(l => l.problem === null),
   };
 }
