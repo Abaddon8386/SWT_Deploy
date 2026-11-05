@@ -19,6 +19,13 @@ const payment = { id: 31, memberId: 1, memberName: profile.fullName, subscriptio
 const cancellation = { id: 41, memberId: 1, memberName: profile.fullName, subscriptionId: 1, packageName: pack.name, reason: 'Thay đổi lịch làm việc', status: 'PENDING', requestedAt: now, resolvedById: null, resolvedAt: null, resolutionNote: null };
 const fixtures = {
   '/profile': profile, '/packages': [pack],
+  '/classes/session-bookings/my': [],
+  '/chat/realtime-session': { enabled: false, userId: 1 }, '/chat/unread-count': { count: 0 },
+  '/wallet/my': { balance: 0, updatedAt: now, transactions: [] },
+  '/memberships/trial/status': { eligible: false, alreadyClaimed: true, cccd: null, fullName: null, redeemedAt: null, subscriptionId: 1 },
+  '/court-bookings/my': { content: [], number: 0, totalPages: 0, totalElements: 0 },
+  '/coach-bookings/unpaid': [],
+  '/staff-accounts': [{ id: 2, fullName: 'Trần Minh', email: 'coach@example.test', roleCode: 'COACH', status: 'active' }],
   '/disciplines': [{ id: 1, name: 'Yoga', description: 'Bộ môn Yoga' }],
   '/rooms': [{ id: 1, name: 'Phòng 1', location: 'Tầng 1', capacity: 20, status: 'available' }],
   '/classes': [gymClass], '/classes/sessions': [session], '/classes/enrollments/my': [enrollment],
@@ -46,7 +53,7 @@ const fixtures = {
 const routes = [
   ...['dashboard', 'packages', 'classes', 'card', 'profile'].map(n => ['MEMBER', `/member/${n}`]),
   ['COACH', '/staff/attendance'], ...['classes', 'reception', 'check-in'].map(n => ['STAFF', `/staff/${n}`]),
-  ...['users', 'catalogs', 'cancellations', 'reports'].map(n => ['MANAGER', `/manager/${n}`]),
+  ...['staff-accounts', 'catalogs', 'cancellations', 'reports'].map(n => ['MANAGER', `/manager/${n}`]),
 ];
 
 (async () => {
@@ -60,6 +67,10 @@ const routes = [
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/v1/**', route => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api\/v1/, '');
+    if (path === '/auth/me') {
+      const serverRole = { STAFF: 'RECEPTIONIST', MANAGER: 'CENTER_MANAGER' }[role] || role;
+      return route.fulfill({ json: { data: { username: 'review', role: serverRole } } });
+    }
     let data = /^\/roles\/\d+\/permissions$/.test(path) ? fixtures['/roles/permissions'] : fixtures[path];
     if (data === undefined) { unknown.add(path); data = []; }
     if (mode === 'empty') data = Array.isArray(data) ? [] : null;
@@ -100,7 +111,7 @@ const routes = [
       assert.ok(result.height >= page.viewportSize().height, 'shell fills viewport height');
       assert.equal(result.maxWidth, 'none'); assert.equal(result.backdropPadding, '0px');
       assert.equal(result.overflow, false, 'document overflows horizontally'); assert.deepEqual(result.pale, [], 'pale controls');
-      assert.ok(result.primary.every(color => ['rgb(206, 145, 128)', 'rgb(225, 170, 152)'].includes(color)), 'primary buttons use landing salmon or its hover color');
+      assert.ok(result.primary.every(color => ['rgb(206, 145, 128)', 'rgb(225, 170, 152)'].includes(color)), `primary buttons use landing salmon or its hover color: ${JSON.stringify(result.primary)}`);
       assert.ok(!['hidden', 'clip'].includes(result.documentScroll) && !['hidden', 'clip'].includes(result.bodyScroll), 'native document scroll remains available');
       if (page.viewportSize().width >= 1101) {
         assert.equal(result.railWidth, 76, 'preserve desktop icon rail');
@@ -127,8 +138,8 @@ const routes = [
       await audit(`dashboard full viewport at ${width}px`); await screenshot(`member-dashboard-${width}`);
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
-    for (const [path, button] of [['/manager/catalogs', /Thêm mới/], ['/manager/users', /Thêm tài khoản/], ['/staff/classes', /Tạo lớp học/]]) {
-      role = 'MANAGER'; await visit(path);
+    for (const [path, button, routeRole] of [['/manager/catalogs', /Thêm mới/, 'MANAGER'], ['/admin/users', /Thêm tài khoản/, 'ADMIN'], ['/staff/classes', /Tạo lớp học/, 'MANAGER']]) {
+      role = routeRole; await visit(path);
       await check(`${path} create dialog`, async () => {
         await page.getByRole('button', { name: button }).first().click(); await page.locator('dialog[open]').waitFor();
         await audit(`${path} dialog controls`);

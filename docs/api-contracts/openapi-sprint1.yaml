@@ -383,8 +383,38 @@ paths:
     put: { summary: Grant permission to role (audited; ADMIN), responses: { '200': { description: OK }, '404': { description: NOT_FOUND } } }
     delete: { summary: Revoke permission from role (audited; ADMIN), responses: { '200': { description: OK } } }
   /profile:
-    get: { summary: Current user profile, responses: { '200': { description: OK } } }
-    put: { summary: Update current user profile, responses: { '200': { description: OK } } }
+    get:
+      summary: Current user profile
+      responses:
+        '200': { description: 'ApiResponse.data contains the current profile; avatarUrl falls back to /images/default-avatar.png when unset.' }
+    put:
+      summary: Update current user profile
+      description: >-
+        Gender accepts male, female or other (case-insensitive; blank clears the optional value).
+        Member fitnessLevel accepts beginner, intermediate or advanced (case-insensitive; blank leaves the level unchanged).
+        Invalid values return a localized validation error instead of silently clearing or ignoring the field.
+      responses:
+        '200': { description: Updated profile in ApiResponse.data }
+        '400': { description: 'INVALID_GENDER, INVALID_FITNESS_LEVEL or invalid avatar data. Message is localized through Accept-Language.' }
+  /profile/avatar:
+    post:
+      summary: Update or reset the authenticated user's avatar
+      description: Changes only the avatar and returns the persisted profile. Null or blank resets to /images/default-avatar.png.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                avatarUrl:
+                  type: string
+                  nullable: true
+                  maxLength: 2800000
+                  description: 'HTTP(S) or relative URL, or JPEG/PNG/WebP base64 data URL with at most 2 MiB decoded data.'
+      responses:
+        '200': { description: Updated persisted profile in ApiResponse.data }
+        '400': { description: Invalid avatar URL, format or data, or avatar exceeds 2 MiB }
   /profile/coach:
     put: { summary: Update coach profile (COACH), responses: { '200': { description: OK }, '403': { description: FORBIDDEN } } }
   /profile/receptionist:

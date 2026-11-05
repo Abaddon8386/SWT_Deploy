@@ -173,6 +173,7 @@ public class UserService {
         user.setGender(dto.getGender() != null && !dto.getGender().isBlank()
                 ? dto.getGender().trim().toLowerCase(Locale.ROOT)
                 : null);
+        user.setAvatarUrl(User.DEFAULT_AVATAR_URL);
         user.setStatus("active");
         user.setCreatedAt(LocalDateTime.now(clock));
         user.setUpdatedAt(LocalDateTime.now(clock));

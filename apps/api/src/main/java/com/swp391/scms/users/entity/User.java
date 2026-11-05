@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 public class User {
 
+    public static final String DEFAULT_AVATAR_URL = "/images/default-avatar.png";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -67,7 +67,9 @@ public class AuditAspect {
 
     private void record(JoinPoint joinPoint, Audited audited, Object result, JsonNode oldValue, JsonNode snapshot) {
         try {
-            JsonNode newValue = snapshot != null ? snapshot : result == null || "PROFILE_UPDATE".equals(audited.action())
+            JsonNode newValue = snapshot != null ? snapshot : result == null
+                    || "PROFILE_UPDATE".equals(audited.action())
+                    || "PROFILE_AVATAR_UPDATE".equals(audited.action())
                     ? null : objectMapper.valueToTree(result);
             AuditLog entry = new AuditLog();
             entry.setUserId(currentUserId());
@@ -93,7 +95,7 @@ public class AuditAspect {
                     if (user == null) return null;
                     node.put("id", id).put("fullName", user.getFullName()).put("email", user.getEmail())
                             .put("phone", user.getPhone()).put("status", user.getStatus())
-                            .put("gender", user.getGender()).put("avatarUrl", user.getAvatarUrl())
+                            .put("gender", user.getGender())
                             .put("address", user.getAddress());
                     if (user.getDob() != null) node.put("dob", user.getDob().toString());
                     if (user.getDeletedAt() != null) node.put("deletedAt", user.getDeletedAt().toString());

@@ -144,6 +144,26 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     expect((host.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it('preserves unsaved profile edits when resetting the avatar, including edits during the request', async () => {
+    mockApi.getProfile.mockResolvedValue({ ...sampleProfile, avatarUrl: 'https://example.test/avatar.png' });
+    let finish!: (profile: Profile) => void;
+    mockApi.uploadAvatar.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    await renderPage();
+    const name = host.querySelector<HTMLInputElement>('#fullName')!;
+    const editName = async (value: string) => act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, value);
+      name.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await editName('Draft name');
+    await act(async () => [...host.querySelectorAll('button')].find(button => button.textContent === 'Đặt lại ảnh mặc định')!.click());
+    expect(mockApi.uploadAvatar).toHaveBeenCalledWith(null);
+    await editName('Newer draft');
+    await act(async () => finish({ ...sampleProfile, avatarUrl: '/images/default-avatar.png' }));
+    expect(name.value).toBe('Newer draft');
+    expect(host.querySelector<HTMLImageElement>('img[alt="Ảnh đại diện hiện tại"]')?.getAttribute('src')).toBe('/images/default-avatar.png');
+    expect(mockApi.updateProfile).not.toHaveBeenCalled();
+  });
+
   it('enforces avatar MIME type and 2MB size constraints before uploading', async () => {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' }));
     await renderPage();

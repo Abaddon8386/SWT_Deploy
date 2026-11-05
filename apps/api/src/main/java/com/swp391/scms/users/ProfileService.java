@@ -66,16 +66,26 @@ public class ProfileService {
             user.setPhone(phone);
         }
         user.setDob(request.dob());
-        user.setGender(request.gender());
-        user.setAvatarUrl(request.avatarUrl() == null || request.avatarUrl().isBlank() ? null : request.avatarUrl().trim());
+        String gender = request.gender() == null || request.gender().isBlank()
+                ? null
+                : request.gender().trim().toLowerCase(java.util.Locale.ROOT);
+        if (gender != null && !List.of("male", "female", "other").contains(gender)) {
+            throw new BadRequestException("INVALID_GENDER", "validation.users.gender.invalid", null, null);
+        }
+        user.setGender(gender);
+        user.setAvatarUrl(request.avatarUrl() == null || request.avatarUrl().isBlank() ? User.DEFAULT_AVATAR_URL : request.avatarUrl().trim());
         user.setAddress(request.address());
 
         Member member = memberRepository.findById(userId).orElse(null);
         if (member != null) {
             member.setHealthNotes(request.healthNotes());
             member.setFitnessGoal(request.fitnessGoal());
-            if (request.fitnessLevel() != null) {
-                member.setFitnessLevel(request.fitnessLevel());
+            if (request.fitnessLevel() != null && !request.fitnessLevel().isBlank()) {
+                String level = request.fitnessLevel().trim().toLowerCase(java.util.Locale.ROOT);
+                if (!List.of("beginner", "intermediate", "advanced").contains(level)) {
+                    throw new BadRequestException("INVALID_FITNESS_LEVEL", "validation.users.fitness_level.invalid", null, null);
+                }
+                member.setFitnessLevel(level);
             }
             member.setEmergencyContactName(request.emergencyContactName());
             member.setEmergencyContactPhone(request.emergencyContactPhone());
@@ -112,7 +122,7 @@ public class ProfileService {
     public ProfileDto updateAvatar(Long userId, String avatarUrl) {
         User user = findActiveUser(userId);
         validateAvatarUrl(avatarUrl);
-        user.setAvatarUrl(avatarUrl == null || avatarUrl.isBlank() ? null : avatarUrl.trim());
+        user.setAvatarUrl(avatarUrl == null || avatarUrl.isBlank() ? User.DEFAULT_AVATAR_URL : avatarUrl.trim());
         Member member = memberRepository.findById(userId).orElse(null);
         Coach coach = coachRepository.findById(userId).orElse(null);
         Receptionist receptionist = receptionistRepository.findById(userId).orElse(null);
@@ -213,7 +223,7 @@ public class ProfileService {
                 user.getPhone(),
                 user.getDob(),
                 user.getGender(),
-                user.getAvatarUrl(),
+                user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank() ? user.getAvatarUrl() : User.DEFAULT_AVATAR_URL,
                 user.getAddress(),
                 member != null ? member.getMembershipCode() : null,
                 member != null ? member.getHealthNotes() : null,

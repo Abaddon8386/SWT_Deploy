@@ -286,7 +286,7 @@ public class AuthService {
         user.setEmail(email);
         user.setPhone(phone);
         user.setGoogleSub(googleSub);
-        user.setAvatarUrl(avatarUrl);
+        user.setAvatarUrl(avatarUrl != null && !avatarUrl.isBlank() ? avatarUrl : User.DEFAULT_AVATAR_URL);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setStatus(initialStatus);
         LocalDateTime now = LocalDateTime.now(clock);

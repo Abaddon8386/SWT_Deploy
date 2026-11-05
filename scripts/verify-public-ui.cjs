@@ -48,6 +48,7 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
   };
   try {
     await page.goto(base);
+    await page.locator('.fit-site--landing').waitFor();
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.locator('.fit-site--landing').count(),1);
     assert.equal(await page.locator('h1,h2').evaluateAll(elements=>elements.every(element=>{
@@ -80,17 +81,19 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
     await page.getByRole('button', { name: 'Gói 1 tháng' }).click();
     assert.equal(await page.locator('.fit-plan').count(), 1);
     check('trainer navigation, gallery switch and pricing filter');
-    await page.getByRole('button', { name: 'Strength & Barbell' }).click();
-    assert.equal(await page.locator('.fit-schedule-card').count(), 2);
-    await page.getByRole('button', { name: 'Tất cả bộ môn' }).click();
-    assert.equal(await page.locator('.fit-schedule-card').count(), 4);
+    assert.equal(await page.locator('#schedule').count(), 0, 'Landing no longer contains the weekly schedule section');
     await page.locator('#fit-bmi-height').fill('175');
     await page.locator('#fit-bmi-weight').fill('70');
     await page.getByRole('button', { name: 'Giảm mỡ & Săn chắc' }).click();
     await page.locator('.fit-bmi-result').filter({ hasText: '22.9' }).waitFor();
     await page.getByRole('button', { name: /Tôi có thể tạm dừng/ }).click();
     await page.locator('.fit-faq-answer').filter({ hasText: 'Freeze' }).waitFor();
-    check('trainer navigation, gallery switch, schedule filter, BMI calculator, FAQ accordion and pricing filter');
+    check('trainer navigation, gallery switch, BMI calculator, FAQ accordion and pricing filter');
+    await page.goto(`${base}/trainers/1`);
+    await page.locator('.fit-schedule-card').first().waitFor();
+    assert.equal(await page.locator('.fit-schedule-card').count(), 2, 'Trainer profile retains its live schedule');
+    assert.equal(await page.locator('.fit-schedule-card h3').first().textContent(), 'Lớp kiểm chứng 1');
+    check('trainer profile retains the API-backed schedule removed from landing');
 
     for (const width of [320, 375, 390, 768, 1024, 1440, 1920, 2560]) {
       await page.setViewportSize({ width, height: 1000 });
