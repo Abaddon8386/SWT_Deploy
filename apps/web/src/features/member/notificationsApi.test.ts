@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead, notificationDestination } from './notificationsApi';
+import { getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead, notificationDestination, safeNotificationPath } from './notificationsApi';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -42,4 +42,15 @@ it('uses safe action links and rejects external or other-role destinations', () 
 it('opens staff and manager support notifications in their own queues', () => {
   expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'STAFF')).toBe('/staff/support');
   expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'MANAGER')).toBe('/manager/support');
+});
+
+it('product_order notifications open the right page per role', () => {
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MEMBER')).toBe('/member/orders');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'STAFF')).toBe('/staff/orders');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'RECEPTIONIST')).toBe('/staff/orders');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MANAGER')).toBe('/manager/products?tab=orders');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'CENTER_MANAGER')).toBe('/manager/products?tab=orders');
+  expect(safeNotificationPath('/staff/orders', 'STAFF')).toBe('/staff/orders');
+  expect(safeNotificationPath('/staff/orders', 'MANAGER')).toBe('/staff/orders');
+  expect(safeNotificationPath('/manager/products', 'MANAGER')).toBe('/manager/products');
 });

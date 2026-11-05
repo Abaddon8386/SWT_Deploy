@@ -31,7 +31,7 @@ export const markAllNotificationsRead = () =>
 export function safeNotificationPath(path: string | null | undefined, role = 'MEMBER'): string | null {
   if (!path || !/^\/[a-z0-9/-]+(?:\?[a-zA-Z0-9_=&%-]+)?(?:#[a-z0-9-]+)?$/.test(path)) return null;
   const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
-  return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && ['/staff/attendance', '/staff/requests', '/staff/coach-classes', '/staff/classes'].some(p => path === p || path.startsWith(`${p}?`))) || (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts'].some(p => path === p || path.startsWith(`${p}?`))) || path === '/messages' ? path : null;
+  return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && ['/staff/attendance', '/staff/requests', '/staff/coach-classes', '/staff/classes'].some(p => path === p || path.startsWith(`${p}?`))) || (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts', '/staff/orders'].some(p => path === p || path.startsWith(`${p}?`))) || path === '/messages' ? path : null;
 }
 
 export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath'>, role = 'MEMBER'): string {
@@ -40,6 +40,7 @@ export function notificationDestination(notification: Pick<MemberNotification, '
   if (role === 'COACH') return notification.relatedEntityType === 'training_plan' ? '/coach/training-plans' : '/coach/classes';
   if (['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER'].includes(role)) {
     const manager = ['MANAGER', 'CENTER_MANAGER'].includes(role);
+    if (notification.relatedEntityType === 'product_order' || notification.type === 'order') return manager ? '/manager/products?tab=orders' : '/staff/orders';
     if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return manager ? '/manager/support' : '/staff/support';
     if (['class_session', 'class_enrollment'].includes(notification.relatedEntityType ?? '') || ['schedule_change', 'class_reminder'].includes(notification.type)) return '/staff/classes';
     return manager ? '/manager/reports' : '/staff/reception';
@@ -50,12 +51,14 @@ export function notificationDestination(notification: Pick<MemberNotification, '
     case 'class_enrollment': return '/member/classes';
     case 'membership_subscription': return '/member/packages';
     case 'payment': return '/member/invoices';
+    case 'product_order': return '/member/orders';
     case 'support_request': return '/member/support';
     case 'training_plan': return '/member/progress';
     default:
       if (notification.type === 'class_reminder' || notification.type === 'schedule_change') return '/member/classes';
       if (notification.type === 'package_expiry') return '/member/packages';
       if (notification.type === 'payment') return '/member/invoices';
+      if (notification.type === 'order') return '/member/orders';
       if (notification.type === 'support_reply') return '/member/support';
       return '/member/dashboard';
   }
