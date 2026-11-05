@@ -357,6 +357,17 @@ BEGIN
         EXECUTE format('ALTER TABLE %I.member_trial_redemptions ALTER COLUMN cccd DROP NOT NULL', current_schema());
         EXECUTE format('ALTER TABLE %I.member_trial_redemptions DROP CONSTRAINT IF EXISTS uq_trial_cccd', current_schema());
     END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'users'
+          AND column_name = 'avatar_url'
+          AND data_type <> 'text'
+    ) THEN
+        EXECUTE format('ALTER TABLE %I.users ALTER COLUMN avatar_url TYPE text', current_schema());
+    END IF;
 END;
 $$;
 

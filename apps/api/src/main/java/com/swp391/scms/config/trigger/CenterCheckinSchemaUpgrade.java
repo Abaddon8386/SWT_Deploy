@@ -58,6 +58,14 @@ final class CenterCheckinSchemaUpgrade {
         });
     }
 
+    static void upgradeAvatarUrlType(JdbcTemplate jdbc) {
+        try {
+            jdbc.execute("ALTER TABLE users ALTER COLUMN avatar_url TYPE text");
+        } catch (Exception ignored) {
+            // Handled gracefully if table/column does not exist yet or already text
+        }
+    }
+
     private static String quoted(String identifier) {
         return "\"" + identifier.replace("\"", "\"\"") + "\"";
     }
