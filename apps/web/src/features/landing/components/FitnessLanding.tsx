@@ -625,7 +625,7 @@ export function FitnessLanding() {
             </div>
           </li>)}
         </ol>
-        <div key={activeStep} className="fit-journey-preview fit-blur-morph" aria-label="Minh họa trực quan theo từng bước">
+        <div key={activeStep} className="fit-journey-preview fit-blur-morph" aria-label="Trực quan theo từng bước">
           {activeStep === 0 ? <div className="fit-preview-widget fit-preview-qr">
             <div className="fit-preview-head">
               <span className="fit-kicker">01 · DIGITAL PASS &amp; SLOT CHECK</span>
