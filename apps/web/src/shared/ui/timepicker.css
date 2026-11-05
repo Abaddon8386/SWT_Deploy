@@ -162,12 +162,14 @@
   border-radius: 8px;
   padding: 4px;
   background: #FAF8F5;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   scrollbar-color: #D6C7B8 transparent;
 }
 
 .ltp-col-scroll::-webkit-scrollbar {
-  width: 4px;
+  display: none;
+  width: 0;
 }
 
 .ltp-col-scroll::-webkit-scrollbar-thumb {

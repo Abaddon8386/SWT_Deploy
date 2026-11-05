@@ -18,6 +18,7 @@ Thư mục này tập trung toàn bộ các tài liệu kế hoạch, phân chia
 |:---:|---|:---:|---|
 | 2026-09-26 | [`2026-09-26-scms-luxury-editorial-frontend.md`](2026-09-26-scms-luxury-editorial-frontend.md) | **Frontend** | Kế hoạch nâng cấp giao diện Web theo chuẩn Luxury Editorial, phong cách sang trọng, typography cao cấp, responsive và tối ưu trải nghiệm người dùng. |
 | 2026-10-01 | [`2026-10-01-backend-layered-jpa.md`](2026-10-01-backend-layered-jpa.md) | **Backend** | Kế hoạch tái cấu trúc Backend sang mô hình 3 lớp chuẩn mực (Layered Architecture), Spring Boot 3 + Spring Data JPA, hỗ trợ đa hình CSDL (SQL Server & PostgreSQL) qua `DatabaseTriggerProvider`. |
+| 2026-11-05 | [`../superpowers/plans/2026-11-05-supplement-shop.md`](../superpowers/plans/2026-11-05-supplement-shop.md) | **Full-Stack (Shop)** | Kế hoạch thiết kế & triển khai phân hệ Cửa hàng Thực phẩm bổ sung (“Sản phẩm”): kệ hàng công khai, bảng thành phần dinh dưỡng, giỏ hàng, địa chỉ hành chính 2 cấp, thanh toán VNPay/Ví/Tại quầy, xử lý đơn Lễ tân và quản trị tồn kho Quản lý. |
 
 ---
 

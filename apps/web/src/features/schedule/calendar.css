@@ -1,0 +1,181 @@
+/* Lịch tuần/tháng dùng chung cho mọi role: một thẻ, điều hướng tròn, cột giờ bên trái, ngày hôm nay là vòng salmon. */
+.mcal {
+  --mcal-hour: 76px;
+  --mcal-gutter: 64px;
+  --mcal-court: var(--portal-warning);
+  --mcal-class: var(--portal-salmon);
+  display: grid; gap: 14px; min-width: 0; padding: 20px;
+  border: 1px solid var(--portal-border); border-radius: 22px; background: var(--portal-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thanh công cụ */
+.mcal__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
+.mcal__nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.mcal__icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--portal-border-strong); border-radius: 50%; background: var(--portal-raised); color: var(--portal-paper); cursor: pointer; }
+.mcal__icon-btn svg, .mcal__next svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mcal__today-btn { height: 40px; padding: 0 18px; border: 1px solid var(--portal-border-strong); border-radius: 999px; background: var(--portal-raised); color: var(--portal-paper); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.mcal__today-btn:disabled { opacity: .55; cursor: default; }
+.mcal__icon-btn:hover, .mcal__today-btn:hover:not(:disabled) { border-color: var(--portal-salmon); color: var(--portal-salmon); }
+.mcal__range { margin: 0 0 0 8px; font-size: clamp(20px, 2.2vw, 28px); font-weight: 800; letter-spacing: -.02em; color: var(--portal-paper); white-space: nowrap; }
+.mcal__side { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.mcal__extra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.mcal__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--portal-muted); }
+.mcal__legend li { display: inline-flex; align-items: center; gap: 7px; }
+.mcal__dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--portal-muted); }
+.mcal__dot--court { background: var(--mcal-court); }
+.mcal__dot--class, .mcal__dot--mine { background: var(--mcal-class); }
+.mcal__dot--open { background: var(--portal-info); }
+.mcal__dot--full { background: var(--portal-warning); }
+.mcal__dot--past, .mcal__dot--neutral { background: var(--portal-muted); }
+.mcal__dot--cancelled { background: var(--portal-danger); }
+.mcal__dot--free { background: transparent; box-shadow: inset 0 0 0 1.5px var(--portal-salmon); }
+.mcal__legend-note { color: var(--portal-muted); opacity: .85; }
+
+.mcal__switch { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--portal-raised); }
+.mcal__switch button { min-width: 72px; height: 34px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+.mcal__switch button[aria-pressed='true'] { background: var(--portal-salmon); color: var(--portal-on-accent); }
+
+/* Thanh "Tiếp theo" */
+.mcal__next { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; width: 100%; padding: 12px 18px; border: 1px solid var(--portal-border); border-radius: 14px; background: var(--portal-raised); color: var(--portal-paper); font: inherit; text-align: left; cursor: pointer; }
+.mcal__next:hover { border-color: var(--portal-salmon); }
+.mcal__next-tag { padding: 3px 10px; border-radius: 999px; background: var(--portal-salmon); color: var(--portal-on-accent); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.mcal__next-title { font-size: 15px; }
+.mcal__next-meta { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--portal-muted); }
+.mcal__next-meta svg { width: 15px; height: 15px; }
+.mcal__next-count { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--portal-salmon); }
+
+/* Lưới tuần */
+.mcal__scroll { position: relative; isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 320px)); scrollbar-width: thin; scrollbar-color: var(--portal-salmon) transparent; }
+.mcal__scroll.is-loading .mcal__week, .mcal__month.is-loading { opacity: .55; }
+.mcal__week {
+  display: grid; min-width: 760px;
+  grid-template-columns: var(--mcal-gutter) repeat(var(--mcal-days, 7), minmax(96px, 1fr));
+  grid-template-rows: auto calc(var(--mcal-hour) * var(--mcal-rows));
+}
+.mcal__week.is-single { min-width: 0; grid-template-columns: var(--mcal-gutter) minmax(0, 1fr); grid-template-rows: calc(var(--mcal-hour) * var(--mcal-rows)); }
+/* Xem một ngày: dải chọn ngày đã ghi thứ/ngày nên bỏ hàng tiêu đề lặp lại */
+.mcal__week.is-single :is(.mcal__corner, .mcal__dayhead) { display: none; }
+.mcal__corner, .mcal__dayhead { position: sticky; top: 0; z-index: 6; background: var(--portal-surface); border-bottom: 1px solid var(--portal-border-strong); }
+.mcal__corner { left: 0; z-index: 7; }
+.mcal__dayhead { display: grid; justify-items: center; align-content: start; gap: 4px; padding: 6px 4px 10px; }
+.mcal__dayname { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--portal-muted); }
+.mcal__daynum { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; font-size: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--portal-paper); }
+.mcal__dayhead.is-today .mcal__dayname { color: var(--portal-paper); }
+.mcal__dayhead.is-today .mcal__daynum { background: var(--portal-salmon); color: var(--portal-on-accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--portal-salmon) 25%, transparent); }
+.mcal__dayhead small { font-size: 11px; color: var(--portal-muted); }
+.mcal__dots { display: flex; gap: 4px; min-height: 7px; }
+.mcal__dots .mcal__dot { width: 7px; height: 7px; }
+
+.mcal__gutter { position: sticky; left: 0; z-index: 5; display: grid; grid-template-rows: repeat(var(--mcal-rows), var(--mcal-hour)); background: var(--portal-surface); }
+.mcal__gutter span { padding: 8px 10px 0 0; text-align: right; font-size: 12px; font-weight: 700; color: var(--portal-muted); }
+
+.mcal__col {
+  position: relative; border-left: 1px solid var(--portal-border);
+  background-image: linear-gradient(to bottom, var(--portal-border) 1px, transparent 1px);
+  background-size: 100% var(--mcal-hour);
+}
+.mcal__col.is-weekend { background-color: color-mix(in srgb, var(--portal-paper) 2.5%, transparent); }
+.mcal__col.is-today { background-color: color-mix(in srgb, var(--portal-salmon) 7%, transparent); }
+
+/* Ô giờ bấm được (Quản lý/Lễ tân tạo lịch) */
+.mcal__slot { position: absolute; left: 0; right: 0; height: var(--mcal-hour); padding: 0; border: 0; background: transparent; font: inherit; cursor: pointer; }
+.mcal__slot.is-past { cursor: not-allowed; background: color-mix(in srgb, var(--portal-ink) 35%, transparent); }
+.mcal__slot-plus { position: absolute; inset: 5px; display: grid; place-items: center; border: 1px dashed var(--portal-salmon); border-radius: 12px; font-size: 12px; font-weight: 800; color: var(--portal-salmon); opacity: 0; transition: opacity 120ms ease; }
+.mcal__slot:not(.is-past):is(:hover, :focus-visible) { background: var(--portal-tint); }
+.mcal__slot:not(.is-past):is(:hover, :focus-visible) .mcal__slot-plus { opacity: 1; }
+.mcal__slot:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: -2px; z-index: 1; }
+
+/* Vạch giờ hiện tại: chấm tròn rỗng + đường kẻ */
+.mcal__now { position: absolute; left: 0; right: 0; z-index: 1; height: 2px; margin-top: -1px; background: var(--portal-paper); pointer-events: none; }
+.mcal__now::before { content: ''; position: absolute; left: -6px; top: -5px; width: 8px; height: 8px; border: 2px solid var(--portal-paper); border-radius: 50%; background: var(--portal-salmon); }
+
+/* Khối lịch */
+.mcal__event {
+  position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden;
+  padding: 9px 11px; border: 0; border-radius: 12px; text-align: left; font: inherit; cursor: pointer;
+  background: var(--mcal-class); color: var(--portal-on-accent);
+  box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--portal-ink) 85%, transparent);
+  transition: transform 120ms ease, filter 120ms ease;
+}
+.mcal__event:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.mcal__event:focus-visible { outline: 2px solid var(--portal-paper); outline-offset: 2px; z-index: 5; }
+.mcal__event:disabled { cursor: wait; transform: none; filter: none; }
+.mcal__event.is-selected { outline: 2px solid var(--portal-paper); outline-offset: 2px; z-index: 4; }
+.mcal__event-time { font-size: 12px; font-weight: 800; letter-spacing: .01em; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event-title { font-size: 14px; font-weight: 800; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.mcal__event-place { font-size: 12.5px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.mcal__event-top .mcal__event-time { flex: 1 1 auto; min-width: 0; }
+.mcal__event-badge { flex: none; max-width: 100%; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.mcal__event--court { background: var(--mcal-court); color: var(--portal-on-accent); }
+.mcal__event--mine, .mcal__event--class { background: var(--mcal-class); color: var(--portal-on-accent); }
+.mcal__event--open { background: color-mix(in srgb, var(--portal-info) 24%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--portal-info); }
+.mcal__event--full { background: color-mix(in srgb, var(--portal-warning) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--portal-warning); }
+.mcal__event--neutral { background: var(--portal-raised); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--portal-salmon); }
+.mcal__event--past, .mcal__event.is-past { background: color-mix(in srgb, var(--portal-paper) 16%, var(--portal-raised)); color: var(--portal-muted); box-shadow: none; }
+.mcal__event--cancelled, .mcal__event.is-cancelled { background: color-mix(in srgb, var(--portal-danger) 14%, var(--portal-raised)); color: var(--portal-muted); box-shadow: inset 3px 0 0 var(--portal-danger); }
+.mcal__event--cancelled .mcal__event-title, .mcal__event.is-cancelled .mcal__event-title { text-decoration: line-through; }
+
+/* Khối 1 giờ: tên một dòng để còn chỗ cho phòng */
+.mcal__event.is-compact { padding: 7px 10px; gap: 2px; }
+.mcal__event.is-compact .mcal__event-title { -webkit-line-clamp: 1; line-clamp: 1; }
+
+/* Khối thấp (buổi ngắn hoặc nhiều làn): gọn lại */
+.mcal__event.is-short { padding: 4px 9px; gap: 1px; }
+.mcal__event.is-short .mcal__event-place, .mcal__event.is-short .mcal__event-badge { display: none; }
+.mcal__event.is-short .mcal__event-title { -webkit-line-clamp: 1; line-clamp: 1; font-size: 13px; }
+
+/* Lưới tháng */
+.mcal__month { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--portal-border); border-left: 1px solid var(--portal-border); border-radius: 14px; overflow: hidden; }
+.mcal__month-head { padding: 10px 4px; border-right: 1px solid var(--portal-border); border-bottom: 1px solid var(--portal-border-strong); text-align: center; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--portal-muted); }
+.mcal__cell { display: grid; align-content: start; gap: 4px; min-height: 112px; padding: 6px; border-right: 1px solid var(--portal-border); border-bottom: 1px solid var(--portal-border); }
+.mcal__cell.is-outside { background: color-mix(in srgb, var(--portal-ink) 45%, transparent); }
+.mcal__cell.is-outside .mcal__cell-day { color: var(--portal-muted); opacity: .6; }
+.mcal__cell.is-today { background: color-mix(in srgb, var(--portal-salmon) 7%, transparent); }
+.mcal__cell-day { justify-self: start; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--portal-paper); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.mcal__cell-day:hover { background: var(--portal-tint); color: var(--portal-salmon); }
+.mcal__cell.is-today .mcal__cell-day { background: var(--portal-salmon); color: var(--portal-on-accent); }
+.mcal__chips { display: grid; gap: 3px; min-width: 0; }
+.mcal__chip { display: block; min-width: 0; overflow: hidden; padding: 3px 7px; border: 0; border-radius: 7px; text-align: left; white-space: nowrap; text-overflow: ellipsis; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; background: var(--mcal-class); color: var(--portal-on-accent); }
+.mcal__chip span { font-weight: 800; opacity: .8; }
+.mcal__chip--court { background: var(--mcal-court); }
+.mcal__chip.is-past { background: color-mix(in srgb, var(--portal-paper) 16%, var(--portal-raised)); color: var(--portal-muted); }
+.mcal__chip.is-cancelled { text-decoration: line-through; background: color-mix(in srgb, var(--portal-danger) 14%, var(--portal-raised)); color: var(--portal-muted); }
+.mcal__more { justify-self: start; padding: 0 4px; border: 0; background: none; color: var(--portal-salmon); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+/* Trạng thái */
+.mcal__empty { position: absolute; left: 50%; top: 140px; z-index: 3; transform: translateX(-50%); margin: 0; padding: 10px 18px; border: 1px dashed var(--portal-border-strong); border-radius: 999px; background: var(--portal-surface); color: var(--portal-muted); font-size: 14px; white-space: nowrap; pointer-events: none; }
+.mcal__state { display: grid; justify-items: start; gap: 6px; padding: 18px; border: 1px solid color-mix(in srgb, var(--portal-danger) 35%, transparent); border-radius: 14px; }
+.mcal__state p { margin: 0; color: var(--portal-muted); }
+.mcal__note { margin: 0; font-size: 13px; color: var(--portal-muted); }
+.mcal__link-btn { padding: 0; border: 0; background: none; color: var(--portal-salmon); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.mcal__dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.mcal__dialog-actions a { text-decoration: none; }
+
+/* Màn hẹp: dải chọn ngày + một cột */
+.mcal__daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.mcal__daychip { display: grid; justify-items: center; gap: 2px; min-height: 58px; padding: 6px 2px; border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-raised); color: var(--portal-muted); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.mcal__daychip strong { font-size: 17px; color: var(--portal-paper); }
+.mcal__daychip.is-today { border-color: var(--portal-salmon); }
+.mcal__daychip.is-active { background: var(--portal-salmon); border-color: var(--portal-salmon); color: var(--portal-on-accent); }
+.mcal__daychip.is-active strong { color: var(--portal-on-accent); }
+
+.mcal :is(button, a):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+
+@media (max-width: 767px) {
+  .mcal { padding: 14px; border-radius: 18px; --mcal-gutter: 52px; }
+  .mcal__range { margin-left: 0; width: 100%; order: 5; }
+  .mcal__next-count { margin-left: 0; }
+  .mcal__scroll { max-height: 70vh; }
+  .mcal__cell { min-height: 72px; padding: 4px; }
+  .mcal__chip { padding: 2px 4px; font-size: 10.5px; }
+  .mcal__chip span { display: none; }
+  .mcal__month-head { font-size: 10px; letter-spacing: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mcal__event, .mcal__slot-plus { transition: none; }
+  .mcal__event:hover { transform: none; }
+}

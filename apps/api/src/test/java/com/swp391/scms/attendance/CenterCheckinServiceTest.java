@@ -43,6 +43,80 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class CenterCheckinServiceTest {
 
+    @Test
+    void streakCountsDistinctDaysAndKeepsAllTimeRecord() {
+        LocalDate today = LocalDate.of(2026, 10, 12);
+        when(checkins.findGrantedVisitTimes(eq(10L), any())).thenReturn(List.of(
+                today.minusDays(20).atTime(8, 0), today.minusDays(19).atTime(8, 0),
+                today.minusDays(18).atTime(8, 0), today.minusDays(17).atTime(8, 0),
+                today.minusDays(2).atTime(8, 0), today.minusDays(1).atTime(8, 0),
+                today.atTime(8, 0), today.atTime(10, 0)));
+
+        var result = service.streak(memberPrincipal);
+
+        assertEquals(3, result.currentStreak());
+        assertEquals(4, result.longestStreak());
+        assertEquals(7, result.workoutDays());
+        assertEquals(7, result.activeDates().size());
+        assertEquals(LocalDate.of(2026, 7, 20), result.startDate());
+        assertEquals(today, result.endDate());
+        verify(checkins).findGrantedVisitTimes(10L, today.atTime(17, 0));
+    }
+
+    @Test
+    void streakAllowsTodayToBePendingAndResetsAfterAMissedDay() {
+        LocalDate today = LocalDate.of(2026, 10, 12);
+        when(checkins.findGrantedVisitTimes(eq(10L), any())).thenReturn(List.of(
+                today.minusDays(2).atTime(8, 0), today.minusDays(1).atTime(8, 0)));
+        assertEquals(2, service.streak(memberPrincipal).currentStreak());
+        when(checkins.findGrantedVisitTimes(eq(10L), any())).thenReturn(List.of(
+                today.minusDays(3).atTime(8, 0), today.minusDays(2).atTime(8, 0)));
+        assertEquals(0, service.streak(memberPrincipal).currentStreak());
+    }
+
+    @Test
+    void streakKeepsOlderRecordOutsideTheHeatmap() {
+        LocalDate today = LocalDate.of(2026, 10, 12);
+        when(checkins.findGrantedVisitTimes(eq(10L), any())).thenReturn(List.of(
+                today.minusDays(200).atTime(8, 0), today.minusDays(199).atTime(8, 0)));
+        var result = service.streak(memberPrincipal);
+        assertEquals(2, result.longestStreak());
+        assertEquals(0, result.currentStreak());
+        assertEquals(0, result.workoutDays());
+        assertTrue(result.activeDates().isEmpty());
+    }
+
+    @Test
+    void streakRestartsAtOneWhenReturningAfterAMissedDay() {
+        LocalDate today = LocalDate.of(2026, 10, 12);
+        when(checkins.findGrantedVisitTimes(eq(10L), any())).thenReturn(List.of(
+                today.minusDays(3).atTime(8, 0), today.minusDays(2).atTime(8, 0), today.atTime(8, 0)));
+        var result = service.streak(memberPrincipal);
+        assertEquals(1, result.currentStreak());
+        assertEquals(2, result.longestStreak());
+    }
+
+    @Test
+    void streakUsesVietnamDateEvenWhenClockIsUtcAndHandlesEmptyHistory() {
+        Clock boundary = Clock.fixed(Instant.parse("2026-10-12T18:00:00Z"), ZoneId.of("UTC"));
+        var boundaryService = new CenterCheckinService(checkins, subscriptions, users, members, boundary, messageService, qrService);
+        when(checkins.findGrantedVisitTimes(eq(10L), any())).thenReturn(List.of());
+        var result = boundaryService.streak(memberPrincipal);
+        assertEquals(LocalDate.of(2026, 10, 13), result.endDate());
+        assertEquals(0, result.currentStreak());
+        assertEquals(0, result.longestStreak());
+        verify(checkins).findGrantedVisitTimes(10L, LocalDateTime.of(2026, 10, 13, 1, 0));
+    }
+
+    @Test
+    void streakRejectsNonMembersBeforeReadingHistory() {
+        assertThrows(ForbiddenException.class, () -> service.streak(null));
+        for (String role : List.of("COACH", "RECEPTIONIST", "CENTER_MANAGER", "ADMIN")) {
+            assertThrows(ForbiddenException.class, () -> service.streak(new AuthenticatedPrincipal(9L, "other", role)));
+        }
+        verifyNoInteractions(checkins);
+    }
+
     @Mock
     private CenterCheckinRepository checkins;
 
@@ -122,6 +196,46 @@ class CenterCheckinServiceTest {
         assertThrows(ForbiddenException.class, () -> service.selfScan(receptionist, new CheckinRequests.SelfScan("anything")));
         assertThrows(ForbiddenException.class, () -> service.gateQr(memberPrincipal, "A1"));
         verifyNoInteractions(subscriptions, checkins);
+    }
+
+    @Test
+    void selfScanWithForgedOrExpiredGateQrAuditsDenial() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        mockMember(10L, "Member");
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var forged = selfService.selfScan(memberPrincipal, new CheckinRequests.SelfScan("SOL:GATE:1:A1:1:bad"));
+        assertEquals("DENIED", forged.status());
+        assertEquals(10L, forged.memberId());
+        String expired = gateQr.generate("A1", clock.millis() - 120_000).qrCode();
+        assertEquals("DENIED", selfService.selfScan(memberPrincipal, new CheckinRequests.SelfScan(expired)).status());
+        verify(checkins, times(2)).saveAndFlush(any());
+        verifyNoInteractions(subscriptions);
+    }
+
+    @Test
+    void selfCheckoutClosesOwnOpenVisitAndRejectsWhenNoneOpen() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        Member member = mockMember(10L, "Member");
+        var open = new CenterCheckin();
+        open.setMember(member);
+        open.setCheckInTime(LocalDateTime.now(clock).minusHours(1));
+        open.setStatus("GRANTED");
+        when(checkins.findFirstByMemberUserIdAndCheckOutTimeIsNullOrderByCheckInTimeDesc(10L))
+                .thenReturn(Optional.of(open), Optional.empty());
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var request = new CheckinRequests.SelfScan(gateQr.generate("A1", clock.millis()).qrCode());
+        assertNotNull(selfService.selfCheckout(memberPrincipal, request).checkOutTime());
+        assertThrows(BadRequestException.class, () -> selfService.selfCheckout(memberPrincipal, request));
+        assertThrows(ForbiddenException.class, () -> selfService.selfCheckout(receptionist, request));
+    }
+
+    @Test
+    void historyRejectsRangesLongerThanOneMonthOrReversed() {
+        LocalDate today = LocalDate.now(clock);
+        assertThrows(BadRequestException.class, () -> service.history(memberPrincipal, today.minusDays(40), today));
+        assertThrows(BadRequestException.class, () -> service.history(memberPrincipal, today, today.minusDays(1)));
     }
 
     @Test

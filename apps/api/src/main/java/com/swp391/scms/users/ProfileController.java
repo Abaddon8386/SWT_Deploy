@@ -7,14 +7,17 @@ import com.swp391.scms.users.dto.ProfileDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "Profile", description = "Hồ sơ cá nhân của người dùng")
 @RestController
 @RequestMapping("/api/v1/profile")
 public class ProfileController {
+
+    public record AvatarUploadRequest(@Size(max = 2800000) String avatarUrl) {}
 
     private final ProfileService profileService;
     private final MessageService messageService;
@@ -46,6 +49,13 @@ public class ProfileController {
         return ApiResponse.ok(msg("users.profile.update.success"), profileService.updateProfile(principal.id(), request));
     }
 
+    @Operation(summary = "Cập nhật ảnh đại diện", description = "Tải lên hoặc xóa ảnh đại diện (hỗ trợ JPG, PNG, WebP tối đa 2MB)")
+    @PostMapping("/avatar")
+    public ApiResponse<ProfileDto> updateMyAvatar(@AuthenticationPrincipal AuthenticatedPrincipal principal,
+                                                  @Valid @RequestBody AvatarUploadRequest request) {
+        return ApiResponse.ok(msg("users.profile.update.success"), profileService.updateAvatar(principal.id(), request.avatarUrl()));
+    }
+
     @Operation(summary = "Cập nhật hồ sơ Coach", description = "Dành riêng cho HLV cập nhật chuyên môn")
     @PutMapping("/coach")
     @PreAuthorize("hasRole('COACH')")
@@ -64,4 +74,3 @@ public class ProfileController {
         return ApiResponse.ok(msg("users.profile.receptionist.update.success"), null);
     }
 }
-

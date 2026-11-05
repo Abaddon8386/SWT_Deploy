@@ -38,6 +38,8 @@ class TriggerPolymorphismIntegrationTest {
         // P3: Schedule conflicts (Coach & Room)
         assertTrue(sql.contains("scms_check_session_conflict"), "Must contain P3 conflict check function");
         assertTrue(sql.contains("trg_sessions_check_conflict"), "Must contain P3 conflict trigger");
+        assertTrue(sql.contains("scms_guard_member_class_overlap"), "Must forbid one member in two overlapping classes");
+        assertTrue(sql.contains("trg_member_overlap_session_booking"), "Must guard per-session bookings against member overlap");
         assertTrue(sql.contains("coach_id"), "Must check coach time overlap");
         assertTrue(sql.contains("room_id"), "Must check room time overlap");
 

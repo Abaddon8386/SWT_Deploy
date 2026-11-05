@@ -59,7 +59,6 @@ export function PaymentInvoice({ onClose, ...invoice }: InvoiceProps & { onClose
     <Modal title="Hóa đơn thanh toán" onClose={onClose}>
       <p className="payment-invoice__success" role="status">Đã ghi nhận thanh toán thành công.</p>
       <div className="payment-invoice__preview"><InvoiceDocument {...invoice} /></div>
-      <p className="payment-invoice__hint">Giấy in nhiệt 80 mm · Tỷ lệ 100% · Tắt đầu/chân trang khi in.</p>
       <div className="payment-invoice__actions">
         <button type="button" className="btn-secondary" onClick={onClose}>Đóng</button>
         <button type="button" className="btn-primary" onClick={() => window.print()}>In hóa đơn (80 mm)</button>

@@ -279,7 +279,7 @@ export function MemberCoachBookingView({
       } else {
         notify(
           `Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
-          , 'success');
+          , 'success', { record: true });
       }
     } catch (err: unknown) {
       setErrorCode(err instanceof ApiError ? err.code : undefined);
@@ -723,7 +723,7 @@ export function MemberCoachBookingView({
                   overflowX: 'auto',
                   padding: '4px 2px 14px',
                   WebkitOverflowScrolling: 'touch',
-                  scrollbarWidth: 'thin',
+                  scrollbarWidth: 'none',
                 }}
               >
                 {daysList.map((d) => {
@@ -1077,7 +1077,7 @@ export function MemberCoachBookingView({
                         </span>
                       )}
 
-                      {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && <VnpayPayButton target={{ coachBookingId: b.id }} />}
+                      {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && <VnpayPayButton target={{ coachBookingId: b.id }} onPaid={() => void getMyCoachBookings().then(setMyBookings)} />}
                       {b.paymentMethod !== 'package_quota' && (
                         <button
                           type="button"
@@ -1187,7 +1187,7 @@ export function MemberCoachBookingView({
               <span>Đánh giá ẩn danh (Không hiển thị họ tên của tôi với Huấn luyện viên)</span>
             </label>
 
-            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span><strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
+            {/* Review modal is for already completed sessions; no active package alert needed here */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button
                 type="button"
@@ -1504,7 +1504,7 @@ export function MemberCoachBookingView({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                       <strong style={{ fontSize: 14, color: 'var(--portal-paper)' }}>
-                        Đăng ký trả phí theo giờ ({formatPrice(selectedCoach.defaultHourlyRate || 200000)} / giờ)
+                        Đăng ký trả phí theo giờ qua VNPay / Ví SÖL ({formatPrice(selectedCoach.defaultHourlyRate || 200000)} / giờ)
                       </strong>
                       {!hasRemainingQuota && !hasNoPackage && (
                         <span
@@ -1522,7 +1522,7 @@ export function MemberCoachBookingView({
                       )}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 4, lineHeight: 1.4 }}>
-                      Thanh toán tại quầy lễ tân hoặc chuyển khoản theo thông tin do lễ tân cung cấp.
+                      Thanh toán trực tuyến qua VNPay Sandbox hoặc Ví điện tử SÖL. Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy.
                     </div>
                   </div>
                 </div>
@@ -1693,7 +1693,7 @@ export function MemberCoachBookingView({
             describe={(b) => `${b.bookingDate} · ${b.startTime.slice(0, 5)}–${b.endTime.slice(0, 5)} · HLV ${formatCoachName(b.coachName)}`}
           />
           {recurringOutcome.booked.some((b) => b.paymentMethod !== 'package_quota') && (
-            <p className="muted">Các buổi trả phí theo giờ cần được thanh toán tại quầy lễ tân.</p>
+            <p className="muted">Các buổi trả phí theo giờ có thể thanh toán qua VNPay Sandbox hoặc Ví SÖL tại danh sách lịch tập. Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy.</p>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
             <button type="button" className="btn-primary" onClick={() => setRecurringOutcome(null)}>Đóng</button>
@@ -1707,7 +1707,7 @@ export function MemberCoachBookingView({
           title="Thanh toán Buổi tập PT 1:1"
           onClose={() => setPaymentModalBooking(null)}
         >
-          <VnpayPayButton target={{ coachBookingId: paymentModalBooking.id }} />
+          <VnpayPayButton target={{ coachBookingId: paymentModalBooking.id }} onPaid={() => { setPaymentModalBooking(null); void getMyCoachBookings().then(setMyBookings); }} />
           <div style={{ display: 'grid', gap: 16 }}>
             <div
               style={{
@@ -1738,11 +1738,11 @@ export function MemberCoachBookingView({
               }}
             >
               <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
-                <div>Vui lòng liên hệ quầy Lễ tân để xác nhận thông tin và hoàn tất thanh toán.</div>
+                <div>Chọn <strong>Thanh toán VNPay Sandbox</strong> hoặc <strong>Thanh toán bằng Ví SÖL</strong> ở trên để hoàn tất thanh toán trực tuyến.</div>
                 <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                 <div>Nội dung chuyển khoản: <strong style={{ color: 'var(--portal-salmon)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
                 <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted)' }}>
-                  * Bạn cũng có thể thanh toán trực tiếp bằng tiền mặt hoặc thẻ tại quầy Lễ tân trước giờ tập.
+                  Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy trước giờ tập để được hỗ trợ thu tiền.
                 </div>
               </div>
             </div>

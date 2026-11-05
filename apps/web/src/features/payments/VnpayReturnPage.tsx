@@ -5,9 +5,12 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { toast } from '../../shared/ui/toast';
-import { getVnpayStatus, type VnpayStatus } from './vnpayApi';
+import { getVnpayStatus, verifyVnpayReturn, type VnpayStatus } from './vnpayApi';
 
 const destinations = new Set(['/member/packages', '/member/courts', '/member/classes?tab=pt', '/member/invoices']);
+function isAllowedDestination(destination: string | null | undefined): destination is string {
+  return Boolean(destination && (destinations.has(destination) || /^\/member\/orders\/\d+$/.test(destination)));
+}
 export function VnpayReturnPage() {
   const [params] = useSearchParams();
   const reference = params.get('vnp_TxnRef') ?? '';
@@ -22,7 +25,10 @@ export function VnpayReturnPage() {
     if (!valid) { setLoading(false); return; }
     async function load() {
       try {
-        const status = await getVnpayStatus(reference);
+        const hasSignedCallback = params.has('vnp_SecureHash') && params.has('vnp_ResponseCode');
+        const status = (hasSignedCallback && attempts === 0 && typeof verifyVnpayReturn === 'function')
+          ? await verifyVnpayReturn(Object.fromEntries(params.entries()))
+          : await getVnpayStatus(reference);
         if (!active) return;
         setData(status); setError('');
         if (!notified && status.status !== 'pending') {
@@ -36,7 +42,7 @@ export function VnpayReturnPage() {
     }
     void load();
     return () => { active = false; if (timer) clearTimeout(timer); };
-  }, [reference, valid, retry]);
+  }, [params, reference, valid, retry]);
   const title = data?.status === 'success' ? 'Thanh toán thành công' : data?.status === 'failed' ? 'Thanh toán chưa thành công' : data?.status === 'refunded' ? 'Giao dịch đã hoàn tiền' : 'Đang xác nhận thanh toán';
   return <div className="portal-container">
     <PageHeader eyebrow="VNPay Sandbox" title="Kết quả thanh toán" />
@@ -46,7 +52,7 @@ export function VnpayReturnPage() {
         <p>Mã giao dịch: {data.reference}</p><p>Số tiền: <strong>{formatPrice(data.amount)}</strong></p>
         {data.status === 'pending' && <p>Hệ thống chưa nhận xác nhận từ VNPay. Vui lòng chờ; không thanh toán thêm cho khoản này. Nếu quá thời gian chờ, liên hệ lễ tân để đối soát.</p>}
         {data.status === 'failed' && <p>VNPay xác nhận giao dịch không thành công. Bạn có thể trở về khoản cần thanh toán và thử lại.</p>}
-        <Link className="btn-primary" to={destinations.has(data.destination) ? data.destination : '/member/invoices'}>Về khoản thanh toán</Link>
+        <Link className="btn-primary" to={isAllowedDestination(data.destination) ? data.destination : '/member/invoices'}>Về khoản thanh toán</Link>
       </>}
       {valid && (error || data?.status === 'pending') && <button type="button" className="btn-secondary" onClick={() => setRetry(value => value + 1)}>Kiểm tra lại</button>}
       <Link className="btn-secondary" to="/member/invoices">Giao dịch & hóa đơn</Link>

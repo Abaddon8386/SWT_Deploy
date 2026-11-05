@@ -129,9 +129,9 @@ public class CoachLeaderboardService {
                     });
 
             review.setManager(manager);
-            BigDecimal avg = avgRating != null
+            BigDecimal avg = (avgRating != null && totalReviews > 0)
                     ? BigDecimal.valueOf(avgRating).setScale(2, RoundingMode.HALF_UP)
-                    : BigDecimal.valueOf(5.00); // Default 5.0 for active coaches with no negative reviews yet
+                    : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
             review.setAverageRating(avg);
             review.setTotalReviews((int) totalReviews);
             review.setTotalSessions(totalSessions);
@@ -140,8 +140,10 @@ public class CoachLeaderboardService {
             results.add(review);
         }
 
-        // Sort descending by averageRating, then totalSessions, then totalReviews
-        results.sort(Comparator.comparing(CoachMonthlyReview::getAverageRating).reversed()
+        // Sort coaches with reviews (totalReviews > 0) before coaches with 0 reviews,
+        // then descending by averageRating, then totalSessions, then totalReviews
+        results.sort(Comparator.comparing((CoachMonthlyReview r) -> r.getTotalReviews() != null && r.getTotalReviews() > 0).reversed()
+                .thenComparing(Comparator.comparing(CoachMonthlyReview::getAverageRating).reversed())
                 .thenComparing(Comparator.comparing(CoachMonthlyReview::getTotalSessions).reversed())
                 .thenComparing(Comparator.comparing(CoachMonthlyReview::getTotalReviews).reversed()));
 
@@ -151,7 +153,7 @@ public class CoachLeaderboardService {
             int rank = i + 1;
             r.setRankPosition(rank);
 
-            if (r.getBadge() == null || r.getBadge().isBlank()) {
+            if (r.getBadge() == null || r.getBadge().isBlank() || isDefaultBadge(r.getBadge())) {
                 if (rank == 1) {
                     r.setBadge("Top 1: Coach of the Month 🏆");
                     r.setBonusAmount(new BigDecimal("2000000.00"));
@@ -167,15 +169,32 @@ public class CoachLeaderboardService {
                 }
             }
 
-            if (r.getManagerFeedback() == null || r.getManagerFeedback().isBlank()) {
-                r.setManagerFeedback(String.format("Duy trì phong độ huấn luyện tốt trong tháng %d/%d với %d buổi dạy và mức hài lòng %.1f sao.",
-                        month, year, r.getTotalSessions(), r.getAverageRating()));
+            if (r.getManagerFeedback() == null || r.getManagerFeedback().isBlank() || isDefaultFeedback(r.getManagerFeedback())) {
+                if (r.getTotalReviews() != null && r.getTotalReviews() > 0) {
+                    r.setManagerFeedback(String.format("Duy trì phong độ huấn luyện tốt trong tháng %d/%d với %d buổi dạy và mức hài lòng %.1f sao.",
+                            month, year, r.getTotalSessions(), r.getAverageRating()));
+                } else {
+                    r.setManagerFeedback(String.format("Duy trì lịch huấn luyện trong tháng %d/%d với %d buổi dạy (chưa có lượt đánh giá từ hội viên).",
+                            month, year, r.getTotalSessions()));
+                }
             }
 
             monthlyReviewRepository.save(r);
         }
 
         return results;
+    }
+
+    private static boolean isDefaultBadge(String badge) {
+        return "Top 1: Coach of the Month 🏆".equals(badge)
+                || "Top 2: HLV Xuất Sắc 🥈".equals(badge)
+                || "Top 3: Ngôi Sao Tận Tâm 🥉".equals(badge)
+                || "HLV Năng Động ⭐".equals(badge);
+    }
+
+    private static boolean isDefaultFeedback(String feedback) {
+        return feedback != null && (feedback.startsWith("Duy trì phong độ huấn luyện tốt trong tháng ")
+                || feedback.startsWith("Duy trì lịch huấn luyện trong tháng "));
     }
 
     @Transactional

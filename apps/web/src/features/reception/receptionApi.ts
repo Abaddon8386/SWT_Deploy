@@ -42,6 +42,8 @@ export interface RenewalCandidate {
   endDate: string;
   status: string;
   createdAt: string;
+  /** Kỳ đang hiệu lực hôm nay: phần chưa dùng của số tiền thực trả, cũng là số tiền hoàn đề xuất khi hủy gói. */
+  remainingValue?: number | null;
 }
 
 export interface HoldRequestItem {
@@ -61,6 +63,30 @@ export interface HoldRequestItem {
   holdRequestedAt: string;
   holdResolvedAt?: string | null;
   cancelledEnrollmentsCount: number;
+}
+
+export interface StaffCancellationRequestPayload {
+  memberId: number;
+  subscriptionId?: number;
+  reason: string;
+  refundAmount?: number;
+}
+
+export interface CancellationRequestItem {
+  id: number;
+  memberId: number;
+  memberName: string | null;
+  subscriptionId: number;
+  packageName: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  resolvedById?: number | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
+  refundAmount?: number | null;
+  requestedById?: number | null;
+  requestedByName?: string | null;
 }
 
 export type PaymentMethod = 'cash' | 'pos' | 'bank_transfer' | 'online_wallet';
@@ -210,6 +236,16 @@ export const receptionApi = {
   rejectHoldRequest: async (subscriptionId: number): Promise<HoldRequestItem> => {
     return apiFetch<HoldRequestItem>(`/memberships/subscriptions/${subscriptionId}/hold/reject`, {
       method: 'POST',
+    });
+  },
+
+  /**
+   * Lễ tân trình yêu cầu hủy gói tập & hoàn tiền lên Quản lý trung tâm phê duyệt
+   */
+  requestSubscriptionCancellation: async (payload: StaffCancellationRequestPayload): Promise<CancellationRequestItem> => {
+    return apiFetch<CancellationRequestItem>('/memberships/cancellations/staff-request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 

@@ -1,0 +1,504 @@
+openapi: 3.0.3
+info:
+  title: SCMS Supplement Shop ("Sản phẩm") API
+  version: 1.0.0
+  description: >-
+    Public catalog, quote, 2-tier administrative geo units, member address book,
+    member product orders, staff order fulfillment, and manager catalog/stock/order administration.
+paths:
+  /api/v1/public/product-categories:
+    get:
+      summary: Public active product categories
+      responses:
+        '200':
+          description: ApiResponse of CategoryDto[]
+  /api/v1/public/products:
+    get:
+      summary: Public paginated product catalog with filters and sort
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: goal, schema: { $ref: '#/components/schemas/ProductGoal' } }
+        - { in: query, name: category, schema: { type: string } }
+        - { in: query, name: inStock, schema: { type: boolean } }
+        - { in: query, name: featuredFirst, schema: { type: boolean } }
+        - { in: query, name: sort, schema: { type: string, enum: [newest, price_asc, price_desc, price_per_serving] } }
+        - { in: query, name: page, schema: { type: integer, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, default: 12 } }
+      responses:
+        '200':
+          description: ApiResponse of Page<ProductSummaryDto>
+  /api/v1/public/products/{slug}:
+    get:
+      summary: Public product detail by slug
+      parameters:
+        - { in: path, name: slug, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: ApiResponse of ProductDetailDto
+        '404':
+          description: PRODUCT_NOT_FOUND
+  /api/v1/public/products/images/{imageId}:
+    get:
+      summary: Binary product image (JPEG/PNG/WEBP) with ETag and Cache-Control
+      parameters:
+        - { in: path, name: imageId, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: Binary image stream
+        '304':
+          description: Not Modified
+        '404':
+          description: PRODUCT_NOT_FOUND
+  /api/v1/public/shop/config:
+    get:
+      summary: Public shop configuration (shipping fee, free shipping threshold, hold timers, pickup address)
+      responses:
+        '200':
+          description: ApiResponse of ShopConfigDto
+  /api/v1/public/shop/quote:
+    post:
+      summary: Authoritative server-side cart quote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: ApiResponse of QuoteDto
+  /api/v1/public/geo/provinces:
+    get:
+      summary: 34 two-tier Vietnamese provinces/cities (post-01/07/2025)
+      responses:
+        '200':
+          description: ApiResponse of GeoRegion[]
+  /api/v1/public/geo/provinces/{provinceCode}/wards:
+    get:
+      summary: Wards/communes directly under a province/city
+      parameters:
+        - { in: path, name: provinceCode, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: ApiResponse of GeoRegion[]
+        '404':
+          description: Unknown provinceCode
+  /api/v1/shop/addresses:
+    get:
+      summary: Member lists saved shipping addresses (max 5)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: ApiResponse of AddressDto[]
+    post:
+      summary: Member creates a shipping address
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      responses:
+        '200':
+          description: ApiResponse of AddressDto
+        '400':
+          description: ADDRESS_REGION_INVALID | ADDRESS_LIMIT_REACHED
+  /api/v1/shop/addresses/{id}:
+    put:
+      summary: Member updates a shipping address
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      responses:
+        '200':
+          description: ApiResponse of AddressDto
+        '404':
+          description: ADDRESS_NOT_FOUND
+    delete:
+      summary: Member deletes a shipping address
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse<Void>
+        '404':
+          description: ADDRESS_NOT_FOUND
+  /api/v1/shop/addresses/{id}/default:
+    post:
+      summary: Member marks a shipping address as default
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of AddressDto
+  /api/v1/shop/orders:
+    post:
+      summary: Member places a product order (idempotent by memberId + clientRequestId, holds stock)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+        '400':
+          description: ORDER_EMPTY | ORDER_LINE_LIMIT | ORDER_ADDRESS_REQUIRED | ORDER_COUNTER_REQUIRES_PICKUP | ADDRESS_REGION_INVALID
+        '409':
+          description: PRODUCT_OUT_OF_STOCK | PRODUCT_INACTIVE | ORDER_PRICE_CHANGED
+    get:
+      summary: Member lists own orders
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: statusGroup, schema: { type: string, enum: [all, pending, active, done, cancelled] } }
+        - { in: query, name: page, schema: { type: integer, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, default: 10 } }
+      responses:
+        '200':
+          description: ApiResponse of Page<OrderSummaryDto>
+  /api/v1/shop/orders/{orderId}:
+    get:
+      summary: Member gets own order detail
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+        '403':
+          description: ORDER_ACCESS_DENIED
+        '404':
+          description: ORDER_NOT_FOUND
+  /api/v1/shop/orders/{orderId}/cancel:
+    post:
+      summary: Member cancels own unpaid pending_payment order and restores stock
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+        '409':
+          description: ORDER_CANNOT_CANCEL
+  /api/v1/staff/product-orders:
+    get:
+      summary: Receptionist or Center Manager lists product orders
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: status, schema: { $ref: '#/components/schemas/OrderStatus' } }
+        - { in: query, name: fulfillment, schema: { $ref: '#/components/schemas/FulfillmentMethod' } }
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: ApiResponse of Page<OrderSummaryDto>
+  /api/v1/staff/product-orders/counts:
+    get:
+      summary: Live counts per order status for staff tabs
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: ApiResponse of OrderCountsDto
+  /api/v1/staff/product-orders/{orderId}:
+    get:
+      summary: Staff gets full order detail
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+  /api/v1/staff/product-orders/{orderId}/counter-payment:
+    post:
+      summary: Staff records counter payment (cash/pos/bank_transfer) for pickup order
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [method]
+              properties:
+                method: { type: string, enum: [cash, pos, bank_transfer] }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+        '409':
+          description: ORDER_ALREADY_PAID | ORDER_INVALID_TRANSITION
+  /api/v1/staff/product-orders/{orderId}/start-processing:
+    post:
+      summary: Staff moves order from paid to processing
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+  /api/v1/staff/product-orders/{orderId}/ready-for-pickup:
+    post:
+      summary: Staff marks pickup order ready at front desk
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+  /api/v1/staff/product-orders/{orderId}/ship:
+    post:
+      summary: Staff hands delivery order to carrier with tracking number
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trackingNumber]
+              properties:
+                shippingCarrier: { type: string }
+                trackingNumber: { type: string }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+        '400':
+          description: ORDER_TRACKING_REQUIRED
+  /api/v1/staff/product-orders/{orderId}/complete:
+    post:
+      summary: Staff marks order completed (handed over at counter or delivered)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+  /api/v1/staff/product-orders/{orderId}/cancel:
+    post:
+      summary: Staff/Manager cancels order with reason, optional restock, and automatic wallet refund if paid
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+                restock: { type: boolean, default: true }
+      responses:
+        '200':
+          description: ApiResponse of OrderDto
+  /api/v1/manager/product-categories:
+    get:
+      summary: Center Manager lists all product categories
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: ApiResponse of CategoryAdminDto[]
+    post:
+      summary: Center Manager creates a product category
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: ApiResponse of CategoryAdminDto
+        '409':
+          description: CATEGORY_SLUG_EXISTS
+  /api/v1/manager/product-categories/{id}:
+    put:
+      summary: Center Manager updates a product category
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of CategoryAdminDto
+    delete:
+      summary: Center Manager deletes an empty product category
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse<Void>
+        '409':
+          description: CATEGORY_IN_USE
+  /api/v1/manager/products:
+    get:
+      summary: Center Manager lists products with stock and active status
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: ApiResponse of Page<ProductAdminSummaryDto>
+    post:
+      summary: Center Manager creates a product with variants, nutrients, and images
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: ApiResponse of ProductAdminDto
+        '400':
+          description: PRODUCT_IMAGE_INVALID | PRODUCT_IMAGE_LIMIT | PRODUCT_VARIANT_REQUIRED
+        '409':
+          description: PRODUCT_SLUG_EXISTS | PRODUCT_SKU_EXISTS
+  /api/v1/manager/products/{id}:
+    get:
+      summary: Center Manager gets full product detail for editing
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of ProductAdminDto
+    put:
+      summary: Center Manager updates product, variants, nutrients, and images
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse of ProductAdminDto
+    delete:
+      summary: Center Manager deletes product if it has no historical orders
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ApiResponse<Void>
+        '409':
+          description: PRODUCT_HAS_ORDERS
+  /api/v1/manager/product-variants/{variantId}/stock-adjustments:
+    post:
+      summary: Center Manager adjusts variant stock by delta with reason
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: variantId, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delta, reason]
+              properties:
+                delta: { type: integer }
+                reason: { type: string }
+      responses:
+        '200':
+          description: ApiResponse of VariantAdminDto
+        '400':
+          description: STOCK_ADJUSTMENT_REASON_REQUIRED
+        '409':
+          description: STOCK_BELOW_ZERO
+  /api/v1/manager/product-orders/summary:
+    get:
+      summary: Center Manager gets order counts and paid revenue for a date range
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: from, schema: { type: string, format: date } }
+        - { in: query, name: to, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: ApiResponse of ManagerOrderSummaryDto
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ProductGoal:
+      type: string
+      enum: [muscle_gain, recovery, energy, weight_management, wellness]
+    ProductForm:
+      type: string
+      enum: [powder, capsule, tablet, liquid, bar, other]
+    OrderStatus:
+      type: string
+      enum: [pending_payment, paid, processing, shipping, ready_for_pickup, completed, cancelled]
+    FulfillmentMethod:
+      type: string
+      enum: [delivery, pickup]
+    OrderPaymentMethod:
+      type: string
+      enum: [online, counter]
+    GeoRegion:
+      type: object
+      required: [code, name, type]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        type: { type: string }
+    QuoteRequest:
+      type: object
+      required: [items, fulfillmentMethod]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [variantId, quantity]
+            properties:
+              variantId: { type: integer, format: int64 }
+              quantity: { type: integer, minimum: 1, maximum: 20 }
+        fulfillmentMethod:
+          $ref: '#/components/schemas/FulfillmentMethod'
+    AddressRequest:
+      type: object
+      required: [recipientName, recipientPhone, provinceCode, wardCode, streetAddress]
+      properties:
+        label: { type: string }
+        recipientName: { type: string }
+        recipientPhone: { type: string }
+        provinceCode: { type: string }
+        wardCode: { type: string }
+        streetAddress: { type: string }
+        isDefault: { type: boolean }
+    CreateOrderRequest:
+      type: object
+      required: [clientRequestId, items, fulfillmentMethod, paymentMethod]
+      properties:
+        clientRequestId: { type: string, format: uuid }
+        items:
+          type: array
+          items:
+            type: object
+            required: [variantId, quantity]
+            properties:
+              variantId: { type: integer, format: int64 }
+              quantity: { type: integer, minimum: 1, maximum: 20 }
+        fulfillmentMethod:
+          $ref: '#/components/schemas/FulfillmentMethod'
+        paymentMethod:
+          $ref: '#/components/schemas/OrderPaymentMethod'
+        addressId: { type: integer, format: int64, nullable: true }
+        shippingAddress:
+          $ref: '#/components/schemas/AddressRequest'
+        saveAddress: { type: boolean }
+        note: { type: string }
+        expectedTotal: { type: number }

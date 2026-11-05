@@ -3,7 +3,8 @@ import { toast } from '../ui/toast';
 
 /**
  * Thông báo phát sinh tại client (kết quả thao tác, trạng thái đồng bộ…) thay cho banner chèn trong trang.
- * Hiển thị trong bảng chuông thông báo của portal; lỗi/thành công còn có toast ngắn để phản hồi ngay.
+ * Mọi thao tác đều có toast ngắn (thành công/lỗi) để phản hồi ngay; chỉ sự kiện quan trọng
+ * (giao dịch, thanh toán, xác nhận, đăng ký/hủy/bảo lưu gói…) mới truyền `record: true` để lưu vào bảng chuông.
  */
 export type PortalNoticeType = 'success' | 'error' | 'info';
 
@@ -29,10 +30,11 @@ function commit(next: PortalNotice[]) {
 }
 
 /** `key` thay thế thông báo cùng khóa (ví dụ trạng thái đồng bộ) để không lặp lại. */
-export function notify(message: string, type: PortalNoticeType = 'info', options: { key?: string; action?: PortalNotice['action']; silent?: boolean } = {}) {
+export function notify(message: string, type: PortalNoticeType = 'info', options: { key?: string; action?: PortalNotice['action']; silent?: boolean; record?: boolean } = {}) {
+  if (type !== 'info' && !options.silent) toast(message, type);
+  if (!options.record) return;
   const notice: PortalNotice = { id: ++sequence, type, message, createdAt: Date.now(), read: false, destination: typeof window !== 'undefined' ? window.location.pathname : undefined, key: options.key, action: options.action };
   commit([notice, ...notices.filter((item) => !options.key || item.key !== options.key)].slice(0, MAX_NOTICES));
-  if (type !== 'info' && !options.silent) toast(message, type);
 }
 
 /** Gỡ thông báo theo khóa khi tình trạng đã hết (ví dụ đồng bộ lại thành công). */

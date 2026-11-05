@@ -2,6 +2,8 @@ package com.swp391.scms.attendance.service;
 
 import com.swp391.scms.attendance.dto.CheckinRequests;
 import com.swp391.scms.attendance.dto.CheckinResponses.CheckinDto;
+import com.swp391.scms.attendance.dto.CheckinResponses.StreakDto;
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.attendance.entity.CenterCheckin;
 import com.swp391.scms.attendance.repository.CenterCheckinRepository;
 import com.swp391.scms.common.exception.BadRequestException;
@@ -28,6 +30,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
 
 /**
  * Service managing center access QR check-in, checkout, audit trail and daily history (SCRUM-75).
@@ -36,6 +42,7 @@ import java.util.Set;
 public class CenterCheckinService {
 
     public static final int ANTI_PASSBACK_TIMEOUT_HOURS = 12;
+    public static final int MAX_HISTORY_DAYS = 31;
     public static final String AUTO_CHECKOUT_NOTE = "SYSTEM_AUTO_CHECKOUT";
 
     private static final String STATUS_ACTIVE = "active";
@@ -110,11 +117,20 @@ public class CenterCheckinService {
         if (principal == null || !"MEMBER".equalsIgnoreCase(principal.role())) {
             throw new ForbiddenException("CHECKIN_MEMBER_REQUIRED", "error.forbidden", null, "error.forbidden");
         }
-        String gateId = gateQrService.verify(request.gateQr(), clock.millis());
-        String gate = gateQrService.gateName(gateId);
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDate today = now.toLocalDate();
         User recorder = users.findById(principal.id()).orElse(null);
+        String gate;
+        try {
+            String gateId = gateQrService.verify(request.gateQr(), clock.millis());
+            gate = gateQrService.gateName(gateId);
+        } catch (BadRequestException invalidGate) {
+            // Audit rejected gate challenges too (forged, malformed or expired) instead of dropping them silently.
+            Member member = members.findByUserIdForUpdate(principal.id()).orElse(null);
+            String reasonKey = "GATE_QR_EXPIRED".equals(invalidGate.getErrorCode())
+                    ? "error.attendance.gate_qr_expired" : "error.attendance.gate_qr_invalid";
+            return saveDeniedRecord(member, now, null, recorder, reasonKey);
+        }
         Optional<MembershipSubscription> subscription = subscriptions
                 .findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
                         principal.id(), STATUS_ACTIVE, today, today);
@@ -123,6 +139,23 @@ public class CenterCheckinService {
             return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_not_active");
         }
         return recordEntry(subscription.get(), now, gate, recorder);
+    }
+
+    /** Member leaves the center by scanning a valid gate QR; closes their own open GRANTED visit. */
+    @Transactional
+    public CheckinDto selfCheckout(AuthenticatedPrincipal principal, CheckinRequests.SelfScan request) {
+        if (principal == null || !"MEMBER".equalsIgnoreCase(principal.role())) {
+            throw new ForbiddenException("CHECKIN_MEMBER_REQUIRED", "error.forbidden", null, "error.forbidden");
+        }
+        gateQrService.verify(request.gateQr(), clock.millis());
+        members.findByUserIdForUpdate(principal.id())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
+        CenterCheckin open = checkins
+                .findFirstByMemberUserIdAndCheckOutTimeIsNullOrderByCheckInTimeDesc(principal.id())
+                .orElseThrow(() -> new BadRequestException("CHECKIN_NO_OPEN_VISIT",
+                        "error.attendance.no_open_visit", null, "No open check-in to check out"));
+        open.setCheckOutTime(LocalDateTime.now(clock));
+        return toDto(checkins.saveAndFlush(open));
     }
 
     private String resolveMessage(String key) {
@@ -321,13 +354,25 @@ public class CenterCheckinService {
      */
     @Transactional(readOnly = true)
     public List<CheckinDto> history(AuthenticatedPrincipal principal) {
+        return history(principal, null, null);
+    }
+
+    /** History for an inclusive date range (default today, at most {@link #MAX_HISTORY_DAYS} days). */
+    @Transactional(readOnly = true)
+    public List<CheckinDto> history(AuthenticatedPrincipal principal, LocalDate from, LocalDate to) {
         if (principal == null) {
             throw new ForbiddenException("CHECKIN_UNAUTHORIZED", "error.unauthorized", null, "Authentication required");
         }
 
         LocalDate today = LocalDate.now(clock);
-        LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+        LocalDate first = from != null ? from : (to != null ? to : today);
+        LocalDate last = to != null ? to : (from != null ? today : first);
+        if (last.isBefore(first) || ChronoUnit.DAYS.between(first, last) >= MAX_HISTORY_DAYS) {
+            throw new BadRequestException("CHECKIN_INVALID_RANGE", "error.attendance.invalid_range", null,
+                    "Invalid history date range");
+        }
+        LocalDateTime startOfDay = first.atStartOfDay();
+        LocalDateTime endOfDay = last.plusDays(1).atStartOfDay();
 
         if (isStaff(principal)) {
             return checkins.findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(startOfDay, endOfDay)
@@ -346,6 +391,35 @@ public class CenterCheckinService {
         }
 
         throw new ForbiddenException("CHECKIN_FORBIDDEN", "error.forbidden", null, "Access denied");
+    }
+
+    @Transactional(readOnly = true)
+    public StreakDto streak(AuthenticatedPrincipal principal) {
+        if (principal == null || !"MEMBER".equalsIgnoreCase(principal.role())) {
+            throw new ForbiddenException("CHECKIN_FORBIDDEN", "error.forbidden", null, "Access denied");
+        }
+        LocalDateTime now = LocalDateTime.now(clock.withZone(CenterTime.ZONE));
+        LocalDate today = now.toLocalDate();
+        var days = checkins.findGrantedVisitTimes(principal.id(), now).stream()
+                .map(LocalDateTime::toLocalDate)
+                .collect(Collectors.toCollection(TreeSet::new));
+        int longest = 0;
+        int run = 0;
+        LocalDate previous = null;
+        for (LocalDate day : days) {
+            run = previous != null && previous.plusDays(1).equals(day) ? run + 1 : 1;
+            longest = Math.max(longest, run);
+            previous = day;
+        }
+        int current = 0;
+        LocalDate cursor = days.contains(today) ? today : today.minusDays(1);
+        while (days.contains(cursor)) {
+            current++;
+            cursor = cursor.minusDays(1);
+        }
+        LocalDate start = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(12);
+        var recent = List.copyOf(days.tailSet(start));
+        return new StreakDto(current, longest, recent.size(), start, today, recent);
     }
 
     private void ensureStaff(AuthenticatedPrincipal principal) {

@@ -9,6 +9,12 @@ let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  });
+  vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (this: HTMLDialogElement) {
+    this.removeAttribute('open');
+  });
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -55,7 +61,7 @@ it('shows a load failure with retry and never treats it as an empty list', async
   expect(host.textContent).toContain('Chưa có tài khoản nhân sự');
 });
 
-it('locks and unlocks a staff account from the list and reports a failed change', async () => {
+it('locks and unlocks a staff account from the list after confirmation and reports a failed change', async () => {
   const coach = { id: 8, fullName: 'Coach A', email: 'a@gmail.com', roleCode: 'COACH' as const, status: 'active' };
   vi.mocked(listStaffAccounts).mockResolvedValue([coach]);
   vi.mocked(setStaffAccountLocked).mockResolvedValueOnce({ ...coach, status: 'locked' });
@@ -63,11 +69,17 @@ it('locks and unlocks a staff account from the list and reports a failed change'
   const rowButton = () => host.querySelector<HTMLButtonElement>('tbody button')!;
   expect(rowButton().textContent).toBe('Khóa');
   await act(async () => rowButton().click());
+  const confirmLock = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(btn => btn.textContent === 'Khóa tài khoản')!;
+  expect(confirmLock).toBeDefined();
+  await act(async () => confirmLock.click());
   expect(setStaffAccountLocked).toHaveBeenLastCalledWith(8, true);
   expect(host.querySelector('tbody')?.textContent).toContain('Đã khóa');
   expect(rowButton().textContent).toBe('Mở khóa');
   vi.mocked(setStaffAccountLocked).mockRejectedValueOnce(new Error('Không thể mở khóa'));
   await act(async () => rowButton().click());
+  const confirmUnlock = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(btn => btn.textContent === 'Mở khóa')!;
+  expect(confirmUnlock).toBeDefined();
+  await act(async () => confirmUnlock.click());
   expect(setStaffAccountLocked).toHaveBeenLastCalledWith(8, false);
   expect(host.querySelector('tbody')?.textContent).toContain('Đã khóa');
 });

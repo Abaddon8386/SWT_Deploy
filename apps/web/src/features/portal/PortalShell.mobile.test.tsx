@@ -112,13 +112,16 @@ describe('mobile portal navigation', () => {
     expect(host.querySelector('dialog')).toBeNull();
   });
 
-  it('marks More on secondary screens and logs out through confirmation', async () => {
+  it('marks More on secondary screens and keeps logout in the topbar avatar menu', async () => {
     const router = await renderPortal('STAFF', '/messages');
     const more = host.querySelector<HTMLButtonElement>('button[aria-label="Thêm màn hình"]');
     expect(more).not.toBeNull();
     expect(more!.getAttribute('aria-current')).toBe('true');
     await act(async () => more!.click());
-    const logout = host.querySelector<HTMLButtonElement>('dialog button[aria-label="Đăng xuất"]');
+    expect(host.querySelector('dialog button[aria-label="Đăng xuất"]')).toBeNull();
+    await act(async () => host.querySelector<HTMLDialogElement>('dialog')!.dispatchEvent(new Event('cancel', { cancelable: true })));
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!.click());
+    const logout = host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-logout"]');
     expect(logout).not.toBeNull();
     await act(async () => logout!.click());
     const confirm = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(button => button.textContent === 'Đăng xuất')!;
@@ -127,10 +130,11 @@ describe('mobile portal navigation', () => {
     expect(router.state.location.pathname).toBe('/login');
   });
 
-  it('offers floating direct messages and AI assistant for members, and hides both during scanning', async () => {
+  it('offers one floating messages button (SÖL AI lives inside it) and hides it during scanning', async () => {
     const router = await renderPortal('MEMBER', '/member/dashboard');
     expect(host.querySelector('.chat-widget')).not.toBeNull();
-    expect(host.querySelector('.member-ai-chat')).not.toBeNull();
+    // Không còn nút AI tách riêng.
+    expect(host.querySelector('.member-ai-chat')).toBeNull();
     expect(host.querySelector('.app-sidebar a[href="/messages"]')).toBeNull();
     await act(async () => router.navigate('/member/check-in'));
     expect(host.querySelector('.chat-widget')).toBeNull();

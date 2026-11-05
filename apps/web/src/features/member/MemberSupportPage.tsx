@@ -183,7 +183,7 @@ export function MemberSupportPage() {
     try {
       const created = await createSupportTicket(fullSubject, description.trim());
       if (!alive.current) return;
-      setSubject(''); setDescription(''); notify(`Đã tạo phiếu #${created.id}.`, 'success');
+      setSubject(''); setDescription(''); notify(`Đã tạo phiếu #${created.id}.`, 'success', { record: true });
       setTickets(previous => [created, ...previous.filter(ticket => ticket.id !== created.id)]);
       openChat(created);
       await loadTickets(0);
@@ -220,7 +220,7 @@ export function MemberSupportPage() {
   }
 
   return <div className="portal-container member-support">
-    <PageHeader eyebrow="Hội viên" title="Hỗ trợ & khiếu nại" subtitle="Kết nối trực tiếp với đội ngũ SÖL qua từng phiếu hỗ trợ." />
+    <PageHeader eyebrow="Hội viên" title="Hỗ trợ & khiếu nại" />
     <div className="member-support-grid">
       <section className="portal-card" aria-labelledby="support-create-title">
         <div className="portal-card-header"><h2 id="support-create-title" className="portal-card-title">Gửi yêu cầu</h2></div>

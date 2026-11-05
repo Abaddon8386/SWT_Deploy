@@ -290,7 +290,19 @@ components:
         upgradeCharge:
           type: number
           nullable: true
-          description: Số tiền phải thanh toán của yêu cầu nâng cấp, chốt lúc tạo yêu cầu. Đã dùng quá một nửa thời hạn gói hiện tại thì bằng đủ giá gói mới; chưa quá một nửa thì bằng chênh lệch giá gói mới trừ gói hiện tại (gói không rẻ hơn gói cũ cũng tính đủ giá gói mới). Null với đăng ký mới và gia hạn. Lễ tân chỉ thu đúng số này; gói cũ hết hiệu lực khi thanh toán được xác nhận.
+          description: Số tiền phải thanh toán của yêu cầu nâng cấp, chốt lúc tạo yêu cầu = giá gói mới tại thời điểm báo giá − creditApplied. Null với đăng ký mới và gia hạn. Lễ tân/VNPay chỉ thu đúng số này, kể cả khi Quản lý đổi giá gói trước lúc thanh toán; gói cũ kết thúc khi thanh toán được xác nhận.
+        quotedPrice:
+          type: number
+          nullable: true
+          description: Đăng ký mới hoặc gia hạn đang chờ thanh toán — giá gói chốt lúc tạo yêu cầu. Lễ tân/VNPay thu đúng số này kể cả khi Quản lý đổi giá gói trước lúc thanh toán (muốn theo giá mới thì hủy yêu cầu rồi tạo lại). Null với yêu cầu tạo trước khi có quy tắc này (khi đó thu theo giá gói hiện tại) và với nâng cấp (dùng upgradeCharge).
+        creditApplied:
+          type: number
+          nullable: true
+          description: Yêu cầu nâng cấp — giá trị còn lại của kỳ bị thay thế đã trừ vào giá gói mới, chốt lúc báo giá. Tính từ số tiền hội viên thực trả cho kỳ đó (payment success trừ phần đã hoàn, cộng creditApplied của chính kỳ đó nếu nó cũng là một lần nâng cấp; nâng cấp tạo trước quy tắc này được dựng lại cùng công thức từ kỳ bị thay thế vào ngày nâng cấp) × số ngày chưa dùng (gồm hôm nay) / tổng số ngày, làm tròn xuống tới 1.000 đ. Không phụ thuộc giá niêm yết hiện tại của gói cũ. Null với đăng ký mới, gia hạn và yêu cầu nâng cấp tạo trước khi có quy tắc này.
+        remainingValue:
+          type: number
+          nullable: true
+          description: Chỉ có ở kỳ đang hiệu lực hôm nay — giá trị còn lại theo cùng công thức với creditApplied, để client xem trước phí nâng cấp (giá gói mới − remainingValue) và số tiền hoàn đề xuất khi hủy gói (Hội viên và Lễ tân đều dùng con số này). Null với kỳ khác.
         status:
           type: string
           enum: [pending_payment, active, frozen, expired, cancelled]
@@ -1098,11 +1110,17 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/SubscriptionUpgradeRequest'
+      description: >
+        Báo giá theo tỷ lệ ngày chưa dùng: upgradeCharge = giá gói mới − creditApplied (xem MembershipSubscription).
+        Gói mới tính từ ngày báo giá với đủ thời hạn; khi thanh toán được xác nhận (kể cả muộn hơn ngày báo giá),
+        kỳ cũ kết thúc đúng ngày báo giá để những ngày đã quy đổi không được dùng hai lần.
       responses:
         '201':
           description: Tạo yêu cầu nâng cấp thành công
         '400':
-          description: Gói nâng cấp không hợp lệ hoặc không cao hơn gói hiện tại
+          description: >
+            Gói nâng cấp không hợp lệ hoặc không cao hơn gói hiện tại (MEMBERSHIP_UPGRADE_NOT_HIGHER), hoặc giá trị còn lại
+            của kỳ hiện tại đã bằng hoặc vượt giá gói mới (MEMBERSHIP_UPGRADE_CREDIT_EXCEEDS)
         '403':
           description: Không phải chủ sở hữu gói
         '409':
@@ -1408,7 +1426,7 @@ paths:
         '403':
           description: Quyền truy cập bị từ chối
         '409':
-          description: Trùng lịch phòng hoặc huấn luyện viên (Trigger P3)
+          description: Trùng lịch phòng hoặc huấn luyện viên (Trigger P3), hoặc SCHEDULING_MEMBER_TIME_OVERLAP khi hội viên của lớp đã có lớp khác trùng giờ (trg_member_schedule_conflict)
 
   /classes/sessions:
     get:
@@ -1607,8 +1625,11 @@ paths:
           schema: {type: string, format: date}
         - name: toDate
           in: query
+          description: Khoảng ngày bao gồm cả hai đầu, mặc định hôm nay, tối đa 31 ngày
           schema: {type: string, format: date}
       responses:
+        '400':
+          description: Khoảng ngày không hợp lệ (CHECKIN_INVALID_RANGE)
         '200':
           description: Thành công
           content:

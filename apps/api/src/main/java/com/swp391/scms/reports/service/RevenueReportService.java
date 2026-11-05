@@ -227,8 +227,9 @@ public class RevenueReportService {
         List<ClassUtilizationDto> results = new ArrayList<>(rows.size());
         for (SessionAttendanceReportRepository.ClassUtilizationRow row : rows) {
             int capacity = row.getCapacity() != null ? row.getCapacity() : 0;
-            long enrolledCount = row.getEnrolledCount() != null ? row.getEnrolledCount() : 0L;
+            long rawEnrolled = row.getEnrolledCount() != null ? row.getEnrolledCount() : 0L;
             long presentCount = row.getPresentCount() != null ? row.getPresentCount() : 0L;
+            long enrolledCount = Math.max(rawEnrolled, presentCount);
 
             double utilizationRate = 0.0;
             if (capacity > 0) {

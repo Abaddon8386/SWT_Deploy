@@ -130,7 +130,6 @@ export function MemberDashboardPage() {
       <PageHeader
         eyebrow="Hội viên"
         title={`Xin chào, ${userName}`}
-        subtitle="Gói tập, lịch học và thẻ hội viên của bạn."
         actions={<Link className="btn-primary" to="/member/classes">Khám phá lịch học</Link>}
       />
 

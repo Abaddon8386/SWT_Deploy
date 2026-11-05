@@ -11,16 +11,20 @@ import com.swp391.scms.membership.entity.MembershipCancellationRequest;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipCancellationRequestRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.scheduling.service.EnrollmentService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
+import com.swp391.scms.wallet.WalletService;
 import jakarta.persistence.EntityManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,8 +42,17 @@ public class MembershipCancellationService {
     private final PaymentRepository payments;
     private final EntityManager entityManager;
 
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    @Autowired(required = false)
     private EntitlementRevocationService entitlementRevocation;
+
+    @Autowired(required = false)
+    private WalletService walletService;
+
+    @Autowired(required = false)
+    private NotificationService notificationService;
+
+    @Autowired(required = false)
+    private SubscriptionValueCalculator valueCalculator;
 
     public MembershipCancellationService(MembershipCancellationRequestRepository requests,
             MembershipSubscriptionRepository subscriptions, MemberRepository members,
@@ -80,8 +93,94 @@ public class MembershipCancellationService {
         request.setMember(member);
         request.setSubscription(subscription);
         request.setReason(reason);
+        request.setRefundAmount(defaultRefund(subscription));
         request.setRequestedAt(LocalDateTime.now(clock));
         return toDto(requests.saveAndFlush(request));
+    }
+
+    @Transactional
+    public CancellationDtos.Response staffRequest(AuthenticatedPrincipal principal, CancellationDtos.StaffRequest body) {
+        if (principal == null || !("RECEPTIONIST".equalsIgnoreCase(principal.role())
+                || "STAFF".equalsIgnoreCase(principal.role())
+                || "CENTER_MANAGER".equalsIgnoreCase(principal.role())
+                || "MANAGER".equalsIgnoreCase(principal.role()))) {
+            throw new ForbiddenException("CANCELLATION_STAFF_ONLY", "error.forbidden", null, null);
+        }
+        String reason = body == null || body.reason() == null ? "" : body.reason().trim();
+        if (reason.isEmpty()) {
+            throw new BadRequestException("CANCELLATION_REASON_REQUIRED", "validation.membership.cancellation_reason.not_blank", null, null);
+        }
+
+        Member member;
+        MembershipSubscription subscription;
+        if (body.subscriptionId() != null) {
+            MembershipSubscription found = subscriptions.findById(body.subscriptionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", body.subscriptionId()));
+            member = lockMember(found.getMember().getUserId());
+            subscription = lockSubscription(body.subscriptionId());
+        } else if (body.memberId() != null) {
+            member = lockMember(body.memberId());
+            MembershipSubscription activeSub = subscriptions.findByMemberUserIdOrderByCreatedAtDesc(body.memberId())
+                    .stream()
+                    .filter(s -> isActiveNow(s) || "active".equalsIgnoreCase(s.getStatus()))
+                    .findFirst()
+                    .orElseThrow(() -> new ConflictException("CANCELLATION_NOT_ACTIVE", "error.membership.cancellation_not_active", null, null));
+            subscription = lockSubscription(activeSub.getId());
+        } else {
+            throw new BadRequestException("CANCELLATION_TARGET_REQUIRED", "resource.subscription", null, null);
+        }
+
+        if (!isActiveNow(subscription) && !"active".equalsIgnoreCase(subscription.getStatus())) {
+            throw new ConflictException("CANCELLATION_NOT_ACTIVE", "error.membership.cancellation_not_active", null, null);
+        }
+        if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
+        }
+        if (requests.existsBySubscriptionIdAndStatus(subscription.getId(), "PENDING")) {
+            throw new ConflictException("CANCELLATION_PENDING_EXISTS", "error.membership.cancellation_pending_exists", null, null);
+        }
+
+        BigDecimal defaultRefund = defaultRefund(subscription);
+        BigDecimal refundAmount = (body.refundAmount() != null && body.refundAmount().compareTo(BigDecimal.ZERO) >= 0)
+                ? body.refundAmount()
+                : defaultRefund;
+
+        MembershipCancellationRequest request = new MembershipCancellationRequest();
+        request.setMember(member);
+        request.setSubscription(subscription);
+        request.setReason(reason);
+        request.setRefundAmount(refundAmount);
+        request.setRequestedAt(LocalDateTime.now(clock));
+        if (principal.id() != null && users != null) {
+            users.findByIdAndDeletedAtIsNull(principal.id()).ifPresent(request::setRequestedBy);
+        }
+        MembershipCancellationRequest saved = requests.saveAndFlush(request);
+
+        if (notificationService != null && users != null) {
+            String memberName = member.getUser() != null ? member.getUser().getFullName() : ("#" + member.getUserId());
+            String pkgName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
+            for (User mgr : users.findActiveManagers()) {
+                try {
+                    String title = messages != null
+                            ? messages.getMessage("notifications.membership.cancellation.staff_request.title")
+                            : "Yêu cầu hủy gói tập & hoàn tiền mới";
+                    String msgBody = messages != null
+                            ? messages.getMessage("notifications.membership.cancellation.staff_request.body", memberName, pkgName, refundAmount.toPlainString(), "100", reason)
+                            : ("Lễ tân vừa trình yêu cầu hủy gói " + pkgName + " của hội viên " + memberName
+                                    + " (Hoàn dự kiến: " + refundAmount.toPlainString() + " đ). Lý do: " + reason);
+                    notificationService.send(
+                            mgr.getId(),
+                            title,
+                            msgBody,
+                            "system",
+                            "cancellation_request",
+                            saved.getId(),
+                            "/manager/reports");
+                } catch (RuntimeException ignored) {
+                }
+            }
+        }
+        return toDto(saved);
     }
 
     @Transactional(readOnly = true)
@@ -133,6 +232,107 @@ public class MembershipCancellationService {
             } else {
                 enrollments.cancelFutureEnrollmentsForMember(memberId, cancelReason);
             }
+
+            BigDecimal refundAmount = (body != null && body.refundAmount() != null)
+                    ? body.refundAmount()
+                    : request.getRefundAmount();
+            if (refundAmount == null) {
+                refundAmount = defaultRefund(subscription);
+            }
+            request.setRefundAmount(refundAmount);
+            if (walletService != null && refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+                walletService.creditRefund(
+                        memberId,
+                        refundAmount,
+                        "CANCEL_REQ_" + request.getId(),
+                        request.getReason());
+            } else if (notificationService != null) {
+                try {
+                    String pkgName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
+                    String noteSuffix = (body != null && body.note() != null && !body.note().isBlank())
+                            ? (messages != null
+                                    ? messages.getMessage("notifications.membership.cancellation.manager_note", body.note().trim())
+                                    : (" Ghi chú: " + body.note().trim()))
+                            : "";
+                    String title = messages != null
+                            ? messages.getMessage("notifications.membership.cancellation.approved_no_refund.title")
+                            : "Gói tập đã được duyệt hủy";
+                    String msgBody = messages != null
+                            ? messages.getMessage("notifications.membership.cancellation.approved_no_refund.body", pkgName, noteSuffix)
+                            : ("Yêu cầu hủy gói tập của bạn đã được Quản lý phê duyệt." + noteSuffix);
+                    notificationService.send(
+                            memberId,
+                            title,
+                            msgBody,
+                            "payment",
+                            "cancellation_request",
+                            request.getId(),
+                            "/member/packages");
+                } catch (RuntimeException ignored) {
+                }
+            }
+
+            if (notificationService != null && request.getRequestedBy() != null && request.getRequestedBy().getId() != null) {
+                String pkgName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
+                String title = messages != null
+                        ? messages.getMessage("notifications.membership.cancellation.approved_refund.title")
+                        : "Quản lý đã duyệt yêu cầu hủy gói & hoàn tiền";
+                String msgBody = messages != null
+                        ? messages.getMessage("notifications.membership.cancellation.approved_refund.body", pkgName, refundAmount != null ? refundAmount.toPlainString() : "0", "100", "")
+                        : "Yêu cầu hủy gói của hội viên đã được phê duyệt. Tiền hoàn đã chuyển vào Ví hội viên.";
+                try {
+                    notificationService.send(
+                            request.getRequestedBy().getId(),
+                            title,
+                            msgBody,
+                            "system",
+                            "cancellation_request",
+                            request.getId(),
+                            "/staff/reception");
+                } catch (RuntimeException ignored) {
+                }
+            }
+        } else {
+            if (notificationService != null) {
+                String pkgName = request.getSubscription() != null && request.getSubscription().getMembershipPackage() != null
+                        ? request.getSubscription().getMembershipPackage().getName()
+                        : "";
+                String noteSuffix = (body != null && body.note() != null && !body.note().isBlank())
+                        ? (messages != null
+                                ? messages.getMessage("notifications.membership.cancellation.manager_note", body.note().trim())
+                                : (" Ghi chú: " + body.note().trim()))
+                        : "";
+                String title = messages != null
+                        ? messages.getMessage("notifications.membership.cancellation.rejected.title")
+                        : "Yêu cầu hủy gói tập bị từ chối";
+                String msgBody = messages != null
+                        ? messages.getMessage("notifications.membership.cancellation.rejected.body", pkgName, noteSuffix)
+                        : ("Yêu cầu hủy gói tập chưa được Quản lý phê duyệt." + noteSuffix);
+                try {
+                    notificationService.send(
+                            memberId,
+                            title,
+                            msgBody,
+                            "system",
+                            "cancellation_request",
+                            request.getId(),
+                            "/member/packages");
+                } catch (RuntimeException ignored) {
+                }
+                if (request.getRequestedBy() != null && request.getRequestedBy().getId() != null) {
+                    try {
+                        notificationService.send(
+                                request.getRequestedBy().getId(),
+                                title,
+                                msgBody,
+                                "system",
+                                "cancellation_request",
+                                request.getId(),
+                                "/staff/reception");
+                    } catch (RuntimeException ignored) {
+                    }
+                }
+            }
         }
         User manager = users.findByIdAndDeletedAtIsNull(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.manager", principal.id()));
@@ -175,6 +375,15 @@ public class MembershipCancellationService {
         return subscription;
     }
 
+    /**
+     * Suggested refund: the unused share of what the member actually paid for this period (including value carried
+     * over from an upgraded package), never the current catalog price. A manager may still override it.
+     */
+    private BigDecimal defaultRefund(MembershipSubscription subscription) {
+        SubscriptionValueCalculator calculator = valueCalculator != null ? valueCalculator : new SubscriptionValueCalculator(payments);
+        return calculator.remainingValue(subscription, LocalDate.now(clock));
+    }
+
     private boolean isActiveNow(MembershipSubscription subscription) {
         LocalDate today = LocalDate.now(clock);
         return "active".equalsIgnoreCase(subscription.getStatus())
@@ -185,11 +394,18 @@ public class MembershipCancellationService {
     private CancellationDtos.Response toDto(MembershipCancellationRequest request) {
         Member member = request.getMember();
         MembershipSubscription subscription = request.getSubscription();
+        BigDecimal refund = request.getRefundAmount();
+        if (refund == null && subscription != null) {
+            refund = defaultRefund(subscription);
+        }
         return new CancellationDtos.Response(request.getId(), member.getUserId(),
                 member.getUser() == null ? null : member.getUser().getFullName(),
                 subscription.getId(), subscription.getMembershipPackage().getName(),
                 request.getReason(), request.getStatus(), request.getRequestedAt(),
                 request.getResolvedBy() == null ? null : request.getResolvedBy().getId(),
-                request.getResolvedAt(), request.getResolutionNote());
+                request.getResolvedAt(), request.getResolutionNote(),
+                refund,
+                request.getRequestedBy() == null ? null : request.getRequestedBy().getId(),
+                request.getRequestedBy() == null ? null : request.getRequestedBy().getFullName());
     }
 }

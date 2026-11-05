@@ -133,7 +133,7 @@ export function MemberPackagesPage() {
     setTrialError('');
     try {
       await trialApi.claim({ cccd: cccdClean, fullName: trialFullName.trim() });
-      notify('Kích hoạt 3 ngày tập thử miễn phí đặc quyền Gold thành công!', 'success');
+      notify('Kích hoạt 3 ngày tập thử miễn phí đặc quyền Gold thành công!', 'success', { record: true });
       setIsTrialModalOpen(false);
       setTrialCccd('');
       setTrialFullName('');
@@ -149,7 +149,6 @@ export function MemberPackagesPage() {
   const [isResuming, setIsResuming] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
   const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
-  const [isPeriodsOpen, setIsPeriodsOpen] = useState(false);
 
   const loadPackages = useCallback(async () => {
     syncVersion.current += 1;
@@ -228,9 +227,6 @@ export function MemberPackagesPage() {
   const currentPackage = current
     ? packages.find((item) => item.id === current.packageId) ?? null
     : null;
-  const latestCancellation = current && cancellationsState.status === 'success'
-    ? cancellationsState.data.find((item) => item.subscriptionId === current.id) ?? null
-    : null;
   const frozenSubscription =
     !current && historyState.status === 'success'
       ? historyState.data.find((item) => item.status?.toLowerCase() === 'frozen') ?? null
@@ -294,6 +290,12 @@ export function MemberPackagesPage() {
     ? historyState.data.filter((item) => item.status === 'active' && item.startDate > todayKey())
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
     : [];
+
+  const hasPendingTransfer = paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending');
+  useEffect(() => {
+    if (!pending || !hasPendingTransfer) return;
+    notify('Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.', 'info', { key: `transfer-pending-${pending.id}`, record: true });
+  }, [pending?.id, hasPendingTransfer]);
 
   const isStatusSyncing =
     currentState.status === 'loading' ||
@@ -377,23 +379,10 @@ export function MemberPackagesPage() {
     };
   }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId]);
 
-  const needsPackage = currentState.status === 'success' && !current && !frozenSubscription && !pending && !isStatusSyncing;
-  const holdRejected = current?.holdStatus === 'REJECTED' ? current.id : null;
-  const cancellationRejected = latestCancellation?.status === 'REJECTED' ? latestCancellation : null;
-  useEffect(() => {
-    if (needsPackage) notify('Bạn chưa có gói đang hoạt động. Hãy chọn một gói tập để đăng ký và kích hoạt thẻ hội viên.', 'info', { key: 'packages-empty' });
-  }, [needsPackage]);
-  useEffect(() => {
-    if (holdRejected !== null) notify('Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.', 'info', { key: `hold-rejected-${holdRejected}` });
-  }, [holdRejected]);
-  useEffect(() => {
-    if (cancellationRejected) notify(`Yêu cầu hủy gói trước đó đã bị từ chối. ${cancellationRejected.resolutionNote ?? ''}`.trim(), 'info', { key: `cancel-rejected-${cancellationRejected.id}` });
-  }, [cancellationRejected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     if (syncError) {
       notify('Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.', 'error', {
-        key: 'packages-sync', silent: true, action: { label: 'Thử đồng bộ lại', run: () => refreshNow.current() },
+        key: 'packages-sync', silent: true, record: true, action: { label: 'Thử đồng bộ lại', run: () => refreshNow.current() },
       });
     } else resolveNotice('packages-sync');
     return () => resolveNotice('packages-sync');
@@ -487,7 +476,7 @@ export function MemberPackagesPage() {
       setHistoryState((previous) => previous.status === 'success'
         ? { status: 'success', data: previous.data.map((item) => item.id === resumed.id ? resumed : item) }
         : previous);
-      notify('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.', 'success');
+      notify('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.', 'success', { record: true });
     } catch (error) {
       setActionError(errorMessage(error, 'Không thể mở lại gói tập. Vui lòng thử lại.'));
     } finally {
@@ -516,7 +505,7 @@ export function MemberPackagesPage() {
       setCurrentState({ status: 'success', data: updated });
       setIsHoldModalOpen(false);
       setHoldReason('');
-      notify('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.', 'success');
+      notify('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.', 'success', { record: true });
       await loadHistory();
     } catch (error) {
       await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
@@ -555,7 +544,7 @@ export function MemberPackagesPage() {
       );
       setRequestResult(null);
       setPendingToCancel(null);
-      notify(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, 'success');
+      notify(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, 'success', { record: true });
     } catch (error) {
       setActionError(
         error instanceof Error
@@ -584,7 +573,6 @@ export function MemberPackagesPage() {
       <PageHeader
         eyebrow="Hội viên"
         title="Gói tập"
-        subtitle="Chọn gói, gia hạn và theo dõi yêu cầu của bạn."
       />
 
       {/* Unified Skeleton for Status Area (replaces piecemeal text lines) */}
@@ -648,9 +636,6 @@ export function MemberPackagesPage() {
               <h2 className="portal-card-title" style={{ marginTop: 6, fontSize: '1.25rem' }}>
                 Trải nghiệm 3 ngày tập miễn phí với đặc quyền Gold
               </h2>
-              <p className="row-card__meta" style={{ marginTop: 4 }}>
-                Xác thực số Căn cước công dân (CCCD) để kích hoạt ngay 3 ngày tập miễn phí tại toàn bộ cơ sở và lớp học Gold.
-              </p>
             </div>
             <button
               type="button"
@@ -749,51 +734,6 @@ export function MemberPackagesPage() {
         </section>
       )}
 
-      {futurePeriods.length > 0 && (
-        <section className={`portal-card membership-periods ${isPeriodsOpen ? 'is-open' : ''}`.trim()} aria-label="Các kỳ đã thanh toán tiếp theo">
-          <button
-            type="button"
-            className="membership-periods__toggle"
-            aria-expanded={isPeriodsOpen}
-            aria-controls="membership-future-periods-list"
-            onClick={() => setIsPeriodsOpen((prev) => !prev)}
-          >
-            <div className="membership-periods__heading">
-              <div>
-                <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
-                <span className="membership-periods__summary">
-                  Kỳ kế tiếp từ {formatDate(futurePeriods[0].startDate)} đến {formatDate(futurePeriods[0].endDate)}
-                </span>
-              </div>
-            </div>
-            <div className="membership-periods__meta">
-              <span className="membership-periods__count">{futurePeriods.length} kỳ</span>
-              <span className="membership-periods__action">
-                <span>{isPeriodsOpen ? 'Thu gọn' : 'Xem chi tiết'}</span>
-                <svg className="membership-periods__chevron" viewBox="0 0 12 12" aria-hidden="true">
-                  <path d="M2.25 4.5 6 8.25 9.75 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </div>
-          </button>
-          {isPeriodsOpen && (
-            <ul id="membership-future-periods-list" className="membership-periods__list">
-              {futurePeriods.map((period) => (
-                <li className="membership-periods__row" key={period.id}>
-                  <div className="membership-periods__package">
-                    <strong>{period.packageName}</strong>
-                  </div>
-                  <dl className="membership-periods__dates">
-                    <div><dt>Từ ngày</dt><dd><time dateTime={period.startDate}>{formatDate(period.startDate)}</time></dd></div>
-                    <div><dt>Đến ngày</dt><dd><time dateTime={period.endDate}>{formatDate(period.endDate)}</time></dd></div>
-                  </dl>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-
       {pendingItems.length > 1 && (
         <div className="portal-alert" role="alert">
           <span>Có nhiều yêu cầu đang chờ. Vui lòng liên hệ nhân viên để kiểm tra.</span>
@@ -811,16 +751,13 @@ export function MemberPackagesPage() {
             <div>
               <h2 className="portal-card-title">{pending.packageName}</h2>
               <p className="row-card__meta" style={{ margin: '4px 0 0' }}>
-                Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
+                Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pending.upgradeCharge ?? pending.quotedPrice ?? pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
               </p>
             </div>
             <span className="badge badge-warning">Đang chờ thanh toán</span>
           </div>
           {paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage && (
             <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
-          )}
-          {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending') && (
-            <p className="row-card__meta" role="status">Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'success') && (
             <p role="alert">Thanh toán đã ghi nhận nhưng gói chưa active. Vui lòng yêu cầu nhân viên kiểm tra.</p>
@@ -964,6 +901,8 @@ export function MemberPackagesPage() {
             const renewalConflict = renewFrom && historyState.status === 'success' ? renewalPath(renewFrom.id).conflict : false;
             const nextRenewals = upgradeFrom ? renewalCount(upgradeFrom.id) : 0;
             const hasPaidFutureUpgrade = upgradeFrom !== null && futurePeriods.length > 0;
+            const quote = upgradeFrom ? upgradeQuote(upgradeFrom, membershipPackage.price, todayKey()) : null;
+            const upgradeCovered = quote !== null && !quote.allowed;
 
             const isPending =
               pending?.packageId ===
@@ -986,7 +925,8 @@ export function MemberPackagesPage() {
               hasPaidFutureUpgrade ||
               renewalConflict ||
               ambiguousRenewal ||
-              hasLowerOrNonUpgradableCurrentPackage;
+              hasLowerOrNonUpgradableCurrentPackage ||
+              upgradeCovered;
 
             const blockedReason = syncError ? 'Chờ đồng bộ trạng thái mới nhất.'
               : hasPendingHold ? 'Yêu cầu bảo lưu đang chờ xử lý. Gói hiện tại vẫn có hiệu lực.'
@@ -998,6 +938,7 @@ export function MemberPackagesPage() {
               : nextRenewals > 0 ? 'Đã có kỳ tiếp theo; vui lòng liên hệ nhân viên trước khi nâng cấp.'
               : frozenSubscription ? 'Mở lại gói bảo lưu trước khi tiếp tục.'
               : hasLowerOrNonUpgradableCurrentPackage ? 'Chỉ có thể gia hạn gói hiện tại hoặc nâng lên gói cao hơn.'
+              : upgradeCovered ? 'Giá trị còn lại của gói hiện tại đã bằng hoặc vượt giá gói này. Hãy chọn gói cao hơn hoặc gia hạn khi gói sắp hết.'
               : ambiguousRenewal ? 'Có nhiều kỳ cùng ngày kết thúc. Vui lòng liên hệ nhân viên.' : null;
 
             let buttonText = historyState.status === 'success' && historyState.data.length === 0
@@ -1096,16 +1037,19 @@ export function MemberPackagesPage() {
                     {formatPrice(membershipPackage.price)}
                     <span className="package-price-term"> / {membershipPackage.durationDays} ngày</span>
                   </div>
-                  {upgradeFrom && currentPackage && (() => {
-                    const quote = upgradeQuote(upgradeFrom, currentPackage.price, membershipPackage.price, todayKey());
-                    return <p className="row-card__meta" data-testid="upgrade-quote" style={{ margin: '8px 0 0' }}>
-                      <strong>Nâng cấp: thanh toán {formatPrice(quote.amount)}</strong>
-                      {quote.mode === 'full'
-                        ? ` — đã dùng ${quote.usedDays}/${quote.totalDays} ngày (quá nửa) nên đóng đủ giá gói mới.`
-                        : ` — bù chênh lệch so với gói hiện tại (đã dùng ${quote.usedDays}/${quote.totalDays} ngày).`}
-                      {' '}Gói hiện tại hết hiệu lực khi thanh toán được xác nhận.
-                    </p>;
-                  })()}
+                  {quote && (
+                    <p className="row-card__meta" data-testid="upgrade-quote" style={{ margin: '8px 0 0' }}>
+                      {quote.allowed ? (
+                        <>
+                          <strong>Nâng cấp: thanh toán {formatPrice(quote.amount)}</strong>
+                          {` — đã trừ ${formatPrice(quote.credit)} giá trị còn lại của gói hiện tại (${quote.remainingDays}/${quote.totalDays} ngày chưa dùng).`}
+                          {' '}Gói mới tính từ hôm nay; gói hiện tại kết thúc khi thanh toán được xác nhận.
+                        </>
+                      ) : (
+                        <>Giá trị còn lại của gói hiện tại ({formatPrice(quote.credit)}) đã bằng hoặc vượt giá gói này nên không nâng cấp được.</>
+                      )}
+                    </p>
+                  )}
 
                   <button
                     type="button"
@@ -1156,8 +1100,10 @@ export function MemberPackagesPage() {
             <p>{requestResult.action === 'upgrade' ? 'Nâng cấp gói tập' : requestResult.action === 'renew' ? 'Gia hạn gói tập' : 'Đăng ký gói tập'} · #{requestResult.subscription.id}</p>
             <p>Yêu cầu của bạn đang chờ xử lý.</p>
             {requestResult.action === 'upgrade' && requestResult.subscription.upgradeCharge != null
-              ? <p className="row-card__meta">Số tiền cần thanh toán để nâng cấp: <strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> (giá gói mới {formatPrice(requestResult.membershipPackage.price)}). Gói hiện tại hết hiệu lực khi thanh toán được xác nhận.</p>
-              : <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán được hệ thống xác nhận khi mở VNPay hoặc tại quầy.</p>}
+              ? <p className="row-card__meta">Số tiền cần thanh toán để nâng cấp: <strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> (giá gói mới {formatPrice(requestResult.membershipPackage.price)}{requestResult.subscription.creditApplied ? `, đã trừ ${formatPrice(requestResult.subscription.creditApplied)} giá trị còn lại của gói hiện tại` : ''}). Số tiền này đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán. Gói hiện tại kết thúc khi thanh toán được xác nhận.</p>
+              : requestResult.subscription.quotedPrice != null
+                ? <p className="row-card__meta">Số tiền cần thanh toán: <strong>{formatPrice(requestResult.subscription.quotedPrice)}</strong>. Giá đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán.</p>
+                : <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán được hệ thống xác nhận khi mở VNPay hoặc tại quầy.</p>}
             <p className="row-card__meta">{paymentInstructionsNotice}</p>
             <div className="package-result__actions">
               <Link

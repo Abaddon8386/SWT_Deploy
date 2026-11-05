@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_db_migrations_v3_create_otp_challenges_sql", "label": "V3__create_otp_challenges.sql", "file_type": "code", "source_file": "db/migrations/V3__create_otp_challenges.sql", "source_location": null}], "edges": []}

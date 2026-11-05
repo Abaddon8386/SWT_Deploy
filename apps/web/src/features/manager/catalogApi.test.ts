@@ -31,8 +31,8 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
     vi.stubGlobal('fetch', mockFetch);
 
     const list = await catalogApi.disciplines();
-    // Bộ môn cũ ngoài danh mục chuẩn (Pilates) không được hiển thị.
-    expect(list).toEqual([yoga]);
+    // Quản lý được xem và chỉnh sửa toàn bộ bộ môn trong danh mục.
+    expect(list).toEqual(mockList);
 
     const created = await catalogApi.saveDiscipline(null, { name: 'Yoga', description: 'Mindfulness' });
     expect(created.id).toBe(2);

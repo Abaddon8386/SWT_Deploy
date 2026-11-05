@@ -35,6 +35,15 @@ public class VnpayController {
     public ApiResponse<Status> status(@AuthenticationPrincipal AuthenticatedPrincipal principal,@PathVariable String reference) {
         return ApiResponse.ok(msg("finance.vnpay.status"),payments.status(principal,reference));
     }
+    @PostMapping("/verify-return") @PreAuthorize("hasRole('MEMBER')")
+    public ApiResponse<Status> verifyReturn(@AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @RequestBody Map<String,String> params) {
+        String reference = params != null ? params.get("vnp_TxnRef") : "";
+        if (params != null && params.containsKey("vnp_SecureHash")) {
+            ipn.process(params);
+        }
+        return ApiResponse.ok(msg("finance.vnpay.status"),payments.status(principal,reference));
+    }
     @GetMapping("/ipn") @PreAuthorize("permitAll()")
     public Map<String,String> ipn(@RequestParam MultiValueMap<String,String> params) {return ipn.handle(params);}
 }

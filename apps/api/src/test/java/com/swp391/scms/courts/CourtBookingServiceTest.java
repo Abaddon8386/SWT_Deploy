@@ -84,7 +84,11 @@ class CourtBookingServiceTest {
         assertTrue(result.canCancel());
     }
     @Test void rejectsPastStart() { error("COURT_BOOKING_PAST_SLOT", () -> service.book(member, request(date, LocalTime.of(10, 0)))); }
-    @Test void rejectsMoreThanSevenDays() { error("COURT_BOOKING_TOO_FAR", () -> service.book(member, request(date.plusDays(8), LocalTime.NOON))); }
+    @Test void rejectsMoreThanSevenDays() {
+        when(subscriptions.hasActiveMembershipCoveringSession(1L, date, date.plusDays(14))).thenReturn(true);
+        assertEquals(date.plusDays(14), service.book(member, request(date.plusDays(14), LocalTime.NOON)).date());
+        error("COURT_BOOKING_TOO_FAR", () -> service.book(member, request(date.plusDays(366), LocalTime.NOON)));
+    }
     @Test void rejectsNonWholeHourAndSeconds() { error("COURT_BOOKING_INVALID_SLOT", () -> service.book(member, request(date, LocalTime.of(12, 0, 1)))); }
     @Test void rejectsEndOutsideHours() { error("COURT_BOOKING_INVALID_SLOT", () -> service.book(member, request(date, LocalTime.of(22, 0)))); }
     @Test void rejectsMissingMembership() {
@@ -98,8 +102,10 @@ class CourtBookingServiceTest {
         when(bookings.existsRoomOverlap(10L, date, LocalTime.NOON, LocalTime.of(13, 0))).thenReturn(true);
         error("COURT_BOOKING_SLOT_TAKEN", () -> service.book(member, request(date, LocalTime.NOON)));
         when(bookings.existsRoomOverlap(anyLong(), any(), any(), any())).thenReturn(false);
-        when(bookings.countByMemberIdAndBookingDateAndStatus(1L, date, "booked")).thenReturn(4L);
-        error("COURT_BOOKING_LIMIT_REACHED", () -> service.book(member, request(date, LocalTime.NOON)));
+        used(1);
+        var fifthBooking = service.book(member, paid(LocalTime.NOON, "cash"));
+        assertEquals("booked", fifthBooking.status());
+        assertEquals("pending", fifthBooking.paymentStatus());
     }
     @Test void firstBookingIsCoveredByTheSilverPlanAndFree() {
         var result = service.book(member, request(date, LocalTime.NOON));

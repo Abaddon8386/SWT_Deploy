@@ -10,6 +10,7 @@ import {
 } from './auditApi';
 import './manager-audit-logs.css';
 import { errorMessage } from '../../shared/lib/errorMessage';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 type ActiveTab = 'audit' | 'occupancy';
 
@@ -195,7 +196,6 @@ export function ManagerAuditLogsPage() {
       <PageHeader
         eyebrow="Quản trị trung tâm"
         title="Giám sát audit log & báo cáo lấp đầy lớp"
-        subtitle="Tra cứu nhật ký kiểm toán hệ thống, phân tích diff thay đổi và theo dõi tỷ lệ lấp đầy phòng học theo bộ môn."
       />
 
       {/* Navigation Tabs */}
@@ -311,7 +311,7 @@ export function ManagerAuditLogsPage() {
                   {filteredLogs.map((log) => (
                     <tr key={log.id}>
                       <td style={{ fontSize: '0.82rem', fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>
-                        {log.createdAt ? log.createdAt.replace('T', ' ') : '—'}
+                        {log.createdAt ? formatCenterDateTime(log.createdAt) : '—'}
                       </td>
                       <td>
                         <div className="actor-meta">
@@ -480,7 +480,7 @@ export function ManagerAuditLogsPage() {
                 <strong>Người thực hiện:</strong> {diffLog.userFullName} ({diffLog.userEmail})
               </div>
               <div>
-                <strong>Thời gian:</strong> {diffLog.createdAt ? diffLog.createdAt.replace('T', ' ') : '—'}
+                <strong>Thời gian:</strong> {diffLog.createdAt ? formatCenterDateTime(diffLog.createdAt) : '—'}
               </div>
               {diffLog.ipAddress && (
                 <div>

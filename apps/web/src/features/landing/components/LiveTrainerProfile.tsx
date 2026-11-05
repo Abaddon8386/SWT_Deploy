@@ -9,7 +9,7 @@ import { usePublicCatalog } from '../publicCatalog';
 export function LiveTrainerProfile() {
   const { trainerId } = useParams<{ trainerId?: string }>();
   const { catalog, error, retry } = usePublicCatalog();
-  const coach = catalog?.coaches.find(item => String(item.id) === trainerId);
+  const coach = trainerId ? catalog?.coaches.find(item => String(item.id) === trainerId) : catalog?.coaches[0];
   const user = getCurrentUser();
   const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
   return <PublicLayout>

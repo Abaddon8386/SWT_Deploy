@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MembershipCancellationRequestRepository extends JpaRepository<MembershipCancellationRequest, Long> {
-    @EntityGraph(attributePaths = {"member", "member.user", "subscription", "subscription.membershipPackage", "resolvedBy"})
+    @EntityGraph(attributePaths = {"member", "member.user", "subscription", "subscription.membershipPackage", "resolvedBy", "requestedBy"})
     List<MembershipCancellationRequest> findByMemberUserIdOrderByRequestedAtDesc(Long memberId);
 
     @Query("""
@@ -21,6 +21,7 @@ public interface MembershipCancellationRequestRepository extends JpaRepository<M
             JOIN FETCH r.subscription s
             JOIN FETCH s.membershipPackage
             LEFT JOIN FETCH r.resolvedBy
+            LEFT JOIN FETCH r.requestedBy
             WHERE u.deletedAt IS NULL
             ORDER BY r.requestedAt DESC
             """)

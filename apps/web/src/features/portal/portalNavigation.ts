@@ -1,10 +1,23 @@
 import type { UserSession } from '../../shared/api/client';
+import type { Language } from '../../shared/i18n';
 import type { PortalIconName } from './PortalIcon';
 
 export const ROLE_LABELS: Record<UserSession['role'], string> = {
   ADMIN: 'Quản trị hệ thống',
   MEMBER: 'Hội viên', STAFF: 'Lễ tân', COACH: 'Huấn luyện viên', MANAGER: 'Quản lý trung tâm',
 };
+
+export const ROLE_LABELS_EN: Record<UserSession['role'], string> = {
+  ADMIN: 'System Administrator',
+  MEMBER: 'Member',
+  STAFF: 'Receptionist',
+  COACH: 'Coach',
+  MANAGER: 'Center Manager',
+};
+
+export function getRoleLabel(role: UserSession['role'], lang: Language = 'vi'): string {
+  return lang === 'en' ? ROLE_LABELS_EN[role] : ROLE_LABELS[role];
+}
 
 export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; roles: UserSession['role'][] }[] = [
   { to: '/member/dashboard', label: 'Bảng điều khiển', icon: 'board', roles: ['MEMBER'] },
@@ -14,6 +27,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/member/card', label: 'Thẻ hội viên', icon: 'card', roles: ['MEMBER'] },
   { to: '/member/check-in', label: 'Quét QR cổng', icon: 'scan', roles: ['MEMBER'] },
   { to: '/member/invoices', label: 'Giao dịch & Hóa đơn', icon: 'receipt', roles: ['MEMBER'] },
+  { to: '/member/orders', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MEMBER'] },
   { to: '/member/progress', label: 'Tiến độ & Giáo án', icon: 'chart', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER', 'COACH', 'MANAGER', 'STAFF'] },
   { to: '/member/support', label: 'Hỗ trợ & Khiếu nại', icon: 'support', roles: ['MEMBER'] },
@@ -23,21 +37,66 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/staff/reception', label: 'Quầy Lễ tân & POS', icon: 'card', roles: ['STAFF'] },
   { to: '/staff/check-in', label: 'Cổng quét QR Check-in', icon: 'scan', roles: ['STAFF'] },
   { to: '/staff/courts', label: 'Lượt đặt sân', icon: 'court', roles: ['STAFF'] },
+  { to: '/staff/orders', label: 'Đơn hàng sản phẩm', icon: 'box', roles: ['STAFF'] },
   { to: '/staff/support', label: 'Hộp thư hỗ trợ', icon: 'inbox', roles: ['STAFF'] },
   { to: '/staff/requests', label: 'Đơn từ nội bộ', icon: 'file', roles: ['STAFF', 'COACH'] },
   { to: '/admin/users', label: 'Tài khoản & Phân quyền', icon: 'users', roles: ['ADMIN'] },
   { to: '/manager/reports', label: 'Báo cáo & Doanh thu', icon: 'chart', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
+  { to: '/manager/products', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MANAGER'] },
   { to: '/manager/equipment', label: 'Quản lý máy móc thiết bị', icon: 'dumbbell', roles: ['MANAGER'] },
   { to: '/manager/coach-assignments', label: 'Theo dõi HLV & Học viên', icon: 'users', roles: ['MANAGER'] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/manager/support', label: 'Khiếu nại chuyển lên', icon: 'inbox', roles: ['MANAGER'] },
-  { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'users', roles: ['MANAGER'] },
+  { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'card', roles: ['MANAGER'] },
   { to: '/manager/requests', label: 'Duyệt đơn nội bộ', icon: 'file', roles: ['MANAGER'] },
   { to: '/manager/coach-reviews', label: 'Xếp hạng & Đánh giá HLV', icon: 'star', roles: ['MANAGER'] },
   { to: '/manager/audit-logs', label: 'Nhật ký kiểm toán & Lấp đầy', icon: 'history', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] },
 ];
+
+export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
+  '/member/dashboard': 'Dashboard',
+  '/member/packages': 'Memberships',
+  '/member/classes': 'Schedule & Booking',
+  '/member/courts': 'Court Booking',
+  '/member/card': 'Member Card',
+  '/member/check-in': 'Gate QR Check-in',
+  '/member/invoices': 'Transactions & Invoices',
+  '/member/orders': 'Shop & Orders',
+  '/member/progress': 'Progress & Plans',
+  '/member/notifications': 'Notifications',
+  '/member/support': 'Support & Tickets',
+  '/coach/classes': 'Coach Schedule & Members',
+  '/staff/attendance': 'Member Attendance',
+  '/coach/training-plans': 'Training Plans & AI',
+  '/staff/reception': 'Front Desk & POS',
+  '/staff/check-in': 'Gate QR Scanner',
+  '/staff/courts': 'Court Bookings',
+  '/staff/orders': 'Product Orders',
+  '/staff/support': 'Support Inbox',
+  '/staff/requests': 'Internal Requests',
+  '/admin/users': 'Accounts & Permissions',
+  '/manager/reports': 'Reports & Revenue',
+  '/manager/catalogs': 'Operations Catalogs',
+  '/manager/products': 'Products & Orders',
+  '/manager/equipment': 'Equipment Management',
+  '/manager/coach-assignments': 'Coach & Member Tracking',
+  '/staff/classes': 'Classes & Scheduling',
+  '/manager/support': 'Escalated Tickets',
+  '/manager/staff-accounts': 'Staff Accounts',
+  '/manager/requests': 'Approve Requests',
+  '/manager/coach-reviews': 'Coach Ratings & Reviews',
+  '/manager/audit-logs': 'Audit Logs & Occupancy',
+  '/member/profile': 'Profile & Health',
+};
+
+export function getNavLabel(to: string, fallbackVi: string, lang: Language = 'vi'): string {
+  if (lang === 'en') {
+    return PORTAL_NAV_EN_LABELS[to] ?? fallbackVi;
+  }
+  return fallbackVi;
+}
 
 /** Short labels for the three frequent tasks; permissions still come from PORTAL_NAV. */
 export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label: string }[]> = {
@@ -66,3 +125,26 @@ export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label
     { to: '/staff/classes', label: 'Lớp học' },
   ],
 };
+
+export const MOBILE_PRIMARY_NAV_EN_LABELS: Record<string, string> = {
+  '/admin/users': 'Accounts',
+  '/member/profile': 'Profile',
+  '/member/dashboard': 'Overview',
+  '/member/classes': 'Classes',
+  '/member/check-in': 'QR Scan',
+  '/staff/reception': 'Desk',
+  '/staff/classes': 'Classes',
+  '/staff/check-in': 'Check-in',
+  '/coach/classes': 'Schedule',
+  '/staff/attendance': 'Attendance',
+  '/coach/training-plans': 'Plans',
+  '/manager/reports': 'Reports',
+  '/manager/catalogs': 'Catalogs',
+};
+
+export function getMobileNavLabel(to: string, fallbackVi: string, lang: Language = 'vi'): string {
+  if (lang === 'en') {
+    return MOBILE_PRIMARY_NAV_EN_LABELS[to] ?? fallbackVi;
+  }
+  return fallbackVi;
+}

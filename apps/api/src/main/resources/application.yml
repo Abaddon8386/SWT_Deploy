@@ -106,3 +106,11 @@ app:
       cron: ${APP_SCHEDULER_PACKAGE_EXPIRY_CRON:0 0 8 * * ?}
     class-reminder:
       cron: ${APP_SCHEDULER_CLASS_REMINDER_CRON:0 */30 * * * ?}
+  shop:
+    shipping-fee: ${APP_SHOP_SHIPPING_FEE_VND:30000}
+    free-shipping-threshold: ${APP_SHOP_FREE_SHIPPING_THRESHOLD_VND:500000}
+    payment-window-minutes: ${APP_SHOP_RESERVATION_MINUTES:30}
+    counter-hold-hours: ${APP_SHOP_COUNTER_HOLD_HOURS:48}
+    pickup-address: "120 Hai Bà Trưng, Phường Sài Gòn, TP. Hồ Chí Minh — quầy lễ tân"
+    seed-samples: ${APP_SHOP_SEED_ENABLED:true}
+    expiry-interval-ms: ${APP_SHOP_EXPIRY_INTERVAL_MS:60000}

@@ -1,12 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser } from '../../shared/api/client';
 import { announceFloatingPanel, useCloseWhenOtherPanelOpens } from '../../shared/lib/floatingPanels';
-import { RefreshButton } from '../../shared/ui/RefreshButton';
-import { ChatPage, type ChatRealtimeFeed } from './ChatPage';
-import { CHAT_UNREAD_EVENT, getChatUnreadCount } from './chatApi';
+import type { ChatRealtimeFeed } from './ChatPage';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { CHAT_UNREAD_EVENT, getChatUnreadCount, type ChatContact } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
+import { LiquidGlassContainer } from '../../shared/liquid-glass/LiquidGlassContainer';
+import { glassEngine } from '../../shared/liquid-glass/LiquidGlassEngine';
+import { useDraggableWidget } from './useDraggableWidget';
 import './chat-widget.css';
+
+// Khung hội thoại (danh sách, hội thoại, SÖL AI) chỉ tải khi mở widget lần đầu.
+const ChatPage = lazy(() => import('./ChatPage').then(module => ({ default: module.ChatPage })));
 
 const connectionLabel: Record<ChatConnection, string> = {
   connecting: 'Đang kết nối…', connected: 'Cập nhật trực tiếp',
@@ -43,9 +49,15 @@ function SignedInChatWidget() {
 function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void }) {
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [peers, setPeers] = useState<ChatContact[]>([]);
   const trigger = useRef<HTMLButtonElement>(null);
-  const panel = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const rerenderGlass = useCallback(() => glassEngine.requestAllRender(), []);
+  const {
+    widgetRef, panelRef: panel, widgetStyle, panelStyle, dragging,
+    onTriggerPointerDown, onPanelPointerDown, consumeDragClick,
+  } = useDraggableWidget({ open, expanded, onMove: rerenderGlass });
   useCloseWhenOtherPanelOpens('chat', () => setOpen(false));
 
   useEffect(() => {
@@ -64,31 +76,90 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
     };
-  }, [open]);
+  }, [open, panel]);
 
   const label = unread > 0 ? `Tin nhắn · ${unread} chưa đọc` : 'Tin nhắn';
-  return <div className="chat-widget">
-    <button ref={trigger} type="button" className="chat-widget__trigger" title={label} aria-label={open ? 'Đóng tin nhắn' : `Mở ${label.toLowerCase()}`} aria-haspopup="dialog" aria-expanded={open} aria-controls="sol-direct-chat"
+  return <div ref={widgetRef} className={`chat-widget${dragging ? ' is-dragging' : ''}`} style={widgetStyle} data-liquid-glass-ignore="">
+    <button
+      ref={trigger}
+      type="button"
+      className={`chat-widget__trigger${open ? ' is-open' : ''}`}
+      title={label}
+      aria-label={open ? 'Đóng tin nhắn' : `Mở ${label.toLowerCase()}`}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-controls="sol-direct-chat"
+      onPointerDown={onTriggerPointerDown}
       onClick={() => {
+        if (consumeDragClick()) return;
         setVisited(true);
         if (!open) { announceFloatingPanel('chat'); onOpen(); }
         setOpen(value => !value);
-      }}>
-      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5a9 9 0 0 1 18 0Z" /><path d="M7 10h8M7 14h5" /></svg>
-      {unread > 0 && <span className="chat-widget__badge" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}
+      }}
+    >
+      <LiquidGlassContainer shape="pill" tintOpacity={0.04} blurRadius={4} active={!open} className="chat-widget__trigger-glass" />
+      <span className="chat-widget__trigger-main" aria-hidden="true">
+        <span className="chat-widget__trigger-icon">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="3" x2="9.218" y2="10.083" />
+            <polygon points="11.698 20.334 22 3.001 2 3.001 9.218 10.084 11.698 20.334" />
+          </svg>
+          {unread > 0 && <span className="chat-widget__badge">{unread > 99 ? '99+' : unread}</span>}
+        </span>
+        <span className="chat-widget__trigger-label">Tin nhắn</span>
+      </span>
+      <span className="chat-widget__trigger-avatars" aria-hidden="true">
+        {[0, 1, 2].map(index => {
+          const peer = peers[index];
+          return (
+            <span key={peer?.id ?? `slot-${index}`} className={`chat-widget__mini-avatar is-slot-${index}`}>
+              {peer?.avatarUrl ? (
+                <img src={peer.avatarUrl} alt="" />
+              ) : (
+                <svg viewBox="0 0 36 36" fill="none">
+                  <circle cx="18" cy="13.5" r="6" fill="currentColor" />
+                  <path d="M7 31.5c1.8-5.5 5.8-8.2 11-8.2s9.2 2.7 11 8.2" fill="currentColor" />
+                </svg>
+              )}
+            </span>
+          );
+        })}
+      </span>
     </button>
-    {visited && <section ref={panel} id="sol-direct-chat" className="chat-widget__panel" role="dialog" aria-label="Tin nhắn SÖL" hidden={!open}>
+    {visited && <section ref={panel} id="sol-direct-chat" className={`chat-widget__panel${expanded ? ' is-expanded' : ''}`} role="dialog" aria-label="Tin nhắn SÖL" hidden={!open} style={panelStyle} onPointerDown={onPanelPointerDown}>
+      <LiquidGlassContainer shape="rounded" borderRadius={16} tintOpacity={0.04} blurRadius={8} active={open} className="chat-widget__glass" />
       <header className="chat-widget__header">
-        <div><strong>Tin nhắn</strong>
+        <div className="chat-widget__header-title">
+          <strong>Tin nhắn</strong>
           {feed && <p className={`chat-widget__status is-${feed.connection}`} role="status">{connectionLabel[feed.connection]}
             {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>Thử lại</button>}</p>}
         </div>
         <div className="chat-widget__header-actions">
-          {onRefresh && <RefreshButton label="Làm mới tin nhắn" onClick={onRefresh} />}
-          <button ref={closeButton} type="button" className="chat-widget__close" aria-label="Đóng cửa sổ tin nhắn" onClick={() => { setOpen(false); trigger.current?.focus(); }}>×</button>
+          <button
+            type="button"
+            className="chat-widget__icon-btn"
+            aria-label={expanded ? 'Thu nhỏ cửa sổ tin nhắn' : 'Mở rộng cửa sổ tin nhắn'}
+            title={expanded ? 'Thu nhỏ' : 'Mở rộng'}
+            onClick={() => { setExpanded(v => !v); onRefresh?.(); }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+          </button>
+          <button ref={closeButton} type="button" className="chat-widget__close" aria-label="Đóng cửa sổ tin nhắn" onClick={() => { setOpen(false); trigger.current?.focus(); }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
       </header>
-      {feed ? <ChatPage embedded visible={open} realtime={feed} /> : <div className="chat-widget__login"><p>Đăng nhập để trao đổi riêng với lễ tân và huấn luyện viên.</p><Link to="/login" className="btn-primary">Đăng nhập để nhắn tin</Link></div>}
+      {feed ? <Suspense fallback={<div className="chat-widget__loading"><LoadingSkeleton label="Đang mở tin nhắn…" count={4} /></div>}>
+        <ChatPage embedded visible={open} realtime={feed} onPeersChange={setPeers} />
+      </Suspense> : <div className="chat-widget__login"><p>Đăng nhập để trao đổi với lễ tân, huấn luyện viên và trợ lý SÖL AI.</p><Link to="/login" className="btn-primary">Đăng nhập để nhắn tin</Link></div>}
     </section>}
   </div>;
 }

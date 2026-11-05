@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -180,6 +181,7 @@ class MembershipSubscriptionServiceTest {
         pack.setName("Gói 1 tháng");
         pack.setStatus("active");
         pack.setDurationDays(30);
+        pack.setPrice(new BigDecimal("199000"));
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
@@ -193,6 +195,8 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
         assertThat(result.memberId()).isEqualTo(10L);
+        // The price is fixed on the request, so a later catalog change does not alter what is collected.
+        assertThat(result.quotedPrice()).isEqualByComparingTo("199000");
     }
 
     @Test
@@ -414,6 +418,12 @@ class MembershipSubscriptionServiceTest {
         current.setStartDate(LocalDate.now(clock).minusDays(5));
         current.setEndDate(LocalDate.now(clock).plusDays(25));
 
+        com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
+        paid.setSubscriptionId(100L);
+        paid.setAmount(new BigDecimal("500000"));
+        paid.setStatus("success");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        when(paymentRepository.findAllBySubscriptionId(100L)).thenReturn(List.of(paid));
         when(subscriptions.findById(100L)).thenReturn(Optional.of(current));
         when(packages.findById(2L)).thenReturn(Optional.of(vipPack));
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -425,41 +435,95 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.previousSubscriptionId()).isEqualTo(100L);
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(89));
-        // 5 of 30 days used: only the difference to the new package is due.
-        assertThat(result.upgradeCharge()).isEqualByComparingTo("1000000");
+        // 26 of 31 days left (today included): 500,000 × 26/31 = 419,354 -> 419,000 credited, rest of 1,500,000 due.
+        assertThat(result.creditApplied()).isEqualByComparingTo("419000");
+        assertThat(result.upgradeCharge()).isEqualByComparingTo("1081000");
     }
 
     @Test
-    void upgradeCharge_isTheDifferenceWithinHalfAndFullPriceBeyondIt() {
+    void upgrade_creditsWhatWasPaidNotTheRepricedCatalogPrice() {
+        Member member = new Member();
+        member.setUserId(10L);
         MembershipPackage silver = new MembershipPackage();
-        silver.setId(1L); silver.setPrice(new BigDecimal("500000")); silver.setDurationDays(30);
+        silver.setId(1L); silver.setPrice(new BigDecimal("199000")); silver.setDurationDays(30); silver.setStatus("active");
         MembershipPackage gold = new MembershipPackage();
-        gold.setId(2L); gold.setPrice(new BigDecimal("1500000")); gold.setDurationDays(90);
-        LocalDate start = LocalDate.of(2026, 11, 1);
+        gold.setId(2L); gold.setPrice(new BigDecimal("299000")); gold.setDurationDays(30); gold.setStatus("active");
         MembershipSubscription current = new MembershipSubscription();
+        current.setId(100L);
+        current.setMember(member);
         current.setMembershipPackage(silver);
-        current.setStartDate(start);
-        current.setEndDate(start.plusDays(29));
+        current.setStatus("active");
+        current.setStartDate(LocalDate.now(clock).minusDays(15));
+        current.setEndDate(LocalDate.now(clock).plusDays(14));
+        com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
+        paid.setSubscriptionId(100L);
+        paid.setAmount(new BigDecimal("199000"));
+        paid.setStatus("success");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        when(paymentRepository.findAllBySubscriptionId(100L)).thenReturn(List.of(paid));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(current));
+        when(packages.findById(2L)).thenReturn(Optional.of(gold));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        // Day 0 and exactly 15 of 30 days used are not "more than half".
-        assertThat(MembershipSubscriptionService.upgradeCharge(current, silver, gold, start)).isEqualByComparingTo("1000000");
-        assertThat(MembershipSubscriptionService.upgradeCharge(current, silver, gold, start.plusDays(15))).isEqualByComparingTo("1000000");
-        // 16 of 30 days used: pay the whole new package again.
-        assertThat(MembershipSubscriptionService.upgradeCharge(current, silver, gold, start.plusDays(16))).isEqualByComparingTo("1500000");
+        // The manager raises the member's current package after it was bought: the credit must not grow with it.
+        silver.setPrice(new BigDecimal("279000"));
+        SubscriptionDto beforeTargetRaise = service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L));
+        // 15 of 30 days left: 199,000 × 15/30 = 99,500 -> 99,000.
+        assertThat(beforeTargetRaise.creditApplied()).isEqualByComparingTo("99000");
+        assertThat(beforeTargetRaise.upgradeCharge()).isEqualByComparingTo("200000");
+
+        // Raising the target package moves only the new price; the credit stays tied to what was paid.
+        gold.setPrice(new BigDecimal("349000"));
+        SubscriptionDto afterTargetRaise = service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L));
+        assertThat(afterTargetRaise.creditApplied()).isEqualByComparingTo("99000");
+        assertThat(afterTargetRaise.upgradeCharge()).isEqualByComparingTo("250000");
     }
 
     @Test
-    void upgradeCharge_neverProducesAZeroPayment() {
-        MembershipPackage monthly = new MembershipPackage();
-        monthly.setPrice(new BigDecimal("500000")); monthly.setDurationDays(30);
-        MembershipPackage longer = new MembershipPackage();
-        longer.setPrice(new BigDecimal("500000")); longer.setDurationDays(60);
-        MembershipSubscription current = new MembershipSubscription();
-        current.setStartDate(LocalDate.of(2026, 11, 1));
-        current.setEndDate(LocalDate.of(2026, 11, 30));
+    void pendingRequestsKeepTheirQuotedPriceWhenTheCatalogChanges() {
+        MembershipPackage pack = new MembershipPackage();
+        pack.setPrice(new BigDecimal("199000"));
+        MembershipSubscription pending = new MembershipSubscription();
+        pending.setMembershipPackage(pack);
+        pending.setQuotedPrice(new BigDecimal("199000"));
 
-        assertThat(MembershipSubscriptionService.upgradeCharge(current, monthly, longer, LocalDate.of(2026, 11, 2)))
-                .isEqualByComparingTo("500000");
+        pack.setPrice(new BigDecimal("249000"));
+        assertThat(pending.payableAmount()).isEqualByComparingTo("199000");
+
+        // Requests made before prices were fixed still follow the catalog.
+        pending.setQuotedPrice(null);
+        assertThat(pending.payableAmount()).isEqualByComparingTo("249000");
+    }
+
+    @Test
+    void upgrade_rejectsWhenUnusedValueAlreadyCoversTheTargetPrice() {
+        Member member = new Member();
+        member.setUserId(10L);
+        MembershipPackage quarterly = new MembershipPackage();
+        quarterly.setId(1L); quarterly.setPrice(new BigDecimal("549000")); quarterly.setDurationDays(90); quarterly.setStatus("active");
+        MembershipPackage premiumMonth = new MembershipPackage();
+        premiumMonth.setId(2L); premiumMonth.setPrice(new BigDecimal("599000")); premiumMonth.setDurationDays(30); premiumMonth.setStatus("active");
+        MembershipSubscription current = new MembershipSubscription();
+        current.setId(100L);
+        current.setMember(member);
+        current.setMembershipPackage(quarterly);
+        current.setStatus("active");
+        current.setStartDate(LocalDate.now(clock));
+        current.setEndDate(LocalDate.now(clock).plusDays(89));
+        com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
+        paid.setSubscriptionId(100L);
+        // Bought before the manager cut the price to 549,000.
+        paid.setAmount(new BigDecimal("649000"));
+        paid.setStatus("success");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        when(paymentRepository.findAllBySubscriptionId(100L)).thenReturn(List.of(paid));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(current));
+        when(packages.findById(2L)).thenReturn(Optional.of(premiumMonth));
+
+        assertThatThrownBy(() -> service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L)))
+                .isInstanceOfSatisfying(BadRequestException.class,
+                        error -> assertThat(error.getErrorCode()).isEqualTo("MEMBERSHIP_UPGRADE_CREDIT_EXCEEDS"));
+        verify(subscriptions, never()).saveAndFlush(any());
     }
 
     @Test

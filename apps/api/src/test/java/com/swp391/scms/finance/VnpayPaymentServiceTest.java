@@ -151,4 +151,72 @@ class VnpayPaymentServiceTest {
         when(transactions.findById("ABC123")).thenReturn(Optional.empty());
         assertEquals("01",service.ipn(callback("00","00","65000000")));
     }
+    @Test void checkoutForProductOrderCreatesPendingPaymentWithOrderTotal() {
+        var orderPayments = mock(com.swp391.scms.shop.service.ProductOrderPayments.class);
+        var order = new com.swp391.scms.shop.entity.ProductOrder();
+        order.setId(9L); order.setMember(payment.getMember()); order.setTotal(new BigDecimal("2580000"));
+        order.setStatus("pending_payment"); order.setPaymentMethod("online");
+        when(orderPayments.requirePayable(9L)).thenReturn(order);
+        when(members.findById(7L)).thenReturn(Optional.of(payment.getMember()));
+        when(payments.findAllByProductOrderId(9L)).thenReturn(List.of());
+        when(payments.save(any())).thenAnswer(i -> { Payment p = i.getArgument(0); p.setId(44L); return p; });
+        service.setOrderPayments(orderPayments);
+        service.checkout(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 9L), "127.0.0.1");
+        verify(payments).save(argThat(p -> Long.valueOf(9L).equals(p.getProductOrderId())
+                && p.getAmount().compareTo(new BigDecimal("2580000")) == 0));
+    }
+    @Test void counterOrdersCannotBePaidOnline() {
+        var ordersRepo = mock(com.swp391.scms.shop.repository.ProductOrderRepository.class);
+        var order = new com.swp391.scms.shop.entity.ProductOrder();
+        order.setId(9L); order.setMember(payment.getMember()); order.setStatus("pending_payment"); order.setPaymentMethod("counter");
+        when(ordersRepo.findByIdForUpdate(9L)).thenReturn(Optional.of(order));
+        var orderPayments = new com.swp391.scms.shop.service.ProductOrderPayments(ordersRepo, null, null, null, null, clock);
+        service.setOrderPayments(orderPayments);
+        var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.checkout(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 9L), "127.0.0.1"));
+        assertEquals("VNPAY_TARGET_UNAVAILABLE", ex.getErrorCode());
+    }
+    @Test void ipnSuccessMarksOrderPaidAndIssuesInvoice() {
+        var ordersRepo = mock(com.swp391.scms.shop.repository.ProductOrderRepository.class);
+        var orderPayments = mock(com.swp391.scms.shop.service.ProductOrderPayments.class);
+        var order = new com.swp391.scms.shop.entity.ProductOrder();
+        order.setId(9L); order.setMember(payment.getMember()); order.setStatus("pending_payment"); order.setPaymentMethod("online");
+        when(ordersRepo.findByIdForUpdate(9L)).thenReturn(Optional.of(order));
+        when(orderPayments.requirePayable(9L)).thenReturn(order);
+        payment.setSubscriptionId(null); payment.setProductOrderId(9L);
+        service.setOrders(ordersRepo); service.setOrderPayments(orderPayments);
+        assertEquals("00", service.ipn(callback("00", "00", "65000000")));
+        verify(orderPayments).markPaid(9L, "online_wallet");
+        verify(invoices).autoIssueInvoiceForPayment(9L);
+    }
+    @Test void walletPayForProductOrderDebitsAndMarksPaid() {
+        var orderPayments = mock(com.swp391.scms.shop.service.ProductOrderPayments.class);
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        var order = new com.swp391.scms.shop.entity.ProductOrder();
+        order.setId(9L); order.setCode("SOL-261103-ABCD"); order.setMember(payment.getMember());
+        order.setTotal(new BigDecimal("2580000")); order.setStatus("pending_payment"); order.setPaymentMethod("online");
+        when(orderPayments.requirePayable(9L)).thenReturn(order);
+        when(members.findById(7L)).thenReturn(Optional.of(payment.getMember()));
+        when(payments.findAllByProductOrderId(9L)).thenReturn(List.of());
+        when(payments.saveAndFlush(any())).thenAnswer(i -> { Payment p = i.getArgument(0); p.setId(55L); return p; });
+        service.setOrderPayments(orderPayments);
+        service.setWalletService(walletService);
+        service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 9L));
+        verify(walletService).debitForPayment(eq(7L), eq(new BigDecimal("2580000")), eq("WALLET_PAY_55"), any(), eq("/member/orders/9"));
+        verify(orderPayments).markPaid(9L, "online_wallet");
+        verify(invoices).autoIssueInvoiceForPayment(55L);
+    }
+    @Test void statusDestinationPointsToOrderPage() {
+        payment.setSubscriptionId(null); payment.setProductOrderId(9L);
+        var st = service.status(owner, "ABC123");
+        assertEquals("/member/orders/9", st.destination());
+    }
+    @Test void guardBlocksWhileProductOrderAttemptIsPendingAndUnexpired() {
+        var guard = new VnpayPaymentGuard(transactions, payments, clock);
+        when(payments.findAllByProductOrderId(9L)).thenReturn(List.of(payment));
+        when(transactions.findAllByPaymentId(9L)).thenReturn(List.of(transaction));
+        when(transactions.existsByPaymentIdAndStatus(9L, "pending")).thenReturn(true);
+        var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> guard.productOrder(9L));
+        assertEquals("VNPAY_AWAITING_CONFIRMATION", ex.getErrorCode());
+    }
 }

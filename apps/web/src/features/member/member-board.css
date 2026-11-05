@@ -95,3 +95,17 @@
 .member-membership-card:has(a:hover), .member-classes-card:has(a:hover), .member-board-info:hover, .member-discover-card:hover, .member-digital-card:hover { box-shadow: 0 10px 24px -14px #00000030; }
 .member-membership-card a, .member-classes-card a, .member-board-info, .member-discover-card, .member-digital-card { cursor: pointer; }
 .member-membership-card a:focus-visible, .member-classes-card a:focus-visible, .member-board-info:focus-visible, .member-discover-card:focus-visible, .member-digital-card:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 3px; }
+
+/* The membership pass is the board's single illuminated card. */
+:root:not([data-theme='light']) .portal-v2 .member-digital-card {
+  border-color: var(--portal-led-edge);
+  color: var(--portal-accent-text);
+  box-shadow: inset 0 1px 0 var(--portal-salmon), 0 0 18px -8px var(--portal-led-glow);
+  transition: border-color 200ms var(--portal-accent-ease), box-shadow 200ms var(--portal-accent-ease);
+}
+:root:not([data-theme='light']) .portal-v2 .member-digital-card > strong { color: var(--portal-paper); }
+:root:not([data-theme='light']) .portal-v2 .member-digital-card:is(:hover, :focus-visible) {
+  border-color: var(--portal-salmon);
+  box-shadow: inset 0 1px 0 var(--portal-salmon), 0 0 22px -6px var(--portal-led-glow);
+  transform: none;
+}

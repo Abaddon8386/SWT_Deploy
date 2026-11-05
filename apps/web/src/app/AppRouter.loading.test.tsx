@@ -64,7 +64,8 @@ it('shows a skeleton after logout while the login route module is pending', asyn
   const root = createRoot(host);
   try {
     await act(async () => root.render(<AppRouter />));
-    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Đăng xuất"]')!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-logout"]')!.click());
     const confirm = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(button => button.textContent === 'Đăng xuất')!;
     await act(async () => confirm.click());
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();

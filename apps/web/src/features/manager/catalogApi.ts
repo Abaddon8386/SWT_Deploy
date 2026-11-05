@@ -1,5 +1,4 @@
 import { apiFetch } from '../../shared/api/client';
-import { isStandardDiscipline } from '../../shared/lib/disciplines';
 
 export interface Discipline {
   id: number;
@@ -28,6 +27,7 @@ export interface MembershipPackage {
   durationDays: number;
   classCreditLimit: number | null;
   status: 'active' | 'inactive';
+  tier?: 'SILVER' | 'GOLD' | 'PLATINUM' | string | null;
 }
 
 type Body<T> = Omit<T, 'id'>;
@@ -35,8 +35,7 @@ type Body<T> = Omit<T, 'id'>;
 const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
 
 export const catalogApi = {
-  disciplines: () => apiFetch<Discipline[]>('/disciplines')
-    .then((items) => items.filter((item) => isStandardDiscipline(item.name))),
+  disciplines: () => apiFetch<Discipline[]>('/disciplines'),
   saveDiscipline: (id: number | null, b: Body<Discipline>) =>
     apiFetch<Discipline>(id ? `/disciplines/${id}` : '/disciplines', json(id ? 'PUT' : 'POST', b)),
   deleteDiscipline: (id: number) => apiFetch<void>(`/disciplines/${id}`, { method: 'DELETE' }),

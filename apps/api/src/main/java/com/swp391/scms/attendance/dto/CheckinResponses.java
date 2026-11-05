@@ -1,10 +1,15 @@
 package com.swp391.scms.attendance.dto;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.List;
 
 public final class CheckinResponses {
 
     private CheckinResponses() {}
+
+    public record StreakDto(int currentStreak, int longestStreak, int workoutDays,
+                            LocalDate startDate, LocalDate endDate, List<LocalDate> activeDates) {}
 
     public record GateQrDto(String qrCode, String gateId, String gate, java.time.Instant generatedAt,
                             java.time.Instant expiresAt, long expiresInSeconds) {}

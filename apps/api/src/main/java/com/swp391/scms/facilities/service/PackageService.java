@@ -59,9 +59,10 @@ public class PackageService {
         pkg.setPrice(request.price());
         pkg.setDurationDays(request.durationDays());
         pkg.setClassCreditLimit(request.classCreditLimit());
-        if (request.status() != null) {
+        if (request.status() != null && !request.status().isBlank()) {
             pkg.setStatus(request.status());
         }
+        pkg.setTier(PackageDto.inferTier(request.name(), request.tier()));
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)

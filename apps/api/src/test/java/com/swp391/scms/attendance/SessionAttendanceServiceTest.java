@@ -200,7 +200,7 @@ class SessionAttendanceServiceTest {
         when(attendanceRepository.saveAndFlush(any(SessionAttendance.class))).thenAnswer(inv -> inv.getArgument(0));
         var request = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", "Good form", 85)), publish);
         service.recordBatchAttendance(100L, request, coachPrincipal);
-        verify(evaluations).save(any(com.swp391.scms.coaching.entity.SessionEvaluation.class));
+        verify(evaluations, times(publish ? 1 : 0)).save(any(com.swp391.scms.coaching.entity.SessionEvaluation.class));
         verify(notifications, times(publish ? 1 : 0)).notifyEvaluation(20L);
     }
 

@@ -23,3 +23,12 @@ it('recovers the purchase intent after an OAuth redirect and clears it on arriva
   clearPurchaseIntent();
   expect(authDestination('MEMBER', '')).toBe('/member/dashboard');
 });
+
+it.each(['/checkout', '/products', '/products/sol-whey-isolate'])('accepts shop return path %s', path => {
+  expect(purchaseAuthPath('/login', `?returnTo=${encodeURIComponent(path)}`)).toBe(`/login?returnTo=${encodeURIComponent(path)}`);
+  expect(authDestination('MEMBER', `?returnTo=${encodeURIComponent(path)}`)).toBe(path);
+});
+
+it.each(['//evil.com', '/products/../admin/users', 'https://x.y/checkout', '/checkout?next=//evil'])('rejects %s', path => {
+  expect(purchaseAuthPath('/login', `?returnTo=${encodeURIComponent(path)}`)).toBe('/login');
+});

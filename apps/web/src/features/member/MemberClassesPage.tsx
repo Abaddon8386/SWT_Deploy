@@ -5,27 +5,24 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
-import { MemberTimetable } from './components/MemberTimetable';
-import { centerNowParts, formatCenterDateTime } from '../../shared/lib/centerTime';
+import { MemberCalendar } from './components/MemberCalendar';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { getMySubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
 import { DISCIPLINES } from '../../shared/lib/disciplines';
 import {
   bookSession,
   cancelBooking,
-  cancelBookings,
   cancelEnrollment,
   currentWeek,
   filterSessions,
   getMyBookings,
   getMyEnrollments,
   getSessions,
-  type BulkSkipped,
   type ClassSessionDto,
   type EnrollmentDto,
   type SessionBookingDto,
 } from './memberClassesApi';
-import { BulkBookingResultModal } from './components/BulkBookingResultModal';
 import { weekRangeLabel } from '../schedule/timetable';
 import '../schedule/timetable.css';
 import './member-classes.css';
@@ -134,11 +131,9 @@ function disciplineFromQuery(value: string | null): string {
 export function MemberClassesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
-  const [tab, setTab] = useState<'timetable' | 'schedule' | 'coach_booking' | 'my'>(
+  const [tab, setTab] = useState<'timetable' | 'schedule' | 'coach_booking'>(
     initialTab === 'coach' || initialTab === 'pt' || initialTab === 'coach_booking'
       ? 'coach_booking'
-      : initialTab === 'my'
-      ? 'my'
       : initialTab === 'list'
       ? 'schedule'
       : 'timetable',
@@ -147,9 +142,6 @@ export function MemberClassesPage() {
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
   const [bookings, setBookings] = useState<SessionBookingDto[]>([]);
-  const [cancelSelected, setCancelSelected] = useState<number[]>([]);
-  const [confirmBulkCancel, setConfirmBulkCancel] = useState(false);
-  const [bulkResult, setBulkResult] = useState<{ done: SessionBookingDto[]; skipped: BulkSkipped[] } | null>(null);
   const [discipline, setDiscipline] = useState(() => disciplineFromQuery(searchParams.get('discipline')));
   const [day, setDay] = useState('ALL');
   // null: chưa biết (đang tải hoặc lỗi) — khi đó không hiện lời nhắc mua gói
@@ -174,14 +166,12 @@ export function MemberClassesPage() {
     setActionError('');
   }
 
-  function handleSelectTab(nextTab: 'timetable' | 'schedule' | 'coach_booking' | 'my') {
+  function handleSelectTab(nextTab: 'timetable' | 'schedule' | 'coach_booking') {
     clearActionFeedback();
     setTab(nextTab);
     const params = new URLSearchParams(searchParams);
     if (nextTab === 'coach_booking') {
       params.set('tab', 'pt');
-    } else if (nextTab === 'my') {
-      params.set('tab', 'my');
     } else if (nextTab === 'schedule') {
       params.set('tab', 'list');
     } else {
@@ -291,7 +281,7 @@ export function MemberClassesPage() {
     try {
       await bookSession(session.id);
       if (actionGenRef.current === gen) {
-        notify(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`, 'success');
+        notify(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`, 'success', { record: true });
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -317,7 +307,7 @@ export function MemberClassesPage() {
     try {
       await cancelEnrollment(enrollmentId);
       if (actionGenRef.current === gen) {
-        notify(`Đã hủy đặt chỗ lớp "${className}".`, 'success');
+        notify(`Đã hủy đặt chỗ lớp "${className}".`, 'success', { record: true });
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -342,7 +332,7 @@ export function MemberClassesPage() {
     try {
       await cancelBooking(bookingId);
       if (actionGenRef.current === gen) {
-        notify(`Đã hủy chỗ buổi học "${className}".`, 'success');
+        notify(`Đã hủy chỗ buổi học "${className}".`, 'success', { record: true });
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -355,36 +345,6 @@ export function MemberClassesPage() {
       busyRef.current = null;
       setBusyKey(null);
     }
-  }
-
-  async function handleBulkCancel() {
-    if (busyRef.current || !myScheduleReady || cancelSelected.length === 0) return;
-    busyRef.current = 'bulk-cancel';
-    setBusyKey('bulk-cancel');
-    const gen = ++actionGenRef.current;
-    setActionError('');
-    try {
-      const result = await cancelBookings(cancelSelected);
-      if (actionGenRef.current === gen) {
-        setBulkResult({ done: result.cancelled, skipped: result.skipped });
-        setCancelSelected([]);
-        if (result.cancelled.length > 0) notify(`Đã hủy ${result.cancelled.length} buổi học.`, 'success');
-      }
-      setRetry((v) => v + 1);
-      setMyScheduleRetry((v) => v + 1);
-    } catch (cause) {
-      if (actionGenRef.current === gen) {
-        setActionError(errorMessage(cause));
-        if (cause instanceof ApiError && [400, 403, 404, 409].includes(cause.status)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
-      }
-    } finally {
-      busyRef.current = null;
-      setBusyKey(null);
-    }
-  }
-
-  function toggleIn(list: number[], id: number): number[] {
-    return list.includes(id) ? list.filter((value) => value !== id) : [...list, id];
   }
 
   const weekRange = currentWeek(weekOffset);
@@ -395,14 +355,12 @@ export function MemberClassesPage() {
   const activeEnrollments = myScheduleReady ? enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled') : [];
   const activeBookings = myScheduleReady ? bookings.filter((item) => item.status === 'booked') : [];
   const seatsInView: EnrollmentDto[] = [...activeEnrollments, ...activeBookings.map(bookingAsEnrollment)];
-  const mySeatCount = activeEnrollments.length + activeBookings.length;
 
   return (
     <div className="portal-container member-classes">
       <PageHeader
         eyebrow="Hội viên"
         title="Lịch học & đặt chỗ"
-        subtitle="Đặt lịch tập cùng Huấn luyện viên, quản lý chỗ ngồi theo thời gian thực."
       />
 
       <div className="portal-tabs" role="tablist" aria-label="Lịch học" style={{ marginBottom: 18 }}>
@@ -413,7 +371,7 @@ export function MemberClassesPage() {
           className={`portal-tab ${tab === 'timetable' ? 'active' : ''}`}
           onClick={() => handleSelectTab('timetable')}
         >
-          Thời khóa biểu
+          Lịch của tôi
         </button>
         <button
           type="button"
@@ -425,17 +383,6 @@ export function MemberClassesPage() {
           }}
         >
           Lịch lớp học
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'my'}
-          className={`portal-tab ${tab === 'my' ? 'active' : ''}`}
-          onClick={() => {
-            handleSelectTab('my');
-          }}
-        >
-          Lịch học của tôi {mySeatCount > 0 ? `(${mySeatCount})` : ''}
         </button>
         <button
           type="button"
@@ -460,30 +407,10 @@ export function MemberClassesPage() {
       )}
 
       {tab === 'timetable' ? (
-        <div className="stack">
-          <div className="filter-chips tt-chips" role="group" aria-label="Lọc theo bộ môn">
-            {['ALL', ...disciplines].map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
-                aria-pressed={discipline === value}
-                onClick={() => setDiscipline(value)}
-              >
-                {value === 'ALL' ? 'Tất cả bộ môn' : value}
-              </button>
-            ))}
-          </div>
-          {hasActivePackage === false && (
-            <p className="row-card__meta" style={{ margin: 0 }}>
-              Cần gói tập đang hoạt động để đặt chỗ. <Link className="member-classes-package-link" to="/member/packages">Xem gói tập</Link>
-            </p>
-          )}
-          <MemberTimetable discipline={discipline} onBookingChange={() => { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }} />
-        </div>
+        <MemberCalendar onBookingChange={() => { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }} />
       ) : tab === 'coach_booking' ? (
         <MemberCoachBookingView onBookingSuccess={() => { setRetry(v => v + 1); setMyScheduleRetry(v => v + 1); }} />
-      ) : tab === 'schedule' ? (
+      ) : (
         <div>
           {myScheduleError && (
             <div className="portal-card portal-empty" role="alert" style={{ marginBottom: 16 }}>
@@ -693,229 +620,6 @@ export function MemberClassesPage() {
             )}
           </div>)}
         </div>
-      ) : (
-        <div className="stack">
-          {myScheduleLoading ? (
-            <div className="stack" role="status" aria-busy="true">
-              <span className="sr-only">Đang tải lịch học của tôi...</span>
-              {[1, 2].map((idx) => (
-                <div key={idx} className="portal-card portal-card--list" aria-hidden="true">
-                  <div style={{ flex: 1 }}>
-                    <div className="portal-skeleton-line" style={{ width: '48%', height: 20, marginBottom: 10 }} />
-                    <div className="portal-skeleton-line" style={{ width: '65%', height: 14 }} />
-                  </div>
-                  <div className="portal-skeleton-line" style={{ width: 120, height: 34 }} />
-                </div>
-              ))}
-            </div>
-          ) : myScheduleError ? (
-            <div className="portal-card portal-empty" role="alert">
-              <h3>Không tải được lịch học của tôi</h3>
-              <p>{myScheduleError}</p>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => setMyScheduleRetry((value) => value + 1)}
-              >
-                Thử lại lịch học của tôi
-              </button>
-            </div>
-          ) : activeEnrollments.length === 0 && activeBookings.length === 0 ? (
-            <div className="portal-card portal-empty">
-              <h3>Chưa có lịch học đã đặt</h3>
-              <p>Bạn chưa đặt chỗ buổi học nào. Hãy chọn buổi học phù hợp tại tab Lịch lớp học.</p>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => {
-                  clearActionFeedback();
-                  setTab('schedule');
-                }}
-              >
-                Xem lịch lớp học
-              </button>
-            </div>
-          ) : (
-            <>
-              {activeBookings.length > 0 && (
-                <>
-                  <h3 className="row-card__title">Buổi học đã đặt ({activeBookings.length})</h3>
-                  <div className="portal-card" role="group" aria-label="Hủy nhiều buổi" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', padding: '12px 20px' }}>
-                    <strong role="status">Đã chọn {cancelSelected.length} buổi</strong>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      disabled={busyKey !== null}
-                      onClick={() => setCancelSelected(activeBookings.map((item) => item.id))}
-                    >
-                      Chọn tất cả
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      disabled={cancelSelected.length === 0 || busyKey !== null}
-                      onClick={() => setCancelSelected([])}
-                    >
-                      Bỏ chọn
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary btn-sm"
-                      disabled={cancelSelected.length === 0 || busyKey !== null}
-                      onClick={() => setConfirmBulkCancel(true)}
-                    >
-                      {busyKey === 'bulk-cancel' ? 'Đang hủy...' : `Hủy ${cancelSelected.length} buổi`}
-                    </button>
-                  </div>
-                  {activeBookings.map((item) => {
-                    const isSelected = cancelSelected.includes(item.id);
-                    return (
-                      <div
-                        key={`booking-${item.id}`}
-                        className={`portal-card portal-card--list member-booking-card ${isSelected ? 'is-selected' : ''}`}
-                      >
-                        <div className="member-booking-card__main">
-                          <label
-                            className="member-booking-card__select"
-                            title={isSelected ? 'Bỏ chọn buổi này' : 'Chọn để hủy buổi này'}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              disabled={busyKey !== null}
-                              onChange={() => setCancelSelected((list) => toggleIn(list, item.id))}
-                              aria-label={`Chọn hủy ${item.className} ngày ${formatShortDate(item.sessionDate)}`}
-                              className="member-booking-card__checkbox"
-                            />
-                            <span
-                              className={`member-booking-card__check-icon ${isSelected ? 'is-checked' : ''}`}
-                              aria-hidden="true"
-                            >
-                              <svg
-                                width="22"
-                                height="22"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            </span>
-                          </label>
-
-                          <div className="member-booking-card__content">
-                            <div className="member-booking-card__header-line">
-                              <span className="badge badge-success member-booking-card__badge">
-                                <span>Đã xác nhận chỗ</span>
-                              </span>
-                              <span className="member-booking-card__divider" aria-hidden="true">|</span>
-                              <span className="member-booking-card__date">
-                                Ngày học: <strong>{formatShortDate(item.sessionDate)}</strong>
-                              </span>
-                            </div>
-
-                            <h3 className="row-card__title member-booking-card__title">{item.className}</h3>
-
-                            <div className="member-booking-card__footer-line">
-                              <span className="member-booking-card__meta-item">
-                                <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
-                              </span>
-                              {item.roomName && (
-                                <>
-                                  <span className="member-booking-card__divider" aria-hidden="true">|</span>
-                                  <span className="member-booking-card__meta-item">
-                                    <span>{item.roomName}</span>
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="member-booking-card__action">
-                          <button
-                            type="button"
-                            className="member-booking-card__cancel-btn"
-                            disabled={busyKey !== null}
-                            onClick={(event) => {
-                              cancelFocusRef.current = event.currentTarget;
-                              setCancelTarget({ id: item.id, className: item.className, kind: 'booking' });
-                            }}
-                          >
-                            {busyKey === `booking-${item.id}` ? 'Đang hủy...' : 'Hủy buổi này'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-
-              {activeEnrollments.length > 0 && (
-                <>
-                  <h3 className="row-card__title">Buổi học đã đặt chỗ ({activeEnrollments.length})</h3>
-                  {activeEnrollments.map((item) => (
-                    <div
-                      key={item.id}
-                      className="portal-card portal-card--list member-booking-card"
-                    >
-                      <div className="member-booking-card__main">
-
-                        <div className="member-booking-card__content">
-                          <div className="member-booking-card__header-line">
-                            <span className="badge badge-success member-booking-card__badge">
-                              <span>Đã xác nhận chỗ</span>
-                            </span>
-                            {item.sessionDate && (
-                              <>
-                                <span className="member-booking-card__divider" aria-hidden="true">|</span>
-                                <span className="member-booking-card__date">
-                                  Ngày học: <strong>{formatShortDate(item.sessionDate)}</strong>
-                                </span>
-                              </>
-                            )}
-                          </div>
-
-                          <h3 className="row-card__title member-booking-card__title">{item.className}</h3>
-
-                          <div className="member-booking-card__footer-line">
-                            {item.startTime && item.endTime && (
-                              <span className="member-booking-card__meta-item">
-                                <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
-                              </span>
-                            )}
-                            <span className="member-booking-card__divider" aria-hidden="true">|</span>
-                            <span className="member-booking-card__meta-item">
-                              <span>Đăng ký lúc: {formatCenterDateTime(item.enrolledAt)}</span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="member-booking-card__action">
-                        <button
-                          type="button"
-                          className="member-booking-card__cancel-btn"
-                          disabled={busyKey === `enroll-${item.id}`}
-                          onClick={(event) => {
-                            cancelFocusRef.current = event.currentTarget;
-                            setCancelTarget({ id: item.id, className: item.className, kind: 'enrollment' });
-                          }}
-                        >
-                          {busyKey === `enroll-${item.id}` ? 'Đang hủy...' : 'Hủy đặt chỗ'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-
-            </>
-          )}
-        </div>
       )}
       {cancelTarget && (
         <Modal title="Hủy đặt chỗ?" onClose={() => setCancelTarget(null)} returnFocusRef={cancelFocusRef}>
@@ -926,25 +630,9 @@ export function MemberClassesPage() {
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
             <button type="button" className="btn-secondary" onClick={() => setCancelTarget(null)}>Giữ đặt chỗ</button>
-            <button type="button" className="btn-primary" onClick={() => { const target = cancelTarget; setCancelTarget(null); if (target.kind === 'booking') void handleCancelBooking(target.id, target.className); else void handleCancelEnrollment(target.id, target.className); }}>Xác nhận hủy</button>
+            <button type="button" className="btn-danger" onClick={() => { const target = cancelTarget; setCancelTarget(null); if (target.kind === 'booking') void handleCancelBooking(target.id, target.className); else void handleCancelEnrollment(target.id, target.className); }}>Xác nhận hủy</button>
           </div>
         </Modal>
-      )}
-      {confirmBulkCancel && (
-        <Modal title={`Hủy ${cancelSelected.length} buổi học?`} onClose={() => setConfirmBulkCancel(false)}>
-          <p className="row-card__meta">Các chỗ đã chọn sẽ được giải phóng. Buổi đã bắt đầu sẽ không hủy được.</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
-            <button type="button" className="btn-secondary" onClick={() => setConfirmBulkCancel(false)}>Giữ lại</button>
-            <button type="button" className="btn-primary" onClick={() => { setConfirmBulkCancel(false); void handleBulkCancel(); }}>Xác nhận hủy</button>
-          </div>
-        </Modal>
-      )}
-      {bulkResult && (
-        <BulkBookingResultModal
-          done={bulkResult.done}
-          skipped={bulkResult.skipped}
-          onClose={() => setBulkResult(null)}
-        />
       )}
     </div>
   );

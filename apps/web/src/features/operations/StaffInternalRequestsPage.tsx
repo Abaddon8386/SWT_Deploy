@@ -136,7 +136,6 @@ export function StaffInternalRequestsPage() {
       <PageHeader
         eyebrow="Vận hành nội bộ"
         title="Đơn từ & đề xuất nội bộ"
-        subtitle="Gửi và theo dõi đơn xin nghỉ phép, đổi ca làm việc hoặc đổi lịch dạy tới Ban Quản Lý."
       />
 
       {/* Top action row */}
@@ -359,8 +358,10 @@ export function StaffInternalRequestsPage() {
                   {req.startDate && (
                     <div>
                       <strong style={{ color: 'var(--portal-muted)' }}>Thời gian:</strong>{' '}
-                      {req.startDate}
-                      {req.endDate && req.endDate !== req.startDate ? ` đến ${req.endDate}` : ''}
+                      {formatCenterDate(req.startDate)}
+                      {req.endDate && req.endDate !== req.startDate ? ` đến ${formatCenterDate(req.endDate)}` : ''}
+                      {req.replacementUserFullName ? ` · Thay thế: ${req.replacementUserFullName}` : ''}
+
                     </div>
                   )}
 

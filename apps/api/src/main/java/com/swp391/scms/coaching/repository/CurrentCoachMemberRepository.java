@@ -13,7 +13,7 @@ public interface CurrentCoachMemberRepository extends Repository<Member,Long> {
  and (:memberId is null or m.userId = :memberId)
  and (:coachId is null or
   exists (select p.id from TrainingPlan p where p.member = m and p.coach.userId = :coachId
-   and p.status = 'active' and p.startDate <= :today and p.endDate >= :today)
+   and p.status in ('active', 'draft') and p.endDate >= :today)
   or exists (select cb.id from CoachBooking cb where cb.member = m and cb.coach.userId = :coachId
    and cb.status = 'confirmed' and cb.bookingDate >= :today)
   or exists (select e.id from ClassEnrollment e where e.member = m and e.gymClass.coach.userId = :coachId

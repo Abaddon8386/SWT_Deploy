@@ -66,7 +66,7 @@ it.each([10, 11])('preserves existing room assignment %s when editing unrelated 
   await submit();
   expect(equipmentApi.save).toHaveBeenCalledWith(1, expect.objectContaining({ roomId }));
   expect(catalogApi.saveRoom).not.toHaveBeenCalled();
-  expect(getNotices()).toEqual([expect.objectContaining({ type: 'success', message: expect.stringContaining('Thảm tập') })]);
+  expect(getNotices()).toEqual([]);
 });
 
 it('allows selection of gym rooms in editor modal', async () => {

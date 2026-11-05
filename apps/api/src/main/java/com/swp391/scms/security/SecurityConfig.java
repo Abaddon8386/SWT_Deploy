@@ -50,12 +50,17 @@ public class SecurityConfig {
                     .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/catalog").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/public/geo/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/public/product-categories", "/api/v1/public/products", "/api/v1/public/products/**", "/api/v1/public/shop/config").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/public/shop/quote").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                     .requestMatchers("/api/v1/payments/vnpay/**").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                     .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                     // Profile extensions (SCRUM-66)
+                    .requestMatchers(HttpMethod.POST, "/api/v1/profile/avatar").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/coach").hasRole("COACH")
+                    .requestMatchers("/api/v1/wallet/**").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/receptionist").hasRole("RECEPTIONIST")
                     .requestMatchers(HttpMethod.PUT, "/api/v1/users/*/receptionist").hasRole("ADMIN")
 
@@ -137,6 +142,10 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST,
                             "/api/v1/memberships/subscriptions/*/cancel", "/api/v1/subscriptions/*/cancel")
                             .hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/memberships/cancellations/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/memberships/cancellations/staff-request").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/memberships/cancellations").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/memberships/cancellations/*/approve", "/api/v1/memberships/cancellations/*/reject").hasRole("CENTER_MANAGER")
                     .requestMatchers("/api/v1/memberships/trial/**").hasRole("MEMBER")
                     .requestMatchers("/api/v1/memberships/subscriptions/**", "/api/v1/memberships/subscriptions",
                             "/api/v1/subscriptions/**", "/api/v1/subscriptions").hasRole("MEMBER")
@@ -158,9 +167,10 @@ public class SecurityConfig {
 
                     // Court booking roles are enforced here and at controller boundaries.
                     .requestMatchers(HttpMethod.GET, "/api/v1/courts", "/api/v1/courts/**").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings/my", "/api/v1/court-bookings/quota").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings", "/api/v1/court-bookings/recurring").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/confirm-payment").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/cancel").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/court-bookings/**", "/api/v1/courts/**").denyAll()
 
@@ -184,6 +194,12 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").authenticated()
                     .requestMatchers("/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .requestMatchers("/api/v1/manager/coach-assignments/**", "/api/v1/manager/coach-assignments").hasAnyRole("CENTER_MANAGER", "MANAGER")
+                    // Supplement Shop (Sản phẩm)
+                    .requestMatchers("/api/v1/shop/addresses/**", "/api/v1/shop/addresses", "/api/v1/shop/orders/**", "/api/v1/shop/orders").hasRole("MEMBER")
+                    .requestMatchers("/api/v1/staff/product-orders/**", "/api/v1/staff/product-orders").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/manager/products/**", "/api/v1/manager/products",
+                            "/api/v1/manager/product-categories/**", "/api/v1/manager/product-categories",
+                            "/api/v1/manager/product-variants/**", "/api/v1/manager/product-orders/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .anyRequest().authenticated())
             .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

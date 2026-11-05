@@ -15,7 +15,7 @@ const STATUS_LABEL: Record<string, { label: string; badgeClass: string }> = {
   retired: { label: 'Ngừng sử dụng', badgeClass: 'badge-secondary' },
 };
 
-const CATEGORIES = ['Tất cả', 'Cardio', 'Strength', 'Free Weights', 'Diagnostic', 'Khác'];
+const CATEGORIES = ['Tất cả', 'Cardio', 'Strength', 'Free Weights', 'Diagnostic', 'Recovery', 'Khác'];
 
 interface FormState {
   name: string;
@@ -218,11 +218,10 @@ export function ManagerEquipmentPage() {
   const standardGymRooms = rooms.filter(isStandardGymRoom);
 
   return (
-    <div className="portal-page">
+    <div className="portal-container">
       <PageHeader
         eyebrow="Vận hành cơ sở vật chất"
         title="Quản lý máy móc & thiết bị phòng gym"
-        subtitle="Quản lý chi tiết danh mục thiết bị, phân bổ khu vực Gym Tiêu chuẩn và Gym VIP Platinum"
         actions={
           <button
             type="button"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, layoutDayEvents, mondayOf, overlapsHour, weekDays, type TimetableEvent } from './timetable';
+import { addDays, fitHourRange, layoutDayEvents, mondayOf, overlapsHour, weekDays, type TimetableEvent } from './timetable';
 
 const ev = (id: string, startTime: string, endTime: string): TimetableEvent => ({
   id, date: '2026-11-09', startTime, endTime, title: id, tone: 'open', ariaLabel: id,
@@ -47,5 +47,18 @@ describe('timetable helpers', () => {
     const placed = layoutDayEvents([ev('early', '04:00', '05:30'), ev('late', '21:00', '23:00')]);
     expect(placed.map((item) => item.event.id)).toEqual(['late']);
     expect(placed[0].topPct + placed[0].heightPct).toBeCloseTo(100);
+  });
+
+  it('fits the hour range to the week, at least 8 hours, inside 06:00–22:00', () => {
+    expect(fitHourRange([])).toHaveLength(16);
+    expect(fitHourRange([ev('a', '09:15', '10:00'), ev('b', '17:00', '19:30')])).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
+    expect(fitHourRange([ev('a', '20:00', '21:00')])).toEqual([14, 15, 16, 17, 18, 19, 20, 21]);
+    expect(fitHourRange([ev('a', '05:00', '06:30'), ev('late', '23:00', '23:30')])).toEqual([6, 7, 8, 9, 10, 11, 12, 13]);
+  });
+
+  it('positions events against a custom hour range', () => {
+    const [placed] = layoutDayEvents([ev('a', '10:00', '11:00')], 8, 12);
+    expect(placed.topPct).toBe(50);
+    expect(placed.heightPct).toBe(25);
   });
 });

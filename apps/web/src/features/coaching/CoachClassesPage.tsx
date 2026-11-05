@@ -1,7 +1,10 @@
 import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCurrentUser } from '../../shared/api/client';
+import { apiFetch, getCurrentUser } from '../../shared/api/client';
+import { notify } from '../../shared/lib/portalNotices';
+import { errorMessage } from '../../shared/lib/errorMessage';
+import { classesApi } from '../classes/classesApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
@@ -121,6 +124,13 @@ export function CoachClassesPage() {
   const [studentSearch, setStudentSearch] = useState<string>('');
   const [selectedFitnessFilter, setSelectedFitnessFilter] = useState<string>('all');
   const [modalViewMode, setModalViewMode] = useState<'students' | 'attendance' | 'evaluation'>('students');
+  const [cancellingCoachSession, setCancellingCoachSession] = useState<CoachSession | null>(null);
+  const [cancelCoachSessionReason, setCancelCoachSessionReason] = useState<string>('');
+  const [cancelCoachSessionError, setCancelCoachSessionError] = useState<string | null>(null);
+  const [cancellingPt, setCancellingPt] = useState<CoachBookingDto | null>(null);
+  const [cancelPtReason, setCancelPtReason] = useState<string>('');
+  const [cancelPtError, setCancelPtError] = useState<string | null>(null);
+  const [cancelBusy, setCancelBusy] = useState<boolean>(false);
 
   // Lấy dữ liệu điểm danh của buổi học (từ localStorage của tài khoản hiện tại)
   const sessionAttendanceData = useMemo(() => {
@@ -254,7 +264,7 @@ export function CoachClassesPage() {
       // Identify coachId
       const myCoachId =
         myReviews[0]?.coachId ||
-        board.find((b) => b.coachName === currentUser?.name)?.coachId;
+        board.find((b) => b.coachName === currentUser?.name || b.coachId === Number(currentUser?.id))?.coachId || (currentUser?.id ? Number(currentUser.id) : undefined);
       if (myCoachId) {
         const reviews = await getCoachReviews(myCoachId).catch(() => []);
         setStudentReviews(reviews);
@@ -264,7 +274,7 @@ export function CoachClassesPage() {
     } finally {
       setRankingLoading(false);
     }
-  }, [reviewYear, reviewMonth, currentUser?.name]);
+  }, [reviewYear, reviewMonth, currentUser?.name, currentUser?.id]);
 
   useEffect(() => {
     if (activeTab === 'ranking') {
@@ -314,6 +324,64 @@ export function CoachClassesPage() {
     setStudents([]);
   };
 
+  const handleConfirmCancelCoachSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancellingCoachSession || cancelBusy) return;
+    const reason = cancelCoachSessionReason.trim();
+    if (!reason) {
+      setCancelCoachSessionError('Vui lòng nhập lý do hủy buổi dạy.');
+      return;
+    }
+    setCancelCoachSessionError(null);
+    setCancelBusy(true);
+    try {
+      const apiWithCancel = classesApi as { cancelSession?: (id: number | string, reason: string) => Promise<unknown> };
+      if (typeof apiWithCancel.cancelSession === 'function') {
+        await apiWithCancel.cancelSession(cancellingCoachSession.id, reason);
+      } else {
+        await apiFetch(`/classes/sessions/${cancellingCoachSession.id}/cancel`, {
+          method: 'POST',
+          body: JSON.stringify({ reason }),
+        });
+      }
+      notify('Đã hủy buổi dạy thành công!', 'success');
+      setCancellingCoachSession(null);
+      setCancelCoachSessionReason('');
+      setActiveSession(null);
+      await loadWeeklySessions();
+    } catch (err: unknown) {
+      setCancelCoachSessionError(errorMessage(err, 'Không thể hủy buổi dạy này.'));
+    } finally {
+      setCancelBusy(false);
+    }
+  };
+
+  const handleConfirmCancelPt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancellingPt || cancelBusy) return;
+    const reason = cancelPtReason.trim();
+    if (!reason) {
+      setCancelPtError('Vui lòng nhập lý do hủy buổi kèm 1:1.');
+      return;
+    }
+    setCancelPtError(null);
+    setCancelBusy(true);
+    try {
+      await apiFetch(`/coach-bookings/${cancellingPt.id}?reason=${encodeURIComponent(reason)}`, {
+        method: 'DELETE',
+      });
+      notify('Đã hủy buổi kèm 1:1 thành công!', 'success');
+      setCancellingPt(null);
+      setCancelPtReason('');
+      setSelectedPt(null);
+      await loadWeeklySessions();
+    } catch (err: unknown) {
+      setCancelPtError(errorMessage(err, 'Không thể hủy buổi kèm 1:1 này.'));
+    } finally {
+      setCancelBusy(false);
+    }
+  };
+
   const filteredStudents = useMemo(() => {
     return students.filter((st) => {
       const matchSearch =
@@ -331,11 +399,6 @@ export function CoachClassesPage() {
       <PageHeader
         eyebrow="Huấn luyện viên"
         title="Thời khóa biểu & học viên phụ trách"
-        subtitle={
-          activeTab === 'schedule'
-            ? `HLV: ${currentUser?.name || 'Huấn luyện viên'} | Lịch đứng lớp và kèm 1:1 của riêng bạn theo tuần, từ 06:00 đến 22:00.`
-            : `HLV: ${currentUser?.name || 'Huấn luyện viên'} | Quản lý thông tin sức khỏe, mục tiêu thể lực và thông tin liên hệ của học viên.`
-        }
       />
 
       {/* Phân hệ Tab: Thời khóa biểu vs Học viên phụ trách */}
@@ -397,9 +460,64 @@ export function CoachClassesPage() {
             <div className="kv-row"><span>Hình thức</span><strong>{selectedPt.paymentMethod === 'package_quota' ? 'Quyền lợi gói tập' : 'Hội viên trả phí'}</strong></div>
             {selectedPt.notes && <div className="kv-row"><span>Ghi chú của học viên</span><strong>{selectedPt.notes}</strong></div>}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 20 }}>
+            <div>
+              {(selectedPt.status === 'confirmed' || (selectedPt.status as string) === 'pending') && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ color: 'var(--portal-danger, #fca5a5)' }}
+                  onClick={() => {
+                    setCancelPtError(null);
+                    setCancelPtReason('');
+                    setCancellingPt(selectedPt);
+                  }}
+                  data-testid="cancel-pt-btn"
+                >
+                  Hủy buổi kèm 1:1
+                </button>
+              )}
+            </div>
             <button type="button" className="btn-secondary" onClick={() => setSelectedPt(null)}>Đóng</button>
           </div>
+        </Modal>
+      )}
+
+      {cancellingPt && (
+        <Modal
+          title={`Hủy buổi kèm 1:1: ${cancellingPt.memberName}`}
+          onClose={() => { if (!cancelBusy) setCancellingPt(null); }}
+        >
+          <form onSubmit={handleConfirmCancelPt} style={{ display: 'grid', gap: 12 }}>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="cancel-pt-reason">
+                Lý do hủy buổi kèm 1:1 *
+              </label>
+              <textarea
+                id="cancel-pt-reason"
+                rows={3}
+                required
+                className="portal-textarea"
+                placeholder="Nhập lý do hủy buổi kèm 1:1 để thông báo cho học viên..."
+                value={cancelPtReason}
+                onChange={(e) => setCancelPtReason(e.target.value)}
+                disabled={cancelBusy}
+              />
+            </div>
+            {cancelPtError && (
+              <div role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+                {cancelPtError}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="btn-secondary" onClick={() => setCancellingPt(null)} disabled={cancelBusy}>
+                Quay lại
+              </button>
+              <button type="submit" className="btn-danger" disabled={cancelBusy} data-testid="confirm-cancel-pt-btn">
+                {cancelBusy ? 'Đang hủy...' : 'Xác nhận hủy buổi'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 
@@ -411,9 +529,6 @@ export function CoachClassesPage() {
           <div className="coach-students-header">
             <div>
               <h3 className="coach-students-title">Danh sách học viên phụ trách</h3>
-              <p style={{ margin: '4px 0 0', fontSize: '0.86rem', color: 'var(--portal-muted)' }}>
-                Theo dõi tình trạng sức khỏe, mục tiêu thể lực và lập lộ trình huấn luyện cho học viên.
-              </p>
             </div>
             <span className="coach-students-count">
               Tổng số: <strong>{allStudents.length} học viên</strong>
@@ -802,7 +917,7 @@ export function CoachClassesPage() {
                 ) : (
                   <div style={{ display: 'grid', gap: 12 }}>
                     {leaderboard.map((item) => {
-                      const isMe = item.coachName === currentUser?.name;
+                      const isMe = item.coachName === currentUser?.name || item.coachId === Number(currentUser?.id);
                       return (
                         <div
                           key={item.coachId}
@@ -1223,11 +1338,66 @@ export function CoachClassesPage() {
                   ? `Hiển thị ${filteredEvalStudents.length} / ${sessionEvaluationData?.students.length || 0} bản ghi đánh giá`
                   : `Hiển thị ${filteredStudents.length} / ${students.length} học viên`}
               </span>
-              <button type="button" className="btn-secondary" onClick={handleCloseModal}>
-                Đóng
-              </button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {activeSession.status === 'scheduled' && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ color: 'var(--portal-danger, #fca5a5)' }}
+                    onClick={() => {
+                      setCancelCoachSessionError(null);
+                      setCancelCoachSessionReason('');
+                      setCancellingCoachSession(activeSession);
+                    }}
+                    data-testid="cancel-coach-session-btn"
+                  >
+                    Hủy buổi dạy
+                  </button>
+                )}
+                <button type="button" className="btn-secondary" onClick={handleCloseModal}>
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {cancellingCoachSession && (
+        <Modal
+          title={`Hủy buổi dạy: ${cancellingCoachSession.className} (${cancellingCoachSession.sessionDate})`}
+          onClose={() => { if (!cancelBusy) setCancellingCoachSession(null); }}
+        >
+          <form onSubmit={handleConfirmCancelCoachSession} style={{ display: 'grid', gap: 12 }}>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="cancel-coach-session-reason">
+                Lý do hủy buổi dạy *
+              </label>
+              <textarea
+                id="cancel-coach-session-reason"
+                rows={3}
+                required
+                className="portal-textarea"
+                placeholder="Nhập lý do hủy buổi dạy để thông báo cho học viên..."
+                value={cancelCoachSessionReason}
+                onChange={(e) => setCancelCoachSessionReason(e.target.value)}
+                disabled={cancelBusy}
+              />
+            </div>
+            {cancelCoachSessionError && (
+              <div role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+                {cancelCoachSessionError}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="btn-secondary" onClick={() => setCancellingCoachSession(null)} disabled={cancelBusy}>
+                Quay lại
+              </button>
+              <button type="submit" className="btn-danger" disabled={cancelBusy} data-testid="confirm-cancel-coach-session-btn">
+                {cancelBusy ? 'Đang hủy...' : 'Xác nhận hủy buổi'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

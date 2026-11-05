@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_db_migrations_v1_init_finance_computed_columns_sql", "label": "V1__init_finance_computed_columns.sql", "file_type": "code", "source_file": "db/migrations/V1__init_finance_computed_columns.sql", "source_location": null}], "edges": []}

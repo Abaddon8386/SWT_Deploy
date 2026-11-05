@@ -281,6 +281,40 @@ class ClassServiceTest {
     }
 
     @Test
+    @DisplayName("rescheduleSession rejects a time that overlaps another class a booked member already attends")
+    void rescheduleSession_rejectsMemberOverlap() throws Exception {
+        var idField = GymClass.class.getDeclaredField("id");
+        idField.setAccessible(true);
+        idField.set(gymClass, 1L);
+
+        ClassSession session = new ClassSession();
+        session.setGymClass(gymClass);
+        session.setSessionDate(LocalDate.of(2026, 10, 17));
+        session.setStartTime(LocalTime.of(8, 0));
+        session.setEndTime(LocalTime.of(9, 0));
+        session.setStatus("scheduled");
+
+        GymClass swimming = new GymClass();
+        swimming.setName("Bơi tự do");
+        ClassSession other = new ClassSession();
+        other.setGymClass(swimming);
+        other.setStartTime(LocalTime.of(18, 0));
+        other.setEndTime(LocalTime.of(20, 0));
+
+        LocalDate date = LocalDate.of(2026, 10, 20);
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(sessions.findById(100L)).thenReturn(Optional.of(session));
+        when(sessions.findMemberOverlaps(1L, 100L, date, LocalTime.of(19, 0), LocalTime.of(20, 0)))
+                .thenReturn(java.util.List.of(other));
+
+        assertThatThrownBy(() -> service.rescheduleSession(1L, 100L,
+                new RescheduleSessionRequest(date, LocalTime.of(19, 0), LocalTime.of(20, 0))))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Bơi tự do");
+        verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any(ClassSession.class));
+    }
+
+    @Test
     @DisplayName("SCRUM-131: deleteClass removes child enrollments, sessions and the class")
     void deleteClass_removesClassAndChildren() {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));

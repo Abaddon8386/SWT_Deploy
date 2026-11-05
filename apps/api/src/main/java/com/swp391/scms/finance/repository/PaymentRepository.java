@@ -31,6 +31,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findAllByCoachBookingId(Long coachBookingId);
     List<Payment> findAllByCourtBookingId(Long courtBookingId);
+    List<Payment> findAllByProductOrderId(Long productOrderId);
 
     boolean existsBySubscriptionIdAndStatus(Long subscriptionId, String status);
 

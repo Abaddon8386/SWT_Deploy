@@ -46,11 +46,20 @@ public class Payment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "court_booking_id", insertable = false, updatable = false)
     private com.swp391.scms.courts.entity.CourtBooking courtBooking;
+    @Column(name = "product_order_id")
+    private Long productOrderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_order_id", insertable = false, updatable = false)
+    private com.swp391.scms.shop.entity.ProductOrder productOrder;
 
     public Long getCoachBookingId() { return coachBookingId; }
     public void setCoachBookingId(Long id) { coachBookingId = id; }
     public Long getCourtBookingId() { return courtBookingId; }
     public void setCourtBookingId(Long id) { courtBookingId = id; }
+    public Long getProductOrderId() { return productOrderId; }
+    public void setProductOrderId(Long id) { productOrderId = id; }
+    public com.swp391.scms.shop.entity.ProductOrder getProductOrder() { return productOrder; }
+    public void setProductOrder(com.swp391.scms.shop.entity.ProductOrder productOrder) { this.productOrder = productOrder; }
 
     @Column(name = "class_enrollment_id")
     private Long classEnrollmentId;

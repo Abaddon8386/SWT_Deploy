@@ -1,5 +1,6 @@
 package com.swp391.scms.config;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Table;
 import jakarta.persistence.JoinTable;
@@ -45,6 +46,10 @@ public class PostgreSqlDataSecurityInitializer implements ApplicationRunner {
                 JoinTable join = field.getAnnotation(JoinTable.class);
                 if (join != null && !join.name().isBlank()) {
                     tables.add(new Target(join.schema().isBlank() ? currentSchema : join.schema(), join.name()));
+                }
+                CollectionTable collection = field.getAnnotation(CollectionTable.class);
+                if (collection != null && !collection.name().isBlank()) {
+                    tables.add(new Target(collection.schema().isBlank() ? currentSchema : collection.schema(), collection.name()));
                 }
             }
         }

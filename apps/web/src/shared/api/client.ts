@@ -1,4 +1,5 @@
 import { clearNotices } from '../lib/portalNotices';
+import { getLanguage } from '../i18n';
 export interface UserSession {
   id: string;
   name: string;
@@ -119,7 +120,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       ...init,
       headers: {
         'Content-Type': 'application/json',
-        'Accept-Language': 'vi',
+        'Accept-Language': getLanguage(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init.headers,
       },
@@ -146,7 +147,7 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
   let res: Response;
   try {
     res = await fetch(`/api/v1${path}`, {
-      headers: { 'Accept-Language': 'vi', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { 'Accept-Language': getLanguage(), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
   } catch {
     throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng thử lại.', 0);

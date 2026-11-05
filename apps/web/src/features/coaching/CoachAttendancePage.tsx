@@ -5,6 +5,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { notify } from '../../shared/lib/portalNotices';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDate, formatTimeRange } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
@@ -93,8 +94,7 @@ export function CoachAttendancePage() {
       if (stored) {
         return JSON.parse(stored);
       }
-    } catch {
-      // Fallback
+    } catch {// Fallback
     }
     return [];
   });
@@ -106,8 +106,7 @@ export function CoachAttendancePage() {
       if (stored) {
         return JSON.parse(stored);
       }
-    } catch {
-      // Fallback
+    } catch {// Fallback
     }
     return [];
   });
@@ -117,8 +116,7 @@ export function CoachAttendancePage() {
     setHistory(updated);
     try {
       localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(updated));
-    } catch {
-      // ignore
+    } catch {// ignore
     }
   };
 
@@ -127,8 +125,7 @@ export function CoachAttendancePage() {
     setEvalHistory(updated);
     try {
       localStorage.setItem(STORAGE_KEY_EVAL_HISTORY, JSON.stringify(updated));
-    } catch {
-      // ignore
+    } catch {// ignore
     }
   };
 
@@ -153,8 +150,7 @@ export function CoachAttendancePage() {
             setWeekStart(mondayOf(preferred.sessionDate));
           }
         }
-      } catch {
-        if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
+      } catch {if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
       } finally {
         if (mounted) { setLoading(false); setSessionsLoaded(true); }
       }
@@ -189,8 +185,7 @@ export function CoachAttendancePage() {
           setStudents(normalized);
           setLoadedSessionId(selectedSessionId);
         }
-      } catch {
-        if (mounted) {
+      } catch {if (mounted) {
           setRosterError('Không thể tải danh sách học viên của buổi học. Vui lòng chọn lại buổi học.');
         }
       } finally {
@@ -293,8 +288,7 @@ export function CoachAttendancePage() {
           ? 'Đã cập nhật lại điểm danh thành công!'
           : 'Lưu điểm danh thành công!'
       );
-    } catch {
-      notify('Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.', 'error');
+    } catch (err) { notify(errorMessage(err, 'Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -347,8 +341,7 @@ export function CoachAttendancePage() {
       saveEvalHistoryToStorage(newEvalHistory);
 
       showCenterNotification('Đã gửi đánh giá tiến độ và thông báo đến học viên.');
-    } catch {
-      notify('Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.', 'error');
+    } catch (err) { notify(errorMessage(err, 'Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.'), 'error');
     } finally {
       setSavingEvaluation(false);
     }
@@ -437,8 +430,7 @@ export function CoachAttendancePage() {
 
       setEditingAttendanceRecord(null);
       showCenterNotification('Cập nhật thành công');
-    } catch {
-      notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
+    } catch {notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
     }
@@ -523,8 +515,7 @@ export function CoachAttendancePage() {
 
       setEditingEvalRecord(null);
       showCenterNotification('Cập nhật thành công');
-    } catch {
-      notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
+    } catch {notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
     }
@@ -565,15 +556,6 @@ export function CoachAttendancePage() {
             : activeTab === 'eval-history'
             ? 'Lịch sử đánh giá học viên'
             : 'Điểm danh buổi học'
-        }
-        subtitle={
-          activeTab === 'evaluation'
-            ? 'Khu vực đánh giá chuyên biệt: Chấm thang điểm tiến bộ và nhận xét kỹ thuật, bài tập cho từng học viên.'
-            : activeTab === 'attendance-history'
-            ? 'Lịch sử điểm danh của tài khoản này đã lưu trên trình duyệt này. Cập nhật được lưu lên hệ thống; ẩn bản ghi chỉ áp dụng trên trình duyệt.'
-            : activeTab === 'eval-history'
-            ? 'Lịch sử đánh giá của tài khoản này đã lưu trên trình duyệt này. Chỉnh sửa được lưu lên hệ thống.'
-            : 'Ghi nhận chuyên cần nhanh chóng cho học viên tham gia buổi học với 2 trạng thái: Có mặt hoặc Vắng mặt.'
         }
       />
 
@@ -850,9 +832,6 @@ export function CoachAttendancePage() {
           <div className="evaluation-section-header">
             <div>
               <h3 className="section-title">Đánh giá tiến bộ kỹ thuật học viên</h3>
-              <p className="section-desc">
-                Chấm điểm theo thang điểm 1-100 và ghi nhận xét tư thế, kỹ năng động tác cho từng học viên.
-              </p>
             </div>
           </div>
 
@@ -947,9 +926,6 @@ export function CoachAttendancePage() {
           <div className="history-header-bar">
             <div>
               <h3 className="section-title">Lịch sử các buổi đã điểm danh</h3>
-              <p className="section-desc">
-                Xem lại danh sách, tỷ lệ chuyên cần và bấm "Sửa điểm danh" để chỉnh sửa trực tiếp trong khung giữa màn hình.
-              </p>
             </div>
           </div>
 
@@ -1034,9 +1010,6 @@ export function CoachAttendancePage() {
           <div className="history-header-bar">
             <div>
               <h3 className="section-title">Lịch sử đánh giá tiến bộ học viên</h3>
-              <p className="section-desc">
-                Xem lại thang điểm kỹ thuật và nhận xét từng buổi tập, bấm "Sửa đánh giá" để chỉnh sửa trong khung giữa màn hình.
-              </p>
             </div>
           </div>
 

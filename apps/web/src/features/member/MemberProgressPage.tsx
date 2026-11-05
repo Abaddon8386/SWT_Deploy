@@ -31,7 +31,7 @@ function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; m
     {segments.map((segment, index) => <polyline key={index} points={segment.join(' ')} fill="none" stroke="var(--portal-salmon)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />)}
     {points.map((point, index) => <g key={point.weekStart}>
       {point[metric] != null && <circle cx={x(index)} cy={y(point[metric])} r="5" fill="var(--portal-salmon)"><title>{`${point.weekStart}: ${point[metric]} ${unit}`}</title></circle>}
-      <text x={x(index)} y="187" textAnchor="middle" fill="currentColor" fontSize="11">{point.weekStart.slice(5)}</text>
+      <text x={x(index)} y="187" textAnchor="middle" fill="currentColor" fontSize="11">{`${point.weekStart.slice(8, 10)}/${point.weekStart.slice(5, 7)}`}</text>
     </g>)}
   </svg></div>;
 }
@@ -97,14 +97,14 @@ function DailyProgress({ today }: { today: string }) {
   const points = metrics.kind === 'ready' ? weeklyMeasurements(metrics.data) : [];
   const exercises = plans.kind === 'ready' ? dailyExercises(plans.data, today) : [];
   return <div className="portal-container member-progress">
-    <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" subtitle="Số đo đã ghi nhận và bài tập từ huấn luyện viên." />
+    <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" />
     <CoachEvaluations />
     <section className="portal-card" aria-labelledby="progress-metrics-title">
       <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">Thay đổi qua các tuần</h2></div>
       {metrics.kind === 'loading' ? <LoadingSkeleton label="Đang tải số đo…" variant="cards" count={2} /> : metrics.kind === 'error' ? <div role="alert">Không thể tải số đo. <button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>Thử lại</button></div> : points.length === 0 ? <p className="portal-empty">Chưa có số đo cân nặng hoặc BMI.</p> : <div className="member-progress-charts">
         <div><h3>Cân nặng <small>kg</small></h3><WeeklyChart points={points} metric="weight" label="Cân nặng" unit="kg" /></div>
         <div><h3>Chỉ số BMI</h3><WeeklyChart points={points} metric="bmi" label="BMI" unit="BMI" /></div>
-        <div className="member-progress-values">{points.map((point) => <p key={point.weekStart}><time dateTime={point.weekStart}>Tuần {point.weekStart.slice(5)}</time><span>{point.weight == null ? '—' : `${point.weight} kg`}</span><span>{point.bmi == null ? '—' : `BMI ${point.bmi}`}</span></p>)}</div>
+        <div className="member-progress-values">{points.map((point) => <p key={point.weekStart}><time dateTime={point.weekStart}>Tuần {`${point.weekStart.slice(8, 10)}/${point.weekStart.slice(5, 7)}`}</time><span>{point.weight == null ? '—' : `${point.weight} kg`}</span><span>{point.bmi == null ? '—' : `BMI ${point.bmi}`}</span></p>)}</div>
       </div>}
     </section>
     <section className="portal-card" aria-labelledby="progress-plan-title">

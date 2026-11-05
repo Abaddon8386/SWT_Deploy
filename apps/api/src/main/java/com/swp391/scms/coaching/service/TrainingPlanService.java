@@ -272,11 +272,16 @@ public class TrainingPlanService {
     }
 
     private void verifyCoachOwnership(TrainingPlan plan, Long currentUserId, String currentUserRole) {
-        if (isCoach(currentUserRole)) requireCurrentAssignment(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
         if (isManager(currentUserRole)) {
             return;
         }
         Long planCoachId = plan.getCoach() != null ? plan.getCoach().getUserId() : null;
+        if (currentUserId != null && currentUserId.equals(planCoachId)) {
+            return;
+        }
+        if (isCoach(currentUserRole)) {
+            requireCurrentAssignment(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
+        }
         // An unassigned plan belongs to management; only its own coach may change an assigned one.
         if (currentUserId == null || planCoachId == null || !currentUserId.equals(planCoachId)) {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,

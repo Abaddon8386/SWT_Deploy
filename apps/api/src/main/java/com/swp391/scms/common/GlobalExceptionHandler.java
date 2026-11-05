@@ -184,6 +184,7 @@ public class GlobalExceptionHandler {
      * Invariants from AGENTS.md & PROJECT_MASTER_GUIDE.md:
      * - trg_enrollments_check_capacity (Capacity Exceeded)
      * - trg_sessions_check_conflict (Coach / Room Schedule Overlap)
+     * - trg_member_schedule_conflict (one member in two overlapping classes)
      * - trg_enrollments_check_membership & trg_checkins_check_membership (Active Subscription)
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -196,28 +197,28 @@ public class GlobalExceptionHandler {
             String courtCode = null;
             String courtKey = null;
             HttpStatus courtStatus = HttpStatus.CONFLICT;
-            if (normalizedRootMsg.contains("trg_court_bookings_check_conflict")) {
+            if (normalizedRootMsg.contains("trg_court_bookings_check_conflict") || normalizedRootMsg.contains("court_booking_slot_taken")) {
                 courtCode = "COURT_BOOKING_SLOT_TAKEN";
                 courtKey = "slot_taken";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_membership")) {
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_membership") || normalizedRootMsg.contains("court_booking_membership_invalid")) {
                 courtCode = "COURT_BOOKING_MEMBERSHIP_INVALID";
                 courtKey = "membership_invalid";
                 courtStatus = HttpStatus.FORBIDDEN;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_limit")) {
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_limit") || normalizedRootMsg.contains("court_booking_limit_reached")) {
                 courtCode = "COURT_BOOKING_LIMIT_REACHED";
                 courtKey = "limit_reached";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_court")) {
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_court") || normalizedRootMsg.contains("court_booking_court_unavailable")) {
                 courtCode = "COURT_BOOKING_COURT_UNAVAILABLE";
                 courtKey = "court_unavailable";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_past")) {
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_past") || normalizedRootMsg.contains("court_booking_past_slot")) {
                 courtCode = "COURT_BOOKING_PAST_SLOT";
                 courtKey = "past_slot";
                 courtStatus = HttpStatus.BAD_REQUEST;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_horizon")) {
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_horizon") || normalizedRootMsg.contains("court_booking_too_far")) {
                 courtCode = "COURT_BOOKING_TOO_FAR";
                 courtKey = "too_far";
                 courtStatus = HttpStatus.BAD_REQUEST;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_slot")) {
+            } else if (normalizedRootMsg.contains("trg_court_bookings_check_slot") || normalizedRootMsg.contains("court_booking_invalid_slot")) {
                 courtCode = "COURT_BOOKING_INVALID_SLOT";
                 courtKey = "invalid_slot";
                 courtStatus = HttpStatus.BAD_REQUEST;
@@ -242,7 +243,15 @@ public class GlobalExceptionHandler {
                                 resolveMessage("error.scheduling.class_full", "invariant.capacity_exceeded"))
                 );
             }
+            if (normalizedRootMsg.contains("trg_member_schedule_conflict")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULING_MEMBER_TIME_OVERLAP",
+                                resolveMessage("error.scheduling.member_class_overlap", "error.scheduling.member_class_overlap"))
+                );
+            }
             if (normalizedRootMsg.contains("trg_sessions_check_conflict")
+                    || normalizedRootMsg.contains("coach_schedule_conflict")
+                    || normalizedRootMsg.contains("member_schedule_conflict")
                     || normalizedRootMsg.contains("huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này.")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULE_CONFLICT",
@@ -255,6 +264,13 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                         ApiResponse.error(HttpStatus.FORBIDDEN.value(), "MEMBERSHIP_INACTIVE_OR_EXPIRED",
                                 resolveMessage("error.scheduling.membership_expired_or_inactive", "invariant.membership_inactive_or_expired"))
+                );
+            }
+            if (normalizedRootMsg.contains("ck_product_variants_stock_nonneg")
+                    || normalizedRootMsg.contains("ck_product_variants_values")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "PRODUCT_OUT_OF_STOCK",
+                                resolveMessage("error.shop.product_out_of_stock", "error.shop.product_out_of_stock"))
                 );
             }
             if (normalizedRootMsg.contains("duplicate") || normalizedRootMsg.contains("unique constraint") || normalizedRootMsg.contains("uq_")) {
@@ -336,6 +352,11 @@ public class GlobalExceptionHandler {
     /**
      * Fallback for any unhandled exceptions (HTTP 500).
      */
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(org.springframework.web.context.request.async.AsyncRequestNotUsableException ex) {
+        log.debug("Client closed connection before response completed: {}", ex.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGeneral(Exception ex) {
         log.error("Unhandled server error: ", ex);

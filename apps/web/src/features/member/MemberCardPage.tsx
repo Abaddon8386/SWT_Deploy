@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { Link } from 'react-router-dom';
 import { getProfile, type Profile } from './profileApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
 import { cardStatus } from './cardStatus';
 import { getMembershipHistory, getMySubscription, getDynamicQr, type CardSubscription } from './memberCardApi';
 
@@ -102,9 +102,9 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
       link.href = canvas.toDataURL('image/png');
       link.download = 'the-hoi-vien.png';
       link.click();
-      toast('Đã tải thẻ hội viên về máy.');
+      notify('Đã tải thẻ hội viên về máy.', 'success');
     } catch {
-      toast('Không thể tải thẻ. Vui lòng thử lại.', 'error');
+      notify('Không thể tải thẻ. Vui lòng thử lại.', 'error');
     } finally {
       setDownloading(false);
     }
@@ -180,9 +180,9 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
               try {
                 if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
                 await navigator.clipboard.writeText(activeQrCode!);
-                toast('Đã sao chép mã QR check-in vào bộ nhớ tạm!');
+                notify('Đã sao chép mã QR check-in vào bộ nhớ tạm!', 'success');
               } catch {
-                toast('Không thể sao chép mã QR. Vui lòng thử lại.', 'error');
+                notify('Không thể sao chép mã QR. Vui lòng thử lại.', 'error');
               }
             }}
           >
@@ -229,7 +229,7 @@ export function MemberCardPage() {
 
   return (
     <div className="portal-container">
-      <PageHeader eyebrow="Hội viên" title="Thẻ thành viên & Mã QR" subtitle="Xuất trình thẻ QR tại quầy Lễ tân để Check-in nhanh vào khu vực tập luyện." />
+      <PageHeader eyebrow="Hội viên" title="Thẻ thành viên & Mã QR" />
       {loading && (
         <div className="portal-card" role="status" aria-busy="true" style={{ maxWidth: 620 }}>
           <span className="sr-only">Đang tải thẻ hội viên…</span>
@@ -252,9 +252,6 @@ export function MemberCardPage() {
         <div className="portal-card" style={{ maxWidth: 620 }}>
           <div className="meta-label">Trạng thái thẻ</div>
           <h3 className="portal-card-title" style={{ marginTop: 8 }}>Đang chờ thanh toán: {pending.packageName}</h3>
-          <p className="row-card__meta" style={{ marginTop: 6 }}>
-            Gói tập chỉ có hiệu lực và cấp mã QR sau khi được nhân viên Lễ tân xác nhận thanh toán tại quầy POS.
-          </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
             <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCard()}>
               Kiểm tra lại trạng thái

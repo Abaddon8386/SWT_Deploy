@@ -112,6 +112,9 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final String SILVER_12M_NAME = "SILVER 12 THÁNG";
     public static final String GOLD_12M_NAME = "GOLD 12 THÁNG";
     public static final String PLATINUM_12M_NAME = "PLATINUM 12 THÁNG";
+    public static final BigDecimal SILVER_12M_PRICE = new BigDecimal("1990000");
+    public static final BigDecimal GOLD_12M_PRICE = new BigDecimal("2990000");
+    public static final BigDecimal PLATINUM_12M_PRICE = new BigDecimal("5990000");
 
     private final DisciplineService disciplines;
     private final RoomService rooms;
@@ -259,7 +262,12 @@ public class CatalogSeeder implements ApplicationRunner {
         }
         packages.create(new PackageRequest(name, desc, price, duration, creditLimit, "active"));
     }
+    /**
+     * Preserves any price customized by a Manager in the database; only converts the original
+     * unedited seed prices when renaming legacy package aliases ("The Essential", etc.) for the first time.
+     */
     private BigDecimal correctedLegacyPrice(String name, BigDecimal currentPrice) {
+        if (currentPrice == null) return null;
         if ("The Essential".equalsIgnoreCase(name) && currentPrice.compareTo(new BigDecimal("2800000")) == 0) return new BigDecimal("299000");
         if ("The Sanctuary VIP".equalsIgnoreCase(name) && currentPrice.compareTo(new BigDecimal("7500000")) == 0) return new BigDecimal("499000");
         if ("The Sovereign Annual".equalsIgnoreCase(name) && currentPrice.compareTo(new BigDecimal("26000000")) == 0) return new BigDecimal("999000");

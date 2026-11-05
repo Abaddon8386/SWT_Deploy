@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type Keyboard
 import {
   TIMETABLE_HOURS,
   addDays,
+  blockClass,
+  fitHourRange,
   hhmm,
   hourLabel,
   isWithinRange,
@@ -17,7 +19,7 @@ import {
   type TimetableEvent,
   type TimetableTone,
 } from './timetable';
-import './timetable.css';
+import './calendar.css';
 
 export interface TimetableSlot {
   date: string;
@@ -59,6 +61,8 @@ interface WeeklyTimetableProps {
 const MINUTE_MS = 60_000;
 /** Dưới mốc này bảng chuyển sang xem từng ngày thay vì 7 cột hẹp cuộn ngang. */
 const NARROW_QUERY = '(max-width: 767px)';
+const HOUR_PX = 72;
+const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
 function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
@@ -104,6 +108,14 @@ export function WeeklyTimetable({
   const visibleDays = narrow ? [activeDay] : days;
   const gridRef = useRef<HTMLDivElement>(null);
   const [rovingKey, setRovingKey] = useState<string | null>(null);
+  // Bảng chỉ xem mặc định thu gọn theo lịch của tuần; Quản lý cần bấm mọi ô giờ nên mặc định hiện đủ.
+  const [fullDay, setFullDay] = useState(Boolean(onSlotClick));
+  const weekEvents = useMemo(() => events.filter((event) => days.includes(event.date)), [events, days]);
+  const fittedHours = useMemo(() => fitHourRange(weekEvents), [weekEvents]);
+  const canCompact = fittedHours.length < TIMETABLE_HOURS.length;
+  const hours = fullDay || !canCompact ? TIMETABLE_HOURS : fittedHours;
+  const firstHour = hours[0];
+  const endHour = hours[hours.length - 1] + 1;
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, TimetableEvent[]>();
@@ -128,91 +140,99 @@ export function WeeklyTimetable({
     const inWeek = events.filter((event) => days.includes(event.date) && isWithinRange(event));
     const selected = inWeek.find((event) => event.id === selectedId);
     const starts = (selected ? [selected] : inWeek).map((event) => toMinutes(event.startTime));
-    const target = starts.length > 0 ? Math.min(...starts) : TIMETABLE_HOURS[0] * 60;
-    const hourPx = box.querySelector<HTMLElement>('.tt__hour')?.offsetHeight ?? 64;
-    box.scrollTop = Math.max(0, ((target - 60 - TIMETABLE_HOURS[0] * 60) / 60) * hourPx);
-    // Chỉ cuộn khi đổi tuần hoặc vừa tải xong, không cuộn lại khi dữ liệu đặt chỗ làm mới.
+    const target = starts.length > 0 ? Math.min(...starts) : firstHour * 60;
+    box.scrollTop = Math.max(0, ((target - 60 - firstHour * 60) / 60) * HOUR_PX);
+    // Chỉ cuộn khi đổi tuần, vừa tải xong hoặc đổi khung giờ; không cuộn lại khi dữ liệu đặt chỗ làm mới.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, loading]);
+  }, [weekStart, loading, fullDay]);
 
-  const firstKey = slotKey(visibleDays[0], TIMETABLE_HOURS[0]);
+  const firstKey = slotKey(visibleDays[0], firstHour);
   const activeKey = rovingKey && visibleDays.some((day) => rovingKey.startsWith(`${day}|`)) ? rovingKey : firstKey;
 
   function moveFocus(event: KeyboardEvent<HTMLButtonElement>, dayIndex: number, hour: number) {
-    const hourIndex = TIMETABLE_HOURS.indexOf(hour);
+    const hourIndex = hours.indexOf(hour);
     let nextDay = dayIndex;
     let nextHour = hourIndex;
     switch (event.key) {
       case 'ArrowLeft': nextDay = Math.max(0, dayIndex - 1); break;
       case 'ArrowRight': nextDay = Math.min(visibleDays.length - 1, dayIndex + 1); break;
       case 'ArrowUp': nextHour = Math.max(0, hourIndex - 1); break;
-      case 'ArrowDown': nextHour = Math.min(TIMETABLE_HOURS.length - 1, hourIndex + 1); break;
+      case 'ArrowDown': nextHour = Math.min(hours.length - 1, hourIndex + 1); break;
       case 'Home': nextHour = 0; break;
-      case 'End': nextHour = TIMETABLE_HOURS.length - 1; break;
+      case 'End': nextHour = hours.length - 1; break;
       default: return;
     }
     event.preventDefault();
-    const key = slotKey(visibleDays[nextDay], TIMETABLE_HOURS[nextHour]);
+    const key = slotKey(visibleDays[nextDay], hours[nextHour]);
     setRovingKey(key);
     gridRef.current?.querySelector<HTMLButtonElement>(`[data-slot="${key}"]`)?.focus();
   }
 
+  const rowsPx = hours.length * HOUR_PX;
+
   return (
-    <section className="tt" aria-label={label}>
-      <div className="tt__toolbar">
-        <div className="tt__nav" role="group" aria-label="Điều hướng tuần">
-          <button type="button" className="btn-secondary btn-sm" onClick={() => onWeekChange(addDays(weekStart, -7))}>
-            Tuần trước
+    <section className="mcal" aria-label={label}>
+      <header className="mcal__toolbar">
+        <div className="mcal__nav" role="group" aria-label="Điều hướng tuần">
+          <button type="button" className="mcal__icon-btn" aria-label="Tuần trước" onClick={() => onWeekChange(addDays(weekStart, -7))}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <button type="button" className="mcal__icon-btn" aria-label="Tuần sau" onClick={() => onWeekChange(addDays(weekStart, 7))}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
           <button
             type="button"
-            className="btn-secondary btn-sm"
+            className="mcal__today-btn"
             disabled={weekStart === thisWeek}
             onClick={() => { setFocusDay(null); onWeekChange(thisWeek); }}
           >
-            Tuần này
+            Hôm nay
           </button>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => onWeekChange(addDays(weekStart, 7))}>
-            Tuần sau
-          </button>
+          <h2 className="mcal__range" aria-live="polite">{weekRangeLabel(weekStart)}</h2>
         </div>
-        <strong className="tt__range" aria-live="polite">{weekRangeLabel(weekStart)}</strong>
-        {toolbar}
-      </div>
-
-      <ul className="tt__legend" aria-label="Chú thích">
-        {legend.map((item) => (
-          <li key={item.tone}>
-            <span className={`tt__swatch tt__swatch--${item.tone}`} aria-hidden="true" />
-            {item.label}
-          </li>
-        ))}
-        {legendNote && <li className="tt__legend-note">{legendNote}</li>}
-      </ul>
+        <div className="mcal__side">
+          <ul className="mcal__legend" aria-label="Chú thích">
+            {legend.map((item) => (
+              <li key={item.tone}>
+                <i className={`mcal__dot mcal__dot--${item.tone}`} aria-hidden="true" />
+                {item.label}
+              </li>
+            ))}
+            {legendNote && <li className="mcal__legend-note">{legendNote}</li>}
+          </ul>
+          {(canCompact || toolbar) && (
+            <div className="mcal__extra">
+              {canCompact && (
+                <div className="mcal__switch" role="group" aria-label="Khung giờ">
+                  <button type="button" aria-pressed={!fullDay} onClick={() => setFullDay(false)}>
+                    {`${hourLabel(fittedHours[0])}–${hourLabel(fittedHours[fittedHours.length - 1] + 1)}`}
+                  </button>
+                  <button type="button" aria-pressed={fullDay} onClick={() => setFullDay(true)}>Cả ngày</button>
+                </div>
+              )}
+              {toolbar}
+            </div>
+          )}
+        </div>
+      </header>
 
       {error && (
-        <div className="portal-card portal-empty" role="alert">
-          <h3>Không tải được thời khóa biểu</h3>
+        <div className="mcal__state" role="alert">
+          <strong>Không tải được thời khóa biểu</strong>
           <p>{error}</p>
           {onRetry && <button type="button" className="btn-secondary btn-sm" onClick={onRetry}>Thử lại</button>}
         </div>
       )}
 
-      {!loading && !error && visibleCount === 0 && (
-        <p className="tt__note tt__note--empty" role="status">
-          {emptyText}.{onSlotClick ? ' Bấm vào một ô giờ trống để tạo lịch.' : ''}
-        </p>
-      )}
-
       {narrow && (
-        <div className="tt__daystrip" role="group" aria-label="Chọn ngày">
+        <div className="mcal__daystrip" role="group" aria-label="Chọn ngày">
           {days.map((day) => {
             const count = (eventsByDay.get(day) ?? []).filter((event) => event.tone !== 'cancelled' && isWithinRange(event)).length;
             return (
               <button
                 key={day}
                 type="button"
-                className={`tt__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
+                className={`mcal__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
                 aria-pressed={day === activeDay}
                 aria-label={`${weekdayLabel(day)} ${shortDate(day)}, ${count} buổi`}
                 onClick={() => setFocusDay(day)}
@@ -226,61 +246,56 @@ export function WeeklyTimetable({
         </div>
       )}
 
-      <div className="tt__scroll" aria-busy={loading} ref={scrollRef}>
-        {loading && <span className="sr-only" role="status">Đang tải thời khóa biểu...</span>}
+      {loading && <span className="sr-only" role="status">Đang tải thời khóa biểu...</span>}
+
+      <div className={`mcal__scroll${loading ? ' is-loading' : ''}`} aria-busy={loading} ref={scrollRef}>
         <div
-          className={`tt__grid${loading ? ' is-loading' : ''}${narrow ? ' is-single' : ''}`}
-          style={{ '--tt-days': visibleDays.length } as CSSProperties}
+          className={`mcal__week${narrow ? ' is-single' : ''}`}
+          style={{ '--mcal-hour': `${HOUR_PX}px`, '--mcal-rows': hours.length, '--mcal-days': visibleDays.length } as CSSProperties}
           ref={gridRef}
         >
-          <div className="tt__corner" aria-hidden="true" />
-          {visibleDays.map((day) => (
-            <div
-              key={day}
-              className={`tt__dayhead${day === today ? ' is-today' : ''}`}
-              aria-current={day === today ? 'date' : undefined}
-            >
-              <span>{weekdayLabel(day)}{day === today ? ' · Hôm nay' : ''}</span>
-              <strong>{shortDate(day)}</strong>
-            </div>
-          ))}
-
-          <div className="tt__gutter" aria-hidden="true">
-            {TIMETABLE_HOURS.map((hour, index) => (
-              <div key={hour} className="tt__hour">
-                <span>{hourLabel(hour)}</span>
-                {index === TIMETABLE_HOURS.length - 1 && <span className="tt__hour-end">{hourLabel(hour + 1)}</span>}
+          <div className="mcal__corner" aria-hidden="true" />
+          {visibleDays.map((day) => {
+            const dayEvents = (eventsByDay.get(day) ?? []).filter((event) => isWithinRange(event));
+            return (
+              <div key={day} className={`mcal__dayhead${day === today ? ' is-today' : ''}`} aria-current={day === today ? 'date' : undefined}>
+                <span className="mcal__dayname">{WEEKDAY_HEAD[days.indexOf(day)]}</span>
+                <strong className="mcal__daynum">{day.slice(8)}</strong>
+                <span className="mcal__dots" aria-hidden="true">
+                  {dayEvents.slice(0, 3).map((event) => <i key={event.id} className={`mcal__dot mcal__dot--${event.tone}`} />)}
+                </span>
               </div>
-            ))}
+            );
+          })}
+
+          <div className="mcal__gutter" aria-hidden="true">
+            {hours.map((hour) => <span key={hour}>{hourLabel(hour)}</span>)}
           </div>
 
           {visibleDays.map((day, dayIndex) => {
             const dayEvents = eventsByDay.get(day) ?? [];
             const busyEvents = dayEvents.filter((event) => event.tone !== 'cancelled');
-            const positioned = layoutDayEvents(dayEvents);
-            const showNow = day === today && nowMinutes >= TIMETABLE_HOURS[0] * 60
-              && nowMinutes < (TIMETABLE_HOURS[TIMETABLE_HOURS.length - 1] + 1) * 60;
+            const positioned = layoutDayEvents(dayEvents, firstHour, endHour);
+            const showNow = day === today && nowMinutes >= firstHour * 60 && nowMinutes < endHour * 60;
+            const weekend = days.indexOf(day) >= 5;
             return (
               <div
                 key={day}
-                className={`tt__day${day === today ? ' is-today' : ''}`}
+                className={`mcal__col${day === today ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}`}
                 role="group"
                 aria-label={`${weekdayLabel(day)} ${shortDate(day)}`}
               >
-                {TIMETABLE_HOURS.map((hour) => {
+                {onSlotClick && hours.map((hour, hourIndex) => {
                   const busy = busyEvents.some((event) => overlapsHour(event, hour));
                   const past = isPastSlot(day, hour);
-                  const className = `tt__slot${busy ? ' is-busy' : ' is-free'}${past ? ' is-past' : ''}`;
-                  if (!onSlotClick) {
-                    return <div key={hour} className={className} aria-hidden="true" />;
-                  }
                   const key = slotKey(day, hour);
                   const range = `${hourLabel(hour)}–${hourLabel(hour + 1)}`;
                   return (
                     <button
                       key={hour}
                       type="button"
-                      className={`${className} is-action`}
+                      className={`mcal__slot${busy ? ' is-busy' : ' is-free'}${past ? ' is-past' : ''}`}
+                      style={{ top: hourIndex * HOUR_PX }}
                       data-slot={key}
                       tabIndex={key === activeKey ? 0 : -1}
                       aria-disabled={past || undefined}
@@ -296,51 +311,60 @@ export function WeeklyTimetable({
                         onSlotClick({ date: day, startTime: hourLabel(hour), endTime: hourLabel(hour + 1) });
                       }}
                     >
-                      <span className="tt__plus" aria-hidden="true">+ {hourLabel(hour)}</span>
+                      <span className="mcal__slot-plus" aria-hidden="true">+ {hourLabel(hour)}</span>
                     </button>
                   );
                 })}
 
                 {showNow && (
                   <span
-                    className="tt__now"
+                    className="mcal__now"
                     aria-hidden="true"
-                    style={{ top: `${((nowMinutes - TIMETABLE_HOURS[0] * 60) / (TIMETABLE_HOURS.length * 60)) * 100}%` }}
+                    style={{ top: `${((nowMinutes - firstHour * 60) / (hours.length * 60)) * 100}%` }}
                   />
                 )}
 
-                {positioned.map(({ event, lane, lanes, topPct, heightPct }) => (
-                  <button
-                    key={event.id}
-                    type="button"
-                    className={`tt__event tt__event--${event.tone}${event.id === selectedId ? ' is-selected' : ''}${toMinutes(event.endTime) - toMinutes(event.startTime) < 50 ? ' is-compact' : ''}`}
-                    style={{
-                      top: `${topPct}%`,
-                      height: `${heightPct}%`,
-                      left: `calc(${(lane / lanes) * 100}% + 2px)`,
-                      width: `calc(${100 / lanes}% - 4px)`,
-                    } as CSSProperties}
-                    aria-label={event.ariaLabel}
-                    disabled={disabled}
-                    aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
-                    title={[event.title, `${hhmm(event.startTime)}–${hhmm(event.endTime)}`, event.meta, event.badge].filter(Boolean).join(' · ')}
-                    onClick={() => onEventClick(event.id)}
-                  >
-                    <span className="tt__event-body">
-                      <strong className="tt__event-title">{event.title}</strong>
-                      {event.badge && <span className="tt__event-badge">{event.badge}</span>}
-                      {event.meta && <span className="tt__event-meta">{event.meta}</span>}
-                    </span>
-                  </button>
-                ))}
+                {positioned.map(({ event, lane, lanes, topPct, heightPct }) => {
+                  const range = `${hhmm(event.startTime)} - ${hhmm(event.endTime)}`;
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      className={`mcal__event mcal__event--${event.tone}${event.id === selectedId ? ' is-selected' : ''}${blockClass((heightPct / 100) * rowsPx)}`}
+                      style={{
+                        top: `calc(${topPct}% + 3px)`,
+                        height: `calc(${heightPct}% - 6px)`,
+                        left: `calc(${(lane / lanes) * 100}% + 5px)`,
+                        width: `calc(${100 / lanes}% - 10px)`,
+                      }}
+                      aria-label={event.ariaLabel}
+                      disabled={disabled}
+                      aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
+                      title={[event.title, range, event.meta, event.badge].filter(Boolean).join(' · ')}
+                      onClick={() => onEventClick(event.id)}
+                    >
+                      <span className="mcal__event-top">
+                        <span className="mcal__event-time">{range}</span>
+                        {event.badge && <span className="mcal__event-badge">{event.badge}</span>}
+                      </span>
+                      <strong className="mcal__event-title">{event.title}</strong>
+                      {event.meta && <span className="mcal__event-place">{event.meta}</span>}
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
         </div>
+        {!loading && !error && visibleCount === 0 && (
+          <p className="mcal__empty" role="status">
+            {emptyText}.{onSlotClick ? ' Bấm vào một ô giờ để tạo lịch.' : ''}
+          </p>
+        )}
       </div>
 
       {outsideRange > 0 && (
-        <p className="tt__note" role="status">
+        <p className="mcal__note" role="status">
           {outsideRange} buổi học nằm ngoài khung 06:00–22:00 nên không hiện trên bảng.
         </p>
       )}

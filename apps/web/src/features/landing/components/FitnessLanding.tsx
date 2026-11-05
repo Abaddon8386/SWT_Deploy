@@ -5,7 +5,9 @@ import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { usePublicCatalog } from '../publicCatalog';
 import { CatalogPackages, CatalogSchedule, CatalogStatus, CatalogTrainers } from './CatalogSections';
+import { ProductShelf } from './ProductShelf';
 import { RoundArrow } from './PublicLayout';
+import { SplitHeading } from './SplitHeading';
 import { SportStack } from './SportStack';
 
 const tickerItems = [
@@ -272,30 +274,6 @@ const faqs = [
     answer: 'Đăng nhập vào Portal để xem lịch lớp và chỗ trống. Để đặt lớp, bạn cần có gói tập đang hoạt động, còn hạn và còn lượt đặt theo gói.',
   },
 ];
-
-function SplitHeading({ id, lines }: { id: string; lines: string[] }) {
-  let wordIndex = 0;
-  return <h2 id={id} className="fit-split-heading">
-    {lines.map((line, lineIdx) => {
-      const words = line.split(' ');
-      return <span key={lineIdx} className="fit-heading-line">
-        {words.map((word, idx) => {
-          const currentIdx = wordIndex++;
-          const isLastWord = lineIdx === lines.length - 1 && idx === words.length - 1;
-          return <span key={`${lineIdx}-${idx}`}>
-            <span className="fit-word">
-              <span style={{ '--word-index': currentIdx } as CSSProperties}>
-                {word}{isLastWord && <span className="fit-title-dot">.</span>}
-              </span>
-            </span>
-            {idx < words.length - 1 ? ' ' : ''}
-          </span>;
-        })}
-        {lineIdx < lines.length - 1 && <br />}
-      </span>;
-    })}
-  </h2>;
-}
 
 function CountUpMetric({ value, countTo, format }: { value: string; countTo: number; format: (n: number) => string }) {
   const ref = useRef<HTMLElement>(null);
@@ -719,6 +697,7 @@ export function FitnessLanding() {
       <div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
       {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="packages" />}
     </section>
+    <ProductShelf />
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
         <span className="fit-kicker">FAQ</span>

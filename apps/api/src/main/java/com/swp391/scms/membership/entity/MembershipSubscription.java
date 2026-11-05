@@ -42,9 +42,23 @@ public class MembershipSubscription {
     @Column(name = "qr_code", length = 255, unique = true)
     private String qrCode;
 
-    /** Quoted amount for an upgrade (difference or full price); null for ordinary purchases and renewals. */
+    /** Quoted amount for an upgrade: new package price minus {@link #creditApplied}; null for ordinary purchases and renewals. */
     @Column(name = "upgrade_charge", precision = 14, scale = 2)
     private BigDecimal upgradeCharge;
+
+    /**
+     * For an upgrade: unused value of the replaced period carried into this one, fixed when the upgrade is quoted.
+     * It comes from what the member actually paid, so later catalog price changes never alter it.
+     */
+    @Column(name = "credit_applied", precision = 14, scale = 2)
+    private BigDecimal creditApplied;
+
+    /**
+     * For a new registration or renewal: the catalog price when the request was made. Like an upgrade quote it is
+     * what the member pays even if the manager reprices the package before payment; null for older requests.
+     */
+    @Column(name = "quoted_price", precision = 14, scale = 2)
+    private BigDecimal quotedPrice;
 
     /** For an upgrade: the expiry the replaced period had before the upgrade cut it short. */
     @Column(name = "replaced_end_date")
@@ -102,9 +116,17 @@ public class MembershipSubscription {
     public void setQrCode(String qrCode) { this.qrCode = qrCode; }
     public BigDecimal getUpgradeCharge() { return upgradeCharge; }
     public void setUpgradeCharge(BigDecimal upgradeCharge) { this.upgradeCharge = upgradeCharge; }
-    /** What the member owes at the counter: the quoted upgrade charge, else the package price. */
+    public BigDecimal getCreditApplied() { return creditApplied; }
+    public void setCreditApplied(BigDecimal creditApplied) { this.creditApplied = creditApplied; }
+    public BigDecimal getQuotedPrice() { return quotedPrice; }
+    public void setQuotedPrice(BigDecimal quotedPrice) { this.quotedPrice = quotedPrice; }
+    /**
+     * What the member owes at the counter or on VNPay: the price fixed when the request was made (upgrade charge or
+     * quoted catalog price). Only requests created before prices were fixed fall back to the current package price.
+     */
     public BigDecimal payableAmount() {
         if (upgradeCharge != null) return upgradeCharge;
+        if (quotedPrice != null) return quotedPrice;
         return membershipPackage != null ? membershipPackage.getPrice() : null;
     }
     public String getHoldStatus() { return holdStatus; }

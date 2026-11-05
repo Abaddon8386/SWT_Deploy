@@ -473,12 +473,14 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   overflow-y: auto;
   padding-right: 8px;
   margin-top: 4px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   scrollbar-color: var(--portal-salmon) var(--portal-raised);
 }
 
 .students-list-wrap::-webkit-scrollbar {
-  width: 6px;
+  display: none;
+  width: 0;
 }
 
 .students-list-wrap::-webkit-scrollbar-track {

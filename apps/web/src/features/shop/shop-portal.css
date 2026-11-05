@@ -1,0 +1,690 @@
+/* Portal shop styles — scoped under .portal-v2 using --portal-* tokens only */
+
+.portal-v2 .shop-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Signature — Nutrition Facts paper label (only place allowed with paper/ink hex) */
+.portal-v2 .shop-facts {
+  --facts-ink: #202020;
+  background: #faf9f6;
+  color: var(--facts-ink);
+  border: 2px solid var(--facts-ink);
+  border-radius: 4px;
+  padding: 10px 12px 12px;
+  max-width: 420px;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-theme='light'] .portal-v2 .shop-facts {
+  background: #ffffff;
+}
+
+.portal-v2 .shop-facts table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.portal-v2 .shop-facts caption {
+  text-align: left;
+  font-weight: 900;
+  font-size: clamp(22px, 2.5vw, 28px);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  line-height: 1.05;
+  padding-bottom: 6px;
+  border-bottom: 10px solid var(--facts-ink);
+  color: var(--facts-ink);
+}
+
+.portal-v2 .shop-facts__serving td {
+  padding: 6px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  border-bottom: 5px solid var(--facts-ink);
+  color: var(--facts-ink);
+}
+
+.portal-v2 .shop-facts__head th {
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--facts-ink);
+  color: var(--facts-ink);
+}
+
+.portal-v2 .shop-facts tbody th,
+.portal-v2 .shop-facts tbody td {
+  padding: 5px 0;
+  font-size: 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--facts-ink) 35%, transparent);
+  text-align: left;
+  font-weight: 700;
+  color: var(--facts-ink);
+}
+
+.portal-v2 .shop-facts tbody tr.is-sub th {
+  padding-left: 16px;
+  font-weight: 500;
+}
+
+.portal-v2 .shop-facts .is-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.portal-v2 .shop-facts tbody tr:last-child > * {
+  border-bottom: 10px solid var(--facts-ink);
+}
+
+.portal-v2 .shop-facts__foot {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--facts-ink);
+}
+
+/* Packshot in Portal */
+.portal-v2 .shop-packshot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 6;
+  background: var(--portal-raised);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--portal-paper);
+}
+
+.portal-v2 .shop-packshot__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.portal-v2 .shop-packshot__svg {
+  width: 72%;
+  height: 78%;
+  display: block;
+}
+
+.portal-v2 .shop-packshot__vessel {
+  fill: var(--portal-surface);
+  stroke: var(--portal-border-strong);
+  stroke-width: 2;
+}
+
+.portal-v2 .shop-packshot__cap {
+  fill: var(--portal-ink);
+}
+
+.portal-v2 .shop-packshot__band {
+  fill: var(--portal-salmon);
+}
+
+.portal-v2 .shop-packshot__monogram {
+  fill: var(--portal-on-accent);
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+/* OrderStatusPill — semantic status classes using --portal-* tokens only */
+.portal-v2 .shop-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  border: 1px solid var(--portal-border);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+}
+
+.portal-v2 .shop-status-pill--pending_payment {
+  background: color-mix(in srgb, var(--portal-warning) 16%, transparent);
+  border-color: color-mix(in srgb, var(--portal-warning) 42%, transparent);
+  color: var(--portal-warning);
+}
+
+.portal-v2 .shop-status-pill--paid,
+.portal-v2 .shop-status-pill--processing {
+  background: var(--portal-tint);
+  border-color: color-mix(in srgb, var(--portal-salmon) 42%, transparent);
+  color: var(--portal-salmon);
+}
+
+.portal-v2 .shop-status-pill--shipping,
+.portal-v2 .shop-status-pill--ready_for_pickup {
+  background: color-mix(in srgb, var(--portal-info) 16%, transparent);
+  border-color: color-mix(in srgb, var(--portal-info) 42%, transparent);
+  color: var(--portal-info);
+}
+
+.portal-v2 .shop-status-pill--completed {
+  background: color-mix(in srgb, var(--portal-success) 16%, transparent);
+  border-color: color-mix(in srgb, var(--portal-success) 42%, transparent);
+  color: var(--portal-success);
+}
+
+.portal-v2 .shop-status-pill--cancelled {
+  background: color-mix(in srgb, var(--portal-danger) 14%, transparent);
+  border-color: color-mix(in srgb, var(--portal-danger) 40%, transparent);
+  color: var(--portal-danger);
+}
+
+/* Stepper & Variants inside Portal */
+.portal-v2 .shop-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 999px;
+  background: var(--portal-raised);
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-v2 .shop-stepper__btn {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--portal-paper);
+  font-size: 18px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.portal-v2 .shop-stepper__input {
+  width: 48px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--portal-paper);
+  text-align: center;
+  font: 700 14px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-v2 .shop-disclaimer {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--portal-muted);
+}
+
+/* Address Form, Region Selects & Address Cards in Portal */
+.portal-v2 .shop-address-form {
+  display: grid;
+  gap: 14px;
+}
+
+.portal-v2 .shop-region-selects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.portal-v2 .shop-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.portal-v2 .shop-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--portal-muted);
+}
+
+.portal-v2 .shop-input,
+.portal-v2 .shop-select,
+.portal-v2 .shop-textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--portal-border-strong);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font: 500 13px var(--font-sans);
+}
+
+.portal-v2 .shop-address-picker {
+  display: grid;
+  gap: 12px;
+}
+
+.portal-v2 .shop-address-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--portal-border);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  cursor: pointer;
+}
+
+.portal-v2 .shop-address-option.is-selected {
+  border-color: var(--portal-salmon);
+  background: var(--portal-tint);
+}
+
+.portal-v2 .portal-dialog.shop-staff-dialog {
+  width: min(680px, 94vw);
+  max-width: 680px;
+}
+
+.portal-v2 .portal-dialog .portal-dialog__body {
+  width: 100%;
+  min-width: 0;
+}
+
+.portal-v2 .portal-dialog .portal-table {
+  min-width: 0;
+  width: 100%;
+}
+
+/* Timeline & Order Cards */
+.portal-v2 .shop-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.portal-v2 .shop-timeline__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-v2 .shop-timeline__step.is-reached {
+  color: var(--portal-paper);
+}
+
+.portal-v2 .shop-timeline__dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid var(--portal-border-strong);
+  background: transparent;
+}
+
+.portal-v2 .shop-timeline__step.is-reached .shop-timeline__dot {
+  border-color: var(--portal-salmon);
+  background: var(--portal-salmon);
+}
+
+@media (max-width: 767px) {
+  .portal-v2 .shop-region-selects {
+    grid-template-columns: 1fr;
+  }
+  .portal-v2 :is(.shop-input, .shop-select, .shop-textarea, .shop-stepper__input) {
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+/* Portal Shop Catalog & Product Cards (Desktop + Mobile) */
+.portal-v2 .portal-shop-toolbar {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.4fr) repeat(2, minmax(150px, 1fr)) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.portal-v2 .portal-shop-stock-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--portal-border);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.portal-v2 .shop-goal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.portal-v2 .shop-goal-chips button {
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--portal-border-strong);
+  background: var(--portal-raised);
+  color: var(--portal-muted);
+  font: 600 13px var(--font-sans);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.portal-v2 .shop-goal-chips button:hover {
+  color: var(--portal-paper);
+  border-color: var(--portal-salmon);
+}
+
+.portal-v2 .shop-goal-chips button[aria-pressed='true'] {
+  background: var(--portal-salmon);
+  border-color: var(--portal-salmon);
+  color: var(--portal-on-accent);
+}
+
+.portal-v2 .portal-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.portal-v2 .shop-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--portal-border);
+  background: var(--portal-surface);
+  color: var(--portal-paper);
+  min-width: 0;
+}
+
+.portal-v2 .shop-card__media {
+  position: relative;
+  display: block;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--portal-raised);
+  text-decoration: none;
+}
+
+.portal-v2 .shop-packshot__img {
+  object-fit: cover;
+}
+
+.portal-v2 .shop-card__badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.portal-v2 .shop-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.portal-v2 .shop-badge--new {
+  background: var(--portal-salmon);
+  color: var(--portal-on-accent);
+}
+
+.portal-v2 .shop-badge--low {
+  background: color-mix(in srgb, var(--portal-warning) 20%, var(--portal-surface));
+  border: 1px solid color-mix(in srgb, var(--portal-warning) 50%, transparent);
+  color: var(--portal-warning);
+}
+
+.portal-v2 .shop-badge--out {
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border-strong);
+  color: var(--portal-muted);
+}
+
+.portal-v2 .shop-card__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--portal-salmon);
+}
+
+.portal-v2 .shop-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.portal-v2 .shop-card__title a {
+  color: var(--portal-paper);
+  text-decoration: none;
+}
+
+.portal-v2 .shop-card__highlight {
+  margin: 0;
+  font-size: 13px;
+  color: var(--portal-muted);
+}
+
+.portal-v2 .shop-card__pricing {
+  margin-top: auto;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-v2 .shop-card__price {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--portal-paper);
+}
+
+.portal-v2 .shop-card__pps {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--portal-salmon);
+}
+
+.portal-v2 .shop-card__cta {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--portal-salmon);
+  color: var(--portal-on-accent);
+  font: 700 13px var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.portal-v2 .shop-card__cta:disabled {
+  background: var(--portal-raised);
+  color: var(--portal-muted);
+  cursor: not-allowed;
+}
+
+.portal-v2 .shop-cart-btn {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--portal-border-strong);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.portal-v2 .shop-cart-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--portal-salmon);
+  color: var(--portal-on-accent);
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-v2 .shop-variants {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.portal-v2 .shop-variants__legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--portal-muted);
+}
+
+.portal-v2 .shop-variants__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.portal-v2 .shop-variant-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--portal-border-strong);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font: 600 13px var(--font-sans);
+  cursor: pointer;
+}
+
+.portal-v2 .shop-variant-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.portal-v2 .shop-variant-pill.is-selected {
+  border-color: var(--portal-salmon);
+  background: var(--portal-tint);
+  color: var(--portal-salmon);
+}
+
+.portal-v2 .shop-variant-pill.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.portal-v2 .portal-shop-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.portal-v2 .portal-shop-cart-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--portal-salmon);
+  background: var(--portal-surface);
+  color: var(--portal-paper);
+}
+
+@media (max-width: 1099px) {
+  .portal-v2 .portal-shop-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .portal-v2 .portal-shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 679px) {
+  .portal-v2 .portal-container,
+  .portal-v2 .portal-container > *,
+  .portal-v2 .stack > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .portal-v2 .portal-tabs {
+    flex-wrap: wrap;
+  }
+  .portal-v2 .portal-shop-toolbar {
+    grid-template-columns: 1fr;
+  }
+  .portal-v2 .portal-shop-grid {
+    grid-template-columns: 1fr;
+  }
+  .portal-v2 .portal-shop-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .portal-v2 .shop-goal-chips {
+    flex-wrap: wrap;
+  }
+  .portal-v2 .shop-goal-chips button {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+}

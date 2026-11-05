@@ -131,11 +131,11 @@ export function StaffSupportPage() {
     event.preventDefault();
     const reason = escalationReason.trim();
     if (!ticket || !reason || reason.length > 500) return;
-    setEscalating(false); setEscalationReason('');
-    void actOnTicket(() => escalateSupportTicket(ticket.id, reason), undefined, 'Đã chuyển khiếu nại lên quản lý.');
+    if (!ticket || !reason || reason.length > 500 || isBusy) return;
+    void actOnTicket(async () => { const updated = await escalateSupportTicket(ticket.id, reason); if (alive.current) { setEscalating(false); setEscalationReason(''); } return updated; }, undefined, 'Đã chuyển khiếu nại lên quản lý.');
   }
   return <div className="portal-container member-support staff-support">
-    <PageHeader eyebrow={isManager ? 'Quản lý' : 'Lễ tân'} title={isManager ? 'Khiếu nại chuyển lên quản lý' : 'Hộp thư hỗ trợ'} subtitle={isManager ? 'Các khiếu nại lễ tân chưa xử lý được. Xem lý do chuyển cấp, phản hồi và quyết định.' : 'Tiếp nhận và xử lý khiếu nại của hội viên. Việc lễ tân không xử lý được thì chuyển lên quản lý.'} />
+    <PageHeader eyebrow={isManager ? 'Quản lý' : 'Lễ tân'} title={isManager ? 'Khiếu nại chuyển lên quản lý' : 'Hộp thư hỗ trợ'} />
     <p role="status" className="member-support-context">{connections[connection]}</p>
     <section className="portal-card" ref={listFocus} tabIndex={-1}>
       <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">Trạng thái</label><select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">Tất cả</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><RefreshButton disabled={loading} onClick={() => void loadList()} /></div>
@@ -155,12 +155,13 @@ export function StaffSupportPage() {
         {ticket.status === 'closed' ? <p className="member-support-context">Phiếu đã đóng, không thể gửi thêm tin nhắn.</p> : !canAct(ticket) ? null : <form className="member-support-compose" onSubmit={send}><label className="portal-label" htmlFor="staff-support-message">Tin nhắn</label><textarea id="staff-support-message" className="portal-textarea" rows={3} maxLength={2000} value={drafts[ticket.id] ?? ''} disabled={isBusy} onChange={event => { const value = event.target.value; setDrafts(values => ({ ...values, [ticket.id]: value })); }} /><button type="submit" className="btn-primary" disabled={isBusy || detailLoading || !drafts[ticket.id]?.trim()}>{isBusy ? 'Đang gửi…' : 'Gửi tin nhắn'}</button></form>}
       </>}
     </div></Modal>}
-    {escalating && ticket && <Modal title={`Chuyển lên quản lý · Phiếu #${ticket.id}`} onClose={() => setEscalating(false)}>
+    {escalating && ticket && <Modal title={`Chuyển lên quản lý · Phiếu #${ticket.id}`} busy={isBusy} onClose={() => { if (!isBusy) setEscalating(false); }}>
       <form className="member-support-compose" onSubmit={submitEscalation}>
         <p className="member-support-context">Quản lý sẽ tiếp nhận và phản hồi hội viên. Sau khi chuyển, lễ tân không xử lý phiếu này nữa.</p>
         <label className="portal-label" htmlFor="staff-support-escalation">Lý do chuyển lên quản lý</label>
         <textarea id="staff-support-escalation" className="portal-textarea" rows={3} maxLength={500} required value={escalationReason} onChange={event => setEscalationReason(event.target.value)} />
-        <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setEscalating(false)}>Hủy</button><button type="submit" className="btn-primary" disabled={!escalationReason.trim()}>Chuyển lên quản lý</button></div>
+        {actionErrors[ticket.id] && <p role="alert" className="member-support-error">{actionErrors[ticket.id]}</p>}
+        <div className="form-actions"><button type="button" className="btn-secondary" disabled={isBusy} onClick={() => setEscalating(false)}>Hủy</button><button type="submit" className="btn-primary" disabled={isBusy || !escalationReason.trim()}>{isBusy ? 'Đang chuyển…' : 'Chuyển lên quản lý'}</button></div>
       </form>
     </Modal>}
   </div>;

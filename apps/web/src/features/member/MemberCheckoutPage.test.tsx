@@ -4,15 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { MemberCheckoutPage } from './MemberCheckoutPage';
 import * as membershipApi from './membershipApi';
+import * as walletApi from '../wallet/walletApi';
 
 vi.mock('./membershipApi', () => ({
   getMembershipPackages: vi.fn(),
   getMembershipHistory: vi.fn(),
   createMembershipSubscription: vi.fn(),
-  createCashReceiptPayment: vi.fn(),
 }));
-vi.mock('../../shared/lib/receiptImage', () => ({
-  readReceiptImage: vi.fn(async () => 'data:image/jpeg;base64,AAAA'),
+
+vi.mock('../wallet/walletApi', () => ({
+  payWithWallet: vi.fn(),
 }));
 
 describe('MemberCheckoutPage Component', () => {
@@ -70,6 +71,7 @@ describe('MemberCheckoutPage Component', () => {
       previousSubscriptionId: null,
       upgradeCharge: null,
     });
+    vi.mocked(walletApi.payWithWallet).mockResolvedValue({ balance: 500000, updatedAt: '2026-11-05T10:00:00', transactions: [] });
   });
 
   afterEach(async () => {
@@ -92,29 +94,6 @@ describe('MemberCheckoutPage Component', () => {
     });
   }
 
-  async function submitForm() {
-    const submitBtn = host.querySelector('form button[type="submit"]') as HTMLButtonElement;
-    expect(submitBtn).not.toBeNull();
-    await act(async () => {
-      submitBtn.click();
-    });
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 20));
-    });
-  }
-
-  async function attachReceipt() {
-    const input = host.querySelector('#receipt-image') as HTMLInputElement;
-    expect(input).not.toBeNull();
-    Object.defineProperty(input, 'files', { value: [new File(['x'], 'bill.jpg', { type: 'image/jpeg' })], configurable: true });
-    await act(async () => {
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-  }
-
   it('renders order summary and package details correctly', async () => {
     await renderCheckout('/member/packages/checkout?packageId=1');
 
@@ -125,53 +104,65 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.textContent).toContain('650.000');
   });
 
-  it('has no counter appointment picker and asks for a receipt photo for cash payment', async () => {
+  it('shows VNPay and Wallet payment buttons, removes cash receipt upload and top-up buttons, and displays receptionist cash note', async () => {
     await renderCheckout('/member/packages/checkout?packageId=1');
 
-    expect(host.querySelector('#appointment-date')).toBeNull();
-    expect(host.querySelector('.time-slot-btn')).toBeNull();
-    expect(host.textContent).not.toContain('tới quầy');
-    expect(host.querySelector('#receipt-image')).not.toBeNull();
-    expect(host.querySelector<HTMLButtonElement>('form button[type="submit"]')!.disabled).toBe(true);
+    expect(host.querySelector('#receipt-image')).toBeNull();
+    expect(host.textContent).toContain('Thanh toán VNPay Sandbox');
+    expect(host.textContent).toContain('Thanh toán bằng Ví SÖL');
+    expect(host.textContent).not.toContain('Nạp thêm tiền');
+    expect(host.textContent).toContain('Lưu ý: Nếu bạn muốn thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy');
   });
 
-  it('creates the request only when the page is opened without one, then sends the receipt', async () => {
-    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, id: 101, packageId: 1 }]);
+  it('creates the subscription request when opened without one and pays with Wallet', async () => {
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([]);
     await renderCheckout('/member/packages/checkout?packageId=1');
 
-    await attachReceipt();
-    await submitForm();
+    const walletBtn = host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement;
+    expect(walletBtn).not.toBeNull();
+    await act(async () => {
+      walletBtn.click();
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
 
     expect(membershipApi.createMembershipSubscription).toHaveBeenCalledExactlyOnceWith(1);
-    expect(membershipApi.createCashReceiptPayment).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ id: 101 }), 650000, 'data:image/jpeg;base64,AAAA');
-    expect(host.textContent).toContain('Đã gửi ảnh hóa đơn');
-    expect(host.textContent).toContain('Đơn #101');
+    expect(walletApi.payWithWallet).toHaveBeenCalledExactlyOnceWith({ subscriptionId: 101 });
   });
 
-  it('reuses an existing request and charges the quoted upgrade amount, not the list price', async () => {
+  it('reuses an existing request and displays the quoted upgrade amount, not the list price', async () => {
     await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
 
     expect(host.querySelector('.order-breakdown-row.total')?.textContent).toContain('1.150.000');
 
-    await attachReceipt();
-    await submitForm();
+    const walletBtn = host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement;
+    await act(async () => {
+      walletBtn.click();
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
 
     expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
-    expect(membershipApi.createCashReceiptPayment).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ id: 55 }), 1150000, 'data:image/jpeg;base64,AAAA');
-    expect(host.textContent).toContain('Đơn #55');
+    expect(walletApi.payWithWallet).toHaveBeenCalledExactlyOnceWith({ subscriptionId: 55 });
   });
 
-  it('shows the error and does not claim success when the receipt cannot be sent', async () => {
-    vi.mocked(membershipApi.createCashReceiptPayment).mockRejectedValue(new Error('Đã có thanh toán cho yêu cầu này'));
-    await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
+  it('charges the price fixed on a pending renewal after the package was repriced', async () => {
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([
+      {
+        ...pendingUpgrade,
+        id: 56,
+        packageId: 1,
+        packageName: 'Gói Tiêu Chuẩn 1 Tháng',
+        upgradeCharge: null,
+        quotedPrice: 600000,
+      },
+    ]);
+    await renderCheckout('/member/packages/checkout?packageId=1&subscriptionId=56');
 
-    await attachReceipt();
-    await submitForm();
-
-    expect(host.textContent).not.toContain('Đã gửi ảnh hóa đơn');
-    expect(host.textContent).toContain('Đã có thanh toán cho yêu cầu này');
+    expect(host.querySelector('.order-breakdown-row.total')?.textContent).toContain('600.000');
+    expect(host.querySelector('.order-breakdown-row.total')?.textContent).not.toContain('650.000');
   });
 
   it('displays error state when packageId is invalid', async () => {

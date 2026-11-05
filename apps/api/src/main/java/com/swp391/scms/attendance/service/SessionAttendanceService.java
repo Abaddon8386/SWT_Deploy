@@ -309,7 +309,7 @@ public class SessionAttendanceService {
 
                 SessionAttendance saved = attendanceRepository.saveAndFlush(attendance);
 
-                if (item.progressScore() != null && evaluationRepository != null) {
+                if (Boolean.TRUE.equals(request.publishEvaluations()) && item.progressScore() != null && evaluationRepository != null) {
                     SessionEvaluation eval = existingEvalMap.getOrDefault(member.getUserId(), new SessionEvaluation());
                     eval.setSession(session);
                     eval.setMember(member);
@@ -321,7 +321,7 @@ public class SessionAttendanceService {
                         eval.setCreatedAt(now);
                     }
                     evaluationRepository.save(eval);
-                    if (request.publishEvaluations() && notificationService != null) notificationService.notifyEvaluation(member.getUserId());
+                    if (notificationService != null) notificationService.notifyEvaluation(member.getUserId());
                 }
 
                 User user = member.getUser();

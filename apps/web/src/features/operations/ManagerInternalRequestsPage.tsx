@@ -127,7 +127,6 @@ export function ManagerInternalRequestsPage() {
       <PageHeader
         eyebrow="Quản lý trung tâm"
         title="Phê duyệt đơn từ nội bộ"
-        subtitle="Tiếp nhận, xử lý và phê duyệt đơn xin nghỉ phép, đổi ca làm việc và đổi lịch dạy từ đội ngũ nhân sự."
       />
 
       {/* Filter and controls bar */}
@@ -401,8 +400,10 @@ export function ManagerInternalRequestsPage() {
                   {req.startDate && (
                     <div>
                       <strong style={{ color: 'var(--portal-muted)' }}>Thời gian:</strong>{' '}
-                      {req.startDate}
-                      {req.endDate && req.endDate !== req.startDate ? ` đến ${req.endDate}` : ''}
+                      {formatCenterDate(req.startDate)}
+                      {req.endDate && req.endDate !== req.startDate ? ` đến ${formatCenterDate(req.endDate)}` : ''}
+                      {req.replacementUserFullName ? ` · Thay thế: ${req.replacementUserFullName}` : ''}
+
                     </div>
                   )}
 
@@ -540,8 +541,10 @@ export function ManagerInternalRequestsPage() {
               </div>
               {reviewTarget.startDate && (
                 <div>
-                  <strong>Thời gian đề xuất:</strong> {reviewTarget.startDate}
-                  {reviewTarget.endDate && ` đến ${reviewTarget.endDate}`}
+                  <strong>Thời gian đề xuất:</strong> {formatCenterDate(reviewTarget.startDate)}
+                  {reviewTarget.endDate && ` đến ${formatCenterDate(reviewTarget.endDate)}`}
+                  {reviewTarget.replacementUserFullName ? ` · Thay thế: ${reviewTarget.replacementUserFullName}` : ''}
+
                 </div>
               )}
             </div>

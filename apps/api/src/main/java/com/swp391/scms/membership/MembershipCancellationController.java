@@ -5,7 +5,6 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.membership.dto.CancellationDtos;
 import com.swp391.scms.membership.service.MembershipCancellationService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
-import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,8 +34,16 @@ public class MembershipCancellationController {
         return ApiResponse.ok(msg("membership.cancellation.list"), service.mine(principal));
     }
 
+    @PostMapping("/staff-request")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER')")
+    public ApiResponse<CancellationDtos.Response> staffRequest(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @Valid @RequestBody CancellationDtos.StaffRequest body) {
+        return ApiResponse.ok(msg("membership.cancellation.requested"), service.staffRequest(principal, body));
+    }
+
     @GetMapping
-    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ApiResponse<List<CancellationDtos.Response>> all() {
         return ApiResponse.ok(msg("membership.cancellation.list"), service.all());
     }
@@ -44,15 +51,17 @@ public class MembershipCancellationController {
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasRole('CENTER_MANAGER')")
     public ApiResponse<CancellationDtos.Response> approve(@AuthenticationPrincipal AuthenticatedPrincipal principal,
-            @PathVariable Long id, @Valid @RequestBody CancellationDtos.Decision body) {
-        return ApiResponse.ok(msg("membership.cancellation.approved"), service.decide(principal, id, true, body));
+            @PathVariable Long id, @Valid @RequestBody(required = false) CancellationDtos.Decision body) {
+        return ApiResponse.ok(msg("membership.cancellation.approved"),
+                service.decide(principal, id, true, body != null ? body : new CancellationDtos.Decision(null)));
     }
 
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasRole('CENTER_MANAGER')")
     public ApiResponse<CancellationDtos.Response> reject(@AuthenticationPrincipal AuthenticatedPrincipal principal,
-            @PathVariable Long id, @Valid @RequestBody CancellationDtos.Decision body) {
-        return ApiResponse.ok(msg("membership.cancellation.rejected"), service.decide(principal, id, false, body));
+            @PathVariable Long id, @Valid @RequestBody(required = false) CancellationDtos.Decision body) {
+        return ApiResponse.ok(msg("membership.cancellation.rejected"),
+                service.decide(principal, id, false, body != null ? body : new CancellationDtos.Decision(null)));
     }
 
     private String msg(String key) {
