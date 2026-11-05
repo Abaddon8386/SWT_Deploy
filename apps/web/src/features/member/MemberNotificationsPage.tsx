@@ -7,6 +7,7 @@ import { getCurrentUser } from '../../shared/api/client';
 import { errorMessage as safeMessage } from '../../shared/lib/errorMessage';
 import { markNoticesRead, usePortalNotices } from '../../shared/lib/portalNotices';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
+import { localizeTitle, localizeMessage } from './notificationLocalizer';
 
 const category: Record<string, { label: string }> = {
   schedule_change: { label: 'Lịch học' },
@@ -103,7 +104,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
         <button type="button" className="notification-action notification-copy" onClick={() => {
           onNavigate?.();
           navigate(safeNotificationPath(notice.destination, role) ?? notificationDestination({ relatedEntityType: null, type: 'system' }, role));
-        }}><span>{notice.message}</span><small>{formatCenterDateTime(new Date(notice.createdAt).toISOString())}</small></button>
+        }}><span>{localizeMessage(notice.message)}</span><small>{formatCenterDateTime(new Date(notice.createdAt).toISOString())}</small></button>
         {notice.action && <button type="button" className="notification-action" onClick={notice.action.run}>{notice.action.label}</button>}
       </li>)}
     </ul>}
@@ -112,7 +113,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
       <div className="portal-empty"><h3>Chưa có thông báo</h3><p>Thông báo mới sẽ xuất hiện tại đây.</p></div> :
       <div className="notification-list" aria-label="Danh sách thông báo">
         {data?.content.map((item) => <button key={item.id} type="button" className={`notification-item${item.isRead ? '' : ' notification-item--unread'}`} disabled={busy} onClick={() => void open(item)}>
-          <span className="notification-copy"><small className="notification-category">{category[item.type?.toLowerCase()]?.label ?? 'Hệ thống'}</small><strong>{item.title}</strong><span>{item.message}</span><small>{formatCenterDateTime(item.createdAt)}</small></span>
+          <span className="notification-copy"><small className="notification-category">{category[item.type?.toLowerCase()]?.label ?? 'Hệ thống'}</small><strong>{localizeTitle(item.title)}</strong><span>{localizeMessage(item.message)}</span><small>{formatCenterDateTime(item.createdAt)}</small></span>
           {!item.isRead && <span className="notification-dot" aria-label="Chưa đọc" />}
         </button>)}
       </div>}
