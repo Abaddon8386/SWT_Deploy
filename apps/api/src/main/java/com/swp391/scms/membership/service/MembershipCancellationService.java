@@ -161,11 +161,17 @@ public class MembershipCancellationService {
             String pkgName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
             for (User mgr : users.findActiveManagers()) {
                 try {
+                    String title = messages != null
+                            ? messages.getMessage("notifications.membership.cancellation.staff_request.title")
+                            : "Yêu cầu hủy gói tập & hoàn tiền mới";
+                    String msgBody = messages != null
+                            ? messages.getMessage("notifications.membership.cancellation.staff_request.body", memberName, pkgName, refundAmount.toPlainString(), "100", reason)
+                            : ("Lễ tân vừa trình yêu cầu hủy gói " + pkgName + " của hội viên " + memberName
+                                    + " (Hoàn dự kiến: " + refundAmount.toPlainString() + " đ). Lý do: " + reason);
                     notificationService.send(
                             mgr.getId(),
-                            "Yêu cầu hủy gói tập & hoàn tiền mới",
-                            "Lễ tân vừa trình yêu cầu hủy gói " + pkgName + " của hội viên " + memberName
-                                    + " (Hoàn dự kiến: " + refundAmount.toPlainString() + " đ). Lý do: " + reason,
+                            title,
+                            msgBody,
                             "system",
                             "cancellation_request",
                             saved.getId(),
@@ -242,10 +248,22 @@ public class MembershipCancellationService {
                         request.getReason());
             } else if (notificationService != null) {
                 try {
+                    String pkgName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
+                    String noteSuffix = (body != null && body.note() != null && !body.note().isBlank())
+                            ? (messages != null
+                                    ? messages.getMessage("notifications.membership.cancellation.manager_note", body.note().trim())
+                                    : (" Ghi chú: " + body.note().trim()))
+                            : "";
+                    String title = messages != null
+                            ? messages.getMessage("notifications.membership.cancellation.approved_no_refund.title")
+                            : "Gói tập đã được duyệt hủy";
+                    String msgBody = messages != null
+                            ? messages.getMessage("notifications.membership.cancellation.approved_no_refund.body", pkgName, noteSuffix)
+                            : ("Yêu cầu hủy gói tập của bạn đã được Quản lý phê duyệt." + noteSuffix);
                     notificationService.send(
                             memberId,
-                            "Gói tập đã được duyệt hủy",
-                            "Yêu cầu hủy gói tập của bạn đã được Quản lý phê duyệt.",
+                            title,
+                            msgBody,
                             "payment",
                             "cancellation_request",
                             request.getId(),
@@ -255,14 +273,18 @@ public class MembershipCancellationService {
             }
 
             if (notificationService != null && request.getRequestedBy() != null && request.getRequestedBy().getId() != null) {
-                String memberName = request.getMember() != null && request.getMember().getUser() != null
-                        ? request.getMember().getUser().getFullName()
-                        : ("#" + memberId);
+                String pkgName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
+                String title = messages != null
+                        ? messages.getMessage("notifications.membership.cancellation.approved_refund.title")
+                        : "Quản lý đã duyệt yêu cầu hủy gói & hoàn tiền";
+                String msgBody = messages != null
+                        ? messages.getMessage("notifications.membership.cancellation.approved_refund.body", pkgName, refundAmount != null ? refundAmount.toPlainString() : "0", "100", "")
+                        : "Yêu cầu hủy gói của hội viên đã được phê duyệt. Tiền hoàn đã chuyển vào Ví hội viên.";
                 try {
                     notificationService.send(
                             request.getRequestedBy().getId(),
-                            "Quản lý đã duyệt yêu cầu hủy gói & hoàn tiền",
-                            "Yêu cầu hủy gói của hội viên " + memberName + " đã được phê duyệt. Tiền hoàn đã chuyển vào Ví hội viên.",
+                            title,
+                            msgBody,
                             "system",
                             "cancellation_request",
                             request.getId(),
@@ -272,12 +294,25 @@ public class MembershipCancellationService {
             }
         } else {
             if (notificationService != null) {
+                String pkgName = request.getSubscription() != null && request.getSubscription().getMembershipPackage() != null
+                        ? request.getSubscription().getMembershipPackage().getName()
+                        : "";
+                String noteSuffix = (body != null && body.note() != null && !body.note().isBlank())
+                        ? (messages != null
+                                ? messages.getMessage("notifications.membership.cancellation.manager_note", body.note().trim())
+                                : (" Ghi chú: " + body.note().trim()))
+                        : "";
+                String title = messages != null
+                        ? messages.getMessage("notifications.membership.cancellation.rejected.title")
+                        : "Yêu cầu hủy gói tập bị từ chối";
+                String msgBody = messages != null
+                        ? messages.getMessage("notifications.membership.cancellation.rejected.body", pkgName, noteSuffix)
+                        : ("Yêu cầu hủy gói tập chưa được Quản lý phê duyệt." + noteSuffix);
                 try {
                     notificationService.send(
                             memberId,
-                            "Yêu cầu hủy gói tập bị từ chối",
-                            "Yêu cầu hủy gói tập chưa được Quản lý phê duyệt."
-                                    + (body != null && body.note() != null && !body.note().isBlank() ? " Ghi chú: " + body.note().trim() : ""),
+                            title,
+                            msgBody,
                             "system",
                             "cancellation_request",
                             request.getId(),
@@ -288,8 +323,8 @@ public class MembershipCancellationService {
                     try {
                         notificationService.send(
                                 request.getRequestedBy().getId(),
-                                "Quản lý đã từ chối yêu cầu hủy gói",
-                                "Yêu cầu hủy gói #" + request.getId() + " đã bị Quản lý từ chối.",
+                                title,
+                                msgBody,
                                 "system",
                                 "cancellation_request",
                                 request.getId(),

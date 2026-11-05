@@ -130,27 +130,33 @@ public class ProfileService {
                     .findFirst()
                     .orElseThrow(() -> new BadRequestException(
                             "INVALID_AVATAR_FORMAT",
+                            "error.profile.avatar.invalid_format",
+                            null,
                             "Ảnh đại diện chỉ hỗ trợ định dạng image/jpeg, image/png hoặc image/webp."
                     ));
             String base64Payload = trimmed.substring(matchedPrefix.length()).replaceAll("\\s+", "");
             if (base64Payload.isEmpty()) {
-                throw new BadRequestException("INVALID_AVATAR_DATA", "Dữ liệu ảnh đại diện không hợp lệ.");
+                throw new BadRequestException("INVALID_AVATAR_DATA", "error.profile.avatar.invalid_data", null, "Dữ liệu ảnh đại diện không hợp lệ.");
             }
             byte[] decoded;
             try {
                 decoded = Base64.getDecoder().decode(base64Payload);
             } catch (IllegalArgumentException ex) {
-                throw new BadRequestException("INVALID_AVATAR_DATA", "Dữ liệu base64 của ảnh đại diện không hợp lệ.");
+                throw new BadRequestException("INVALID_AVATAR_DATA", "error.profile.avatar.invalid_base64", null, "Dữ liệu base64 của ảnh đại diện không hợp lệ.");
             }
             if (decoded.length == 0 || decoded.length > MAX_AVATAR_BYTES) {
                 throw new BadRequestException(
                         "AVATAR_TOO_LARGE",
+                        "error.profile.avatar.too_large",
+                        null,
                         "Dung lượng ảnh đại diện không được vượt quá 2MB."
                 );
             }
         } else if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("/")) {
             throw new BadRequestException(
                     "INVALID_AVATAR_URL",
+                    "error.profile.avatar.invalid_url",
+                    null,
                     "Đường dẫn ảnh đại diện không hợp lệ."
             );
         }

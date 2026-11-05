@@ -26,9 +26,9 @@ import java.math.BigDecimal;
 public class WalletController {
 
     public record TopupRequest(
-            @NotNull(message = "Vui lòng nhập số tiền cần nạp.")
-            @DecimalMin(value = "10000", message = "Số tiền nạp tối thiểu là 10.000 đ.")
-            @DecimalMax(value = "100000000", message = "Số tiền nạp tối đa mỗi lần là 100.000.000 đ.")
+            @NotNull(message = "{validation.wallet.amount.not_null}")
+            @DecimalMin(value = "10000", message = "{validation.wallet.amount.min}")
+            @DecimalMax(value = "100000000", message = "{validation.wallet.amount.max}")
             BigDecimal amount
     ) {}
 
@@ -68,7 +68,10 @@ public class WalletController {
             @Valid @RequestBody TopupRequest body,
             HttpServletRequest request) {
         String ip = request != null && request.getRemoteAddr() != null ? request.getRemoteAddr() : "127.0.0.1";
-        return ApiResponse.ok("Đã tạo liên kết nạp tiền vào Ví qua VNPay Sandbox", vnpayPaymentService.topupWallet(principal, body.amount(), ip));
+        String msg = messageService != null
+                ? messageService.getMessage("wallet.topup.vnpay.created")
+                : "Đã tạo liên kết nạp tiền vào Ví qua VNPay Sandbox";
+        return ApiResponse.ok(msg, vnpayPaymentService.topupWallet(principal, body.amount(), ip));
     }
 
     @PostMapping("/pay")
@@ -76,6 +79,9 @@ public class WalletController {
     public ApiResponse<WalletDto> payWithWallet(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @Valid @RequestBody VnpayDtos.CheckoutRequest body) {
-        return ApiResponse.ok("Thanh toán bằng Ví SÖL thành công", vnpayPaymentService.payWithWallet(principal, body));
+        String msg = messageService != null
+                ? messageService.getMessage("wallet.pay.success")
+                : "Thanh toán bằng Ví SÖL thành công";
+        return ApiResponse.ok(msg, vnpayPaymentService.payWithWallet(principal, body));
     }
 }

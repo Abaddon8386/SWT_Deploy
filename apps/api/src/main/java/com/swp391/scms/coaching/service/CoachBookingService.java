@@ -231,7 +231,7 @@ public class CoachBookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Coach", request.coachId()));
 
         if (!"active".equalsIgnoreCase(coach.getEmploymentStatus())) {
-            throw new BadRequestException("COACH_INACTIVE", "error.coach.inactive", "Huấn luyện viên hiện không nhận học viên.");
+            throw new BadRequestException("COACH_INACTIVE", "error.coach.inactive", null, "Huấn luyện viên hiện không nhận học viên.");
         }
         if (request.bookingDate() != null && onLeave(coach.getUserId(), request.bookingDate())) {
             throw new ConflictException("COACH_ON_LEAVE", "error.coach_booking.coach_on_leave",
@@ -241,19 +241,19 @@ public class CoachBookingService {
         String paymentMethod = request.paymentMethod() != null
                 ? request.paymentMethod().trim().toLowerCase(java.util.Locale.ROOT) : "package_quota";
         if (!ALLOWED_PAYMENT_METHODS.contains(paymentMethod)) {
-            throw new BadRequestException("INVALID_PAYMENT_METHOD", "error.coach_booking.invalid_payment_method",
+            throw new BadRequestException("INVALID_PAYMENT_METHOD", "error.coach_booking.invalid_payment_method", null,
                     "Unsupported payment method.");
         }
 
         if (request.endTime().isBefore(request.startTime()) || request.endTime().equals(request.startTime())) {
-            throw new BadRequestException("INVALID_TIME_RANGE", "error.scheduling.invalid_time_range", "Giờ kết thúc phải sau giờ bắt đầu.");
+            throw new BadRequestException("INVALID_TIME_RANGE", "error.scheduling.invalid_time_range", null, "Giờ kết thúc phải sau giờ bắt đầu.");
         }
 
         if (!request.endTime().equals(request.startTime().plusHours(1))
                 || request.startTime().getMinute() != 0 || request.startTime().getSecond() != 0
                 || request.endTime().getSecond() != 0
                 || request.startTime().isBefore(LocalTime.of(6, 0)) || request.endTime().isAfter(LocalTime.of(21, 0))) {
-            throw new BadRequestException("INVALID_COACH_BOOKING_SLOT", "error.coach_booking.invalid_slot",
+            throw new BadRequestException("INVALID_COACH_BOOKING_SLOT", "error.coach_booking.invalid_slot", null,
                     "Choose a one-hour slot from 06:00 to 21:00.");
         }
 
@@ -322,7 +322,7 @@ public class CoachBookingService {
                         && !sub.getEndDate().isBefore(request.bookingDate()))
                 .toList();
         if (validSubscriptions.isEmpty()) {
-            throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription",
+            throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription", null,
                     "Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.");
         }
 
@@ -332,7 +332,7 @@ public class CoachBookingService {
         if ("package_quota".equalsIgnoreCase(paymentMethod)) {
             List<MembershipSubscription> activeSubs = validSubscriptions;
             if (activeSubs.isEmpty()) {
-                throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription", "Bạn cần có gói tập đang hoạt động để đặt lịch HLV.");
+                throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription", null, "Bạn cần có gói tập đang hoạt động để đặt lịch HLV.");
             }
 
             MembershipSubscription sub = activeSubs.get(0);
@@ -350,6 +350,7 @@ public class CoachBookingService {
                 throw new BadRequestException(
                         "COACH_BOOKING_PACKAGE_NO_QUOTA",
                         "error.coach_booking.package_no_quota",
+                        null,
                         "Gói tập hiện tại (Silver) không bao gồm buổi tập 1:1 miễn phí. Vui lòng chọn thanh toán theo giờ (200.000đ/buổi)."
                 );
             }
@@ -469,7 +470,7 @@ public class CoachBookingService {
         if (vnpayGuard != null) vnpayGuard.coach(bookingId);
 
         if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
-            throw new BadRequestException("ALREADY_CANCELLED", "error.coach_booking.already_cancelled", "Lịch này đã được hủy trước đó.");
+            throw new BadRequestException("ALREADY_CANCELLED", "error.coach_booking.already_cancelled", null, "Lịch này đã được hủy trước đó.");
         }
         // A session that was held (or has started) is part of attendance, quota and revenue history.
         if ("completed".equalsIgnoreCase(booking.getStatus()) || booking.getBookingDate() == null
@@ -526,7 +527,7 @@ public class CoachBookingService {
         String paidWith = method == null || method.isBlank()
                 ? "cash" : method.trim().toLowerCase(java.util.Locale.ROOT);
         if (!ALLOWED_PAYMENT_METHODS.contains(paidWith) || "package_quota".equals(paidWith)) {
-            throw new BadRequestException("INVALID_PAYMENT_METHOD", "error.coach_booking.invalid_payment_method",
+            throw new BadRequestException("INVALID_PAYMENT_METHOD", "error.coach_booking.invalid_payment_method", null,
                     "Unsupported payment method.");
         }
         booking.setPaymentMethod(paidWith);

@@ -64,7 +64,7 @@ public class VnpayPaymentService {
         requireMember(principal);
         gateway.requireEnabled();
         if (amount == null || amount.compareTo(BigDecimal.valueOf(10_000)) < 0 || amount.compareTo(BigDecimal.valueOf(100_000_000)) > 0) {
-            throw new BadRequestException("VNPAY_INVALID_AMOUNT", "Số tiền nạp vào Ví phải từ 10.000 đ đến 100.000.000 đ.");
+            throw new BadRequestException("VNPAY_INVALID_AMOUNT", "error.wallet.topup_range", null, "Số tiền nạp vào Ví phải từ 10.000 đ đến 100.000.000 đ.");
         }
         lockMember(principal.id());
         Payment payment = new Payment();
@@ -85,7 +85,7 @@ public class VnpayPaymentService {
     public com.swp391.scms.wallet.WalletDto payWithWallet(AuthenticatedPrincipal principal, CheckoutRequest request) {
         requireMember(principal);
         if (walletService == null) {
-            throw new ConflictException("WALLET_UNAVAILABLE", "Tính năng Ví điện tử hiện không khả dụng.");
+            throw new ConflictException("WALLET_UNAVAILABLE", "error.wallet.unavailable", null, "Tính năng Ví điện tử hiện không khả dụng.");
         }
         Payment payment = resolveTargetPayment(principal, request);
         if (!"pending".equals(payment.getStatus())) throw unavailable();
