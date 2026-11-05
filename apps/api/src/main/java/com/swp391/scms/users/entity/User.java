@@ -38,7 +38,7 @@ public class User {
     @Column(length = 10)
     private String gender;
 
-    @Column(name = "avatar_url", length = 255)
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
     @Column(length = 255)

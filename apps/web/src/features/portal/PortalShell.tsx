@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigation } from 'react-router-dom';
-import { clearAuthSession, syncSessionWithServer, type UserSession } from '../../shared/api/client';
+import { apiFetch, clearAuthSession, syncSessionWithServer, TOKEN_STORAGE_KEY, type UserSession } from '../../shared/api/client';
 import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
@@ -8,6 +8,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from './PortalIcon';
 import { MOBILE_PRIMARY_NAV, PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
+import { getProfile } from '../member/profileApi';
 import { usePortalNotices } from '../../shared/lib/portalNotices';
 import { ChatWidget } from '../chat/ChatWidget';
 import { PwaStatus } from '../pwa/PwaStatus';
@@ -15,6 +16,35 @@ import { NotificationsPopover } from '../member/NotificationsPopover';
 
 // Only members see the AI assistant; its WebGL shaders stay out of every other role's first load.
 const LiquidGlassChatbot = lazy(() => import('../../shared/liquid-glass/LiquidGlassChatbot').then(module => ({ default: module.LiquidGlassChatbot })));
+
+interface WalletTransactionItem {
+  id?: number;
+  type?: string;
+  amount?: number;
+  balanceAfter?: number;
+  description?: string | null;
+  referenceId?: string | null;
+  createdAt?: string | null;
+}
+
+interface WalletSummaryResponse {
+  balance?: number;
+  updatedAt?: string | null;
+  transactions?: WalletTransactionItem[];
+}
+
+function walletTypeLabel(type?: string) {
+  if (type === 'TOPUP_VNPAY') return 'Nạp từ VNPay';
+  if (type === 'REFUND_CREDIT') return 'Hoàn tiền vào ví';
+  if (type === 'PAYMENT_DEBIT') return 'Thanh toán dịch vụ';
+  return type || 'Giao dịch ví';
+}
+
+function isCreditTransaction(type?: string, amount?: number) {
+  if (type === 'PAYMENT_DEBIT') return false;
+  if (type === 'TOPUP_VNPAY' || type === 'REFUND_CREDIT') return true;
+  return (amount ?? 0) >= 0;
+}
 
 function searchable(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -35,7 +65,15 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const navigating = navigation.state !== 'idle';
-  const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | 'notifications' | null>(null);
+  const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | 'notifications' | 'wallet' | null>(null);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef<HTMLDivElement | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [profileEmail, setProfileEmail] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransactionItem[]>([]);
+  const [walletLoading, setWalletLoading] = useState(false);
+
   const notificationTrigger = useRef<HTMLElement | null>(null);
   const closeNotifications = useCallback(() => {
     setDialog(null);
@@ -70,6 +108,90 @@ function PortalShellContent({ user }: { user: UserSession }) {
     return authorizedItem ? [{ ...authorizedItem, label: item.label }] : [];
   });
   const secondaryScreen = !mobileItems.some(item => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
+
+  const refreshProfileSummary = useCallback(() => {
+    void getProfile()
+      .then((profile) => {
+        if (profile && typeof profile === 'object') {
+          setAvatarUrl(typeof profile.avatarUrl === 'string' && profile.avatarUrl.trim() ? profile.avatarUrl.trim() : null);
+          setProfileEmail(typeof profile.email === 'string' && profile.email.trim() ? profile.email.trim() : null);
+        }
+      })
+      .catch(() => {
+        // Ignore in offline/test contexts where /profile is not mocked
+      });
+  }, []);
+
+  const refreshWallet = useCallback(() => {
+    setWalletLoading(true);
+    void apiFetch<WalletSummaryResponse>('/wallet/my')
+      .then((data) => {
+        if (data && typeof data === 'object') {
+          const numeric = Number(data.balance);
+          setWalletBalance(Number.isFinite(numeric) ? numeric : 0);
+          setWalletTransactions(Array.isArray(data.transactions) ? data.transactions : []);
+        }
+      })
+      .catch(() => {
+        // Graceful fallback to 0 đ
+      })
+      .finally(() => {
+        setWalletLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (localStorage.getItem(TOKEN_STORAGE_KEY)) {
+      refreshProfileSummary();
+    }
+    window.addEventListener('profile-updated', refreshProfileSummary);
+    return () => {
+      window.removeEventListener('profile-updated', refreshProfileSummary);
+    };
+  }, [refreshProfileSummary]);
+
+  useEffect(() => {
+    if (localStorage.getItem(TOKEN_STORAGE_KEY)) {
+      refreshWallet();
+    }
+    const handleOpenWalletModal = () => {
+      setAvatarMenuOpen(false);
+      refreshWallet();
+      setDialog('wallet');
+    };
+    window.addEventListener('wallet-updated', refreshWallet);
+    window.addEventListener('member-notifications-changed', refreshWallet);
+    window.addEventListener('open-wallet-modal', handleOpenWalletModal);
+    return () => {
+      window.removeEventListener('wallet-updated', refreshWallet);
+      window.removeEventListener('member-notifications-changed', refreshWallet);
+      window.removeEventListener('open-wallet-modal', handleOpenWalletModal);
+    };
+  }, [refreshWallet]);
+
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    refreshProfileSummary();
+    refreshWallet();
+    const onPointerDown = (event: Event) => {
+      if (avatarMenuRef.current && event.target instanceof Node && !avatarMenuRef.current.contains(event.target)) {
+        setAvatarMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAvatarMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [avatarMenuOpen, refreshProfileSummary, refreshWallet]);
 
   useEffect(() => {
     if (!hasServerNotifications) return;
@@ -118,6 +240,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
 
   useEffect(() => {
     if (previousPath.current !== location.pathname) {
+      setAvatarMenuOpen(false);
       setDialog(current => current === 'notifications' ? null : current);
       mainRef.current?.focus();
       previousPath.current = location.pathname;
@@ -137,6 +260,17 @@ function PortalShellContent({ user }: { user: UserSession }) {
     setDialog(mode);
   };
 
+  const renderAvatarContent = () =>
+    avatarUrl ? (
+      <img
+        src={avatarUrl}
+        alt=""
+        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+      />
+    ) : (
+      initials
+    );
+
   return <div className="portal-backdrop">
     <div className="app-shell portal-v2">
       <a href="#portal-main" className="skip-link">Bỏ qua tới nội dung chính</a>
@@ -150,7 +284,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         </nav>
         <div className="portal-rail-footer">
           <NavLink to="/member/profile" className="portal-rail-link portal-rail-profile" aria-label={profileLabel}>
-            <span className="portal-avatar">{initials}</span><span className="portal-rail-tooltip">{profileLabel}</span>
+            <span className="portal-avatar" style={{ overflow: 'hidden' }}>{renderAvatarContent()}</span><span className="portal-rail-tooltip">{profileLabel}</span>
           </NavLink>
           <Link to="/" className="portal-rail-link" aria-label="Về trang chủ"><PortalIcon name="home" /><span className="portal-rail-tooltip">Về trang chủ</span></Link>
           <button type="button" className="portal-rail-link" aria-label="Đăng xuất" onClick={() => setDialog('logout')}>
@@ -176,10 +310,156 @@ function PortalShellContent({ user }: { user: UserSession }) {
             <button type="button" className="portal-search-trigger" aria-label="Tìm màn hình" onClick={() => openNavigation('search')}>
               <span className="portal-search-icon"><PortalIcon name="search" size={17} /></span><span>Tìm màn hình…</span>
             </button>
-            <Link to="/member/profile" className="portal-account" aria-label={`Hồ sơ của ${user.name}`}>
-              <span className="portal-avatar">{initials}</span>
-              <span className="portal-account-name">{user.name}<small>{ROLE_LABELS[user.role]}</small></span>
-            </Link>
+            <div className="portal-avatar-menu" ref={avatarMenuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="portal-account"
+                aria-label={`Hồ sơ của ${user.name}`}
+                aria-haspopup="menu"
+                aria-expanded={avatarMenuOpen}
+                data-testid="portal-avatar-trigger"
+                onClick={() => setAvatarMenuOpen((current) => !current)}
+                style={{
+                  background: 'transparent',
+                  border: 0,
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  color: 'inherit',
+                  font: 'inherit',
+                  textAlign: 'left',
+                }}
+              >
+                <span className="portal-avatar" style={{ overflow: 'hidden' }}>{renderAvatarContent()}</span>
+                <span className="portal-account-name">{user.name}<small>{ROLE_LABELS[user.role]}</small></span>
+              </button>
+              {avatarMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Menu tài khoản"
+                  className="portal-avatar-dropdown"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 10px)',
+                    right: 0,
+                    zIndex: 90,
+                    width: 280,
+                    padding: 12,
+                    borderRadius: 16,
+                    background: 'var(--portal-surface, #292929)',
+                    border: '1px solid var(--portal-border-strong, #ffffff30)',
+                    boxShadow: '0 20px 48px -12px rgba(0,0,0,0.65)',
+                    color: 'var(--portal-paper, #faf9f6)',
+                  }}
+                >
+                  <div
+                    className="portal-avatar-dropdown__summary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '8px 10px 12px',
+                      borderBottom: '1px solid var(--portal-border, #ffffff1a)',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span className="portal-avatar" style={{ overflow: 'hidden', flexShrink: 0 }}>
+                      {renderAvatarContent()}
+                    </span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {user.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--portal-salmon, #ce9180)', fontWeight: 600 }}>
+                        {ROLE_LABELS[user.role]}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--portal-muted, #bcb8b5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {profileEmail || user.identifier}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="avatar-menu-wallet"
+                    onClick={() => {
+                      setAvatarMenuOpen(false);
+                      refreshWallet();
+                      setDialog('wallet');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: '1px solid var(--portal-border, #ffffff1a)',
+                      background: 'var(--portal-raised, #303030)',
+                      color: 'var(--portal-paper, #faf9f6)',
+                      font: '600 12px var(--font-sans)',
+                      cursor: 'pointer',
+                      marginBottom: 6,
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <span>Ví của tôi</span>
+                    </span>
+                    <strong style={{ color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums' }}>
+                      {walletBalance.toLocaleString('vi-VN')} đ
+                    </strong>
+                  </button>
+
+                  <Link
+                    to="/member/profile"
+                    role="menuitem"
+                    data-testid="avatar-menu-profile"
+                    onClick={() => setAvatarMenuOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      color: 'var(--portal-paper, #faf9f6)',
+                      font: '500 12px var(--font-sans)',
+                      textDecoration: 'none',
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span>Thông tin cá nhân &amp; Ảnh đại diện</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="avatar-menu-logout"
+                    onClick={() => {
+                      setAvatarMenuOpen(false);
+                      setDialog('logout');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: 0,
+                      background: 'transparent',
+                      color: 'var(--portal-danger, #fca5a5)',
+                      font: '600 12px var(--font-sans)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <PwaStatus mode="status" />
@@ -202,6 +482,84 @@ function PortalShellContent({ user }: { user: UserSession }) {
       {isMember && location.pathname !== '/member/check-in' && <Suspense fallback={null}><LiquidGlassChatbot /></Suspense>}
       {location.pathname !== '/member/check-in' && location.pathname !== '/messages' && <ChatWidget />}
       {canReceiveNotifications && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
+      {dialog === 'wallet' && (
+        <Modal title="Ví điện tử SÖL" onClose={() => setDialog(null)}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              padding: 18,
+              borderRadius: 16,
+              background: 'var(--portal-raised, #303030)',
+              border: '1px solid var(--portal-border-strong, #ffffff30)',
+              marginBottom: 16,
+            }}
+          >
+            <div>
+              <div className="portal-label">Số dư khả dụng</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>
+                {walletBalance.toLocaleString('vi-VN')} đ
+              </div>
+            </div>
+            <button type="button" className="btn-secondary btn-sm" onClick={refreshWallet} disabled={walletLoading}>
+              {walletLoading ? 'Đang tải…' : 'Làm mới'}
+            </button>
+          </div>
+          <p className="portal-subtitle" style={{ marginBottom: 16 }}>
+            Khi thanh toán qua VNPay, tiền được nạp tự động vào Ví và trừ ngay cho dịch vụ đăng ký. Khi yêu cầu hủy gói tập được Quản lý phê duyệt hoàn tiền, tiền hoàn sẽ cộng trực tiếp vào Ví của bạn.
+          </p>
+          <h3 className="portal-card-title" style={{ fontSize: 14, marginBottom: 10 }}>Lịch sử giao dịch Ví</h3>
+          {walletTransactions.length === 0 ? (
+            <p className="portal-subtitle" role="status">Chưa có biến động số dư nào trong ví.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+              {walletTransactions.map((tx, idx) => {
+                const credit = isCreditTransaction(tx.type, tx.amount);
+                const absAmount = Math.abs(Number(tx.amount ?? 0));
+                return (
+                  <div
+                    key={tx.id ?? idx}
+                    className="row-card"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      padding: '10px 14px',
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{walletTypeLabel(tx.type)}</div>
+                      {tx.description && (
+                        <div className="row-card__meta" style={{ fontSize: 12 }}>{tx.description}</div>
+                      )}
+                      {tx.createdAt && (
+                        <div className="row-card__meta" style={{ fontSize: 11 }}>{tx.createdAt}</div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 13,
+                        fontVariantNumeric: 'tabular-nums',
+                        color: credit ? 'var(--portal-success, #86efac)' : 'var(--portal-paper, #faf9f6)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {credit ? '+' : '-'}{absAmount.toLocaleString('vi-VN')} đ
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="form-actions" style={{ marginTop: 20, justifyContent: 'flex-end' }}>
+            <button type="button" className="btn-primary" onClick={() => setDialog(null)}>Đóng</button>
+          </div>
+        </Modal>
+      )}
       {dialog === 'logout' && <Modal title="Đăng xuất khỏi SÖL?" onClose={() => setDialog(null)}>
         <p className="portal-subtitle">Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.</p>
         <div className="form-actions" style={{ marginTop: 24 }}>

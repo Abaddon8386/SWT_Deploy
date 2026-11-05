@@ -35,6 +35,7 @@ describe('portal navigation', () => {
       { element: <AppLayout />, children: [
         { path: '/member/dashboard', element: <h1>Tổng quan</h1> },
         { path: '/member/classes', element: <h1>Lịch học</h1> },
+        { path: '/member/profile', element: <h1>Hồ sơ cá nhân</h1> },
       ] },
       { path: '/login', element: <h1>Đăng nhập</h1> },
     ], { initialEntries: ['/member/dashboard'] });
@@ -84,5 +85,44 @@ describe('portal navigation', () => {
     await act(async () => (cancel as HTMLButtonElement).click());
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).not.toBeNull();
     expect(host.querySelector('dialog')).toBeNull();
+  });
+
+  it('opens avatar dropdown menu with wallet balance, profile link, and logout option', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url.includes('/wallet/my')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          success: true,
+          data: { balance: 250000, transactions: [{ id: 1, type: 'REFUND_CREDIT', amount: 250000, description: 'Hoàn tiền gói Silver' }] },
+        })));
+      }
+      return Promise.resolve(new Response(JSON.stringify({
+        success: true,
+        data: { fullName: 'Nguyễn An', email: 'an@sol.vn', avatarUrl: null },
+      })));
+    }));
+    const router = await renderPortal();
+    const avatarBtn = host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]');
+    expect(avatarBtn).not.toBeNull();
+    await act(async () => avatarBtn!.click());
+
+    const menu = host.querySelector('[role="menu"]');
+    expect(menu).not.toBeNull();
+    expect(menu?.textContent).toContain('Ví của tôi');
+    expect(menu?.textContent).toContain('250.000');
+
+    // Open wallet modal from dropdown
+    const walletItem = host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-wallet"]')!;
+    await act(async () => walletItem.click());
+    expect(host.querySelector('[role="menu"]')).toBeNull();
+    expect(host.querySelector('dialog')?.textContent).toContain('Ví điện tử SÖL');
+    expect(host.querySelector('dialog')?.textContent).toContain('Hoàn tiền gói Silver');
+
+    // Close wallet modal and navigate to profile via dropdown
+    const closeBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Đóng')!;
+    await act(async () => closeBtn.click());
+    await act(async () => avatarBtn!.click());
+    const profileLink = host.querySelector<HTMLAnchorElement>('[data-testid="avatar-menu-profile"]')!;
+    await act(async () => profileLink.click());
+    expect(router.state.location.pathname).toBe('/member/profile');
   });
 });

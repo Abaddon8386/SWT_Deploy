@@ -15,6 +15,20 @@ export interface Profile {
   fitnessLevel: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  specialization?: string | null;
+  bio?: string | null;
+  certification?: string | null;
+  shift?: string | null;
+}
+
+export interface CoachProfileUpdate {
+  specialization: string | null;
+  bio: string | null;
+  certification: string | null;
+}
+
+export interface ReceptionistProfileUpdate {
+  shift: string | null;
 }
 
 export interface HealthMetric {
@@ -35,6 +49,15 @@ export const getProfile = () => apiFetch<Profile>('/profile');
 
 export const updateProfile = (profile: Profile) =>
   apiFetch<Profile>('/profile', { method: 'PUT', body: JSON.stringify(profile) });
+
+export const uploadAvatar = (avatarUrl: string | null) =>
+  apiFetch<Profile>('/profile/avatar', { method: 'POST', body: JSON.stringify({ avatarUrl }) });
+
+export const updateCoachProfile = (payload: CoachProfileUpdate) =>
+  apiFetch<void>('/profile/coach', { method: 'PUT', body: JSON.stringify(payload) });
+
+export const updateReceptionistProfile = (payload: ReceptionistProfileUpdate) =>
+  apiFetch<void>('/profile/receptionist', { method: 'PUT', body: JSON.stringify(payload) });
 
 export const listHealthMetrics = (memberId: number) =>
   apiFetch<HealthMetric[]>(`/members/${memberId}/health-metrics`);

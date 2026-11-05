@@ -9,6 +9,9 @@ import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 const mockApi = vi.hoisted(() => ({
   getProfile: vi.fn(),
   updateProfile: vi.fn(),
+  updateCoachProfile: vi.fn(),
+  updateReceptionistProfile: vi.fn(),
+  uploadAvatar: vi.fn(),
   listHealthMetrics: vi.fn(),
   addHealthMetric: vi.fn(),
   updateHealthMetric: vi.fn(),
@@ -18,6 +21,9 @@ const mockApi = vi.hoisted(() => ({
 vi.mock('./profileApi', () => ({
   getProfile: mockApi.getProfile,
   updateProfile: mockApi.updateProfile,
+  updateCoachProfile: mockApi.updateCoachProfile,
+  updateReceptionistProfile: mockApi.updateReceptionistProfile,
+  uploadAvatar: mockApi.uploadAvatar,
   listHealthMetrics: mockApi.listHealthMetrics,
   addHealthMetric: mockApi.addHealthMetric,
   updateHealthMetric: mockApi.updateHealthMetric,
@@ -51,7 +57,7 @@ const sampleMetrics: HealthMetric[] = [
   },
 ];
 
-describe('MemberProfilePage role-based health metrics rendering', () => {
+describe('MemberProfilePage role-based profile & avatar upload', () => {
   let host: HTMLDivElement;
   let root: Root;
 
@@ -63,6 +69,9 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
 
     mockApi.getProfile.mockReset();
     mockApi.updateProfile.mockReset();
+    mockApi.updateCoachProfile.mockReset();
+    mockApi.updateReceptionistProfile.mockReset();
+    mockApi.uploadAvatar.mockReset();
     mockApi.listHealthMetrics.mockReset();
     mockApi.addHealthMetric.mockReset();
     mockApi.updateHealthMetric.mockReset();
@@ -70,6 +79,8 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
 
     mockApi.getProfile.mockResolvedValue(sampleProfile);
     mockApi.listHealthMetrics.mockResolvedValue(sampleMetrics);
+    mockApi.updateCoachProfile.mockResolvedValue(undefined);
+    mockApi.updateReceptionistProfile.mockResolvedValue(undefined);
   });
 
   afterEach(async () => {
@@ -100,7 +111,6 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     expect(mockApi.getProfile).toHaveBeenCalled();
     expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
-    // Should display health metrics column
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.querySelector('h1')?.textContent).toBe('Hồ sơ cá nhân');
     expect(host.querySelector('.profile-grid--single')).not.toBeNull();
@@ -111,6 +121,7 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     expect(host.textContent).toContain('Trình độ thể lực');
     expect(host.textContent).toContain('Mục tiêu thể lực');
     expect(host.textContent).toContain('Ghi chú sức khỏe & chấn thương');
+    expect(host.textContent).toContain('Tải ảnh đại diện lên');
   });
 
   it('saves the personal profile without mutating health measurements', async () => {
@@ -133,34 +144,85 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     expect((host.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('hides health metrics section and member fitness fields for COACH role', async () => {
+  it('enforces avatar MIME type and 2MB size constraints before uploading', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' }));
+    await renderPage();
+    const input = host.querySelector<HTMLInputElement>('#avatar-file-input')!;
+    expect(input).not.toBeNull();
+
+    const invalidTypeFile = new File(['bad'], 'avatar.gif', { type: 'image/gif' });
+    await act(async () => {
+      Object.defineProperty(input, 'files', { value: [invalidTypeFile], configurable: true });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Chỉ chấp nhận ảnh JPG, PNG hoặc WebP');
+    expect(mockApi.updateProfile).not.toHaveBeenCalled();
+
+    const oversizedFile = new File([new Uint8Array(2 * 1024 * 1024 + 100)], 'huge.png', { type: 'image/png' });
+    await act(async () => {
+      Object.defineProperty(input, 'files', { value: [oversizedFile], configurable: true });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('không được vượt quá 2MB');
+    expect(mockApi.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('hides health metrics section and renders editable professional fields for COACH role', async () => {
     localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({ id: '20', name: 'Coach Huấn Luyện', identifier: 'coach1', role: 'COACH' })
     );
+    mockApi.getProfile.mockResolvedValue({
+      ...sampleProfile,
+      specialization: 'Yoga',
+      certification: 'RYT-500',
+      bio: '10 năm kinh nghiệm',
+    });
+    mockApi.updateProfile.mockResolvedValue({
+      ...sampleProfile,
+      specialization: 'Pilates',
+      certification: 'RYT-500',
+      bio: '10 năm kinh nghiệm',
+    });
 
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    // listHealthMetrics should NOT be called for coach
     expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
-    // Health metrics card should be hidden
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
     expect(host.textContent).not.toContain('Trình độ thể lực');
-    expect(host.textContent).not.toContain('Mục tiêu thể lực');
-    expect(host.textContent).not.toContain('Ghi chú sức khỏe & chấn thương');
-
-    // Should display Role badge
     expect(host.textContent).toContain('Huấn luyện viên');
+    expect((host.querySelector('#specialization') as HTMLInputElement).value).toBe('Yoga');
+    expect((host.querySelector('#certification') as HTMLInputElement).value).toBe('RYT-500');
+
+    await act(async () => {
+      const specInput = host.querySelector<HTMLInputElement>('#specialization')!;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(specInput, 'Pilates');
+      specInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(mockApi.updateCoachProfile).toHaveBeenCalledWith({
+      specialization: 'Pilates',
+      certification: 'RYT-500',
+      bio: '10 năm kinh nghiệm',
+    });
   });
 
-  it('hides health metrics section and member fitness fields for STAFF (Receptionist) role', async () => {
+  it('hides health metrics section and renders editable shift field for STAFF (Receptionist) role', async () => {
     localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({ id: '30', name: 'Le Tan Quầy', identifier: 'staff1', role: 'STAFF' })
     );
+    mockApi.getProfile.mockResolvedValue({
+      ...sampleProfile,
+      shift: 'Ca sáng',
+    });
+    mockApi.updateProfile.mockResolvedValue({
+      ...sampleProfile,
+      shift: 'Ca chiều',
+    });
 
     await renderPage();
 
@@ -170,6 +232,15 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
     expect(host.textContent).toContain('Lễ tân');
+    expect((host.querySelector('#shift') as HTMLInputElement).value).toBe('Ca sáng');
+
+    await act(async () => {
+      const shiftInput = host.querySelector<HTMLInputElement>('#shift')!;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(shiftInput, 'Ca chiều');
+      shiftInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(mockApi.updateReceptionistProfile).toHaveBeenCalledWith({ shift: 'Ca chiều' });
   });
 
   it.each([['MANAGER', 'Quản lý trung tâm'], ['ADMIN', 'Quản trị hệ thống']])('shows the correct administrative profile without member fields: %s', async (role, label) => {

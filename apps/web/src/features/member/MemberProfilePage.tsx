@@ -1,21 +1,82 @@
 import { Select } from '../../shared/ui/Select';
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  getProfile,
-  updateProfile,
-  type Profile,
-} from './profileApi';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import * as profileApi from './profileApi';
+import { getProfile, updateProfile, type Profile } from './profileApi';
 import { getCurrentUser } from '../../shared/api/client';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { notify } from '../../shared/lib/portalNotices';
 import { PageHeader } from '../../shared/ui/PageHeader';
 
+const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const MIN_AVATAR_DIMENSION = 100;
+const MAX_AVATAR_DIMENSION = 4096;
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('Không thể đọc dữ liệu ảnh.'));
+    };
+    reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function validateAndProcessImage(dataUrl: string, mimeType: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const width = img.naturalWidth || img.width;
+      const height = img.naturalHeight || img.height;
+      if (
+        width < MIN_AVATAR_DIMENSION ||
+        height < MIN_AVATAR_DIMENSION ||
+        width > MAX_AVATAR_DIMENSION ||
+        height > MAX_AVATAR_DIMENSION
+      ) {
+        reject(new Error(`Kích thước ảnh phải từ ${MIN_AVATAR_DIMENSION}x${MIN_AVATAR_DIMENSION} đến ${MAX_AVATAR_DIMENSION}x${MAX_AVATAR_DIMENSION} pixel.`));
+        return;
+      }
+      try {
+        const maxSide = 512;
+        if (width > maxSide || height > maxSide) {
+          const scale = Math.min(maxSide / width, maxSide / height);
+          const targetW = Math.max(1, Math.round(width * scale));
+          const targetH = Math.max(1, Math.round(height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, targetW, targetH);
+            const outType = ALLOWED_AVATAR_TYPES.includes(mimeType) ? mimeType : 'image/jpeg';
+            const compressed = canvas.toDataURL(outType, 0.88);
+            if (compressed && compressed.startsWith('data:image/')) {
+              resolve(compressed);
+              return;
+            }
+          }
+        }
+      } catch {
+        // Fallback to original dataUrl if canvas is unsupported in test environment
+      }
+      resolve(dataUrl);
+    };
+    img.onerror = () => reject(new Error('Tệp ảnh bị hỏng hoặc không hợp lệ.'));
+    img.src = dataUrl;
+  });
+}
+
 export function MemberProfilePage() {
   const currentUser = getCurrentUser();
   const isMember = currentUser?.role === 'MEMBER';
-  const roleName = currentUser?.role === 'COACH'
+  const isCoach = currentUser?.role === 'COACH';
+  const isStaff = currentUser?.role === 'STAFF';
+  const roleName = isCoach
     ? 'Huấn luyện viên'
-    : currentUser?.role === 'STAFF'
+    : isStaff
     ? 'Lễ tân'
     : currentUser?.role === 'MANAGER'
     ? 'Quản lý trung tâm'
@@ -26,7 +87,9 @@ export function MemberProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,6 +110,54 @@ export function MemberProfilePage() {
 
   const patch = (changes: Partial<Profile>) => profile && setProfile({ ...profile, ...changes });
 
+  const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !profile || avatarBusy) return;
+
+    setError('');
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      setError('Định dạng ảnh không hợp lệ. Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.');
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      setError('Dung lượng ảnh không được vượt quá 2MB.');
+      return;
+    }
+
+    setAvatarBusy(true);
+    try {
+      const rawDataUrl = await readFileAsDataUrl(file);
+      const validDataUrl = await validateAndProcessImage(rawDataUrl, file.type);
+      const nextProfile: Profile = { ...profile, avatarUrl: validDataUrl };
+      const updated = await updateProfile(nextProfile);
+      setProfile(updated);
+      window.dispatchEvent(new Event('profile-updated'));
+      notify('Đã cập nhật ảnh đại diện.', 'success');
+    } catch (err) {
+      setError(errorMessage(err, 'Không thể tải ảnh đại diện lên.'));
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!profile || avatarBusy) return;
+    setError('');
+    setAvatarBusy(true);
+    try {
+      const nextProfile: Profile = { ...profile, avatarUrl: null };
+      const updated = await updateProfile(nextProfile);
+      setProfile(updated);
+      window.dispatchEvent(new Event('profile-updated'));
+      notify('Đã cập nhật ảnh đại diện.', 'success');
+    } catch (err) {
+      setError(errorMessage(err, 'Không thể xóa ảnh đại diện.'));
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || saving) return;
@@ -54,7 +165,26 @@ export function MemberProfilePage() {
     setSaving(true);
     try {
       const updated = await updateProfile(profile);
-      setProfile(updated);
+      if (isCoach && typeof profileApi.updateCoachProfile === 'function') {
+        await profileApi.updateCoachProfile({
+          specialization: profile.specialization ?? null,
+          bio: profile.bio ?? null,
+          certification: profile.certification ?? null,
+        });
+      }
+      if (isStaff && typeof profileApi.updateReceptionistProfile === 'function') {
+        await profileApi.updateReceptionistProfile({
+          shift: profile.shift ?? null,
+        });
+      }
+      setProfile({
+        ...updated,
+        specialization: profile.specialization ?? updated.specialization,
+        bio: profile.bio ?? updated.bio,
+        certification: profile.certification ?? updated.certification,
+        shift: profile.shift ?? updated.shift,
+      });
+      window.dispatchEvent(new Event('profile-updated'));
       notify('Đã cập nhật hồ sơ cá nhân.', 'success');
     } catch (err) {
       setError(errorMessage(err, 'Không thể lưu hồ sơ.'));
@@ -75,7 +205,6 @@ export function MemberProfilePage() {
               <div key={row} className="portal-skeleton-line" style={{ width: '100%', height: 42, marginBottom: 14 }} />
             ))}
           </div>
-
         </div>
       </div>
     );
@@ -94,6 +223,14 @@ export function MemberProfilePage() {
       </div>
     );
   }
+
+  const initials = (profile.fullName || currentUser?.name || 'S')
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'S';
 
   return (
     <div className="portal-container">
@@ -121,6 +258,78 @@ export function MemberProfilePage() {
             )}
           </div>
 
+          {/* Khu vực Ảnh đại diện */}
+          <div
+            className="profile-avatar-section"
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 20,
+              padding: '16px 20px',
+              marginBottom: 22,
+              borderRadius: 16,
+              background: 'var(--portal-raised, #303030)',
+              border: '1px solid var(--portal-border, #ffffff1a)',
+            }}
+          >
+            <div
+              className="portal-avatar"
+              style={{
+                width: 72,
+                height: 72,
+                flex: '0 0 72px',
+                fontSize: 22,
+                overflow: 'hidden',
+              }}
+            >
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt="Ảnh đại diện hiện tại"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+                />
+              ) : (
+                initials
+              )}
+            </div>
+            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Ảnh đại diện tài khoản</div>
+              <p className="portal-subtitle" style={{ marginTop: 4, marginBottom: 12 }}>
+                Hỗ trợ định dạng JPG, PNG, WebP · Tối đa 2MB · Kích thước 100x100 đến 4096x4096 px.
+              </p>
+              <input
+                ref={fileInputRef}
+                id="avatar-file-input"
+                data-testid="avatar-file-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => void handleAvatarFileChange(e)}
+                style={{ display: 'none' }}
+              />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={avatarBusy}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {avatarBusy ? 'Đang xử lý…' : 'Tải ảnh đại diện lên'}
+                </button>
+                {profile.avatarUrl && (
+                  <button
+                    type="button"
+                    className="btn-danger btn-sm"
+                    disabled={avatarBusy}
+                    onClick={() => void handleRemoveAvatar()}
+                  >
+                    Xóa ảnh
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <form onSubmit={handleSave}>
             <div className="grid-2">
               <div className="portal-form-group">
@@ -130,6 +339,7 @@ export function MemberProfilePage() {
                   type="text"
                   className="portal-input"
                   required
+                  maxLength={100}
                   value={profile.fullName}
                   onChange={(e) => patch({ fullName: e.target.value })}
                 />
@@ -180,6 +390,7 @@ export function MemberProfilePage() {
                   id="phone"
                   type="tel"
                   className="portal-input"
+                  maxLength={20}
                   placeholder="Vd: 0912345678"
                   value={profile.phone ?? ''}
                   onChange={(e) => patch({ phone: e.target.value })}
@@ -220,11 +431,71 @@ export function MemberProfilePage() {
                 id="address"
                 type="text"
                 className="portal-input"
+                maxLength={255}
                 placeholder="Vd: 123 Lê Duẩn, Quận 1, TP. HCM"
                 value={profile.address ?? ''}
                 onChange={(e) => patch({ address: e.target.value })}
               />
             </div>
+
+            {/* Các trường chuyên môn dành cho Huấn luyện viên (COACH) */}
+            {isCoach && (
+              <>
+                <div className="grid-2">
+                  <div className="portal-form-group">
+                    <label className="portal-label" htmlFor="specialization">Chuyên môn</label>
+                    <input
+                      id="specialization"
+                      type="text"
+                      className="portal-input"
+                      maxLength={150}
+                      placeholder="Vd: Yoga, Strength & Conditioning, Pilates..."
+                      value={profile.specialization ?? ''}
+                      onChange={(e) => patch({ specialization: e.target.value })}
+                    />
+                  </div>
+                  <div className="portal-form-group">
+                    <label className="portal-label" htmlFor="certification">Chứng chỉ</label>
+                    <input
+                      id="certification"
+                      type="text"
+                      className="portal-input"
+                      maxLength={255}
+                      placeholder="Vd: NASM CPT, RYT-500..."
+                      value={profile.certification ?? ''}
+                      onChange={(e) => patch({ certification: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor="bio">Giới thiệu</label>
+                  <textarea
+                    id="bio"
+                    rows={3}
+                    className="portal-textarea"
+                    placeholder="Kinh nghiệm huấn luyện và phương pháp giảng dạy..."
+                    value={profile.bio ?? ''}
+                    onChange={(e) => patch({ bio: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Trường ca trực dành cho Lễ tân (STAFF / RECEPTIONIST) */}
+            {isStaff && (
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="shift">Ca trực</label>
+                <input
+                  id="shift"
+                  type="text"
+                  className="portal-input"
+                  maxLength={50}
+                  placeholder="Vd: Ca sáng (06:00 - 14:00)"
+                  value={profile.shift ?? ''}
+                  onChange={(e) => patch({ shift: e.target.value })}
+                />
+              </div>
+            )}
 
             {/* Các trường thể lực & sức khỏe - Dành riêng cho Hội viên (MEMBER) */}
             {isMember && (
@@ -249,6 +520,7 @@ export function MemberProfilePage() {
                       id="emergencyName"
                       type="text"
                       className="portal-input"
+                      maxLength={100}
                       placeholder="Họ tên người thân"
                       value={profile.emergencyContactName ?? ''}
                       onChange={(e) => patch({ emergencyContactName: e.target.value })}
@@ -262,6 +534,7 @@ export function MemberProfilePage() {
                     id="emergencyPhone"
                     type="tel"
                     className="portal-input"
+                    maxLength={20}
                     placeholder="0912 345 678"
                     value={profile.emergencyContactPhone ?? ''}
                     onChange={(e) => patch({ emergencyContactPhone: e.target.value })}
@@ -273,6 +546,7 @@ export function MemberProfilePage() {
                   <textarea
                     id="fitnessGoal"
                     rows={2}
+                    maxLength={255}
                     className="portal-textarea"
                     placeholder="Vd: Cải thiện sức bền, giảm mỡ nội tạng, tăng độ dẻo dai..."
                     value={profile.fitnessGoal ?? ''}

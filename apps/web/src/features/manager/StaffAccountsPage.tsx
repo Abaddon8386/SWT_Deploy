@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { createStaffAccount, listStaffAccounts, setStaffAccountLocked, type StaffAccount, type StaffAccountInput } from './staffAccountsApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { errorMessage } from '../../shared/lib/errorMessage';
@@ -30,10 +31,20 @@ export function StaffAccountsPage() {
   }, [reload]);
 
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
 
   async function toggleLock(account: StaffAccount) {
     if (busyId !== null) return;
     const lock = account.status === 'active';
+    const confirmed = await confirm({
+      title: lock ? 'Khóa tài khoản nhân sự?' : 'Mở khóa tài khoản nhân sự?',
+      message: lock
+        ? `Bạn có chắc chắn muốn khóa tài khoản ${account.fullName} (${account.email})? Nhân sự sẽ không thể đăng nhập cho đến khi được mở khóa.`
+        : `Bạn có chắc chắn muốn mở khóa tài khoản ${account.fullName} (${account.email})?`,
+      confirmLabel: lock ? 'Khóa tài khoản' : 'Mở khóa',
+      danger: lock,
+    });
+    if (!confirmed) return;
     setBusyId(account.id);
     try {
       const updated = await setStaffAccountLocked(account.id, lock);
@@ -121,5 +132,6 @@ export function StaffAccountsPage() {
         </table>
       </div>}
     </section>
+    {confirmDialog}
   </div>;
 }

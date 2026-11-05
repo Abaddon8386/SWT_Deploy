@@ -28,13 +28,13 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
 import java.time.LocalDate;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -70,7 +70,14 @@ class ProfileControllerTest {
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                       NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-            jakarta.servlet.http.HttpServletRequest req = webRequest.getNativeRequest(jakarta.servlet.http.HttpServletRequest.class); String role = req.getHeader("X-Test-Role"); if (role == null) { role = "MEMBER"; if (req.getRequestURI().contains("/coach")) role = "COACH"; if (req.getRequestURI().contains("/receptionist")) role = "RECEPTIONIST"; } return new AuthenticatedPrincipal(101L, "member1", role);
+            jakarta.servlet.http.HttpServletRequest req = webRequest.getNativeRequest(jakarta.servlet.http.HttpServletRequest.class);
+            String role = req.getHeader("X-Test-Role");
+            if (role == null) {
+                role = "MEMBER";
+                if (req.getRequestURI().contains("/coach")) role = "COACH";
+                if (req.getRequestURI().contains("/receptionist")) role = "RECEPTIONIST";
+            }
+            return new AuthenticatedPrincipal(101L, "member1", role);
         }
     };
 
@@ -79,7 +86,6 @@ class ProfileControllerTest {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
-        // Setup real MessageService
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
         messageSource.setBasenames("i18n/messages");
         messageSource.setDefaultEncoding("UTF-8");
@@ -129,13 +135,23 @@ class ProfileControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/profile returns current authenticated user profile")
+    @DisplayName("GET /api/v1/profile returns current authenticated user profile including Coach & Receptionist details")
     void getMyProfileSuccess() throws Exception {
-        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(sampleUser()));
+        User user = sampleUser();
+        user.setAvatarUrl("data:image/png;base64,aGVsbG8=");
+        Coach coach = new Coach();
+        coach.setSpecialization("Pilates");
+        coach.setBio("5 years");
+        coach.setCertification("CPT");
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+        when(coachRepository.findById(101L)).thenReturn(Optional.of(coach));
 
         mockMvc.perform(get("/api/v1/profile"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.avatarUrl").value("data:image/png;base64,aGVsbG8="))
+                .andExpect(jsonPath("$.data.specialization").value("Pilates"))
+                .andExpect(jsonPath("$.data.certification").value("CPT"));
     }
 
     @Test
@@ -149,6 +165,34 @@ class ProfileControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/profile/avatar accepts valid PNG base64 and rejects unsupported MIME or >2MB payload")
+    void validateAvatarUploadConstraints() throws Exception {
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(sampleUser()));
+
+        String validDataUrl = "data:image/webp;base64," + Base64.getEncoder().encodeToString(new byte[]{1, 2, 3, 4});
+        mockMvc.perform(post("/api/v1/profile/avatar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(validDataUrl))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.avatarUrl").value(validDataUrl));
+
+        String invalidMime = "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString("<svg/>".getBytes());
+        mockMvc.perform(post("/api/v1/profile/avatar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(invalidMime))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_AVATAR_FORMAT"));
+
+        byte[] oversized = new byte[2 * 1024 * 1024 + 10];
+        String oversizedDataUrl = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(oversized);
+        mockMvc.perform(post("/api/v1/profile/avatar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(oversizedDataUrl))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("AVATAR_TOO_LARGE"));
     }
 
     @Test
@@ -199,7 +243,9 @@ class ProfileControllerTest {
                 "Certified Yoga Instructor"
         );
         User coachUser = sampleUser();
-        com.swp391.scms.users.entity.Role r = new com.swp391.scms.users.entity.Role(); r.setCode("COACH"); coachUser.setRole(r);
+        com.swp391.scms.users.entity.Role r = new com.swp391.scms.users.entity.Role();
+        r.setCode("COACH");
+        coachUser.setRole(r);
         when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(coachUser));
         when(coachRepository.findById(101L)).thenReturn(Optional.empty());
 
@@ -219,9 +265,11 @@ class ProfileControllerTest {
                 "Certified Yoga Instructor"
         );
         User coachUser = sampleUser();
-        com.swp391.scms.users.entity.Role r = new com.swp391.scms.users.entity.Role(); r.setCode("COACH"); coachUser.setRole(r);
+        com.swp391.scms.users.entity.Role r = new com.swp391.scms.users.entity.Role();
+        r.setCode("COACH");
+        coachUser.setRole(r);
         when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(coachUser));
-        
+
         Coach existingCoach = new Coach();
         existingCoach.setUserId(101L);
         when(coachRepository.findById(101L)).thenReturn(Optional.of(existingCoach));
@@ -236,13 +284,13 @@ class ProfileControllerTest {
     @Test
     @DisplayName("PUT /api/v1/profile/receptionist updates existing receptionist profile")
     void updateReceptionistProfileSuccess() throws Exception {
-        ReceptionistProfileUpdateDto request = new ReceptionistProfileUpdateDto(
-                "Morning"
-        );
+        ReceptionistProfileUpdateDto request = new ReceptionistProfileUpdateDto("Morning");
         User recUser = sampleUser();
-        com.swp391.scms.users.entity.Role r = new com.swp391.scms.users.entity.Role(); r.setCode("RECEPTIONIST"); recUser.setRole(r);
+        com.swp391.scms.users.entity.Role r = new com.swp391.scms.users.entity.Role();
+        r.setCode("RECEPTIONIST");
+        recUser.setRole(r);
         when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(recUser));
-        
+
         Receptionist existingRec = new Receptionist();
         existingRec.setUserId(101L);
         when(receptionistRepository.findById(101L)).thenReturn(Optional.of(existingRec));
@@ -281,13 +329,3 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 }
-
-
-
-
-
-
-
-
-
-
