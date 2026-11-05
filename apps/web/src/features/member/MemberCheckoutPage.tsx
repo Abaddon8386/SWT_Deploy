@@ -1,6 +1,6 @@
 import { VnpayPayButton } from '../payments/VnpayPayButton';
 import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { notify } from '../../shared/lib/portalNotices';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
@@ -17,6 +17,7 @@ import { errorMessage } from '../../shared/lib/errorMessage';
 
 export function MemberCheckoutPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const packageIdParam = searchParams.get('packageId');
   const parsedPackageId = packageIdParam ? parseInt(packageIdParam, 10) : null;
@@ -241,7 +242,16 @@ export function MemberCheckoutPage() {
           <section className="portal-card stack" aria-label="Thanh toán VNPay Sandbox">
             <h2 className="portal-card-title">VNPay Sandbox</h2>
             <p>Thanh toán thử nghiệm qua ngân hàng, thẻ hoặc QR trên VNPay. Gói tập được cập nhật khi hệ thống nhận xác nhận giao dịch.</p>
-            <VnpayPayButton prepare={prepareVnpay} disabled={isSubmitting} />
+            <VnpayPayButton prepare={prepareVnpay} disabled={isSubmitting} onPaid={() => navigate('/member/packages', { replace: true })} />
+            <div>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-wallet-modal'))}
+              >
+                Mở Ví SÖL &amp; Nạp thêm tiền
+              </button>
+            </div>
           </section>
           <div className="appointment-form-box">
             <h3 className="appointment-form-title">

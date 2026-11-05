@@ -1,5 +1,6 @@
 package com.swp391.scms.wallet;
 
+import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.users.UserRepository;
@@ -57,6 +58,10 @@ public class WalletService {
     @Transactional
     public WalletDto getMyWallet(Long userId) {
         Wallet wallet = getOrCreateWallet(userId);
+        return toDto(wallet);
+    }
+
+    public WalletDto toDto(Wallet wallet) {
         List<WalletTransactionDto> txDtos = walletTransactionRepository
                 .findTop50ByWallet_IdOrderByCreatedAtDescIdDesc(wallet.getId())
                 .stream()
@@ -72,6 +77,104 @@ public class WalletService {
                 ))
                 .toList();
         return new WalletDto(wallet.getBalance(), wallet.getUpdatedAt(), txDtos);
+    }
+
+    @Transactional
+    public void creditTopup(Long userId, BigDecimal amount, String reference) {
+        if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0 || reference == null || reference.isBlank()) {
+            return;
+        }
+        Wallet wallet = getOrCreateWalletForUpdate(userId);
+        String topupRef = reference + ":TOPUP";
+        if (walletTransactionRepository.existsByWallet_IdAndReferenceId(wallet.getId(), topupRef)) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal newBalance = currentBalance.add(amount);
+
+        WalletTransaction topup = new WalletTransaction();
+        topup.setWallet(wallet);
+        topup.setType("TOPUP_VNPAY");
+        topup.setAmount(amount);
+        topup.setBalanceAfter(newBalance);
+        topup.setReferenceType("VNPAY_TOPUP");
+        topup.setReferenceId(topupRef);
+        topup.setDescription("Nạp tiền vào Ví qua VNPay (#" + reference + ")");
+        topup.setCreatedAt(now);
+        walletTransactionRepository.save(topup);
+
+        wallet.setBalance(newBalance);
+        wallet.setUpdatedAt(now);
+        walletRepository.save(wallet);
+
+        if (notificationService != null) {
+            try {
+                notificationService.send(
+                        userId,
+                        "Nạp tiền vào Ví SÖL thành công",
+                        "Đã nạp thành công " + amount.toPlainString() + " đ vào Ví điện tử SÖL của bạn (#" + reference + "). Số dư mới: " + newBalance.toPlainString() + " đ.",
+                        "payment",
+                        "wallet",
+                        wallet.getId(),
+                        "/member/packages"
+                );
+            } catch (RuntimeException ignored) {
+            }
+        }
+    }
+
+    @Transactional
+    public WalletDto debitForPayment(Long userId, BigDecimal amount, String referenceId, String serviceDescription, String actionPath) {
+        if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không hợp lệ.");
+        }
+        Wallet wallet = getOrCreateWalletForUpdate(userId);
+        BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
+        if (currentBalance.compareTo(amount) < 0) {
+            throw new BadRequestException(
+                    "INSUFFICIENT_WALLET_BALANCE",
+                    "Số dư Ví không đủ để thanh toán (Hiện có: " + currentBalance.toPlainString()
+                            + " đ, cần: " + amount.toPlainString() + " đ). Vui lòng nạp thêm tiền vào Ví."
+            );
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        BigDecimal newBalance = currentBalance.subtract(amount);
+
+        WalletTransaction debit = new WalletTransaction();
+        debit.setWallet(wallet);
+        debit.setType("PAYMENT_DEBIT");
+        debit.setAmount(amount);
+        debit.setBalanceAfter(newBalance);
+        debit.setReferenceType("WALLET_PAYMENT");
+        debit.setReferenceId(referenceId);
+        debit.setDescription((serviceDescription != null && !serviceDescription.isBlank())
+                ? serviceDescription
+                : ("Thanh toán dịch vụ bằng Ví SÖL (#" + referenceId + ")"));
+        debit.setCreatedAt(now);
+        walletTransactionRepository.save(debit);
+
+        wallet.setBalance(newBalance);
+        wallet.setUpdatedAt(now);
+        walletRepository.saveAndFlush(wallet);
+
+        if (notificationService != null) {
+            try {
+                notificationService.send(
+                        userId,
+                        "Thanh toán bằng Ví SÖL thành công",
+                        "Đã trừ " + amount.toPlainString() + " đ từ Ví SÖL để thanh toán dịch vụ. Số dư còn lại: " + newBalance.toPlainString() + " đ.",
+                        "payment",
+                        "wallet",
+                        wallet.getId(),
+                        actionPath != null ? actionPath : "/member/invoices"
+                );
+            } catch (RuntimeException ignored) {
+            }
+        }
+        return toDto(wallet);
     }
 
     @Transactional

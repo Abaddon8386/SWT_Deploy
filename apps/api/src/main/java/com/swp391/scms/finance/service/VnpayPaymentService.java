@@ -59,12 +59,96 @@ public class VnpayPaymentService {
     private void lockMember(Long id) {
         members.findByUserIdForUpdate(id).orElseThrow(()->new ResourceNotFoundException("resource.member",id));
     }
+
+    public Checkout topupWallet(AuthenticatedPrincipal principal, BigDecimal amount, String ip) {
+        requireMember(principal);
+        gateway.requireEnabled();
+        if (amount == null || amount.compareTo(BigDecimal.valueOf(10_000)) < 0 || amount.compareTo(BigDecimal.valueOf(100_000_000)) > 0) {
+            throw new BadRequestException("VNPAY_INVALID_AMOUNT", "Số tiền nạp vào Ví phải từ 10.000 đ đến 100.000.000 đ.");
+        }
+        lockMember(principal.id());
+        Payment payment = new Payment();
+        payment.setMember(members.findById(principal.id()).orElseThrow(this::unavailable));
+        payment.setAmount(amount);
+        payment.setMethod("wallet_topup");
+        payment.setStatus("pending");
+        payment = payments.save(payment);
+
+        String reference = UUID.randomUUID().toString().replace("-", "");
+        var created = now();
+        var transaction = new VnpayTransaction(reference, payment, payment.getAmount(), created, created.plusMinutes(gateway.timeoutMinutes()), ip);
+        Checkout response = checkoutDto(transaction);
+        transactions.save(transaction);
+        return response;
+    }
+
+    public com.swp391.scms.wallet.WalletDto payWithWallet(AuthenticatedPrincipal principal, CheckoutRequest request) {
+        requireMember(principal);
+        if (walletService == null) {
+            throw new ConflictException("WALLET_UNAVAILABLE", "Tính năng Ví điện tử hiện không khả dụng.");
+        }
+        Payment payment = resolveTargetPayment(principal, request);
+        if (!"pending".equals(payment.getStatus())) throw unavailable();
+        payment.setMethod("online_wallet");
+        payment = payments.saveAndFlush(payment);
+
+        String targetPath = payment.getCourtBookingId() != null
+                ? "/member/courts"
+                : payment.getCoachBookingId() != null
+                        ? "/member/classes?tab=pt"
+                        : payment.getSubscriptionId() != null
+                                ? "/member/packages"
+                                : "/member/invoices";
+        String desc = payment.getSubscriptionId() != null
+                ? "Thanh toán gói tập hội viên (#" + payment.getId() + ")"
+                : payment.getCoachBookingId() != null
+                        ? "Thanh toán lịch PT 1:1 (#" + payment.getId() + ")"
+                        : payment.getCourtBookingId() != null
+                                ? "Thanh toán đặt sân (#" + payment.getId() + ")"
+                                : "Thanh toán dịch vụ (#" + payment.getId() + ")";
+
+        com.swp391.scms.wallet.WalletDto updatedWallet = walletService.debitForPayment(
+                principal.id(),
+                payment.getAmount(),
+                "WALLET_PAY_" + payment.getId(),
+                desc,
+                targetPath
+        );
+        settlement.updatePaymentStatus(payment.getId(), "success");
+        markBookingPaid(payment);
+        invoices.autoIssueInvoiceForPayment(payment.getId());
+        return updatedWallet;
+    }
+
     // Compatibility helper and the membership checkout entry point.
     public Checkout checkout(AuthenticatedPrincipal principal, Long subscriptionId, String ip) {
         return checkout(principal, new CheckoutRequest(subscriptionId,null,null,null),ip);
     }
     public Checkout checkout(AuthenticatedPrincipal principal, CheckoutRequest request, String ip) {
         requireMember(principal); gateway.requireEnabled();
+        Payment payment = resolveTargetPayment(principal, request);
+        if (!"pending".equals(payment.getStatus())) throw unavailable();
+        payment=payments.save(payment);
+        var existing=transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(),"pending");
+        if(existing.isPresent()) {
+            VnpayTransaction current=existing.get();
+            if(current.getExpiresAt().isAfter(now())) return checkoutDto(current);
+            // The gateway refuses payment after expiry; wait out the IPN grace period, then start a fresh attempt.
+            if(!current.getExpiresAt().plus(VnpayPaymentGuard.SETTLEMENT_GRACE).isBefore(now()))
+                throw new ConflictException("VNPAY_AWAITING_CONFIRMATION","finance.vnpay.awaiting_confirmation",null,null);
+            current.setStatus("failed");
+            transactions.save(current);
+        }
+        String reference=UUID.randomUUID().toString().replace("-","");
+        var created=now();
+        var transaction=new VnpayTransaction(reference,payment,payment.getAmount(),created,created.plusMinutes(gateway.timeoutMinutes()),ip);
+        Checkout response=checkoutDto(transaction); // validate before persisting a payment attempt
+        payment.setMethod("online_wallet");
+        transactions.save(transaction);
+        return response;
+    }
+
+    private Payment resolveTargetPayment(AuthenticatedPrincipal principal, CheckoutRequest request) {
         Long[] targets={request.subscriptionId(),request.coachBookingId(),request.courtBookingId(),request.paymentId()};
         if (Arrays.stream(targets).filter(Objects::nonNull).count()!=1 || Arrays.stream(targets).filter(Objects::nonNull).anyMatch(id->id<1))
             throw new BadRequestException("VNPAY_TARGET_REQUIRED","finance.vnpay.target_required",null,null);
@@ -98,26 +182,9 @@ public class VnpayPaymentService {
             payment=findOrCreate(payments.findAllByCourtBookingId(booking.getId()),principal.id(),booking.getPrice());
             payment.setCourtBookingId(booking.getId());
         }
-        if (!"pending".equals(payment.getStatus())) throw unavailable();
-        payment=payments.save(payment);
-        var existing=transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(),"pending");
-        if(existing.isPresent()) {
-            VnpayTransaction current=existing.get();
-            if(current.getExpiresAt().isAfter(now())) return checkoutDto(current);
-            // The gateway refuses payment after expiry; wait out the IPN grace period, then start a fresh attempt.
-            if(!current.getExpiresAt().plus(VnpayPaymentGuard.SETTLEMENT_GRACE).isBefore(now()))
-                throw new ConflictException("VNPAY_AWAITING_CONFIRMATION","finance.vnpay.awaiting_confirmation",null,null);
-            current.setStatus("failed");
-            transactions.save(current);
-        }
-        String reference=UUID.randomUUID().toString().replace("-","");
-        var created=now();
-        var transaction=new VnpayTransaction(reference,payment,payment.getAmount(),created,created.plusMinutes(gateway.timeoutMinutes()),ip);
-        Checkout response=checkoutDto(transaction); // validate before persisting a payment attempt
-        payment.setMethod("online_wallet");
-        transactions.save(transaction);
-        return response;
+        return payment;
     }
+
     private Payment findOrCreate(List<Payment> existing,Long memberId,BigDecimal amount) {
         if(existing!=null && !existing.isEmpty()) {
             if(existing.stream().anyMatch(p -> !"pending".equals(p.getStatus()))) throw unavailable();
@@ -141,8 +208,16 @@ public class VnpayPaymentService {
         var t=transactions.findById(reference).orElseThrow(()->new ResourceNotFoundException("resource.payment",reference));
         Payment p=t.getPayment();requireOwner(principal,p.getMember().getUserId());
         String status="refunded".equals(p.getStatus())?"refunded":t.getStatus();
-        return new Status(reference,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),
-                p.getCourtBookingId()!=null?"/member/courts":p.getCoachBookingId()!=null?"/member/classes?tab=pt":p.getSubscriptionId()!=null?"/member/packages":"/member/invoices");
+        String targetPath = p.getCourtBookingId()!=null
+                ? "/member/courts"
+                : p.getCoachBookingId()!=null
+                        ? "/member/classes?tab=pt"
+                        : p.getSubscriptionId()!=null
+                                ? "/member/packages"
+                                : "wallet_topup".equalsIgnoreCase(p.getMethod())
+                                        ? "/member/packages"
+                                        : "/member/invoices";
+        return new Status(reference,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath);
     }
     public String ipn(Map<String,String> fields) {
         if(!gateway.validSignature(fields)) return "97";
@@ -170,14 +245,20 @@ public class VnpayPaymentService {
             markBookingPaid(p);
             invoices.autoIssueInvoiceForPayment(p.getId());
             if (walletService != null) {
-                String desc = p.getSubscriptionId() != null
-                        ? "Thanh toán gói tập hội viên (#" + reference + ")"
-                        : p.getCoachBookingId() != null
-                                ? "Thanh toán lịch PT 1:1 (#" + reference + ")"
-                                : p.getCourtBookingId() != null
-                                        ? "Thanh toán đặt sân (#" + reference + ")"
-                                        : "Thanh toán dịch vụ (#" + reference + ")";
-                walletService.recordVnpayTopupAndDebit(p.getMember().getUserId(), t.getAmount(), reference, desc);
+                boolean isDirectTopup = "wallet_topup".equalsIgnoreCase(p.getMethod());
+
+                if (isDirectTopup) {
+                    walletService.creditTopup(p.getMember().getUserId(), t.getAmount(), reference);
+                } else {
+                    String desc = p.getSubscriptionId() != null
+                            ? "Thanh toán gói tập hội viên (#" + reference + ")"
+                            : p.getCoachBookingId() != null
+                                    ? "Thanh toán lịch PT 1:1 (#" + reference + ")"
+                                    : p.getCourtBookingId() != null
+                                            ? "Thanh toán đặt sân (#" + reference + ")"
+                                            : "Thanh toán dịch vụ (#" + reference + ")";
+                    walletService.recordVnpayTopupAndDebit(p.getMember().getUserId(), t.getAmount(), reference, desc);
+                }
             }
             notifications.send(p.getMember().getUserId(), messages.getMessage("notifications.payment.vnpay_success.title"),
                     messages.getMessage("notifications.payment.vnpay_success.body", t.getAmount().toPlainString(), reference),

@@ -73,6 +73,34 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransactionItem[]>([]);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [topupAmount, setTopupAmount] = useState('200000');
+  const [topupBusy, setTopupBusy] = useState(false);
+  const [topupError, setTopupError] = useState<string | null>(null);
+
+  const handleWalletTopup = async () => {
+    if (topupBusy) return;
+    const numeric = Number(topupAmount);
+    if (!Number.isFinite(numeric) || numeric < 10000 || numeric > 100000000) {
+      setTopupError('Số tiền nạp vào Ví phải từ 10.000 đ đến 100.000.000 đ.');
+      return;
+    }
+    setTopupBusy(true);
+    setTopupError(null);
+    try {
+      const checkout = await apiFetch<{ paymentUrl?: string }>('/wallet/topup/vnpay', {
+        method: 'POST',
+        body: JSON.stringify({ amount: numeric }),
+      });
+      if (checkout?.paymentUrl) {
+        window.location.assign(checkout.paymentUrl);
+      } else {
+        setTopupBusy(false);
+      }
+    } catch (err) {
+      setTopupError(err instanceof Error ? err.message : 'Không thể tạo giao dịch nạp tiền VNPay.');
+      setTopupBusy(false);
+    }
+  };
 
   const notificationTrigger = useRef<HTMLElement | null>(null);
   const closeNotifications = useCallback(() => {
@@ -510,6 +538,66 @@ function PortalShellContent({ user }: { user: UserSession }) {
           <p className="portal-subtitle" style={{ marginBottom: 16 }}>
             Khi thanh toán qua VNPay, tiền được nạp tự động vào Ví và trừ ngay cho dịch vụ đăng ký. Khi yêu cầu hủy gói tập được Quản lý phê duyệt hoàn tiền, tiền hoàn sẽ cộng trực tiếp vào Ví của bạn.
           </p>
+          {isMember && (
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: '1px solid var(--portal-border, #ffffff1a)',
+                background: 'var(--portal-surface, #292929)',
+                display: 'grid',
+                gap: 10,
+                marginBottom: 16,
+              }}
+            >
+              <div className="portal-label" style={{ marginBottom: 0 }}>Nạp tiền vào Ví qua VNPay Sandbox</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {[100000, 200000, 500000, 1000000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    className={Number(topupAmount) === amt ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+                    onClick={() => {
+                      setTopupError(null);
+                      setTopupAmount(String(amt));
+                    }}
+                  >
+                    +{amt.toLocaleString('vi-VN')} đ
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  type="number"
+                  className="portal-input"
+                  aria-label="Số tiền nạp vào Ví (VNĐ)"
+                  min={10000}
+                  max={100000000}
+                  step={10000}
+                  value={topupAmount}
+                  onChange={(e) => {
+                    setTopupError(null);
+                    setTopupAmount(e.target.value);
+                  }}
+                  style={{ flex: '1 1 160px' }}
+                />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  data-testid="wallet-topup-btn"
+                  disabled={topupBusy}
+                  onClick={() => void handleWalletTopup()}
+                >
+                  {topupBusy ? 'Đang chuyển tới VNPay…' : 'Nạp vào Ví qua VNPay'}
+                </button>
+              </div>
+              {topupError && (
+                <p className="form-error" role="alert" style={{ margin: 0 }}>
+                  {topupError}
+                </p>
+              )}
+            </div>
+          )}
           <h3 className="portal-card-title" style={{ fontSize: 14, marginBottom: 10 }}>Lịch sử giao dịch Ví</h3>
           {walletTransactions.length === 0 ? (
             <p className="portal-subtitle" role="status">Chưa có biến động số dư nào trong ví.</p>
