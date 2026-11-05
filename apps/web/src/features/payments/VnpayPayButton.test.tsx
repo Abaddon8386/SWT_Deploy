@@ -16,6 +16,17 @@ it('never sends an amount and cannot double submit while starting checkout',asyn
  await act(async()=>resolve({reference:'ABC',paymentUrl:'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',amount:200000,expiresAt:'2026-11-03T12:15:00'}));
  expect(api.navigateToVnpay).toHaveBeenCalledTimes(1);
 });
+it('becomes usable again when the browser restores the page after leaving VNPay without paying',async()=>{
+ vi.mocked(api.createVnpayCheckout).mockResolvedValue({reference:'ABC',paymentUrl:'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',amount:200000,expiresAt:'2026-11-03T12:15:00'});
+ await act(async()=>root.render(<VnpayPayButton target={{coachBookingId:81}} />));
+ const button=host.querySelector('button')!;await act(async()=>button.click());
+ expect(button.disabled).toBe(true);expect(button.textContent).toContain('Đang chuyển');
+ const pageshow=(persisted:boolean)=>Object.assign(new Event('pageshow'),{persisted});
+ await act(async()=>{window.dispatchEvent(pageshow(false));});expect(button.disabled).toBe(true);
+ await act(async()=>{window.dispatchEvent(pageshow(true));});
+ expect(button.disabled).toBe(false);expect(button.textContent).toContain('Thanh toán VNPay');
+ await act(async()=>button.click());expect(api.createVnpayCheckout).toHaveBeenCalledTimes(2);
+});
 it('allows retry after an API error and shows the error inline',async()=>{
  vi.mocked(api.createVnpayCheckout).mockRejectedValue(new Error('private error'));
  await act(async()=>root.render(<VnpayPayButton target={{courtBookingId:82}} />));
