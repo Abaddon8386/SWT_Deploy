@@ -26,6 +26,8 @@ import {
   type SessionBookingDto,
 } from './memberClassesApi';
 import { BulkBookingResultModal } from './components/BulkBookingResultModal';
+import { weekRangeLabel } from '../schedule/timetable';
+import '../schedule/timetable.css';
 import './member-classes.css';
 import { notify } from '../../shared/lib/portalNotices';
 
@@ -503,11 +505,8 @@ export function MemberClassesPage() {
               gap: 14,
             }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <p className="row-card__meta" style={{ margin: 0 }}>
-                Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> (Thứ 2–Chủ nhật)
-              </p>
-              <div className="filter-chips" role="group" aria-label="Lọc theo tuần">
+            <div className="tt__toolbar" style={{ margin: 0 }}>
+              <div className="tt__nav" role="group" aria-label="Lọc theo tuần">
                 {([-1, 0, 1] as const).map((offset) => (
                   <button key={offset} type="button" className={`filter-chip ${weekOffset === offset ? 'is-active' : ''}`}
                     aria-pressed={weekOffset === offset} onClick={() => changeWeek(offset)}>
@@ -515,6 +514,7 @@ export function MemberClassesPage() {
                   </button>
                 ))}
               </div>
+              <strong className="tt__range" aria-live="polite">{weekRangeLabel(weekRange.fromDate)}</strong>
             </div>
 
             <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
@@ -580,7 +580,7 @@ export function MemberClassesPage() {
             {sessions.length === 0 ? (
               <div className="portal-card portal-empty">
                 <h3>Chưa có lịch học</h3>
-                <p>Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần kế tiếp.</p>
+                <p>Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần sau.</p>
                 {weekOffset === 0 && (
                   <button
                     type="button"
@@ -589,7 +589,7 @@ export function MemberClassesPage() {
                       changeWeek(1);
                     }}
                   >
-                    Xem lịch tuần kế tiếp
+                    Xem lịch tuần sau
                   </button>
                 )}
               </div>
