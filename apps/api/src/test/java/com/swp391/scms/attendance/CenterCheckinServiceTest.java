@@ -199,6 +199,46 @@ class CenterCheckinServiceTest {
     }
 
     @Test
+    void selfScanWithForgedOrExpiredGateQrAuditsDenial() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        mockMember(10L, "Member");
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var forged = selfService.selfScan(memberPrincipal, new CheckinRequests.SelfScan("SOL:GATE:1:A1:1:bad"));
+        assertEquals("DENIED", forged.status());
+        assertEquals(10L, forged.memberId());
+        String expired = gateQr.generate("A1", clock.millis() - 120_000).qrCode();
+        assertEquals("DENIED", selfService.selfScan(memberPrincipal, new CheckinRequests.SelfScan(expired)).status());
+        verify(checkins, times(2)).saveAndFlush(any());
+        verifyNoInteractions(subscriptions);
+    }
+
+    @Test
+    void selfCheckoutClosesOwnOpenVisitAndRejectsWhenNoneOpen() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        Member member = mockMember(10L, "Member");
+        var open = new CenterCheckin();
+        open.setMember(member);
+        open.setCheckInTime(LocalDateTime.now(clock).minusHours(1));
+        open.setStatus("GRANTED");
+        when(checkins.findFirstByMemberUserIdAndCheckOutTimeIsNullOrderByCheckInTimeDesc(10L))
+                .thenReturn(Optional.of(open), Optional.empty());
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var request = new CheckinRequests.SelfScan(gateQr.generate("A1", clock.millis()).qrCode());
+        assertNotNull(selfService.selfCheckout(memberPrincipal, request).checkOutTime());
+        assertThrows(BadRequestException.class, () -> selfService.selfCheckout(memberPrincipal, request));
+        assertThrows(ForbiddenException.class, () -> selfService.selfCheckout(receptionist, request));
+    }
+
+    @Test
+    void historyRejectsRangesLongerThanOneMonthOrReversed() {
+        LocalDate today = LocalDate.now(clock);
+        assertThrows(BadRequestException.class, () -> service.history(memberPrincipal, today.minusDays(40), today));
+        assertThrows(BadRequestException.class, () -> service.history(memberPrincipal, today, today.minusDays(1)));
+    }
+
+    @Test
     void selfScanWithoutCurrentSubscriptionAuditsDenial() {
         var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
         var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);

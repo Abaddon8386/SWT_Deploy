@@ -53,7 +53,7 @@ paths:
   /check-in/self:
     post:
       summary: Member records own entry using a signed gate QR
-      description: MEMBER only. Identity comes from the authenticated principal. The server checks gate signature/lifetime, account status, current active subscription, anti-passback and database membership trigger. No offline queue. Invalid/expired challenges return 400; business denials return 201 with status DENIED and an audit entry.
+      description: MEMBER only. Identity comes from the authenticated principal. The server checks gate signature/lifetime, account status, current active subscription, anti-passback and database membership trigger. No offline queue. Forged, malformed or expired challenges and business denials all return 201 with status DENIED and an audit entry (denialReason localized).
       requestBody:
         required: true
         content:
@@ -87,7 +87,25 @@ paths:
                       avatarUrl: { type: string, nullable: true }
                       packageName: { type: string, nullable: true }
                       remainingDays: { type: integer, nullable: true }
-        '400': { description: Validation error, GATE_QR_INVALID or GATE_QR_EXPIRED }
+        '400': { description: Validation error (blank or oversize gateQr) }
+        '401': { description: Authentication required }
+        '403': { description: Member role required }
+  /check-in/self/checkout:
+    post:
+      summary: Member checks out by scanning a signed gate QR
+      description: MEMBER only. Closes the caller's own open GRANTED visit. Invalid/expired gate QR returns 400 (GATE_QR_INVALID / GATE_QR_EXPIRED); no open visit returns 400 CHECKIN_NO_OPEN_VISIT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gateQr]
+              properties:
+                gateQr: { type: string, minLength: 1, maxLength: 256 }
+      responses:
+        '200': { description: Checked out; returns CheckinDto with checkOutTime }
+        '400': { description: GATE_QR_INVALID, GATE_QR_EXPIRED or CHECKIN_NO_OPEN_VISIT }
         '401': { description: Authentication required }
         '403': { description: Member role required }
 components:

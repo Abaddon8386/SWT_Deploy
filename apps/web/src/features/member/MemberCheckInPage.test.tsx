@@ -40,3 +40,16 @@ it('rejects unrelated QR content without sending a check-in', async () => {
   expect(host.textContent).toContain('Đây không phải mã QR cổng SÖL');
   expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).includes('/self'))).toHaveLength(0);
 });
+it('sends the gate code to the checkout endpoint in check-out mode', async () => {
+  await render();
+  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Check-out')!.click());
+  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Bật camera')!.click());
+  const code = `SOL:GATE:1:A1:1793256000000:${'a'.repeat(64)}`;
+  await act(async () => camera.decode!({ data: code }));
+  expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).includes('/self/checkout'))).toHaveLength(1);
+});
+it('requests a date range when a longer history window is chosen', async () => {
+  await render();
+  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === '7 ngày')!.click());
+  expect(vi.mocked(fetch).mock.calls.some((call) => String(call[0]).includes('fromDate='))).toBe(true);
+});
