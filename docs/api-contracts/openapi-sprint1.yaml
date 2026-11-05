@@ -415,6 +415,26 @@ paths:
       responses:
         '200': { description: Updated persisted profile in ApiResponse.data }
         '400': { description: Invalid avatar URL, format or data, or avatar exceeds 2 MiB }
+  /profile/kyc:
+    post:
+      summary: Verify Member identity (CCCD or Passport) and synchronize fullName before first package purchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [citizenId, fullName, frontImageUrl]
+              properties:
+                documentType: { type: string, enum: [CCCD, PASSPORT], default: CCCD }
+                citizenId: { type: string, maxLength: 30 }
+                fullName: { type: string, maxLength: 150 }
+                nationality: { type: string }
+                frontImageUrl: { type: string }
+                backImageUrl: { type: string }
+      responses:
+        '200': { description: Updated ProfileDto with identityVerified=true and synchronized fullName }
+        '400': { description: Invalid document number, foreign-only passport rule, or missing/oversized document image }
   /profile/coach:
     put: { summary: Update coach profile (COACH), responses: { '200': { description: OK }, '403': { description: FORBIDDEN } } }
   /profile/receptionist:

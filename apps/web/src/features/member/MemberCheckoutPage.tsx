@@ -163,6 +163,7 @@ export function MemberCheckoutPage() {
         backImageUrl: kycDocType === 'CCCD' ? kycBackImage : undefined,
       });
       setProfile(updated);
+      window.dispatchEvent(new Event('profile-updated'));
       setKycSuccess('Đã xác minh danh tính và đồng bộ họ tên tài khoản thành công! Bạn có thể tiếp tục thanh toán bên dưới.');
     } catch (err) {
       setKycError(errorMessage(err, 'Không thể gửi xác minh danh tính. Vui lòng kiểm tra lại.'));

@@ -459,12 +459,18 @@ public class MemberTrialService {
     }
 
     private TrialStatusDto toStatusDto(MemberTrialRedemption r) {
-        boolean isApproved = MemberTrialRedemption.STATUS_APPROVED.equalsIgnoreCase(r.getStatus());
+        String effectiveStatus = r.getStatus() != null
+                ? r.getStatus()
+                : (r.getSubscription() != null ? MemberTrialRedemption.STATUS_APPROVED : MemberTrialRedemption.STATUS_PENDING);
+        String effectiveDocType = r.getDocumentType() != null
+                ? r.getDocumentType()
+                : MemberTrialRedemption.DOC_CCCD;
+        boolean isApproved = MemberTrialRedemption.STATUS_APPROVED.equalsIgnoreCase(effectiveStatus);
         return new TrialStatusDto(
                 false,
                 isApproved,
-                r.getStatus(),
-                r.getDocumentType(),
+                effectiveStatus,
+                effectiveDocType,
                 cccdHasher.mask(r.getCccdLast4()),
                 r.getFullName(),
                 r.getNationality(),
@@ -482,6 +488,12 @@ public class MemberTrialService {
         Member m = r.getMember();
         User u = m != null ? m.getUser() : null;
         MembershipSubscription s = r.getSubscription();
+        String effectiveStatus = r.getStatus() != null
+                ? r.getStatus()
+                : (s != null ? MemberTrialRedemption.STATUS_APPROVED : MemberTrialRedemption.STATUS_PENDING);
+        String effectiveDocType = r.getDocumentType() != null
+                ? r.getDocumentType()
+                : MemberTrialRedemption.DOC_CCCD;
         return new ReceptionTrialDto(
                 r.getId(),
                 m != null ? m.getUserId() : null,
@@ -489,13 +501,13 @@ public class MemberTrialService {
                 u != null ? u.getFullName() : r.getFullName(),
                 u != null ? u.getEmail() : null,
                 u != null ? u.getPhone() : null,
-                r.getDocumentType(),
+                effectiveDocType,
                 cccdHasher.mask(r.getCccdLast4()),
                 r.getFullName(),
                 r.getNationality(),
                 r.getFrontImageUrl(),
                 r.getBackImageUrl(),
-                r.getStatus(),
+                effectiveStatus,
                 r.getRedeemedAt(),
                 r.getReviewedBy(),
                 r.getReviewedAt(),

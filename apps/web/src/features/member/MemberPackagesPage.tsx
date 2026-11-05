@@ -699,14 +699,14 @@ export function MemberPackagesPage() {
               CHỜ LỄ TÂN PHÊ DUYỆT TẠI QUẦY
             </span>
             <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-              Đã nộp: {trialStatus.requestedAt ? formatCenterDate(trialStatus.requestedAt) : 'Gần đây'}
+              Đã nộp: {(trialStatus.requestedAt ?? trialStatus.redeemedAt) ? formatCenterDate((trialStatus.requestedAt ?? trialStatus.redeemedAt)!) : 'Gần đây'}
             </span>
           </div>
           <h3 style={{ margin: '10px 0 6px', fontSize: 18, fontWeight: 700 }}>
             Đơn đăng ký Gói Trải Nghiệm 3 Ngày đang được xử lý
           </h3>
           <p className="row-card__meta" style={{ margin: 0, lineHeight: 1.5 }}>
-            Hệ thống đã ghi nhận thông tin ({trialStatus.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'} • {trialStatus.documentNumberMasked}).
+            Hệ thống đã ghi nhận thông tin ({trialStatus.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'} • {trialStatus.documentNumberMasked ?? trialStatus.cccd ?? '—'}).
             Vui lòng mang theo <strong>giấy tờ bản gốc ({trialStatus.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'})</strong> đến quầy Lễ tân để nhân viên đối chiếu và kích hoạt 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.
           </p>
         </section>

@@ -312,8 +312,9 @@ export const receptionApi = {
    * Lễ tân lấy danh sách đơn đăng ký Gói Trải Nghiệm 3 Ngày (mặc định chờ duyệt)
    */
   getPendingTrials: async (search?: string): Promise<ReceptionTrialItem[]> => {
-    const q = search ? `?search=${encodeURIComponent(search)}` : '';
-    return apiFetch<ReceptionTrialItem[]>(`/reception/trials${q}`);
+    const params = new URLSearchParams({ status: 'PENDING_APPROVAL' });
+    if (search) params.set('search', search);
+    return apiFetch<ReceptionTrialItem[]>(`/reception/trials?${params.toString()}`);
   },
 
   /**

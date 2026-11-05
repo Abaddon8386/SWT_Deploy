@@ -215,8 +215,8 @@ public class ProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
     }
 
-    private static final java.util.regex.Pattern CCCD_PATTERN = java.util.regex.Pattern.compile("^\\d{12}$");
-    private static final java.util.regex.Pattern PASSPORT_PATTERN = java.util.regex.Pattern.compile("^[A-Z0-9]{6,12}$", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern CCCD_PATTERN = java.util.regex.Pattern.compile("^(\\d{9}|\\d{12})$");
+    private static final java.util.regex.Pattern PASSPORT_PATTERN = java.util.regex.Pattern.compile("^[A-Z0-9]{6,15}$", java.util.regex.Pattern.CASE_INSENSITIVE);
 
     @Transactional
     @Audited(action = "MEMBER_KYC_SUBMIT", entity = "members")
@@ -224,11 +224,10 @@ public class ProfileService {
         User user = findActiveUser(userId);
         Member member = memberRepository.findById(userId).orElseGet(() -> {
             Member m = new Member();
-            m.setUserId(userId);
             m.setUser(user);
             m.setMembershipCode("MEM-" + userId);
             m.setJoinDate(java.time.LocalDate.now());
-            return memberRepository.save(m);
+            return m;
         });
 
         String docType = request.resolvedDocumentType();
@@ -247,14 +246,14 @@ public class ProfileService {
             }
             if (!PASSPORT_PATTERN.matcher(citizenId).matches()) {
                 throw new BadRequestException("TRIAL_PASSPORT_INVALID", "trial.passport.format", null,
-                        "Số hộ chiếu không hợp lệ. Vui lòng nhập từ 6-12 ký tự chữ và số.");
+                        "Số hộ chiếu không hợp lệ (từ 6 đến 15 ký tự chữ và số).");
             }
             member.setNationality(nationality);
         } else {
             docType = "CCCD";
             if (!CCCD_PATTERN.matcher(citizenId).matches()) {
-                throw new BadRequestException("TRIAL_CCCD_INVALID", "trial.cccd.format", null,
-                        "Số Căn cước công dân (CCCD) phải bao gồm đúng 12 chữ số.");
+                throw new BadRequestException("TRIAL_CCCD_INVALID", "validation.trial.cccd.format", null,
+                        "Số Căn cước công dân (CCCD) phải bao gồm 9 hoặc 12 chữ số.");
             }
             if (request.backImageUrl() == null || request.backImageUrl().isBlank()) {
                 throw new BadRequestException("KYC_BACK_IMAGE_REQUIRED", "validation.users.kyc.back_image.required", null,
@@ -266,6 +265,13 @@ public class ProfileService {
         if (request.frontImageUrl() == null || request.frontImageUrl().isBlank()) {
             throw new BadRequestException("KYC_FRONT_IMAGE_REQUIRED", "validation.users.kyc.front_image.not_blank", null,
                     "Vui lòng tải lên ảnh mặt trước của giấy tờ.");
+        }
+
+        if (request.frontImageUrl().trim().startsWith("data:")) {
+            validateAvatarUrl(request.frontImageUrl());
+        }
+        if (request.backImageUrl() != null && request.backImageUrl().trim().startsWith("data:")) {
+            validateAvatarUrl(request.backImageUrl());
         }
 
         member.setDocumentType(docType);

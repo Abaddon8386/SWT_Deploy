@@ -70,6 +70,7 @@ public class AuditAspect {
             JsonNode newValue = snapshot != null ? snapshot : result == null
                     || "PROFILE_UPDATE".equals(audited.action())
                     || "PROFILE_AVATAR_UPDATE".equals(audited.action())
+                    || "MEMBER_KYC_SUBMIT".equals(audited.action())
                     ? null : objectMapper.valueToTree(result);
             AuditLog entry = new AuditLog();
             entry.setUserId(currentUserId());

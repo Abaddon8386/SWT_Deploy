@@ -43,4 +43,12 @@ public record TrialStatusDto(
                 1
         );
     }
+
+    public String getDocumentNumberMasked() {
+        return cccd;
+    }
+
+    public LocalDateTime getRequestedAt() {
+        return redeemedAt;
+    }
 }

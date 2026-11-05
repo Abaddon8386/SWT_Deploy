@@ -446,6 +446,19 @@ BEGIN
         ) THEN
             EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN rejection_reason VARCHAR(500)', current_schema());
         END IF;
+
+        EXECUTE format('UPDATE %I.member_trial_redemptions SET document_type = ''CCCD'' WHERE document_type IS NULL', current_schema());
+        EXECUTE format('UPDATE %I.member_trial_redemptions SET status = CASE WHEN subscription_id IS NOT NULL THEN ''APPROVED'' ELSE ''PENDING_APPROVAL'' END WHERE status IS NULL', current_schema());
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'members'
+          AND column_name = 'identity_verified'
+    ) THEN
+        EXECUTE format('UPDATE %I.members SET identity_verified = FALSE WHERE identity_verified IS NULL', current_schema());
     END IF;
 END;
 $$;
