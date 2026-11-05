@@ -50,6 +50,8 @@ interface GlassRenderer {
 
 /** Phần tử có thuộc tính này (và chính lớp kính) không được chụp vào nền khúc xạ. */
 export const LIQUID_GLASS_IGNORE_ATTR = 'data-liquid-glass-ignore';
+/** Tỉ lệ pixel của ảnh chụp so với CSS px; shader dùng kích thước logic nên không lệch. */
+const SNAPSHOT_SCALE = 0.5;
 
 // html2canvas 1.4 chỉ hiểu rgb/hsl: màu computed dạng color(srgb …), oklch, oklab, lab, lch
 // (sinh ra từ color-mix/oklch trong CSS) làm nó ném lỗi. Đổi về rgba trong bản clone.
@@ -84,6 +86,44 @@ function toRgba(value: string): string {
   return result;
 }
 
+/**
+ * Rút gọn bản clone: khối nằm hẳn ngoài dải cần chụp được làm rỗng nhưng giữ nguyên kích
+ * thước, nên bố cục không đổi mà html2canvas có ít phần tử phải phân tích (trang dài như
+ * landing ~15.000px giảm từ hàng nghìn phần tử xuống vài trăm).
+ */
+function pruneOutsideBand(root: Element, top: number, bottom: number, depth: number) {
+  const view = root.ownerDocument.defaultView;
+  if (!view || depth > 8) return;
+  for (const child of Array.from(root.children)) {
+    if (!(child instanceof view.HTMLElement) || child.tagName === 'HEAD' || child.tagName === 'STYLE') continue;
+    const rect = child.getBoundingClientRect();
+    if (rect.height === 0 && rect.width === 0) continue;
+    const position = view.getComputedStyle(child).position;
+    if (position === 'fixed' || position === 'sticky') continue;
+    if (rect.bottom < top || rect.top > bottom) {
+      child.style.setProperty('box-sizing', 'border-box', 'important');
+      child.style.setProperty('height', `${rect.height}px`, 'important');
+      child.style.setProperty('min-height', `${rect.height}px`, 'important');
+      child.style.setProperty('width', `${rect.width}px`, 'important');
+      child.replaceChildren();
+    } else if (child.children.length > 0 && (rect.top < top || rect.bottom > bottom)) {
+      // Cắt ngang dải: đi tiếp vào trong để làm rỗng phần con nằm ngoài.
+      pruneOutsideBand(child, top, bottom, depth + 1);
+    }
+  }
+}
+
+function prepareClone(doc: Document, bandTop: number, bandBottom: number) {
+  // Animation/transition chạy lại từ đầu trong bản clone (vd. hiệu ứng hiện dần của landing),
+  // khiến phần tử bị chụp lúc còn trong suốt. Tắt hết để chụp đúng trạng thái đang hiển thị.
+  const freeze = doc.createElement('style');
+  freeze.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;}';
+  doc.head.appendChild(freeze);
+  // Clone cuộn ở 0 nên getBoundingClientRect chính là toạ độ tài liệu.
+  if (doc.body) pruneOutsideBand(doc.body, bandTop, bandBottom, 0);
+  normalizeModernColors(doc);
+}
+
 function normalizeModernColors(doc: Document) {
   const view = doc.defaultView;
   if (!view) return;
@@ -108,8 +148,11 @@ class LiquidGlassEngine {
   /** Ảnh chụp viewport thật (html2canvas) mà shader khúc xạ, giống liquid-glass-js. */
   public pageSnapshot: HTMLCanvasElement | null = null;
   /** Vị trí cuộn của cửa sổ tại thời điểm chụp, để dịch nền khi người dùng cuộn tiếp. */
-  public snapshotScrollX = 0;
-  public snapshotScrollY = 0;
+  /** Góc trên-trái (toạ độ tài liệu) và kích thước logic của vùng đã chụp. */
+  public snapshotOriginX = 0;
+  public snapshotOriginY = 0;
+  public snapshotWidth = 0;
+  public snapshotHeight = 0;
   public isCapturing = false;
   private pendingCapture: Promise<boolean> | null = null;
   private recaptureRequested = false;
@@ -122,6 +165,13 @@ class LiquidGlassEngine {
       // capture: true để bắt cả vùng cuộn bên trong (portal, landing) chứ không chỉ window.
       document.addEventListener('scroll', this.handleScroll, { passive: true, capture: true });
       window.addEventListener('resize', this.handleResize, { passive: true });
+      // Đổi theme sáng/tối (data-theme, class trên <html>): nền phía sau đổi hoàn toàn nên ảnh cũ
+      // không còn đúng. Tạm dùng kính CSS và chụp lại ngay.
+      new MutationObserver(() => {
+        this.contentDirty = true;
+        this.requestAllRender();
+        this.scheduleRecapture(60);
+      }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
     }
   }
 
@@ -166,13 +216,36 @@ class LiquidGlassEngine {
     return false;
   }
 
+  /**
+   * html2canvas chạy trên main thread (~50–80ms): chỉ chụp lại khi người dùng đã ngừng
+   * thao tác một lúc và trình duyệt rảnh, để không khựng ngay lúc vừa dừng cuộn/kéo.
+   */
   private scheduleRecapture(delay: number) {
     if (!this.hasActiveGlass()) return;
     if (this.recaptureTimeout) clearTimeout(this.recaptureTimeout);
     this.recaptureTimeout = setTimeout(() => {
       this.recaptureTimeout = null;
-      void this.captureSnapshot();
+      const run = () => { void this.captureSnapshot(); };
+      if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run, { timeout: 1500 });
+      else run();
     }, delay);
+  }
+
+  /** Nội dung trong một khung cuộn con đã dịch chuyển: ảnh chụp không còn khớp tới khi chụp lại. */
+  private contentDirty = false;
+
+  /**
+   * Ảnh chụp còn khớp với những gì đang hiển thị (viewport nằm trong vùng đã chụp và không có
+   * khung con nào cuộn). Khi false, lớp kính tạm dùng blur CSS cho tới lần chụp kế tiếp.
+   */
+  public viewportCovered() {
+    if (!this.pageSnapshot || this.contentDirty) return false;
+    const top = window.scrollY;
+    const left = window.scrollX;
+    return top >= this.snapshotOriginY
+      && top + window.innerHeight <= this.snapshotOriginY + this.snapshotHeight
+      && left >= this.snapshotOriginX
+      && left + window.innerWidth <= this.snapshotOriginX + this.snapshotWidth;
   }
 
   private handleScroll = (event: Event) => {
@@ -181,12 +254,16 @@ class LiquidGlassEngine {
     if (target instanceof Element && target.closest(`[${LIQUID_GLASS_IGNORE_ATTR}]`)) return;
     if (!this.hasActiveGlass()) return;
     this.requestAllRender();
-    this.scheduleRecapture(180);
+    const windowScroll = target === document || target === document.documentElement || target === document.body;
+    if (!windowScroll) this.contentDirty = true;
+    // Cuộn cửa sổ trong vùng đã chụp: shader tự dịch nền, không cần chụp lại.
+    if (windowScroll && this.viewportCovered()) return;
+    this.scheduleRecapture(windowScroll ? 250 : 450);
   };
 
   private handleResize = () => {
     this.requestAllRender();
-    this.scheduleRecapture(250);
+    this.scheduleRecapture(300);
   };
 
   /**
@@ -200,8 +277,15 @@ class LiquidGlassEngine {
       return this.pendingCapture;
     }
     this.isCapturing = true;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
+    // Chụp thêm ~1 viewport phía trên và dưới để cuộn qua lại không phải chụp lại liên tục.
+    const viewportH = window.innerHeight;
+    const docH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, viewportH);
+    const originX = window.scrollX;
+    const originY = Math.max(0, Math.min(window.scrollY - viewportH * 1.5, docH - viewportH * 4));
+    const cropW = window.innerWidth;
+    const cropH = Math.min(docH - originY, viewportH * 4);
+    const dirtyAtStart = this.contentDirty;
+    this.contentDirty = false;
     const run = async () => {
       try {
         const { default: html2canvas } = await import('html2canvas');
@@ -209,25 +293,35 @@ class LiquidGlassEngine {
         const rootBg = getComputedStyle(document.documentElement).backgroundColor;
         const transparent = (c: string) => c === 'transparent' || c === 'rgba(0, 0, 0, 0)';
         const snapshot = await html2canvas(document.body, {
-          x: scrollX,
-          y: scrollY,
-          width: window.innerWidth,
-          height: window.innerHeight,
+          // Bản clone giữ cuộn 0 để toạ độ phần tử là toạ độ tài liệu, rồi cắt đúng vùng viewport.
+          // (Để mặc định, html2canvas cộng độ cuộn vào trong khi clone không cuộn theo → lệch.)
+          scrollX: 0,
+          scrollY: 0,
+          x: originX,
+          y: originY,
+          width: cropW,
+          height: cropH,
           windowWidth: document.documentElement.clientWidth,
           windowHeight: window.innerHeight,
-          scale: 1,
+          // Nền luôn bị blur: nửa độ phân giải nhẹ hơn ~4 lần mà không thấy khác biệt.
+          scale: SNAPSHOT_SCALE,
           logging: false,
           useCORS: true,
           backgroundColor: !transparent(bodyBg) ? bodyBg : !transparent(rootBg) ? rootBg : '#1c1c1c',
-          onclone: (doc) => normalizeModernColors(doc),
+          onclone: (doc) => prepareClone(doc, originY - 40, originY + cropH + 40),
           ignoreElements: (el) => el.hasAttribute?.(LIQUID_GLASS_IGNORE_ATTR) ?? false,
         });
+        // Khung con lại cuộn trong lúc đang chụp: ảnh vẫn cũ, giữ cờ để chụp tiếp.
+        if (this.contentDirty) this.recaptureRequested = true;
         this.pageSnapshot = snapshot;
-        this.snapshotScrollX = scrollX;
-        this.snapshotScrollY = scrollY;
+        this.snapshotOriginX = originX;
+        this.snapshotOriginY = originY;
+        this.snapshotWidth = cropW;
+        this.snapshotHeight = cropH;
         this.requestAllRender();
         return true;
       } catch (error) {
+        this.contentDirty = this.contentDirty || dirtyAtStart;
         if (import.meta.env.DEV) console.warn('[liquid-glass] snapshot failed', error);
         return false;
       } finally {

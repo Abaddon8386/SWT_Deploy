@@ -91,9 +91,14 @@ export function LiquidGlassContainer({
 
       const rect = canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
-      // Ảnh chụp là viewport tại lúc chụp; bù phần cửa sổ đã cuộn thêm kể từ đó.
-      const dx = window.scrollX - glassEngine.snapshotScrollX;
-      const dy = window.scrollY - glassEngine.snapshotScrollY;
+      // Ảnh chụp không khớp vị trí hiện tại: đánh dấu để CSS hiện kính blur dự phòng thay vì
+      // kéo giãn mép ảnh cũ; lần chụp kế tiếp sẽ vẽ lại và bỏ dấu.
+      const stale = !glassEngine.viewportCovered();
+      container.toggleAttribute('data-glass-stale', stale);
+      if (stale) return;
+      // Ảnh chụp bắt đầu tại snapshotOrigin (toạ độ tài liệu): đổi vị trí viewport sang toạ độ ảnh.
+      const dx = window.scrollX - glassEngine.snapshotOriginX;
+      const dy = window.scrollY - glassEngine.snapshotOriginY;
 
       gl.useProgram(current.program);
       gl.bindTexture(gl.TEXTURE_2D, current.texture);
@@ -103,9 +108,10 @@ export function LiquidGlassContainer({
       }
 
       gl.uniform2f(current.resolutionLoc, canvas.width, canvas.height);
-      gl.uniform2f(current.textureSizeLoc, snapshot.width, snapshot.height);
+      // Kích thước logic (CSS px) để toạ độ chuẩn hoá đúng dù ảnh chụp ở tỉ lệ thấp hơn.
+      gl.uniform2f(current.textureSizeLoc, glassEngine.snapshotWidth, glassEngine.snapshotHeight);
       gl.uniform1f(current.scrollYLoc, dy);
-      gl.uniform1f(current.pageHeightLoc, snapshot.height);
+      gl.uniform1f(current.pageHeightLoc, glassEngine.snapshotHeight);
       gl.uniform1f(current.viewportHeightLoc, window.innerHeight);
       gl.uniform1f(current.borderRadiusLoc, radiusRef.current);
       gl.uniform2f(current.containerPositionLoc, rect.left + rect.width / 2 + dx, rect.top + rect.height / 2);
