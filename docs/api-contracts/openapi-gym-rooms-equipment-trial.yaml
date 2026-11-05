@@ -122,17 +122,65 @@ paths:
               schema: { $ref: '#/components/schemas/TrialStatus' }
   /memberships/trial/claim:
     post:
-      summary: Verify CCCD and activate the 3-day GOLD trial (MEMBER)
+      summary: Submit 3-day trial request with CCCD or Passport (MEMBER)
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/TrialClaimRequest' }
       responses:
-        '201': { description: 'ApiResponse.data = MembershipSubscription (GOLD, endDate = startDate + 3 days, upgradeCharge 0)' }
-        '400': { description: Validation error (CCCD must be 9 or 12 digits) }
-        '404': { description: No active GOLD package in the catalog }
-        '409': { description: TRIAL_ALREADY_CLAIMED, TRIAL_CCCD_ALREADY_USED or TRIAL_NOT_NEW_MEMBER }
+        '201': { description: 'ApiResponse.data = TrialStatus (status = PENDING_APPROVAL)' }
+        '400': { description: Validation error (invalid document format or foreign-only passport restriction) }
+        '409': { description: TRIAL_ALREADY_CLAIMED, TRIAL_REQUEST_PENDING, TRIAL_DOCUMENT_ALREADY_USED or TRIAL_NOT_NEW_MEMBER }
+  /reception/trials:
+    get:
+      summary: List 3-day trial requests for reception verification (RECEPTIONIST, CENTER_MANAGER)
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [PENDING_APPROVAL, APPROVED, REJECTED] }
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        '200':
+          description: ApiResponse.data = array of ReceptionTrialDto
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ReceptionTrialDto' }
+  /reception/trials/{id}/approve:
+    post:
+      summary: Receptionist approves trial after in-person ID check (activates 3-day subscription & syncs user fullName)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200': { description: ApiResponse.data = ReceptionTrialDto }
+        '404': { description: Trial request not found }
+        '409': { description: Trial already approved }
+  /reception/trials/{id}/reject:
+    post:
+      summary: Receptionist rejects trial with a stated reason
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: ApiResponse.data = ReceptionTrialDto }
+        '404': { description: Trial request not found }
 components:
   schemas:
     RoomRequest:
@@ -162,16 +210,50 @@ components:
         note: { type: string, maxLength: 500 }
     TrialClaimRequest:
       type: object
-      required: [cccd, fullName]
+      required: [fullName]
       properties:
-        cccd: { type: string, pattern: '^(\d{9}|\d{12})$' }
+        documentType: { type: string, enum: [CCCD, PASSPORT], default: CCCD }
+        documentNumber: { type: string, description: 'CCCD (9/12 digits) or Passport (6-15 alphanumeric)' }
+        cccd: { type: string, description: 'Legacy alias for documentNumber' }
         fullName: { type: string, maxLength: 150 }
+        nationality: { type: string, maxLength: 100 }
+        frontImageUrl: { type: string }
+        backImageUrl: { type: string }
     TrialStatus:
       type: object
       properties:
         eligible: { type: boolean, description: True only for a member who has never held a package and never claimed a trial }
         alreadyClaimed: { type: boolean }
+        status: { type: string, enum: [NONE, PENDING_APPROVAL, APPROVED, REJECTED] }
+        documentType: { type: string, enum: [CCCD, PASSPORT] }
         cccd: { type: string, nullable: true, description: 'Masked, e.g. ********1234' }
         fullName: { type: string, nullable: true }
+        nationality: { type: string, nullable: true }
+        frontImageUrl: { type: string, nullable: true }
+        backImageUrl: { type: string, nullable: true }
+        rejectionReason: { type: string, nullable: true }
         redeemedAt: { type: string, format: date-time, nullable: true }
+        subscriptionId: { type: integer, format: int64, nullable: true }
+        packageName: { type: string }
+        coachSessionQuota: { type: integer, example: 1 }
+    ReceptionTrialDto:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        memberId: { type: integer, format: int64 }
+        membershipCode: { type: string }
+        memberName: { type: string }
+        memberEmail: { type: string }
+        memberPhone: { type: string }
+        documentType: { type: string }
+        documentNumberMasked: { type: string }
+        documentFullName: { type: string }
+        nationality: { type: string }
+        frontImageUrl: { type: string }
+        backImageUrl: { type: string }
+        status: { type: string }
+        requestedAt: { type: string, format: date-time }
+        reviewedBy: { type: integer, format: int64, nullable: true }
+        reviewedAt: { type: string, format: date-time, nullable: true }
+        rejectionReason: { type: string, nullable: true }
         subscriptionId: { type: integer, format: int64, nullable: true }

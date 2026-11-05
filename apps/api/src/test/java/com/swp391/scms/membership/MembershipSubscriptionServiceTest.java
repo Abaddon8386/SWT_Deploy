@@ -1096,6 +1096,22 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void requestHold_rejectsTrialSubscription() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(99L);
+        pack.setName("Gói Trải Nghiệm 3 Ngày");
+        pack.setDurationDays(3);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = period(100L, member, pack, null, today.minusDays(1), today.plusDays(2));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Lý do")))
+                .isInstanceOf(BadRequestException.class)
+                .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("MEMBERSHIP_TRIAL_CANNOT_HOLD"));
+    }
+
+    @Test
     void requestHold_rejectsDuplicatePendingHoldPendingPaymentPaidFutureRenewalAndPendingCancellation() {
         org.springframework.test.util.ReflectionTestUtils.setField(service, "cancellationRequests", cancellationRequests);
         Member member = new Member(); member.setUserId(10L);

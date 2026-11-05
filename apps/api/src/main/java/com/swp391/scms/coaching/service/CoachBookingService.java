@@ -191,6 +191,24 @@ public class CoachBookingService {
         return slots;
     }
 
+    private boolean isTrialSubscription(MembershipSubscription sub) {
+        if (sub == null) return false;
+        if (sub.getMembershipPackage() != null) {
+            String name = sub.getMembershipPackage().getName();
+            if (name != null && (name.contains("Trải Nghiệm") || name.toUpperCase().contains("TRIAL"))) {
+                return true;
+            }
+            if (sub.getMembershipPackage().getDurationDays() > 0 && sub.getMembershipPackage().getDurationDays() <= 3) {
+                return true;
+            }
+        }
+        if (sub.getStartDate() != null && sub.getEndDate() != null) {
+            long days = java.time.temporal.ChronoUnit.DAYS.between(sub.getStartDate(), sub.getEndDate());
+            return days >= 0 && days <= 3;
+        }
+        return false;
+    }
+
     @Transactional(readOnly = true)
     public CoachQuotaStatusDto getMemberQuotaStatus(Long memberUserId) {
         List<MembershipSubscription> activeSubs = subscriptionRepository.findByMemberUserIdAndStatus(memberUserId, "active").stream()
@@ -202,14 +220,22 @@ public class CoachBookingService {
             return new CoachQuotaStatusDto(null, 0, 0, 0);
         }
         MembershipSubscription sub = activeSubs.get(0);
-        String pkgName = sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
-                ? sub.getMembershipPackage().getName().toUpperCase() : "";
-
+        boolean isTrial = isTrialSubscription(sub);
+        String pkgName;
         int monthlyQuota = 0;
-        if (pkgName.contains("PLATINUM")) {
-            monthlyQuota = 6;
-        } else if (pkgName.contains("GOLD")) {
-            monthlyQuota = 3;
+
+        if (isTrial) {
+            pkgName = "Gói Trải Nghiệm 3 Ngày";
+            monthlyQuota = 1;
+        } else {
+            pkgName = sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
+                    ? sub.getMembershipPackage().getName() : "";
+            String upper = pkgName.toUpperCase();
+            if (upper.contains("PLATINUM")) {
+                monthlyQuota = 6;
+            } else if (upper.contains("GOLD")) {
+                monthlyQuota = 3;
+            }
         }
 
         LocalDate now = LocalDate.now(clock);
@@ -336,14 +362,18 @@ public class CoachBookingService {
             }
 
             MembershipSubscription sub = activeSubs.get(0);
-            String pkgName = sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
-                    ? sub.getMembershipPackage().getName().toUpperCase() : "";
-
+            boolean isTrial = isTrialSubscription(sub);
             int monthlyQuota = 0;
-            if (pkgName.contains("PLATINUM")) {
-                monthlyQuota = 6;
-            } else if (pkgName.contains("GOLD")) {
-                monthlyQuota = 3;
+            if (isTrial) {
+                monthlyQuota = 1;
+            } else {
+                String pkgName = sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
+                        ? sub.getMembershipPackage().getName().toUpperCase() : "";
+                if (pkgName.contains("PLATINUM")) {
+                    monthlyQuota = 6;
+                } else if (pkgName.contains("GOLD")) {
+                    monthlyQuota = 3;
+                }
             }
 
             if (monthlyQuota == 0) {
@@ -360,6 +390,14 @@ public class CoachBookingService {
             long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(member.getUserId(), startMonth, endMonth, "package_quota");
 
             if (usedQuota >= monthlyQuota) {
+                if (isTrial) {
+                    throw new BadRequestException(
+                            "COACH_BOOKING_TRIAL_QUOTA_EXCEEDED",
+                            "error.coach_booking.trial_quota_exceeded",
+                            new Object[]{monthlyQuota},
+                            "Gói tập trải nghiệm chỉ bao gồm tối đa 1 buổi tập 1:1 cùng Huấn luyện viên cá nhân. Vui lòng chọn thanh toán theo giờ."
+                    );
+                }
                 throw new BadRequestException(
                         "COACH_BOOKING_QUOTA_EXCEEDED",
                         "error.coach_booking.quota_exceeded",

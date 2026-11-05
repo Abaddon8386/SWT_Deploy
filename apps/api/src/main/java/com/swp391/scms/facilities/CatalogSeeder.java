@@ -17,6 +17,19 @@ import org.springframework.stereotype.Component;
 @Order(50)
 public class CatalogSeeder implements ApplicationRunner {
 
+    // --- GÓI TRẢI NGHIỆM 3 NGÀY ---
+    public static final String TRIAL_PACKAGE_NAME = "Gói Trải Nghiệm 3 Ngày";
+    public static final String TRIAL_PACKAGE_DESC = "GÓI TRẢI NGHIỆM – Khám phá SÖL Fitness trong 3 ngày\n"
+            + "Quyền lợi:\n"
+            + "- Toàn quyền sử dụng khu vực gym tiêu chuẩn và trang thiết bị hiện đại.\n"
+            + "- 01 buổi tập Personal Trainer 1:1 cùng Huấn luyện viên chuyên nghiệp.\n"
+            + "- Sử dụng tủ khóa và tiện ích phòng thay đồ.\n"
+            + "- Không áp dụng chính sách bảo lưu.";
+    public static final BigDecimal TRIAL_PACKAGE_PRICE = BigDecimal.ZERO;
+    public static final int TRIAL_PACKAGE_DURATION = 3;
+    public static final Integer TRIAL_PACKAGE_CREDIT_LIMIT = 3;
+    public static final String TRIAL_PACKAGE_TIER = "GOLD";
+
     // --- 1 THÁNG (30 NGÀY) ---
     public static final String SILVER_NAME = "SILVER";
     public static final String SILVER_DESC = "BASIC – Cơ bản\n"
@@ -150,6 +163,9 @@ public class CatalogSeeder implements ApplicationRunner {
             rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available", null, null, null, "STANDARD"));
         }
 
+        // Upsert 3-day trial package
+        upsertPackageWithTier(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_PRICE, TRIAL_PACKAGE_DURATION, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, "GOLD TRIAL", "Gói Tập Thử 3 Ngày", "Gói Thử Gold");
+
         // Upsert 1-month base packages
         upsertPackage(SILVER_NAME, SILVER_DESC, SILVER_PRICE, SILVER_DURATION, SILVER_CREDIT_LIMIT, "The Essential");
         upsertPackage(GOLD_NAME, GOLD_DESC, GOLD_PRICE, GOLD_DURATION, GOLD_CREDIT_LIMIT, "The Sanctuary VIP");
@@ -245,6 +261,10 @@ public class CatalogSeeder implements ApplicationRunner {
     }
 
     private void upsertPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
+        upsertPackageWithTier(name, desc, price, duration, creditLimit, null, legacyAliases);
+    }
+
+    private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier, String... legacyAliases) {
         var existingList = packages.list();
         for (var pkg : existingList) {
             if (name.equalsIgnoreCase(pkg.name())) {
@@ -254,13 +274,13 @@ public class CatalogSeeder implements ApplicationRunner {
                 for (String alias : legacyAliases) {
                     if (alias.equalsIgnoreCase(pkg.name())) {
                         packages.update(pkg.id(), new PackageRequest(name, pkg.description(),
-                                correctedLegacyPrice(pkg.name(), pkg.price()), pkg.durationDays(), pkg.classCreditLimit(), pkg.status()));
+                                correctedLegacyPrice(pkg.name(), pkg.price()), pkg.durationDays(), pkg.classCreditLimit(), pkg.status(), tier));
                         return;
                     }
                 }
             }
         }
-        packages.create(new PackageRequest(name, desc, price, duration, creditLimit, "active"));
+        packages.create(new PackageRequest(name, desc, price, duration, creditLimit, "active", tier));
     }
     /**
      * Preserves any price customized by a Manager in the database; only converts the original

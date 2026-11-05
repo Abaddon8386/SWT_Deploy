@@ -357,6 +357,96 @@ BEGIN
         EXECUTE format('ALTER TABLE %I.member_trial_redemptions ALTER COLUMN cccd DROP NOT NULL', current_schema());
         EXECUTE format('ALTER TABLE %I.member_trial_redemptions DROP CONSTRAINT IF EXISTS uq_trial_cccd', current_schema());
     END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'member_trial_redemptions'
+          AND column_name = 'subscription_id'
+          AND is_nullable = 'NO'
+    ) THEN
+        EXECUTE format('ALTER TABLE %I.member_trial_redemptions ALTER COLUMN subscription_id DROP NOT NULL', current_schema());
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = current_schema()
+          AND table_name = 'member_trial_redemptions'
+    ) THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'member_trial_redemptions'
+              AND column_name = 'document_type'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN document_type VARCHAR(20) DEFAULT ''CCCD'' NOT NULL', current_schema());
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'member_trial_redemptions'
+              AND column_name = 'nationality'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN nationality VARCHAR(100)', current_schema());
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'member_trial_redemptions'
+              AND column_name = 'front_image_url'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN front_image_url TEXT', current_schema());
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'member_trial_redemptions'
+              AND column_name = 'back_image_url'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN back_image_url TEXT', current_schema());
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'member_trial_redemptions'
+              AND column_name = 'status'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN status VARCHAR(30) DEFAULT ''APPROVED'' NOT NULL', current_schema());
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'member_trial_redemptions'
+              AND column_name = 'reviewed_by'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN reviewed_by BIGINT', current_schema());
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'member_trial_redemptions'
+              AND column_name = 'reviewed_at'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN reviewed_at TIMESTAMP', current_schema());
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'member_trial_redemptions'
+              AND column_name = 'rejection_reason'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.member_trial_redemptions ADD COLUMN rejection_reason VARCHAR(500)', current_schema());
+        END IF;
+    END IF;
 END;
 $$;
 

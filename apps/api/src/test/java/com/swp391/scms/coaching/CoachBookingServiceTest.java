@@ -235,6 +235,88 @@ class CoachBookingServiceTest {
     }
 
     @Test
+    @DisplayName("Thành công trừ lượt PT của Gói Trải Nghiệm 3 Ngày (tối đa 1 lượt)")
+    void createBooking_success_withTrialQuota() {
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+
+        MembershipPackage pkg = new MembershipPackage();
+        pkg.setName("Gói Trải Nghiệm 3 Ngày");
+        pkg.setDurationDays(3);
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setMembershipPackage(pkg);
+        sub.setStatus("active");
+        sub.setStartDate(LocalDate.of(2026, 10, 30));
+        sub.setEndDate(LocalDate.of(2026, 11, 2));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
+        // Used 0 quota out of 1
+        when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(0L);
+
+        when(coachBookingRepository.save(any(CoachBooking.class))).thenAnswer(inv -> {
+            CoachBooking b = inv.getArgument(0);
+            b.setId(102L);
+            return b;
+        });
+
+        CoachBookingCreateDto request = new CoachBookingCreateDto(
+                20L,
+                null,
+                LocalDate.of(2026, 10, 31),
+                LocalTime.of(16, 0),
+                LocalTime.of(17, 0),
+                "package_quota",
+                "Tập thử HLV 1:1"
+        );
+
+        CoachBookingDto result = service.createBooking(principal, request);
+        assertThat(result.paymentStatus()).isEqualTo("used_quota");
+        assertThat(result.status()).isEqualTo("confirmed");
+    }
+
+    @Test
+    @DisplayName("Báo lỗi khi Gói Trải Nghiệm 3 Ngày đã dùng hết 1 buổi PT 1:1")
+    void createBooking_throws_whenTrialQuotaExceeded() {
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+
+        MembershipPackage pkg = new MembershipPackage();
+        pkg.setName("Gói Trải Nghiệm 3 Ngày");
+        pkg.setDurationDays(3);
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setMembershipPackage(pkg);
+        sub.setStatus("active");
+        sub.setStartDate(LocalDate.of(2026, 10, 30));
+        sub.setEndDate(LocalDate.of(2026, 11, 2));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
+        // Already used 1 session
+        when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(1L);
+
+        CoachBookingCreateDto request = new CoachBookingCreateDto(
+                20L,
+                null,
+                LocalDate.of(2026, 10, 31),
+                LocalTime.of(16, 0),
+                LocalTime.of(17, 0),
+                "package_quota",
+                "Đặt buổi thứ hai"
+        );
+
+        assertThatThrownBy(() -> service.createBooking(principal, request))
+                .isInstanceOf(BadRequestException.class)
+                .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("COACH_BOOKING_TRIAL_QUOTA_EXCEEDED"));
+    }
+
+    @Test
     @DisplayName("Báo lỗi khi gói tập không có quyền lợi PT (như SILVER) mà chọn trừ lượt gói")
     void createBooking_throws_whenSilverHasNoPtQuota() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
@@ -479,5 +561,50 @@ class CoachBookingServiceTest {
                         LocalTime.of(14, 0), LocalTime.of(15, 0), "month", null, null, null)))
                 .isInstanceOf(com.swp391.scms.common.exception.ResourceNotFoundException.class);
         verify(coachBookingRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("getMemberQuotaStatus: Trả về đúng 1 lượt cho Gói Trải Nghiệm 3 Ngày (dù tên cũ là GOLD)")
+    void getMemberQuotaStatus_returnsTrialQuotaCorrectly() {
+        MembershipPackage pkg = new MembershipPackage();
+        pkg.setName("GOLD");
+        pkg.setDurationDays(30);
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setMembershipPackage(pkg);
+        sub.setStatus("active");
+        sub.setStartDate(LocalDate.of(2026, 10, 30));
+        sub.setEndDate(LocalDate.of(2026, 11, 2)); // 3 days
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
+        when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(0L);
+
+        var quota = service.getMemberQuotaStatus(10L);
+        assertThat(quota.packageName()).isEqualTo("Gói Trải Nghiệm 3 Ngày");
+        assertThat(quota.monthlyQuota()).isEqualTo(1);
+        assertThat(quota.remainingQuota()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("getMemberQuotaStatus: Trả về đúng 3 lượt cho Gói GOLD 30 ngày chuẩn")
+    void getMemberQuotaStatus_returnsGoldQuotaCorrectly() {
+        MembershipPackage pkg = new MembershipPackage();
+        pkg.setName("GOLD");
+        pkg.setDurationDays(30);
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setMembershipPackage(pkg);
+        sub.setStatus("active");
+        sub.setStartDate(LocalDate.of(2026, 10, 1));
+        sub.setEndDate(LocalDate.of(2026, 11, 30)); // 60 days
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
+        when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(1L);
+
+        var quota = service.getMemberQuotaStatus(10L);
+        assertThat(quota.packageName()).isEqualTo("GOLD");
+        assertThat(quota.monthlyQuota()).isEqualTo(3);
+        assertThat(quota.usedThisMonth()).isEqualTo(1);
+        assertThat(quota.remainingQuota()).isEqualTo(2);
     }
 }

@@ -224,6 +224,15 @@ export function MemberPackagesPage() {
     currentState.data?.status?.toLowerCase() === 'active'
       ? currentState.data
       : null;
+  const isTrial = Boolean(
+    current && (
+      current.packageName?.toLowerCase().includes('trải nghiệm') ||
+      current.packageName?.toLowerCase().includes('trial') ||
+      (current.startDate && current.endDate &&
+        Math.abs(new Date(current.endDate).getTime() - new Date(current.startDate).getTime()) <= 3.5 * 24 * 60 * 60 * 1000)
+    )
+  );
+  const displayedPackageName = isTrial ? 'Gói Trải Nghiệm 3 Ngày' : current?.packageName;
   const currentPackage = current
     ? packages.find((item) => item.id === current.packageId) ?? null
     : null;
@@ -635,7 +644,7 @@ export function MemberPackagesPage() {
                 Đặc quyền Hội viên mới
               </div>
               <h2 className="portal-card-title" style={{ marginTop: 6, fontSize: '1.25rem' }}>
-                Trải nghiệm 3 ngày tập miễn phí với đặc quyền Gold
+                Gói Trải Nghiệm 3 Ngày miễn phí (Kèm 01 buổi tập HLV 1:1)
               </h2>
             </div>
             <button
@@ -666,7 +675,7 @@ export function MemberPackagesPage() {
                 className="portal-card-title"
                 style={{ marginTop: 8 }}
               >
-                {current.packageName}
+                {displayedPackageName}
               </h2>
               <p className="row-card__meta" style={{ marginTop: 4 }}>
                 Hiệu lực từ {formatDate(current.startDate)} đến {formatDate(current.paidThroughDate ?? current.endDate)}
@@ -679,23 +688,25 @@ export function MemberPackagesPage() {
               <Link to="/member/classes" className="btn-secondary btn-sm">
                 Đặt lịch lớp học
               </Link>
-              <details className="package-manage">
-                <summary className="btn-secondary btn-sm">Quản lý gói</summary>
-                <div className="package-manage__menu">
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    disabled={current.holdStatus === 'PENDING'}
-                    onClick={() => {
-                      setHoldError(null);
-                      setHoldReason(current.holdReason && current.holdStatus !== 'REJECTED' ? current.holdReason : '');
-                      setIsHoldModalOpen(true);
-                    }}
-                  >
-                    {current.holdStatus === 'PENDING' ? 'Đang chờ duyệt bảo lưu' : 'Bảo lưu gói tập'}
-                  </button>
-                </div>
-              </details>
+              {!isTrial && (
+                <details className="package-manage">
+                  <summary className="btn-secondary btn-sm">Quản lý gói</summary>
+                  <div className="package-manage__menu">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      disabled={current.holdStatus === 'PENDING'}
+                      onClick={() => {
+                        setHoldError(null);
+                        setHoldReason(current.holdReason && current.holdStatus !== 'REJECTED' ? current.holdReason : '');
+                        setIsHoldModalOpen(true);
+                      }}
+                    >
+                      {current.holdStatus === 'PENDING' ? 'Đang chờ duyệt bảo lưu' : 'Bảo lưu gói tập'}
+                    </button>
+                  </div>
+                </details>
+              )}
             </div>
           </div>
         </section>
@@ -1147,13 +1158,13 @@ export function MemberPackagesPage() {
 
       {isTrialModalOpen && (
         <Modal
-          title="Nhận 3 ngày tập miễn phí (Đặc quyền Gold)"
+          title="Đăng ký Gói Trải Nghiệm 3 Ngày"
           onClose={() => setIsTrialModalOpen(false)}
           busy={isClaimingTrial}
         >
           <div className="meta-label">Xác minh Căn cước công dân (CCCD)</div>
           <p className="row-card__meta" style={{ marginTop: 8 }}>
-            Theo quy định của trung tâm, mỗi hội viên và mỗi số CCCD chỉ được nhận gói tập trải nghiệm 3 ngày Gold một lần duy nhất.
+            Theo quy định của trung tâm, mỗi hội viên và mỗi số CCCD chỉ được nhận Gói Trải Nghiệm 3 Ngày một lần duy nhất. Gói bao gồm 01 buổi tập 1:1 cùng HLV cá nhân và không hỗ trợ bảo lưu.
           </p>
           <form onSubmit={(e) => void handleClaimTrial(e)} style={{ marginTop: 16 }}>
             <div className="portal-form-group">
