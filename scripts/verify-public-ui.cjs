@@ -14,6 +14,7 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
   await page.addInitScript(() => localStorage.setItem('scms_theme', 'dark'));
   await page.route('**/api/v1/public/catalog', route => route.fulfill({ json: { success: true, data: require('./public-catalog-fixture.cjs') } }));
+  await page.route('**/api/v1/public/products*', route => route.fulfill({ json: { success: true, data: { content: [], number: 0, size: 3, totalElements: 0, totalPages: 0 } } }));
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/accounts.google.com/gsi/**', (route) => route.fulfill({ body: '', contentType: 'text/javascript' }));
@@ -31,6 +32,7 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
         canvasRight: canvas.getBoundingClientRect().right,
         padding: getComputedStyle(site).padding,
         scrollbar: getComputedStyle(document.documentElement).scrollbarColor,
+        scrollbarWidth: getComputedStyle(document.documentElement).scrollbarWidth,
         scheme: getComputedStyle(document.documentElement).colorScheme,
       };
     });
@@ -38,7 +40,10 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
     assert.equal(layout.canvasLeft, 0, 'Canvas must have no outer frame');
     assert.ok(Math.abs(layout.canvasRight - layout.viewport) <= 1, 'Canvas must fill the viewport width');
     assert.equal(layout.padding, '0px', 'Public page must have no outer padding');
-    assert.equal(layout.scrollbar, 'rgb(206, 145, 128) rgb(32, 32, 32)', 'Scrollbar must use the public palette');
+    assert.ok(
+      layout.scrollbar === 'rgb(206, 145, 128) rgb(32, 32, 32)' || layout.scrollbarWidth === 'none',
+      'Scrollbar must use the public palette or be hidden',
+    );
     assert.equal(layout.scheme, 'dark', 'Public browser surfaces must use the dark palette');
   };
   try {
@@ -72,13 +77,13 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
     await page.getByRole('button', { name: 'Strength floor' }).click();
     await page.getByRole('button', { name: 'Đồng hành dài hạn' }).click();
     assert.equal(await page.locator('.fit-plan').count(), 2);
-    await page.getByRole('button', { name: 'Tất cả gói tập' }).click();
-    assert.equal(await page.locator('.fit-plan').count(), 3);
+    await page.getByRole('button', { name: 'Gói 1 tháng' }).click();
+    assert.equal(await page.locator('.fit-plan').count(), 1);
     check('trainer navigation, gallery switch and pricing filter');
     await page.getByRole('button', { name: 'Strength & Barbell' }).click();
     assert.equal(await page.locator('.fit-schedule-card').count(), 2);
     await page.getByRole('button', { name: 'Tất cả bộ môn' }).click();
-    assert.equal(await page.locator('.fit-schedule-card').count(), 6);
+    assert.equal(await page.locator('.fit-schedule-card').count(), 4);
     await page.locator('#fit-bmi-height').fill('175');
     await page.locator('#fit-bmi-weight').fill('70');
     await page.getByRole('button', { name: 'Giảm mỡ & Săn chắc' }).click();

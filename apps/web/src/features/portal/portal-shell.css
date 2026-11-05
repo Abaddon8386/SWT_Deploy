@@ -226,21 +226,27 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   font-weight: 700;
   line-height: 1;
 }
-.portal-v2 .app-main { min-width: 0; min-height: 0; }
+.portal-v2 .app-main { position: relative; min-width: 0; min-height: 0; }
+/* Desktop: không còn hàng tiêu đề riêng; cụm thao tác nổi ở góc phải, nội dung trang bắt đầu ngay từ đầu. */
 .portal-v2 .app-topbar {
-  position: static;
+  position: absolute;
+  top: 0;
+  right: 0;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 20px;
   height: auto;
-  min-height: 78px;
-  padding: 10px 24px 20px;
+  min-height: 0;
+  padding: 10px 24px 0;
   border: 0;
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
-  z-index: auto;
+  z-index: 30;
 }
+.portal-v2 #portal-main .portal-header:first-child { min-height: 54px; padding-right: max(0px, calc(var(--portal-topbar-width, 0px) - 8px)); }
+.portal-avatar-dropdown__brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 10px 10px; }
+.portal-avatar-dropdown__brand .portal-wordmark { min-height: 0; font-size: 20px; text-decoration: none; }
 .portal-workspace, .portal-topbar-actions, .portal-account { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .portal-wordmark { flex-shrink: 0; display: inline-flex; flex-direction: column; justify-content: center; min-height: 44px; font-weight: 800; font-size: 22px; letter-spacing: -.06em; line-height: 1.2; color: var(--portal-paper); }
 .portal-wordmark span { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--portal-muted); }
@@ -418,7 +424,9 @@ body:has(.portal-backdrop) .sol-toast__icon { display: none; }
   .portal-v2 .app-sidebar { display: none; }
   .portal-v2 .app-topbar { position: sticky; top: 0; z-index: 20; flex-wrap: nowrap; min-height: 70px; gap: 10px; margin-top: calc(-1 * env(safe-area-inset-top, 0px)); padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 14px; background: var(--portal-ink); }
   .portal-workspace { gap: 10px; }
-  .portal-workspace-divider, .portal-workspace-role { display: none; }
+  .portal-workspace-divider { display: none; }
+  .portal-v2 .app-topbar { justify-content: space-between; }
+  .portal-v2 #portal-main .portal-header:first-child { min-height: 0; padding-right: 0; }
   .portal-wordmark { font-size: 20px; }
   .portal-wordmark span { font-size: 11px; }
   .portal-topbar-actions { gap: 6px; }

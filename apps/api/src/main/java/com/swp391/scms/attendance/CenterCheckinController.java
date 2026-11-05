@@ -89,8 +89,23 @@ public class CenterCheckinController {
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'MEMBER', 'ADMIN')")
     public ApiResponse<List<CheckinDto>> history(
-            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        return ApiResponse.ok(msg("attendance.history.success"), service.history(principal));
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fromDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate toDate) {
+        List<CheckinDto> rows = fromDate == null && toDate == null
+                ? service.history(principal)
+                : service.history(principal, fromDate, toDate);
+        return ApiResponse.ok(msg("attendance.history.success"), rows);
+    }
+
+    @Operation(summary = "Member checks out by scanning the gate QR")
+    @PostMapping("/self/checkout")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<ApiResponse<CheckinDto>> selfCheckout(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @Valid @RequestBody CheckinRequests.SelfScan request) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(ApiResponse.ok(msg("attendance.self_checkout.success"), service.selfCheckout(principal, request)));
     }
 
     @Operation(summary = "Get the current member's workout streak")

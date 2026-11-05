@@ -15,6 +15,7 @@ const category: Record<string, { label: string }> = {
   booking: { label: 'Đăng ký lớp' },
   waitlist: { label: 'Hàng chờ' },
   payment: { label: 'Thanh toán' },
+  order: { label: 'Đơn hàng' },
   package_expiry: { label: 'Hạn gói tập' },
   support_reply: { label: 'Hỗ trợ' },
   system: { label: 'Hệ thống' },

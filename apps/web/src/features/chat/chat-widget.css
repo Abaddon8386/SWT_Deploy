@@ -572,3 +572,303 @@
     transform: none;
   }
 }
+
+/* ==========================================================================
+   LIQUID GLASS (05/11/2026): khung chat nổi trong suốt, kế thừa quang học
+   của bộ liquid-glass cũ (blur + saturate, viền sáng, highlight trong).
+   Chỉ áp dụng cho widget; nền đặc cũ được thay bằng lớp kính.
+   ========================================================================== */
+.chat-widget__trigger {
+  background: linear-gradient(145deg, rgba(52, 49, 48, 0.5) 0%, rgba(28, 26, 26, 0.62) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36), inset 0 1.5px 1px rgba(255, 255, 255, 0.34), inset 0 -1px 2px rgba(206, 145, 128, 0.22);
+  backdrop-filter: blur(22px) saturate(190%);
+  -webkit-backdrop-filter: blur(22px) saturate(190%);
+}
+.chat-widget__trigger:hover { background: linear-gradient(145deg, rgba(66, 62, 61, 0.56) 0%, rgba(36, 34, 34, 0.66) 100%); }
+.chat-widget__mini-avatar { border-color: rgba(40, 38, 38, 0.8); }
+
+.chat-widget__panel {
+  position: absolute;
+  background: linear-gradient(155deg, rgba(48, 46, 45, 0.42) 0%, rgba(28, 27, 27, 0.52) 52%, rgba(22, 21, 21, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 28px 68px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(206, 145, 128, 0.2), inset 0 1.5px 1px rgba(255, 255, 255, 0.34), inset 0 -1px 1px rgba(255, 255, 255, 0.1), inset 1px 0 1px rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+}
+.chat-widget__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(120% 55% at 12% 0%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 45%, transparent 72%), radial-gradient(90% 50% at 92% 100%, rgba(206, 145, 128, 0.16) 0%, transparent 65%);
+}
+.chat-widget__panel > * { position: relative; z-index: 1; }
+
+/* Các lớp bên trong trong suốt để lộ kính */
+.chat-widget .direct-chat__workspace,
+.chat-widget .direct-chat__thread,
+.chat-widget .direct-chat__compose,
+.chat-widget .direct-chat__inbox,
+.chat-widget .direct-chat__contacts { background: transparent; }
+.chat-widget__header,
+.chat-widget .direct-chat__thread-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-bottom-color: rgba(255, 255, 255, 0.14);
+}
+.chat-widget .direct-chat__compose {
+  background: linear-gradient(0deg, rgba(22, 21, 21, 0.4) 0%, rgba(36, 34, 34, 0.14) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.chat-widget .direct-chat__compose-pill,
+.chat-widget .direct-chat__search input,
+.chat-widget .direct-chat__search .btn-secondary {
+  background: rgba(24, 23, 23, 0.42);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.chat-widget .direct-chat__person:hover,
+.chat-widget .direct-chat__person.is-selected,
+.chat-widget .direct-chat__compose-fab { background: rgba(255, 255, 255, 0.12); }
+.chat-widget .direct-chat__bubble {
+  background: linear-gradient(145deg, rgba(60, 57, 56, 0.55) 0%, rgba(38, 36, 35, 0.62) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+.chat-widget .direct-chat__messages .is-mine .direct-chat__bubble {
+  background: linear-gradient(135deg, rgba(186, 118, 100, 0.72) 0%, rgba(146, 80, 64, 0.8) 100%);
+  border-color: rgba(255, 232, 224, 0.42);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), inset 0 1px 1px rgba(255, 255, 255, 0.36);
+}
+.chat-widget .btn-primary { background: linear-gradient(135deg, #ce9180, #a35b49); border-color: rgba(255, 232, 224, 0.4); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .chat-widget__panel { background: #212328; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .chat-widget__trigger { background: #212328; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* Canvas WebGL liquid-glass (dashersw/liquid-glass-js): shader khúc xạ ảnh chụp thật
+   của trang phía sau. Khi chưa chụp xong / không có WebGL, canvas ẩn và kính CSS ở trên
+   làm dự phòng. Nằm dưới nội dung, không chặn thao tác. */
+.chat-widget__panel > .chat-widget__glass.glass-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  gap: 0;
+  display: block;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.chat-widget__glass canvas { opacity: 0; box-shadow: none; transition: none; }
+.chat-widget__glass.is-ready:not([data-glass-stale]) canvas { opacity: 1; filter: blur(3px); }
+
+/* Đã có khúc xạ thật: bỏ blur CSS, chỉ giữ lớp phủ tối mỏng để chữ trắng luôn đọc được. */
+.chat-widget__panel:has(> .chat-widget__glass.is-ready:not([data-glass-stale])) {
+  background: transparent;
+  --chat-glass-veil: linear-gradient(160deg, rgba(26, 25, 25, 0.24) 0%, rgba(16, 15, 15, 0.34) 100%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* Chữ phụ xám #a8a8a8 chìm khi nền khúc xạ sáng: nâng lên trắng bán trong suốt trên kính. */
+.chat-widget__panel :is(.chat-widget__login p, .chat-widget__status.is-reconnecting, .direct-chat__role,
+  .direct-chat__person-sub, .direct-chat__preview, .direct-chat__dot, .direct-chat__person time,
+  .direct-chat__person-arrow, .direct-chat__thread-header p, .direct-chat__older, .direct-chat__empty,
+  .direct-chat__muted, .direct-chat__search .portal-label, .direct-chat__intro) {
+  color: rgba(245, 245, 245, 0.86);
+}
+.chat-widget__panel .direct-chat .direct-chat__input::placeholder { color: rgba(245, 245, 245, 0.62); }
+
+/* Nút pill "Tin nhắn": cùng lớp kính WebGL khi panel đóng; kính CSS ở trên làm dự phòng. */
+.chat-widget__trigger > .chat-widget__trigger-glass.glass-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  gap: 0;
+  display: block;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+.chat-widget__trigger-glass canvas { opacity: 0; box-shadow: none; transition: none; }
+.chat-widget__trigger-glass.is-ready:not([data-glass-stale]) canvas { opacity: 1; filter: blur(2px); }
+.chat-widget__trigger > :not(.chat-widget__trigger-glass) { position: relative; z-index: 1; }
+.chat-widget__trigger:has(> .chat-widget__trigger-glass.is-ready:not([data-glass-stale])) {
+  background: transparent;
+  --chat-glass-veil: linear-gradient(160deg, rgba(28, 27, 27, 0.16) 0%, rgba(16, 15, 15, 0.26) 100%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+/* Kéo nút chat / panel (qua thanh tiêu đề) tới bất kỳ đâu trên màn hình. */
+.chat-widget__trigger,
+.chat-widget__header,
+.chat-widget .direct-chat__thread-header,
+.chat-widget .direct-chat__inbox-heading {
+  touch-action: none;
+}
+.chat-widget__header,
+.chat-widget .direct-chat__thread-header,
+.chat-widget .direct-chat__inbox-heading {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.chat-widget.is-dragging,
+.chat-widget.is-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+.chat-widget.is-dragging .chat-widget__trigger { transition: none; transform: scale(1.03); }
+.chat-widget.is-dragging .chat-widget__panel { transition: none; }
+
+/* ==========================================================================
+   LIQUID GLASS — THEME SÁNG: kính trắng mờ, chữ mực tối. Thay toàn bộ nền/chữ tối
+   của khung chat (panel, pill, danh sách, bong bóng, ô soạn tin) khi data-theme='light'.
+   Chỉ trong widget; trang /messages đầy đủ giữ style riêng.
+   ========================================================================== */
+:root[data-theme='light'] .chat-widget {
+  --chat-glass-ink: #1c1917;
+  --chat-glass-muted: rgba(28, 25, 23, 0.64);
+  --chat-glass-line: rgba(28, 25, 23, 0.12);
+  --chat-glass-hover: rgba(28, 25, 23, 0.07);
+  color: var(--chat-glass-ink);
+}
+
+/* Nút pill */
+:root[data-theme='light'] .chat-widget__trigger {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.62) 0%, rgba(246, 242, 239, 0.5) 100%);
+  border-color: rgba(255, 255, 255, 0.9);
+  color: var(--chat-glass-ink);
+  box-shadow: 0 12px 30px rgba(32, 24, 20, 0.16), inset 0 1.5px 1px rgba(255, 255, 255, 0.95), inset 0 -1px 2px rgba(206, 145, 128, 0.18);
+}
+:root[data-theme='light'] .chat-widget__trigger:hover { background: linear-gradient(145deg, rgba(255, 255, 255, 0.74) 0%, rgba(246, 242, 239, 0.62) 100%); }
+:root[data-theme='light'] .chat-widget__trigger:has(> .chat-widget__trigger-glass.is-ready:not([data-glass-stale])) {
+  background: transparent;
+  --chat-glass-veil: linear-gradient(160deg, rgba(255, 255, 255, 0.5) 0%, rgba(250, 247, 245, 0.58) 100%);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+:root[data-theme='light'] :is(.chat-widget__trigger-label, .chat-widget__trigger-icon) { color: var(--chat-glass-ink); }
+:root[data-theme='light'] .chat-widget__mini-avatar { border-color: rgba(255, 255, 255, 0.92); }
+:root[data-theme='light'] .chat-widget__badge { border-color: #ffffff; }
+
+/* Panel */
+:root[data-theme='light'] .chat-widget__panel {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.66) 0%, rgba(248, 245, 242, 0.56) 100%);
+  border-color: rgba(255, 255, 255, 0.88);
+  color: var(--chat-glass-ink);
+  box-shadow: 0 24px 56px rgba(32, 24, 20, 0.18), 0 0 0 1px rgba(206, 145, 128, 0.16), inset 0 1.5px 1px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(255, 255, 255, 0.5);
+}
+:root[data-theme='light'] .chat-widget__panel:has(> .chat-widget__glass.is-ready:not([data-glass-stale])) {
+  background: transparent;
+  --chat-glass-veil: linear-gradient(160deg, rgba(255, 255, 255, 0.42) 0%, rgba(250, 247, 245, 0.5) 100%);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
+}
+:root[data-theme='light'] .chat-widget__header,
+:root[data-theme='light'] .chat-widget .direct-chat__thread-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.16) 100%);
+  border-bottom-color: var(--chat-glass-line);
+}
+:root[data-theme='light'] .chat-widget :is(.chat-widget__header strong, .direct-chat h2, .direct-chat__person strong,
+  .direct-chat__preview.is-unread, .direct-chat__thread-header h2, .direct-chat__ai-intro strong, .direct-chat__placeholder h2) {
+  color: var(--chat-glass-ink);
+}
+:root[data-theme='light'] .chat-widget .direct-chat { color: var(--chat-glass-ink); }
+:root[data-theme='light'] .chat-widget__panel :is(.chat-widget__login p, .chat-widget__status.is-reconnecting, .direct-chat__role,
+  .direct-chat__person-sub, .direct-chat__preview:not(.is-unread), .direct-chat__dot, .direct-chat__person time,
+  .direct-chat__person-arrow, .direct-chat__thread-header p, .direct-chat__older, .direct-chat__empty,
+  .direct-chat__muted, .direct-chat__search .portal-label, .direct-chat__intro, .direct-chat__placeholder p, .direct-chat__react-trigger) {
+  color: var(--chat-glass-muted);
+}
+:root[data-theme='light'] .chat-widget__panel .direct-chat .direct-chat__input::placeholder { color: var(--chat-glass-muted); }
+
+/* Nút chỉ có icon */
+:root[data-theme='light'] .chat-widget :is(.chat-widget__icon-btn, .chat-widget__close, .direct-chat__back,
+  .direct-chat__thread-action, .direct-chat__composer-icon) { color: var(--chat-glass-ink); }
+:root[data-theme='light'] .chat-widget :is(.chat-widget__icon-btn, .chat-widget__close, .direct-chat__back,
+  .direct-chat__thread-action, .direct-chat__composer-icon, .direct-chat__emoji-item):hover { background: var(--chat-glass-hover); }
+:root[data-theme='light'] .chat-widget .direct-chat__react-trigger:hover { color: var(--chat-glass-ink); }
+
+/* Danh sách hội thoại & tìm liên hệ */
+:root[data-theme='light'] .chat-widget :is(.direct-chat__person:hover, .direct-chat__person.is-selected) { background: rgba(255, 255, 255, 0.5); }
+:root[data-theme='light'] .chat-widget .direct-chat__compose-fab {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--chat-glass-ink);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 20px rgba(32, 24, 20, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+:root[data-theme='light'] .chat-widget .direct-chat__compose-fab:hover { background: rgba(255, 255, 255, 0.88); }
+:root[data-theme='light'] .chat-widget :is(.direct-chat__inbox, .direct-chat__inbox-heading, .direct-chat__contacts) { border-color: var(--chat-glass-line); }
+:root[data-theme='light'] .chat-widget :is(.direct-chat__search input, .direct-chat__search .btn-secondary, .btn-secondary) {
+  background: rgba(255, 255, 255, 0.62);
+  border-color: rgba(28, 25, 23, 0.14);
+  color: var(--chat-glass-ink);
+  box-shadow: inset 0 1px 2px rgba(32, 24, 20, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+:root[data-theme='light'] .chat-widget .direct-chat__link { color: #1f6fd1; }
+
+/* Bong bóng tin nhắn: của người khác là kính sáng, của mình giữ salmon */
+:root[data-theme='light'] .chat-widget .direct-chat__bubble {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.78) 0%, rgba(250, 247, 245, 0.66) 100%);
+  border-color: rgba(255, 255, 255, 0.92);
+  color: var(--chat-glass-ink);
+  box-shadow: 0 6px 18px rgba(32, 24, 20, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+:root[data-theme='light'] .chat-widget .direct-chat__bubble time { color: rgba(28, 25, 23, 0.5); }
+:root[data-theme='light'] .chat-widget .direct-chat__messages .is-mine .direct-chat__bubble {
+  background: linear-gradient(135deg, rgba(206, 145, 128, 0.92) 0%, rgba(163, 91, 73, 0.94) 100%);
+  border-color: rgba(255, 232, 224, 0.6);
+  box-shadow: 0 6px 18px rgba(163, 91, 73, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(80, 36, 26, 0.35);
+}
+:root[data-theme='light'] .chat-widget .direct-chat__messages .is-mine .direct-chat__bubble time { color: rgba(255, 255, 255, 0.86); }
+:root[data-theme='light'] .chat-widget :is(.direct-chat__reaction-pill, .direct-chat__new, .direct-chat__emoji-bar) {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.95);
+  color: var(--chat-glass-ink);
+  box-shadow: 0 6px 18px rgba(32, 24, 20, 0.12);
+}
+:root[data-theme='light'] .chat-widget .direct-chat__typing span { background: var(--chat-glass-muted); }
+
+/* Ô soạn tin */
+:root[data-theme='light'] .chat-widget .direct-chat__compose {
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.16) 100%);
+  border-top-color: var(--chat-glass-line);
+}
+:root[data-theme='light'] .chat-widget .direct-chat__compose-pill {
+  background: rgba(255, 255, 255, 0.62);
+  border-color: rgba(28, 25, 23, 0.14);
+  box-shadow: inset 0 1px 2px rgba(32, 24, 20, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+:root[data-theme='light'] .chat-widget .direct-chat__compose-pill:focus-within { border-color: rgba(163, 91, 73, 0.5); }
+:root[data-theme='light'] .chat-widget .direct-chat .direct-chat__input { color: var(--chat-glass-ink); }
+:root[data-theme='light'] .chat-widget .direct-chat .direct-chat__send-btn { color: #a35b49; }
+:root[data-theme='light'] .chat-widget .direct-chat .direct-chat__send-btn:hover:not(:disabled) { color: #7f4334; background: rgba(163, 91, 73, 0.1); }
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-theme='light'] .chat-widget__panel,
+  :root[data-theme='light'] .chat-widget__trigger { background: #faf8f6; }
+}
+
+/* Lớp phủ màu nằm TRÊN canvas WebGL (nền của chính nút/panel bị canvas che mất). */
+.chat-widget__glass::after,
+.chat-widget__trigger-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--chat-glass-veil, transparent);
+  pointer-events: none;
+}

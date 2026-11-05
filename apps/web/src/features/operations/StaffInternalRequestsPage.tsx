@@ -136,7 +136,6 @@ export function StaffInternalRequestsPage() {
       <PageHeader
         eyebrow="Vận hành nội bộ"
         title="Đơn từ & đề xuất nội bộ"
-        subtitle="Gửi và theo dõi đơn xin nghỉ phép, đổi ca làm việc hoặc đổi lịch dạy tới Ban Quản Lý."
       />
 
       {/* Top action row */}

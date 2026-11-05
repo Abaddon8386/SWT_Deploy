@@ -229,7 +229,7 @@ export function MemberCardPage() {
 
   return (
     <div className="portal-container">
-      <PageHeader eyebrow="Hội viên" title="Thẻ thành viên & Mã QR" subtitle="Xuất trình thẻ QR tại quầy Lễ tân để Check-in nhanh vào khu vực tập luyện." />
+      <PageHeader eyebrow="Hội viên" title="Thẻ thành viên & Mã QR" />
       {loading && (
         <div className="portal-card" role="status" aria-busy="true" style={{ maxWidth: 620 }}>
           <span className="sr-only">Đang tải thẻ hội viên…</span>
@@ -252,9 +252,6 @@ export function MemberCardPage() {
         <div className="portal-card" style={{ maxWidth: 620 }}>
           <div className="meta-label">Trạng thái thẻ</div>
           <h3 className="portal-card-title" style={{ marginTop: 8 }}>Đang chờ thanh toán: {pending.packageName}</h3>
-          <p className="row-card__meta" style={{ marginTop: 6 }}>
-            Gói tập chỉ có hiệu lực và cấp mã QR sau khi được nhân viên Lễ tân xác nhận thanh toán tại quầy POS.
-          </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
             <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCard()}>
               Kiểm tra lại trạng thái

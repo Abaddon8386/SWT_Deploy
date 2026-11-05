@@ -295,9 +295,6 @@ export function MemberProfilePage() {
             </div>
             <div style={{ flex: '1 1 220px', minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14 }}>Ảnh đại diện tài khoản</div>
-              <p className="portal-subtitle" style={{ marginTop: 4, marginBottom: 12 }}>
-                Hỗ trợ định dạng JPG, PNG, WebP · Tối đa 2MB · Kích thước 100x100 đến 4096x4096 px.
-              </p>
               <input
                 ref={fileInputRef}
                 id="avatar-file-input"

@@ -8,14 +8,35 @@ export function selectedPackageId(search: string): number | null {
   return Number.isSafeInteger(num) && num > 0 ? num : null;
 }
 
+function shopReturnPath(target: string): string | null {
+  if (!target.startsWith('/') || target.startsWith('//') || target.includes('..')) return null;
+  try {
+    const url = new URL(target, 'https://scms.invalid');
+    if (url.origin !== 'https://scms.invalid' || url.search || url.hash) return null;
+    if (/^\/checkout$|^\/products$|^\/products\/[a-z0-9-]{1,180}$/.test(url.pathname)) {
+      return url.pathname;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function purchaseReturnPath(search: string): string | null {
   const target = new URLSearchParams(search).get('returnTo');
-  if (!target || !target.startsWith('/member/packages')) return null;
-  const url = new URL(target, 'https://scms.invalid');
-  if (url.origin !== 'https://scms.invalid' || url.pathname !== '/member/packages') return null;
-  const id = selectedPackageId(url.search);
-  if (url.searchParams.has('packageId') && id === null) return null;
-  return '/member/packages' + (id ? `?packageId=${id}` : '');
+  if (!target) return null;
+  if (target.startsWith('/member/packages')) {
+    try {
+      const url = new URL(target, 'https://scms.invalid');
+      if (url.origin !== 'https://scms.invalid' || url.pathname !== '/member/packages') return null;
+      const id = selectedPackageId(url.search);
+      if (url.searchParams.has('packageId') && id === null) return null;
+      return '/member/packages' + (id ? `?packageId=${id}` : '');
+    } catch {
+      return null;
+    }
+  }
+  return shopReturnPath(target);
 }
 
 export function purchaseAuthPath(path: '/login' | '/register', search: string): string {

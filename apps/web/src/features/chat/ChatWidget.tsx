@@ -6,6 +6,9 @@ import type { ChatRealtimeFeed } from './ChatPage';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { CHAT_UNREAD_EVENT, getChatUnreadCount, type ChatContact } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
+import { LiquidGlassContainer } from '../../shared/liquid-glass/LiquidGlassContainer';
+import { glassEngine } from '../../shared/liquid-glass/LiquidGlassEngine';
+import { useDraggableWidget } from './useDraggableWidget';
 import './chat-widget.css';
 
 // Khung hội thoại (danh sách, hội thoại, SÖL AI) chỉ tải khi mở widget lần đầu.
@@ -49,8 +52,12 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
   const [expanded, setExpanded] = useState(false);
   const [peers, setPeers] = useState<ChatContact[]>([]);
   const trigger = useRef<HTMLButtonElement>(null);
-  const panel = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const rerenderGlass = useCallback(() => glassEngine.requestAllRender(), []);
+  const {
+    widgetRef, panelRef: panel, widgetStyle, panelStyle, dragging,
+    onTriggerPointerDown, onPanelPointerDown, consumeDragClick,
+  } = useDraggableWidget({ open, expanded, onMove: rerenderGlass });
   useCloseWhenOtherPanelOpens('chat', () => setOpen(false));
 
   useEffect(() => {
@@ -69,10 +76,10 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
     };
-  }, [open]);
+  }, [open, panel]);
 
   const label = unread > 0 ? `Tin nhắn · ${unread} chưa đọc` : 'Tin nhắn';
-  return <div className="chat-widget">
+  return <div ref={widgetRef} className={`chat-widget${dragging ? ' is-dragging' : ''}`} style={widgetStyle} data-liquid-glass-ignore="">
     <button
       ref={trigger}
       type="button"
@@ -82,12 +89,15 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
       aria-haspopup="dialog"
       aria-expanded={open}
       aria-controls="sol-direct-chat"
+      onPointerDown={onTriggerPointerDown}
       onClick={() => {
+        if (consumeDragClick()) return;
         setVisited(true);
         if (!open) { announceFloatingPanel('chat'); onOpen(); }
         setOpen(value => !value);
       }}
     >
+      <LiquidGlassContainer shape="pill" tintOpacity={0.04} blurRadius={4} active={!open} className="chat-widget__trigger-glass" />
       <span className="chat-widget__trigger-main" aria-hidden="true">
         <span className="chat-widget__trigger-icon">
           <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -116,7 +126,8 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
         })}
       </span>
     </button>
-    {visited && <section ref={panel} id="sol-direct-chat" className={`chat-widget__panel${expanded ? ' is-expanded' : ''}`} role="dialog" aria-label="Tin nhắn SÖL" hidden={!open}>
+    {visited && <section ref={panel} id="sol-direct-chat" className={`chat-widget__panel${expanded ? ' is-expanded' : ''}`} role="dialog" aria-label="Tin nhắn SÖL" hidden={!open} style={panelStyle} onPointerDown={onPanelPointerDown}>
+      <LiquidGlassContainer shape="rounded" borderRadius={16} tintOpacity={0.04} blurRadius={8} active={open} className="chat-widget__glass" />
       <header className="chat-widget__header">
         <div className="chat-widget__header-title">
           <strong>Tin nhắn</strong>

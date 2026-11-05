@@ -1,16 +1,16 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import {
   TIMETABLE_HOURS,
   addDays,
+  blockClass,
   fitHourRange,
+  hhmm,
   hourLabel,
   isWithinRange,
   layoutDayEvents,
   mondayOf,
   overlapsHour,
-  roundedRangeLabel,
   shortDate,
-  splitIntoHours,
   toMinutes,
   todayISO,
   weekRangeLabel,
@@ -19,7 +19,7 @@ import {
   type TimetableEvent,
   type TimetableTone,
 } from './timetable';
-import './timetable.css';
+import './calendar.css';
 
 export interface TimetableSlot {
   date: string;
@@ -61,10 +61,8 @@ interface WeeklyTimetableProps {
 const MINUTE_MS = 60_000;
 /** Dưới mốc này bảng chuyển sang xem từng ngày thay vì 7 cột hẹp cuộn ngang. */
 const NARROW_QUERY = '(max-width: 767px)';
-/** Chiều cao một giờ khi khớp màn hình: thấp hơn mốc dưới thì khối 1 giờ không còn đọc được, nên để khung cuộn. */
-const HOUR_MIN_PX = 36;
-const HOUR_MAX_PX = 64;
-const VIEWPORT_GAP_PX = 18;
+const HOUR_PX = 72;
+const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
 function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
@@ -119,7 +117,6 @@ export function WeeklyTimetable({
   const firstHour = hours[0];
   const endHour = hours[hours.length - 1] + 1;
 
-  const eventsById = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
   const eventsByDay = useMemo(() => {
     const map = new Map<string, TimetableEvent[]>();
     for (const day of days) map.set(day, []);
@@ -135,30 +132,8 @@ export function WeeklyTimetable({
   const isPastSlot = (date: string, hour: number) =>
     date < today || (date === today && (hour + 1) * 60 <= nowMinutes);
 
-  // Màn rộng: chia chiều cao còn lại của màn hình cho số giờ đang hiện để cả tuần nằm gọn một màn hình.
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [hourPx, setHourPx] = useState<number | null>(null);
-  const rowCount = hours.length;
-  const hasError = Boolean(error);
-  const isEmpty = visibleCount === 0;
-  useLayoutEffect(() => {
-    const box = scrollRef.current;
-    if (narrow || !box) { setHourPx(null); return; }
-    const measure = () => {
-      const top = box.getBoundingClientRect().top + window.scrollY;
-      // Bảng nằm sâu dưới trang thì khớp theo cả màn hình (cuộn trang một lần là thấy đủ).
-      const reserve = top < window.innerHeight * 0.55 ? top : VIEWPORT_GAP_PX;
-      const head = box.querySelector<HTMLElement>('.tt__dayhead')?.offsetHeight ?? 48;
-      const available = window.innerHeight - reserve - VIEWPORT_GAP_PX - head - 2;
-      setHourPx(Math.min(HOUR_MAX_PX, Math.max(HOUR_MIN_PX, Math.floor(available / rowCount))));
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-    // Đo lại khi số giờ hoặc phần tử phía trên bảng (thông báo lỗi/tuần trống) thay đổi.
-  }, [narrow, rowCount, loading, hasError, isEmpty]);
-
   // Mở tuần: cuộn khung tới 1 giờ trước khối đang chọn, nếu không có thì trước buổi học đầu tiên của tuần.
+  const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const box = scrollRef.current;
     if (!box || loading || box.scrollHeight <= box.clientHeight) return;
@@ -166,11 +141,10 @@ export function WeeklyTimetable({
     const selected = inWeek.find((event) => event.id === selectedId);
     const starts = (selected ? [selected] : inWeek).map((event) => toMinutes(event.startTime));
     const target = starts.length > 0 ? Math.min(...starts) : firstHour * 60;
-    const rowPx = box.querySelector<HTMLElement>('.tt__slot')?.offsetHeight ?? HOUR_MAX_PX;
-    box.scrollTop = Math.max(0, ((target - 60 - firstHour * 60) / 60) * rowPx);
-    // Chỉ cuộn khi đổi tuần, vừa tải xong hoặc đổi khung giờ/chiều cao giờ; không cuộn lại khi dữ liệu đặt chỗ làm mới.
+    box.scrollTop = Math.max(0, ((target - 60 - firstHour * 60) / 60) * HOUR_PX);
+    // Chỉ cuộn khi đổi tuần, vừa tải xong hoặc đổi khung giờ; không cuộn lại khi dữ liệu đặt chỗ làm mới.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, loading, fullDay, hourPx]);
+  }, [weekStart, loading, fullDay]);
 
   const firstKey = slotKey(visibleDays[0], firstHour);
   const activeKey = rovingKey && visibleDays.some((day) => rovingKey.startsWith(`${day}|`)) ? rovingKey : firstKey;
@@ -194,74 +168,71 @@ export function WeeklyTimetable({
     gridRef.current?.querySelector<HTMLButtonElement>(`[data-slot="${key}"]`)?.focus();
   }
 
+  const rowsPx = hours.length * HOUR_PX;
+
   return (
-    <section className="tt" aria-label={label}>
-      <div className="tt__toolbar">
-        <div className="tt__nav" role="group" aria-label="Điều hướng tuần">
-          <button type="button" className="btn-secondary btn-sm" onClick={() => onWeekChange(addDays(weekStart, -7))}>
-            Tuần trước
+    <section className="mcal" aria-label={label}>
+      <header className="mcal__toolbar">
+        <div className="mcal__nav" role="group" aria-label="Điều hướng tuần">
+          <button type="button" className="mcal__icon-btn" aria-label="Tuần trước" onClick={() => onWeekChange(addDays(weekStart, -7))}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <button type="button" className="mcal__icon-btn" aria-label="Tuần sau" onClick={() => onWeekChange(addDays(weekStart, 7))}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
           <button
             type="button"
-            className="btn-secondary btn-sm"
+            className="mcal__today-btn"
             disabled={weekStart === thisWeek}
             onClick={() => { setFocusDay(null); onWeekChange(thisWeek); }}
           >
-            Tuần này
+            Hôm nay
           </button>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => onWeekChange(addDays(weekStart, 7))}>
-            Tuần sau
-          </button>
+          <h2 className="mcal__range" aria-live="polite">{weekRangeLabel(weekStart)}</h2>
         </div>
-        <strong className="tt__range" aria-live="polite">{weekRangeLabel(weekStart)}</strong>
-        {canCompact && (
-          <button
-            type="button"
-            className="btn-secondary btn-sm tt__span"
-            aria-pressed={fullDay}
-            onClick={() => setFullDay((value) => !value)}
-          >
-            {fullDay
-              ? `Thu gọn ${hourLabel(fittedHours[0])}–${hourLabel(fittedHours[fittedHours.length - 1] + 1)}`
-              : 'Hiện đủ 06:00–22:00'}
-          </button>
-        )}
-        {toolbar}
-      </div>
-
-      <ul className="tt__legend" aria-label="Chú thích">
-        {legend.map((item) => (
-          <li key={item.tone}>
-            <span className={`tt__swatch tt__swatch--${item.tone}`} aria-hidden="true" />
-            {item.label}
-          </li>
-        ))}
-        {legendNote && <li className="tt__legend-note">{legendNote}</li>}
-      </ul>
+        <div className="mcal__side">
+          <ul className="mcal__legend" aria-label="Chú thích">
+            {legend.map((item) => (
+              <li key={item.tone}>
+                <i className={`mcal__dot mcal__dot--${item.tone}`} aria-hidden="true" />
+                {item.label}
+              </li>
+            ))}
+            {legendNote && <li className="mcal__legend-note">{legendNote}</li>}
+          </ul>
+          {(canCompact || toolbar) && (
+            <div className="mcal__extra">
+              {canCompact && (
+                <div className="mcal__switch" role="group" aria-label="Khung giờ">
+                  <button type="button" aria-pressed={!fullDay} onClick={() => setFullDay(false)}>
+                    {`${hourLabel(fittedHours[0])}–${hourLabel(fittedHours[fittedHours.length - 1] + 1)}`}
+                  </button>
+                  <button type="button" aria-pressed={fullDay} onClick={() => setFullDay(true)}>Cả ngày</button>
+                </div>
+              )}
+              {toolbar}
+            </div>
+          )}
+        </div>
+      </header>
 
       {error && (
-        <div className="portal-card portal-empty" role="alert">
-          <h3>Không tải được thời khóa biểu</h3>
+        <div className="mcal__state" role="alert">
+          <strong>Không tải được thời khóa biểu</strong>
           <p>{error}</p>
           {onRetry && <button type="button" className="btn-secondary btn-sm" onClick={onRetry}>Thử lại</button>}
         </div>
       )}
 
-      {!loading && !error && visibleCount === 0 && (
-        <p className="tt__note tt__note--empty" role="status">
-          {emptyText}.{onSlotClick ? ' Bấm vào một ô giờ trống để tạo lịch.' : ''}
-        </p>
-      )}
-
       {narrow && (
-        <div className="tt__daystrip" role="group" aria-label="Chọn ngày">
+        <div className="mcal__daystrip" role="group" aria-label="Chọn ngày">
           {days.map((day) => {
             const count = (eventsByDay.get(day) ?? []).filter((event) => event.tone !== 'cancelled' && isWithinRange(event)).length;
             return (
               <button
                 key={day}
                 type="button"
-                className={`tt__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
+                className={`mcal__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
                 aria-pressed={day === activeDay}
                 aria-label={`${weekdayLabel(day)} ${shortDate(day)}, ${count} buổi`}
                 onClick={() => setFocusDay(day)}
@@ -275,57 +246,56 @@ export function WeeklyTimetable({
         </div>
       )}
 
-      <div
-        className="tt__scroll"
-        aria-busy={loading}
-        ref={scrollRef}
-        style={hourPx ? ({ '--tt-hour': `${hourPx}px` } as CSSProperties) : undefined}
-      >
-        {loading && <span className="sr-only" role="status">Đang tải thời khóa biểu...</span>}
+      {loading && <span className="sr-only" role="status">Đang tải thời khóa biểu...</span>}
+
+      <div className={`mcal__scroll${loading ? ' is-loading' : ''}`} aria-busy={loading} ref={scrollRef}>
         <div
-          className={`tt__grid${loading ? ' is-loading' : ''}${narrow ? ' is-single' : ''}`}
-          style={{ '--tt-days': visibleDays.length } as CSSProperties}
+          className={`mcal__week${narrow ? ' is-single' : ''}`}
+          style={{ '--mcal-hour': `${HOUR_PX}px`, '--mcal-rows': hours.length, '--mcal-days': visibleDays.length } as CSSProperties}
           ref={gridRef}
         >
-          {visibleDays.map((day, dayIndex) => (
-            <div
-              key={day}
-              className={`tt__dayhead${day === today ? ' is-today' : ''}${dayIndex === 0 ? ' is-first' : ''}`}
-              aria-current={day === today ? 'date' : undefined}
-            >
-              <span>{weekdayLabel(day)}{day === today ? ' · Hôm nay' : ''}</span>
-              <strong>{shortDate(day)}</strong>
-            </div>
-          ))}
+          <div className="mcal__corner" aria-hidden="true" />
+          {visibleDays.map((day) => {
+            const dayEvents = (eventsByDay.get(day) ?? []).filter((event) => isWithinRange(event));
+            return (
+              <div key={day} className={`mcal__dayhead${day === today ? ' is-today' : ''}`} aria-current={day === today ? 'date' : undefined}>
+                <span className="mcal__dayname">{WEEKDAY_HEAD[days.indexOf(day)]}</span>
+                <strong className="mcal__daynum">{day.slice(8)}</strong>
+                <span className="mcal__dots" aria-hidden="true">
+                  {dayEvents.slice(0, 3).map((event) => <i key={event.id} className={`mcal__dot mcal__dot--${event.tone}`} />)}
+                </span>
+              </div>
+            );
+          })}
+
+          <div className="mcal__gutter" aria-hidden="true">
+            {hours.map((hour) => <span key={hour}>{hourLabel(hour)}</span>)}
+          </div>
 
           {visibleDays.map((day, dayIndex) => {
             const dayEvents = eventsByDay.get(day) ?? [];
             const busyEvents = dayEvents.filter((event) => event.tone !== 'cancelled');
-            // Mỗi giờ một ô: buổi 3 giờ hiện thành 3 ô liền nhau, giờ làm tròn về giờ chẵn.
-            const positioned = layoutDayEvents(splitIntoHours(dayEvents), firstHour, endHour);
+            const positioned = layoutDayEvents(dayEvents, firstHour, endHour);
             const showNow = day === today && nowMinutes >= firstHour * 60 && nowMinutes < endHour * 60;
+            const weekend = days.indexOf(day) >= 5;
             return (
               <div
                 key={day}
-                className={`tt__day${day === today ? ' is-today' : ''}${dayIndex === 0 ? ' is-first' : ''}`}
+                className={`mcal__col${day === today ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}`}
                 role="group"
                 aria-label={`${weekdayLabel(day)} ${shortDate(day)}`}
               >
-                {hours.map((hour) => {
+                {onSlotClick && hours.map((hour, hourIndex) => {
                   const busy = busyEvents.some((event) => overlapsHour(event, hour));
                   const past = isPastSlot(day, hour);
-                  // Không ghi giờ ở mép trái: mỗi ô buổi học tự ghi giờ của nó.
-                  const className = `tt__slot${busy ? ' is-busy' : ' is-free'}${past ? ' is-past' : ''}`;
-                  if (!onSlotClick) {
-                    return <div key={hour} className={className} aria-hidden="true" />;
-                  }
                   const key = slotKey(day, hour);
                   const range = `${hourLabel(hour)}–${hourLabel(hour + 1)}`;
                   return (
                     <button
                       key={hour}
                       type="button"
-                      className={`${className} is-action`}
+                      className={`mcal__slot${busy ? ' is-busy' : ' is-free'}${past ? ' is-past' : ''}`}
+                      style={{ top: hourIndex * HOUR_PX }}
                       data-slot={key}
                       tabIndex={key === activeKey ? 0 : -1}
                       aria-disabled={past || undefined}
@@ -341,44 +311,44 @@ export function WeeklyTimetable({
                         onSlotClick({ date: day, startTime: hourLabel(hour), endTime: hourLabel(hour + 1) });
                       }}
                     >
-                      <span className="tt__plus" aria-hidden="true">+ {hourLabel(hour)}</span>
+                      <span className="mcal__slot-plus" aria-hidden="true">+ {hourLabel(hour)}</span>
                     </button>
                   );
                 })}
 
                 {showNow && (
                   <span
-                    className="tt__now"
+                    className="mcal__now"
                     aria-hidden="true"
                     style={{ top: `${((nowMinutes - firstHour * 60) / (hours.length * 60)) * 100}%` }}
                   />
                 )}
 
                 {positioned.map(({ event, lane, lanes, topPct, heightPct }) => {
-                  const slotRange = `${hourLabel(event.hour)}–${hourLabel(event.hour + 1)}`;
-                  const fullRange = roundedRangeLabel(eventsById.get(event.sourceId) ?? event);
+                  const range = `${hhmm(event.startTime)} - ${hhmm(event.endTime)}`;
                   return (
                     <button
                       key={event.id}
                       type="button"
-                      className={`tt__event tt__event--${event.tone}${event.sourceId === selectedId ? ' is-selected' : ''}`}
+                      className={`mcal__event mcal__event--${event.tone}${event.id === selectedId ? ' is-selected' : ''}${blockClass((heightPct / 100) * rowsPx)}`}
                       style={{
-                        top: `calc(${topPct}% + 2px)`,
-                        height: `calc(${heightPct}% - 4px)`,
-                        left: `calc(${(lane / lanes) * 100}% + 2px)`,
-                        width: `calc(${100 / lanes}% - 4px)`,
-                      } as CSSProperties}
-                      aria-label={event.parts > 1 ? `${event.ariaLabel} (giờ ${event.part}/${event.parts}: ${slotRange})` : event.ariaLabel}
+                        top: `calc(${topPct}% + 3px)`,
+                        height: `calc(${heightPct}% - 6px)`,
+                        left: `calc(${(lane / lanes) * 100}% + 5px)`,
+                        width: `calc(${100 / lanes}% - 10px)`,
+                      }}
+                      aria-label={event.ariaLabel}
                       disabled={disabled}
-                      aria-pressed={selectedId === undefined ? undefined : event.sourceId === selectedId}
-                      title={[event.title, fullRange, event.meta, event.badge].filter(Boolean).join(' · ')}
-                      onClick={() => onEventClick(event.sourceId)}
+                      aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
+                      title={[event.title, range, event.meta, event.badge].filter(Boolean).join(' · ')}
+                      onClick={() => onEventClick(event.id)}
                     >
-                      <span className="tt__event-body">
-                        <strong className="tt__event-title" data-start={hourLabel(event.hour)}>{event.title}</strong>
-                        {event.badge && <span className="tt__event-badge">{event.badge}</span>}
-                        <span className="tt__event-meta">{slotRange}{event.meta ? ` · ${event.meta}` : ''}</span>
+                      <span className="mcal__event-top">
+                        <span className="mcal__event-time">{range}</span>
+                        {event.badge && <span className="mcal__event-badge">{event.badge}</span>}
                       </span>
+                      <strong className="mcal__event-title">{event.title}</strong>
+                      {event.meta && <span className="mcal__event-place">{event.meta}</span>}
                     </button>
                   );
                 })}
@@ -386,10 +356,15 @@ export function WeeklyTimetable({
             );
           })}
         </div>
+        {!loading && !error && visibleCount === 0 && (
+          <p className="mcal__empty" role="status">
+            {emptyText}.{onSlotClick ? ' Bấm vào một ô giờ để tạo lịch.' : ''}
+          </p>
+        )}
       </div>
 
       {outsideRange > 0 && (
-        <p className="tt__note" role="status">
+        <p className="mcal__note" role="status">
           {outsideRange} buổi học nằm ngoài khung 06:00–22:00 nên không hiện trên bảng.
         </p>
       )}

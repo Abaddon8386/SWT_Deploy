@@ -51,7 +51,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/catalog").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/geo/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/public/product-categories", "/api/v1/public/products", "/api/v1/public/products/*", "/api/v1/public/shop/config").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/public/product-categories", "/api/v1/public/products", "/api/v1/public/products/**", "/api/v1/public/shop/config").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/public/shop/quote").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                     .requestMatchers("/api/v1/payments/vnpay/**").hasRole("MEMBER")

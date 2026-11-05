@@ -170,18 +170,18 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     expect(host.textContent).toContain('Thời khóa biểu & học viên phụ trách');
     expect(host.textContent).toContain('Thời khóa biểu');
     expect(host.textContent).toContain('Học viên phụ trách');
-    expect(host.textContent).toContain('Tuần trước');
-    expect(host.textContent).toContain('Tuần sau');
-    expect(host.querySelectorAll('.tt__day')).toHaveLength(7);
+    expect(host.querySelector('[aria-label="Tuần trước"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="Tuần sau"]')).not.toBeNull();
+    expect(host.querySelectorAll('.mcal__col')).toHaveLength(7);
     // Bảng chỉ xem thu gọn theo lịch tuần; bấm "Hiện đủ" để xem 06:00–22:00.
-    await act(async () => { host.querySelector<HTMLButtonElement>('.tt__span')?.click(); });
-    expect(host.querySelectorAll('.tt__day')[0].querySelectorAll('.tt__slot')).toHaveLength(16);
+    await act(async () => { [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Cả ngày')?.click(); });
+    expect(host.querySelectorAll('.mcal__gutter span')).toHaveLength(16);
     expect(host.querySelector('.tt__mark')).toBeNull();
     expect(host.textContent).toContain('Thứ 2');
     expect(host.textContent).toContain('Chủ nhật');
-    const titles = [...host.querySelectorAll('.tt__event-title')].map((node) => node.textContent);
+    const titles = [...host.querySelectorAll('.mcal__event-title')].map((node) => node.textContent);
     expect(titles).toEqual(expect.arrayContaining(['High-Intensity Strength & Conditioning', 'Olympic Weightlifting Fundamentals']));
-    expect(host.querySelector('.tt__slot.is-action')).toBeNull();
+    expect(host.querySelector('.mcal__slot')).toBeNull();
 
     // Ensure raw emojis are removed
     expect(host.textContent).not.toContain('⏰');
@@ -199,7 +199,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       );
     });
 
-    const nextWeekBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Tuần sau') as HTMLButtonElement;
+    const nextWeekBtn = host.querySelector('[aria-label="Tuần sau"]') as HTMLButtonElement;
     expect(nextWeekBtn).not.toBeNull();
 
     await act(async () => {
@@ -247,7 +247,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       );
     });
 
-    const viewStudentsBtn = host.querySelector('.tt__event') as HTMLButtonElement;
+    const viewStudentsBtn = host.querySelector('.mcal__event') as HTMLButtonElement;
     expect(viewStudentsBtn).not.toBeNull();
 
     await act(async () => {
@@ -287,7 +287,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       { id: 10, memberName: 'Đã hủy', bookingDate: currentMondayStr, startTime: '20:00:00', endTime: '21:00:00', status: 'cancelled' },
     ] as never);
     await act(async () => { root.render(<MemoryRouter><CoachClassesPage /></MemoryRouter>); });
-    const events = [...host.querySelectorAll<HTMLButtonElement>('.tt__event--mine')];
+    const events = [...host.querySelectorAll<HTMLButtonElement>('.mcal__event--mine')];
     expect(events).toHaveLength(1);
     expect(events[0].textContent).toContain('PT 1:1 · Phạm Quốc Bảo');
     await act(async () => events[0].click());

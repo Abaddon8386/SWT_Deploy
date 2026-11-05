@@ -8,6 +8,9 @@ import { toast } from '../../shared/ui/toast';
 import { getVnpayStatus, verifyVnpayReturn, type VnpayStatus } from './vnpayApi';
 
 const destinations = new Set(['/member/packages', '/member/courts', '/member/classes?tab=pt', '/member/invoices']);
+function isAllowedDestination(destination: string | null | undefined): destination is string {
+  return Boolean(destination && (destinations.has(destination) || /^\/member\/orders\/\d+$/.test(destination)));
+}
 export function VnpayReturnPage() {
   const [params] = useSearchParams();
   const reference = params.get('vnp_TxnRef') ?? '';
@@ -49,7 +52,7 @@ export function VnpayReturnPage() {
         <p>Mã giao dịch: {data.reference}</p><p>Số tiền: <strong>{formatPrice(data.amount)}</strong></p>
         {data.status === 'pending' && <p>Hệ thống chưa nhận xác nhận từ VNPay. Vui lòng chờ; không thanh toán thêm cho khoản này. Nếu quá thời gian chờ, liên hệ lễ tân để đối soát.</p>}
         {data.status === 'failed' && <p>VNPay xác nhận giao dịch không thành công. Bạn có thể trở về khoản cần thanh toán và thử lại.</p>}
-        <Link className="btn-primary" to={destinations.has(data.destination) ? data.destination : '/member/invoices'}>Về khoản thanh toán</Link>
+        <Link className="btn-primary" to={isAllowedDestination(data.destination) ? data.destination : '/member/invoices'}>Về khoản thanh toán</Link>
       </>}
       {valid && (error || data?.status === 'pending') && <button type="button" className="btn-secondary" onClick={() => setRetry(value => value + 1)}>Kiểm tra lại</button>}
       <Link className="btn-secondary" to="/member/invoices">Giao dịch & hóa đơn</Link>

@@ -35,6 +35,9 @@ public class InvoiceService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.common.i18n.MessageService messageService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.shop.repository.ProductOrderRepository productOrders;
+
     public InvoiceService(InvoiceRepository invoiceRepository,
                           PaymentRepository paymentRepository,
                           InvoiceMapper invoiceMapper, Clock clock) {
@@ -142,15 +145,47 @@ public class InvoiceService {
                     invoice.setSubtotalAmount(payment.getAmount());
                     invoice.setTaxAmount(java.math.BigDecimal.ZERO);
 
-                    InvoiceItem item = new InvoiceItem();
-                    item.setDescription(resolveDefaultItemDescription(payment.getId()));
-                    item.setQuantity(1);
-                    item.setUnitPrice(payment.getAmount());
-                    invoice.addItem(item);
+                    com.swp391.scms.shop.entity.ProductOrder productOrder =
+                            (payment.getProductOrderId() != null && productOrders != null)
+                                    ? productOrders.findById(payment.getProductOrderId()).orElse(null)
+                                    : null;
+                    if (productOrder != null && productOrder.getItems() != null && !productOrder.getItems().isEmpty()) {
+                        for (com.swp391.scms.shop.entity.ProductOrderItem line : productOrder.getItems()) {
+                            InvoiceItem item = new InvoiceItem();
+                            item.setDescription(line.getProductName() + " · " + line.getVariantLabel());
+                            item.setQuantity(line.getQuantity());
+                            item.setUnitPrice(line.getUnitPrice());
+                            invoice.addItem(item);
+                        }
+                        if (productOrder.getShippingFee() != null && productOrder.getShippingFee().signum() > 0) {
+                            InvoiceItem shipItem = new InvoiceItem();
+                            shipItem.setDescription(resolveShippingItemDescription());
+                            shipItem.setQuantity(1);
+                            shipItem.setUnitPrice(productOrder.getShippingFee());
+                            invoice.addItem(shipItem);
+                        }
+                    } else {
+                        InvoiceItem item = new InvoiceItem();
+                        item.setDescription(resolveDefaultItemDescription(payment.getId()));
+                        item.setQuantity(1);
+                        item.setUnitPrice(payment.getAmount());
+                        invoice.addItem(item);
+                    }
 
                     Invoice saved = invoiceRepository.save(invoice);
                     return invoiceMapper.toDto(saved);
                 });
+    }
+
+    private String resolveShippingItemDescription() {
+        String fallback = "Phí giao hàng";
+        if (messageService == null) {
+            return fallback;
+        }
+        String resolved = messageService.getMessage("finance.invoice.item.shipping");
+        return (resolved == null || resolved.isBlank() || "finance.invoice.item.shipping".equals(resolved))
+                ? fallback
+                : resolved;
     }
 
     private String resolveDefaultItemDescription(Long paymentId) {

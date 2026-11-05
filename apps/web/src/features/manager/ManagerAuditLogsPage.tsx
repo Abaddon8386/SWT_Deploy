@@ -196,7 +196,6 @@ export function ManagerAuditLogsPage() {
       <PageHeader
         eyebrow="Quản trị trung tâm"
         title="Giám sát audit log & báo cáo lấp đầy lớp"
-        subtitle="Tra cứu nhật ký kiểm toán hệ thống, phân tích diff thay đổi và theo dõi tỷ lệ lấp đầy phòng học theo bộ môn."
       />
 
       {/* Navigation Tabs */}
