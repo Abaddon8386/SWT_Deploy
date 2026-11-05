@@ -180,11 +180,7 @@ describe('MemberClassesPage', () => {
     await render();
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không tải được');
     expect(host.querySelector('.member-class-enroll')).toBeNull();
-    await clickText('Lịch học của tôi');
-    expect(host.textContent).not.toContain('Chưa có lịch học đã đặt');
     await clickText('Thử lại lịch học của tôi');
-    expect(host.textContent).toContain('Đã xác nhận chỗ');
-    await clickText('Lịch lớp học');
     expect(host.textContent).toContain('Đã đặt chỗ');
     expect(mocks.sessions).toHaveBeenCalledTimes(1);
   });
@@ -257,8 +253,6 @@ describe('MemberClassesPage', () => {
     await render();
     expect(host.textContent).toContain('Yoga Flow');
     expect([...host.querySelectorAll('h3')].some(heading => heading.textContent === 'Không tải được lịch học')).toBe(false);
-    const tab = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Lịch học của tôi'))!;
-    await act(async () => tab.click());
     expect(host.textContent).toContain('Không tải được lịch học của tôi');
     const retry = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Thử lại lịch học của tôi')!;
     await act(async () => retry.click());
@@ -267,14 +261,12 @@ describe('MemberClassesPage', () => {
     expect(mocks.bookings).toHaveBeenCalledTimes(2);
   });
 
-  it('disables booking for cancelled sessions and shows empty my-schedule when nothing booked', async () => {
+  it('disables booking for cancelled sessions and does not render the removed my-schedule list tab', async () => {
     mocks.sessions.mockResolvedValue([{ ...session, status: 'cancelled' }]);
     await render();
     expect(host.textContent).toContain('Không thể đặt');
-    const tab = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Lịch học của tôi'))!;
-    await act(async () => tab.click());
-    expect(host.textContent).toContain('Chưa có lịch học đã đặt');
-    expect(host.textContent).not.toContain('Hủy đặt chỗ');
+    const tabs = [...host.querySelectorAll('[role="tab"]')].map((item) => item.textContent?.trim());
+    expect(tabs).toEqual(['Lịch của tôi', 'Lịch lớp học', 'Đặt lịch HLV 1:1 (PT)']);
   });
 
   it('marks a past session unavailable even when capacity remains', async () => {
@@ -318,7 +310,7 @@ describe('MemberClassesPage', () => {
     expect(host.textContent).not.toContain('Đã có chỗ');
     await act(async () => { day.value = 'ALL'; day.dispatchEvent(new Event('change', { bubbles: true })); });
     await act(async () => join().click());
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Lịch học của tôi'))!.click());
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Đặt lịch HLV 1:1'))!.click());
     expect(host.textContent).not.toContain('Đã có chỗ');
   });
 
@@ -519,29 +511,6 @@ describe('MemberClassesPage', () => {
       expect(host.textContent).toContain('Hủy buổi này');
       expect(host.querySelector('[data-testid="overlap-btn-9"]')).not.toBeNull();
       expect(host.querySelector('.member-class-enroll')).toBeNull();
-    });
-
-    it('cancels several booked sessions at once from my schedule', async () => {
-      mocks.sessions.mockResolvedValue([]);
-      mocks.bookings.mockResolvedValue([
-        seat(41, 8, 'Yoga Flow', '08:00:00', '09:00:00'),
-        seat(42, 9, 'Pilates Core', '10:00:00', '11:00:00'),
-      ]);
-      mocks.cancelBookings.mockResolvedValue({
-        cancelled: [seat(41, 8, 'Yoga Flow', '08:00:00', '09:00:00')],
-        skipped: [{ id: 42, date: '2099-10-19', code: 'SCHEDULING_BOOKING_TOO_LATE', message: 'Buổi học đã bắt đầu' }],
-      });
-      await render();
-      await clickText('Lịch học của tôi');
-      expect(host.textContent).toContain('Buổi học đã đặt (2)');
-      await clickText('Chọn tất cả');
-      expect(host.textContent).toContain('Đã chọn 2 buổi');
-      await clickText('Hủy 2 buổi');
-      expect(mocks.cancelBookings).not.toHaveBeenCalled(); // confirmation first
-      await clickText('Xác nhận hủy');
-      expect(mocks.cancelBookings).toHaveBeenCalledExactlyOnceWith([41, 42]);
-      expect(host.textContent).toContain('Kết quả hủy nhiều buổi');
-      expect(host.textContent).toContain('Buổi học đã bắt đầu');
     });
   });
 });

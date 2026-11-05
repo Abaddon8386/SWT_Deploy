@@ -14,6 +14,10 @@ export const memberCheckinApi = {
   scan: (gateQr: string) => apiFetch<CheckinDto>('/check-in/self', {
     method: 'POST', cache: 'no-store', body: JSON.stringify({ gateQr }),
   }),
-  history: () => apiFetch<CheckinDto[]>('/check-in/history', { cache: 'no-store' }),
+  checkout: (gateQr: string) => apiFetch<CheckinDto>('/check-in/self/checkout', {
+    method: 'POST', cache: 'no-store', body: JSON.stringify({ gateQr }),
+  }),
+  history: (range?: { fromDate: string; toDate: string }) => apiFetch<CheckinDto[]>(
+    range ? `/check-in/history?fromDate=${range.fromDate}&toDate=${range.toDate}` : '/check-in/history', { cache: 'no-store' }),
   streak: () => apiFetch<WorkoutStreak>('/check-in/streak', { cache: 'no-store' }),
 };

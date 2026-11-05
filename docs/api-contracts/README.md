@@ -17,3 +17,6 @@ Frontend may use a local mock matching the contract, but must remove the mock be
 - `openapi-sprint3-member-progress.yaml`: Member training item completion checklist (`SCRUM-129`).
 
 [`openapi-gym-rooms-equipment-trial.yaml`](openapi-gym-rooms-equipment-trial.yaml) defines room tiers (STANDARD/PLATINUM), equipment management and the 3-day Gold trial verified by CCCD. Member package cancellation requests can no longer be created (the `POST /memberships/cancellations/subscriptions/{id}` endpoint was removed); manager list/approve/reject remain only to resolve legacy pending requests.
+
+[`openapi-shop.yaml`](openapi-shop.yaml) defines the Supplement Shop ("Sản phẩm") public catalog, server-side cart quote, 2-tier Vietnamese administrative regions (`34` provinces/cities and `3.321` wards/communes), member shipping address book, member product orders, staff order fulfillment, and manager catalog/stock/order administration.
+

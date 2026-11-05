@@ -119,3 +119,43 @@ it('does not offer direct chat to managers', async () => {
   expect(host.querySelector('button')).toBeNull();
   expect(api.getConversations).not.toHaveBeenCalled();
 });
+
+/** jsdom không có PointerEvent: dựng MouseEvent mang đủ trường pointer mà React đọc. */
+const pointer = (target: EventTarget, type: string, x: number, y: number) => {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+  Object.defineProperties(event, { pointerId: { value: 1 }, isPrimary: { value: true } });
+  target.dispatchEvent(event);
+};
+
+it('drags the chat pill anywhere, remembers the spot and does not toggle on drop', async () => {
+  window.localStorage.removeItem('sol-chat-widget-position');
+  await render();
+  const pill = button('Mở tin nhắn');
+  await act(async () => {
+    pointer(pill, 'pointerdown', 10, 10);
+    pointer(window, 'pointermove', 110, 60);
+    pointer(window, 'pointermove', 210, 110);
+    pointer(window, 'pointerup', 210, 110);
+    pill.click();
+  });
+  const widget = host.querySelector<HTMLElement>('.chat-widget')!;
+  expect(widget.style.left).toBe('200px');
+  expect(widget.style.top).toBe('100px');
+  expect(pill.getAttribute('aria-expanded')).toBe('false');
+  expect(JSON.parse(window.localStorage.getItem('sol-chat-widget-position')!)).toEqual({ x: 200, y: 100 });
+  window.localStorage.removeItem('sol-chat-widget-position');
+});
+
+it('still opens on a plain click without movement', async () => {
+  window.localStorage.removeItem('sol-chat-widget-position');
+  await render();
+  const pill = button('Mở tin nhắn');
+  await act(async () => {
+    pointer(pill, 'pointerdown', 10, 10);
+    pointer(window, 'pointerup', 12, 11);
+    pill.click();
+  });
+  await settle();
+  expect(host.querySelector<HTMLElement>('[role="dialog"]')?.hidden).toBe(false);
+  expect(host.querySelector<HTMLElement>('.chat-widget')!.style.left).toBe('');
+});

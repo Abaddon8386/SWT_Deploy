@@ -8,13 +8,12 @@ import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 
 vi.mock('./catalogApi', () => ({ catalogApi: { rooms: vi.fn(), saveRoom: vi.fn() } }));
 vi.mock('./equipmentApi', () => ({ equipmentApi: { list: vi.fn(), save: vi.fn(), updateStatus: vi.fn(), delete: vi.fn() } }));
-vi.mock('../../shared/ui/toast', () => ({ toast: vi.fn() }));
 
 const studio: Room = { id: 9, name: 'Yoga Studio', location: null, capacity: 20, status: 'available', tier: 'STANDARD' };
 const standard: Room = { ...studio, id: 10, name: 'Phòng Gym Tiêu chuẩn' };
 const vip: Room = { ...studio, id: 11, name: 'Phòng Gym VIP', tier: 'PLATINUM' };
 const equipment: Equipment = {
-  id: 1, name: 'Thảm tập', code: 'YOGA-01', category: 'Khác', roomId: null, roomName: null,
+  id: 1, name: 'Thảm tập', code: 'YOGA-01', category: 'Khác', roomId: 10, roomName: standard.name,
   quantity: 2, status: 'active', purchaseDate: null, maintenanceDate: null, note: null,
   createdAt: '2026-01-01T00:00:00', updatedAt: '2026-01-01T00:00:00',
 };
@@ -60,8 +59,8 @@ it('loads an empty inventory without creating rooms or exposing browser demo wri
   expect(host.textContent).not.toContain('Nạp 12 máy móc mẫu');
 });
 
-it.each([null, 9])('preserves existing room assignment %s when editing unrelated fields', async roomId => {
-  vi.mocked(equipmentApi.list).mockResolvedValue([{ ...equipment, roomId, roomName: roomId === 9 ? studio.name : null }]);
+it.each([null, 9, 10, 11])('preserves existing room assignment %s when editing unrelated fields', async roomId => {
+  vi.mocked(equipmentApi.list).mockResolvedValue([{ ...equipment, roomId, roomName: [studio, standard, vip].find(room => room.id === roomId)?.name ?? null }]);
   await render();
   await click('Sửa');
   await submit();
@@ -70,9 +69,9 @@ it.each([null, 9])('preserves existing room assignment %s when editing unrelated
   expect(getNotices()).toEqual([]);
 });
 
-it('allows selection of any room and clearing the room assignment', async () => {
+it('allows selection of gym rooms in editor modal', async () => {
   vi.mocked(equipmentApi.save).mockImplementation(async (_id, input) => {
-    const saved = { ...equipment, roomId: input.roomId ?? null, roomName: [studio, standard, vip].find(room => room.id === input.roomId)?.name ?? null };
+    const saved = { ...equipment, roomId: input.roomId ?? null, roomName: [standard, vip].find(room => room.id === input.roomId)?.name ?? null };
     vi.mocked(equipmentApi.list).mockResolvedValue([saved]);
     return saved;
   });
@@ -82,15 +81,10 @@ it('allows selection of any room and clearing the room assignment', async () => 
   expect(trigger).toBeTruthy();
   await act(async () => trigger!.click());
   const options = [...host.querySelectorAll<HTMLElement>('[role="option"]')];
-  expect(options.map(node => node.textContent)).toEqual(expect.arrayContaining(['Chưa xếp phòng', 'Yoga Studio', 'Phòng Gym Tiêu chuẩn', 'Phòng Gym VIP']));
-  await act(async () => options.find(node => node.textContent === 'Yoga Studio')!.click());
+  expect(options.map(node => node.textContent)).toEqual(expect.arrayContaining(['Gym Tiêu chuẩn (Phòng Gym Tiêu chuẩn)', 'Gym VIP Platinum (Phòng Gym VIP)']));
+  await act(async () => options.find(node => node.textContent?.includes('Phòng Gym Tiêu chuẩn'))!.click());
   await submit();
-  expect(equipmentApi.save).toHaveBeenLastCalledWith(1, expect.objectContaining({ roomId: 9 }));
-  await click('Sửa');
-  await act(async () => host.querySelector<HTMLButtonElement>('#eq-room')!.click());
-  await act(async () => [...host.querySelectorAll<HTMLElement>('[role="option"]')].find(node => node.textContent === 'Chưa xếp phòng')!.click());
-  await submit();
-  expect(equipmentApi.save).toHaveBeenLastCalledWith(1, expect.objectContaining({ roomId: null }));
+  expect(equipmentApi.save).toHaveBeenLastCalledWith(1, expect.objectContaining({ roomId: 10 }));
 });
 
 it('selects existing gym rooms synchronously and disables missing gym shortcuts', async () => {
@@ -98,7 +92,7 @@ it('selects existing gym rooms synchronously and disables missing gym shortcuts'
   await render();
   await click('Sửa');
   const dialog = host.querySelector('dialog')!;
-  const vipButton = [...dialog.querySelectorAll('button')].find(node => node.textContent?.trim() === 'Gym VIP')!;
+  const vipButton = [...dialog.querySelectorAll('button')].find(node => node.textContent?.trim() === 'Gym VIP Platinum')!;
   expect(vipButton.disabled).toBe(true);
   await click('Gym Tiêu chuẩn');
   await submit();
@@ -117,16 +111,20 @@ it('recovers from a failed load through a read-only retry', async () => {
   expect(catalogApi.saveRoom).not.toHaveBeenCalled();
 });
 
-it('shows all existing rooms in the room filter and filters by room ID', async () => {
-  vi.mocked(equipmentApi.list).mockResolvedValue([equipment, { ...equipment, id: 2, name: 'Bóng yoga', roomId: 9, roomName: studio.name }]);
+it('filters equipment items by gym room classification (STANDARD vs VIP)', async () => {
+  vi.mocked(equipmentApi.list).mockResolvedValue([
+    { ...equipment, id: 1, name: 'Máy chạy Tiêu chuẩn', roomId: 10, roomName: standard.name },
+    { ...equipment, id: 2, name: 'Máy Technogym VIP', roomId: 11, roomName: vip.name },
+  ]);
   await render();
   await act(async () => host.querySelector<HTMLButtonElement>('[role="combobox"]')!.click());
   const options = [...host.querySelectorAll<HTMLElement>('[role="option"]')];
-  expect(options.map(node => node.textContent)).toEqual(expect.arrayContaining(['Yoga Studio', 'Phòng Gym Tiêu chuẩn', 'Phòng Gym VIP']));
-  await act(async () => options.find(node => node.textContent === 'Yoga Studio')!.click());
+  expect(options.some(node => node.textContent?.includes('Gym Tiêu chuẩn'))).toBe(true);
+  expect(options.some(node => node.textContent?.includes('Gym VIP Platinum'))).toBe(true);
+  await act(async () => options.find(node => node.textContent?.includes('Gym Tiêu chuẩn'))!.click());
   const rows = [...host.querySelectorAll('tbody tr')];
   expect(rows).toHaveLength(1);
-  expect(rows[0].textContent).toContain('Bóng yoga');
+  expect(rows[0].textContent).toContain('Máy chạy Tiêu chuẩn');
 });
 
 it('locks dialog dismissal while equipment is saving', async () => {
@@ -140,4 +138,26 @@ it('locks dialog dismissal while equipment is saving', async () => {
   expect(dialog.querySelector<HTMLButtonElement>('[aria-label="Đóng hộp thoại"]')!.disabled).toBe(true);
   await act(async () => finish(equipment));
   expect(host.querySelector('dialog')).toBeNull();
+});
+
+it('keeps non-gym rooms and unassigned equipment available in the unified filter and editor', async () => {
+  vi.mocked(equipmentApi.list).mockResolvedValue([
+    equipment,
+    { ...equipment, id: 2, name: 'Bóng yoga', roomId: 9, roomName: studio.name },
+  ]);
+  await render();
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Lọc theo phòng tập"]')!.click());
+  const roomOption = [...host.querySelectorAll<HTMLElement>('[role="option"]')].find(node => node.textContent === studio.name);
+  expect(roomOption).toBeTruthy();
+  await act(async () => roomOption!.click());
+  expect(host.querySelectorAll('tbody tr')).toHaveLength(1);
+  expect(host.querySelector('tbody')?.textContent).toContain('Bóng yoga');
+  await click('Sửa');
+  expect(host.querySelector('#eq-room')?.textContent).toContain(studio.name);
+  await act(async () => host.querySelector<HTMLButtonElement>('#eq-room')!.click());
+  const unassigned = [...host.querySelectorAll<HTMLElement>('[role="option"]')].find(node => node.textContent === 'Chưa xếp phòng');
+  expect(unassigned).toBeTruthy();
+  await act(async () => unassigned!.click());
+  await submit();
+  expect(equipmentApi.save).toHaveBeenLastCalledWith(2, expect.objectContaining({ roomId: null }));
 });

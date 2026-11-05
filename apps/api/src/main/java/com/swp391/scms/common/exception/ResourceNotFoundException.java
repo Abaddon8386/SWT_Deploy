@@ -14,4 +14,8 @@ public class ResourceNotFoundException extends AppException {
     public ResourceNotFoundException(String resourceName, Object identifier) {
         super(HttpStatus.NOT_FOUND, "NOT_FOUND", "error.not_found", new Object[]{resourceName, identifier}, null);
     }
+
+    public ResourceNotFoundException(String errorCode, String messageKey, Object[] messageArgs, String fallbackMessage) {
+        super(HttpStatus.NOT_FOUND, errorCode, messageKey, messageArgs, fallbackMessage);
+    }
 }

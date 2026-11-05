@@ -7,14 +7,16 @@ import { LanguageSetting, useDomLanguageSync, useI18n } from '../../../shared/i1
 import { useComponentReveal } from '../hooks/useComponentReveal';
 import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
 import { ChatWidget } from '../../chat/ChatWidget';
+import { CartButton } from '../../shop/components/CartButton';
 import '../fitness-public.css';
 import { SPORT_PAGES, sportIdFromPath } from '../sportPages';
 
-const links = [
+const links: { to: string; hash?: string; label: string; labelEn: string }[] = [
   { to: '/#about', hash: 'about', label: 'Về SÖL', labelEn: 'About SÖL' },
   { to: '/#multisport', hash: 'multisport', label: 'Bộ môn', labelEn: 'Disciplines' },
   { to: '/#trainers', hash: 'trainers', label: 'Huấn luyện viên', labelEn: 'Coaches' },
   { to: '/#packages', hash: 'packages', label: 'Gói tập', labelEn: 'Memberships' },
+  { to: '/products', label: 'Sản phẩm', labelEn: 'Products' },
 ];
 
 const scrollToSection = (targetId: string) => {
@@ -46,6 +48,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     if (sportTarget && to === SPORT_PAGES[sportTarget].path) return sportIdFromPath(pathname) === sportTarget;
     if (target === 'trainers') return pathname.startsWith('/trainers') || (pathname === '/' && hash === '#trainers');
     if (target) return pathname === '/' && hash === `#${target}`;
+    if (to === '/products') return pathname.startsWith('/products');
     return pathname === to;
   };
 
@@ -58,7 +61,11 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           ? SPORT_PAGES[sportIdFromPath(pathname)!].title
           : pathname.startsWith('/trainers')
             ? (lang === 'en' ? 'Coaches' : 'Huấn luyện viên')
-            : 'Build your body. Find your balance.';
+            : pathname.startsWith('/products')
+              ? (lang === 'en' ? 'Products' : 'Sản phẩm')
+              : pathname.startsWith('/checkout')
+                ? (lang === 'en' ? 'Checkout' : 'Thanh toán')
+                : 'Build your body. Find your balance.';
     document.title = `${pageTitle} · SÖL Fitness`;
     if (hash) {
       const targetId = hash.slice(1);
@@ -89,6 +96,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             key={label}
             to={to}
             data-nav-target={target}
+            aria-current={!target && to === '/products' && pathname.startsWith('/products') ? 'page' : undefined}
             className={isNavActive(to, target) ? 'is-active' : undefined}
             onClick={(event) => {
               setMenuOpen(false);
@@ -105,6 +113,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="fit-header-actions">
           <ThemeToggle />
+          <CartButton />
           <Link to={user ? homePath(user.role) : pathname === '/login' ? purchaseAuthPath('/register', search) : purchaseAuthPath('/login', search)} className="fit-pill fit-header-cta">
             <span className="fit-header-cta-label">{user ? t('Vào portal', 'Enter portal') : pathname === '/login' ? t('Tham gia ngay', 'Join now') : t('Đăng nhập', 'Sign in')}</span><RoundArrow />
           </Link>

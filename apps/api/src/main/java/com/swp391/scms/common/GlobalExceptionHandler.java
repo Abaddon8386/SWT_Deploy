@@ -270,7 +270,7 @@ public class GlobalExceptionHandler {
                     || normalizedRootMsg.contains("ck_product_variants_values")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "PRODUCT_OUT_OF_STOCK",
-                                resolveMessage("error.shop.order.out_of_stock", "error.shop.order.out_of_stock", "", 0))
+                                resolveMessage("error.shop.product_out_of_stock", "error.shop.product_out_of_stock"))
                 );
             }
             if (normalizedRootMsg.contains("duplicate") || normalizedRootMsg.contains("unique constraint") || normalizedRootMsg.contains("uq_")) {

@@ -569,8 +569,22 @@ MODULE                      METHOD   ENDPOINT                                  M
 7. Chatbot & Thông báo      POST     /api/v1/ai/chat/message                   Gửi tin nhắn hỏi đáp với Chatbot AI
                             GET      /api/v1/notifications                    Lấy danh sách thông báo của người dùng
                             PUT      /api/v1/notifications/{id}/read          Đánh dấu thông báo đã đọc
+-----------------------------------------------------------------------------------
+8. Cửa hàng Sản phẩm        GET      /api/v1/public/products                  Danh mục thực phẩm bổ sung công khai
+   (Supplement Shop)        GET      /api/v1/public/products/{slug}           Chi tiết sản phẩm & Bảng thành phần
+                            POST     /api/v1/public/shop/quote                Báo giá giỏ hàng & phí vận chuyển
+                            GET      /api/v1/public/geo/provinces             Danh mục 34 Tỉnh/Thành phố (2 cấp)
+                            POST     /api/v1/shop/orders                      Hội viên đặt đơn hàng (giữ tồn kho)
+                            POST     /api/v1/staff/product-orders/{id}/...    Lễ tân thu tiền tại quầy / giao hàng
+                            POST     /api/v1/manager/products                 Quản lý CRUD sản phẩm & điều chỉnh tồn
 ===================================================================================
 ```
+
+### 7.2.1. Nghiệp vụ Cửa hàng Thực phẩm bổ sung (“Sản phẩm” — Cập nhật 05/11/2026)
+- **Đối tượng mua hàng:** Khách vãng lai xem danh mục `/products`, bảng thành phần dinh dưỡng (`NutritionFacts`), giá mỗi khẩu phần (`pricePerServing`) và thêm vào giỏ hàng (`localStorage`). Khi thanh toán (`/checkout`), hệ thống yêu cầu đăng nhập tài khoản `MEMBER` (không bắt buộc có gói tập `active` — khác với đặt lớp/check-in).
+- **Trừ tồn kho & Giữ hàng:** Tồn kho (`product_variants.stock`) được kiểm tra và trừ ngay khi tạo đơn dưới khóa bi quan `PESSIMISTIC_WRITE` theo thứ tự `variantId` tăng dần kèm `CHECK (stock >= 0)`. Đơn thanh toán online giữ hàng **15 phút**; đơn nhận tại quầy trả tại quầy giữ hàng **24 giờ**. Scheduler tự động hủy đơn quá hạn và hoàn tồn kho (`stock_movements` ghi nhận `order_hold` / `order_release`).
+- **Tích hợp Tài chính & Hoàn tiền:** Tái sử dụng `payments` (`product_order_id`), `vnpay_payment_attempts`, `wallets` và `invoices`. Khi hủy đơn đã thanh toán (`paid` / `processing`), hệ thống tự động hoàn tiền vào **Ví điện tử** của hội viên (`wallet_transactions` loại `REFUND`, `reference_id = orderId` chống hoàn trùng).
+- **Địa chỉ hành chính 2 cấp:** Áp dụng mô hình Tỉnh/Thành phố → Phường/Xã/Đặc khu (34 tỉnh/thành, 3.321 đơn vị cấp xã từ `vn-admin-units.json`), lưu snapshot tên tỉnh và phường trên từng đơn hàng để bảo toàn lịch sử.
 
 ---
 

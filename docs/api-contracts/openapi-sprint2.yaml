@@ -1625,8 +1625,11 @@ paths:
           schema: {type: string, format: date}
         - name: toDate
           in: query
+          description: Khoảng ngày bao gồm cả hai đầu, mặc định hôm nay, tối đa 31 ngày
           schema: {type: string, format: date}
       responses:
+        '400':
+          description: Khoảng ngày không hợp lệ (CHECKIN_INVALID_RANGE)
         '200':
           description: Thành công
           content:
