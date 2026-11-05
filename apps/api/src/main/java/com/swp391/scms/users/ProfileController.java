@@ -56,6 +56,13 @@ public class ProfileController {
         return ApiResponse.ok(msg("users.profile.update.success"), profileService.updateAvatar(principal.id(), request.avatarUrl()));
     }
 
+    @Operation(summary = "Xác minh danh tính CCCD/Hộ chiếu", description = "Cập nhật thông tin định danh (CCCD/Hộ chiếu) và đồng bộ họ tên tài khoản trước khi đăng ký gói tập đầu tiên")
+    @PostMapping("/kyc")
+    public ApiResponse<ProfileDto> submitMyKyc(@AuthenticationPrincipal AuthenticatedPrincipal principal,
+                                               @Valid @RequestBody com.swp391.scms.users.dto.MemberKycRequest request) {
+        return ApiResponse.ok(msg("users.profile.kyc.success"), profileService.submitMemberKyc(principal.id(), request));
+    }
+
     @Operation(summary = "Cập nhật hồ sơ Coach", description = "Dành riêng cho HLV cập nhật chuyên môn")
     @PutMapping("/coach")
     @PreAuthorize("hasRole('COACH')")

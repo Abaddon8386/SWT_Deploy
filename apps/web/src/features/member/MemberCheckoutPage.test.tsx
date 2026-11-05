@@ -4,12 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { MemberCheckoutPage } from './MemberCheckoutPage';
 import * as membershipApi from './membershipApi';
+import * as profileApi from './profileApi';
 import * as walletApi from '../wallet/walletApi';
 
 vi.mock('./membershipApi', () => ({
   getMembershipPackages: vi.fn(),
   getMembershipHistory: vi.fn(),
   createMembershipSubscription: vi.fn(),
+}));
+
+vi.mock('./profileApi', () => ({
+  getProfile: vi.fn(),
+  submitMemberKyc: vi.fn(),
 }));
 
 vi.mock('../wallet/walletApi', () => ({
@@ -72,6 +78,44 @@ describe('MemberCheckoutPage Component', () => {
       upgradeCharge: null,
     });
     vi.mocked(walletApi.payWithWallet).mockResolvedValue({ balance: 500000, updatedAt: '2026-11-05T10:00:00', transactions: [] });
+    vi.mocked(profileApi.getProfile).mockResolvedValue({
+      userId: 10,
+      fullName: 'Hội Viên Mẫu',
+      email: 'member@sol.com',
+      phone: '0901234567',
+      dob: '1995-05-10',
+      gender: 'male',
+      avatarUrl: null,
+      address: '123 Le Loi',
+      membershipCode: 'MEM-0010',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: true,
+      citizenId: '012345678901',
+      documentType: 'CCCD',
+    });
+    vi.mocked(profileApi.submitMemberKyc).mockResolvedValue({
+      userId: 10,
+      fullName: 'NGUYEN VAN A',
+      email: 'member@sol.com',
+      phone: '0901234567',
+      dob: '1995-05-10',
+      gender: 'male',
+      avatarUrl: null,
+      address: '123 Le Loi',
+      membershipCode: 'MEM-0010',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: true,
+      citizenId: '012345678901',
+      documentType: 'CCCD',
+    });
   });
 
   afterEach(async () => {
@@ -172,5 +216,34 @@ describe('MemberCheckoutPage Component', () => {
     const backLink = host.querySelector('a.btn-primary') as HTMLAnchorElement;
     expect(backLink).not.toBeNull();
     expect(backLink.getAttribute('href')).toBe('/member/packages');
+  });
+
+  it('displays KYC verification form when member has no prior subscriptions and identity is not verified', async () => {
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([]);
+    vi.mocked(profileApi.getProfile).mockResolvedValue({
+      userId: 10,
+      fullName: 'Hội Viên Mới',
+      email: 'member@sol.com',
+      phone: '0901234567',
+      dob: '1995-05-10',
+      gender: 'male',
+      avatarUrl: null,
+      address: '123 Le Loi',
+      membershipCode: 'MEM-0010',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: false,
+      citizenId: null,
+      documentType: null,
+    });
+
+    await renderCheckout('/member/packages/checkout?packageId=1');
+
+    expect(host.textContent).toContain('Xác minh danh tính trước khi đăng ký gói tập đầu tiên');
+    expect(host.textContent).toContain('Số Căn cước công dân (12 chữ số)');
+    expect(host.textContent).toContain('Họ tên tài khoản sẽ được đồng bộ theo tên này');
   });
 });

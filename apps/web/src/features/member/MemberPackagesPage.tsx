@@ -100,8 +100,12 @@ export function MemberPackagesPage() {
   const [holdError, setHoldError] = useState<string | null>(null);
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
-  const [trialCccd, setTrialCccd] = useState('');
+  const [trialDocType, setTrialDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
+  const [trialDocumentNumber, setTrialDocumentNumber] = useState('');
+  const [trialNationality, setTrialNationality] = useState('');
   const [trialFullName, setTrialFullName] = useState('');
+  const [trialFrontImage, setTrialFrontImage] = useState('');
+  const [trialBackImage, setTrialBackImage] = useState('');
   const [trialError, setTrialError] = useState('');
   const [isClaimingTrial, setIsClaimingTrial] = useState(false);
 
@@ -118,28 +122,72 @@ export function MemberPackagesPage() {
     void loadTrialStatus();
   }, [loadTrialStatus]);
 
-  const handleClaimTrial = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cccdClean = trialCccd.trim();
-    if (!/^(\d{9}|\d{12})$/.test(cccdClean)) {
-      setTrialError('Số CCCD không hợp lệ (phải gồm 9 hoặc 12 chữ số).');
+  const handleTrialImageUpload = (file: File, target: 'front' | 'back') => {
+    if (file.size > 5 * 1024 * 1024) {
+      setTrialError('Dung lượng ảnh tối đa là 5MB.');
       return;
     }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = reader.result as string;
+      if (target === 'front') setTrialFrontImage(b64);
+      else setTrialBackImage(b64);
+      setTrialError('');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClaimTrial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const docClean = trialDocumentNumber.trim();
+    if (trialDocType === 'CCCD') {
+      if (!/^(\d{9}|\d{12})$/.test(docClean)) {
+        setTrialError('Số CCCD không hợp lệ (phải gồm 9 hoặc 12 chữ số).');
+        return;
+      }
+    } else {
+      if (docClean.length < 6 || docClean.length > 20) {
+        setTrialError('Số Hộ chiếu không hợp lệ (từ 6 đến 20 ký tự).');
+        return;
+      }
+      if (!trialNationality.trim()) {
+        setTrialError('Vui lòng nhập quốc tịch cho người nước ngoài.');
+        return;
+      }
+    }
     if (!trialFullName.trim()) {
-      setTrialError('Vui lòng nhập họ và tên theo CCCD.');
+      setTrialError(`Vui lòng nhập họ và tên theo ${trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'}.`);
+      return;
+    }
+    if (!trialFrontImage) {
+      setTrialError('Vui lòng tải lên ảnh chụp mặt trước của giấy tờ.');
+      return;
+    }
+    if (trialDocType === 'CCCD' && !trialBackImage) {
+      setTrialError('Vui lòng tải lên ảnh chụp mặt sau của CCCD.');
       return;
     }
     setIsClaimingTrial(true);
     setTrialError('');
     try {
-      await trialApi.claim({ cccd: cccdClean, fullName: trialFullName.trim() });
-      notify('Kích hoạt 3 ngày tập thử miễn phí đặc quyền Gold thành công!', 'success', { record: true });
+      await trialApi.claim({
+        documentNumber: docClean,
+        fullName: trialFullName.trim(),
+        documentType: trialDocType,
+        nationality: trialDocType === 'PASSPORT' ? trialNationality.trim() : undefined,
+        frontImageUrl: trialFrontImage,
+        backImageUrl: trialBackImage || undefined,
+      });
+      notify('Đã gửi đơn đăng ký Gói Trải Nghiệm 3 Ngày! Vui lòng mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.', 'success', { record: true });
       setIsTrialModalOpen(false);
-      setTrialCccd('');
+      setTrialDocumentNumber('');
+      setTrialNationality('');
       setTrialFullName('');
+      setTrialFrontImage('');
+      setTrialBackImage('');
       await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
     } catch (err) {
-      setTrialError(errorMessage(err, 'Không thể nhận gói tập thử. Vui lòng kiểm tra lại số CCCD.'));
+      setTrialError(errorMessage(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.'));
     } finally {
       setIsClaimingTrial(false);
     }
@@ -627,7 +675,78 @@ export function MemberPackagesPage() {
         </div>
       )}
 
-      {!current && trialStatus?.eligible && (
+      {/* Trạng thái: Đơn trải nghiệm đang chờ Lễ tân duyệt */}
+      {!current && trialStatus?.status === 'PENDING_APPROVAL' && (
+        <section
+          className="portal-card"
+          style={{
+            marginBottom: 20,
+            background: 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface))',
+            borderColor: 'var(--portal-salmon)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: 'var(--portal-salmon)',
+                background: 'var(--portal-tint)',
+                padding: '4px 10px',
+                borderRadius: 99,
+              }}
+            >
+              CHỜ LỄ TÂN PHÊ DUYỆT TẠI QUẦY
+            </span>
+            <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
+              Đã nộp: {trialStatus.requestedAt ? formatCenterDate(trialStatus.requestedAt) : 'Gần đây'}
+            </span>
+          </div>
+          <h3 style={{ margin: '10px 0 6px', fontSize: 18, fontWeight: 700 }}>
+            Đơn đăng ký Gói Trải Nghiệm 3 Ngày đang được xử lý
+          </h3>
+          <p className="row-card__meta" style={{ margin: 0, lineHeight: 1.5 }}>
+            Hệ thống đã ghi nhận thông tin ({trialStatus.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'} • {trialStatus.documentNumberMasked}).
+            Vui lòng mang theo <strong>giấy tờ bản gốc ({trialStatus.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'})</strong> đến quầy Lễ tân để nhân viên đối chiếu và kích hoạt 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.
+          </p>
+        </section>
+      )}
+
+      {/* Trạng thái: Đơn trải nghiệm bị từ chối */}
+      {!current && trialStatus?.status === 'REJECTED' && (
+        <section
+          className="portal-card"
+          style={{
+            marginBottom: 20,
+            borderColor: 'var(--portal-danger)',
+            background: 'color-mix(in srgb, var(--portal-danger) 8%, var(--portal-surface))',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--portal-danger)' }}>
+                Đơn đăng ký Gói Trải Nghiệm 3 Ngày bị từ chối
+              </h3>
+              <p className="row-card__meta" style={{ margin: 0 }}>
+                Lý do từ Lễ tân: <strong>{trialStatus.rejectionReason || 'Thông tin giấy tờ không khớp bản gốc.'}</strong>. Bạn có thể kiểm tra và nộp lại đơn mới.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-primary btn-sm"
+              onClick={() => {
+                setTrialError('');
+                setIsTrialModalOpen(true);
+              }}
+            >
+              Nộp lại đơn
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Banner mời nhận gói trải nghiệm */}
+      {!current && trialStatus?.eligible && trialStatus?.status !== 'PENDING_APPROVAL' && trialStatus?.status !== 'REJECTED' && (
         <section
           className="portal-card"
           style={{
@@ -1162,44 +1281,203 @@ export function MemberPackagesPage() {
           onClose={() => setIsTrialModalOpen(false)}
           busy={isClaimingTrial}
         >
-          <div className="meta-label">Xác minh Căn cước công dân (CCCD)</div>
-          <p className="row-card__meta" style={{ marginTop: 8 }}>
-            Theo quy định của trung tâm, mỗi hội viên và mỗi số CCCD chỉ được nhận Gói Trải Nghiệm 3 Ngày một lần duy nhất. Gói bao gồm 01 buổi tập 1:1 cùng HLV cá nhân và không hỗ trợ bảo lưu.
+          <div className="meta-label">Xác minh Căn cước công dân (CCCD) / Hộ chiếu</div>
+          <p className="row-card__meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
+            Mỗi hội viên chỉ được nhận Gói Trải Nghiệm 3 Ngày một lần duy nhất. Gói bao gồm 01 buổi tập 1:1 cùng HLV cá nhân và không hỗ trợ bảo lưu.
+            Họ tên tài khoản sẽ được tự động đồng bộ theo giấy tờ sau khi Lễ tân đối chiếu bản gốc tại quầy.
           </p>
+
           <form onSubmit={(e) => void handleClaimTrial(e)} style={{ marginTop: 16 }}>
+            {/* Chọn loại giấy tờ */}
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="trial-full-name">Họ và tên trên CCCD *</label>
+              <label className="portal-label">Loại giấy tờ tùy thân *</label>
+              <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+                <button
+                  type="button"
+                  className={`btn-secondary btn-sm ${trialDocType === 'CCCD' ? 'btn-primary' : ''}`}
+                  onClick={() => { setTrialDocType('CCCD'); setTrialError(''); }}
+                  style={{ flex: 1 }}
+                >
+                  Căn cước công dân (Việt Nam)
+                </button>
+                <button
+                  type="button"
+                  className={`btn-secondary btn-sm ${trialDocType === 'PASSPORT' ? 'btn-primary' : ''}`}
+                  onClick={() => { setTrialDocType('PASSPORT'); setTrialError(''); }}
+                  style={{ flex: 1 }}
+                >
+                  Hộ chiếu (Người nước ngoài)
+                </button>
+              </div>
+            </div>
+
+            {/* Nếu là Passport: yêu cầu nhập quốc tịch */}
+            {trialDocType === 'PASSPORT' && (
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="trial-nationality">Quốc tịch *</label>
+                <input
+                  id="trial-nationality"
+                  className="portal-input"
+                  type="text"
+                  required
+                  placeholder="Vd: Korea, Japan, France, USA..."
+                  value={trialNationality}
+                  onChange={(e) => setTrialNationality(e.target.value)}
+                  disabled={isClaimingTrial}
+                />
+              </div>
+            )}
+
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="trial-full-name">
+                Họ và tên trên {trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'} *
+              </label>
               <input
                 id="trial-full-name"
                 className="portal-input"
                 type="text"
                 required
                 maxLength={150}
-                placeholder="Vd: Nguyễn Văn A"
+                placeholder="Vd: NGUYEN VAN A"
                 value={trialFullName}
                 onChange={(e) => setTrialFullName(e.target.value)}
                 disabled={isClaimingTrial}
               />
+              <span style={{ fontSize: '0.78rem', color: 'var(--portal-muted)', display: 'block', marginTop: 4 }}>
+                Họ tên tài khoản sẽ được đồng bộ theo tên này sau khi Lễ tân duyệt.
+              </span>
             </div>
+
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="trial-cccd">Số CCCD (12 chữ số) *</label>
+              <label className="portal-label" htmlFor="trial-cccd">
+                Số {trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD (12 chữ số)'} *
+              </label>
               <input
                 id="trial-cccd"
                 className="portal-input"
                 type="text"
                 required
-                maxLength={12}
-                placeholder="Vd: 001200001234"
-                value={trialCccd}
-                onChange={(e) => setTrialCccd(e.target.value.replace(/\D/g, ''))}
+                maxLength={trialDocType === 'CCCD' ? 12 : 20}
+                placeholder={trialDocType === 'CCCD' ? 'Vd: 001200001234' : 'Vd: M12345678'}
+                value={trialDocumentNumber}
+                onChange={(e) => setTrialDocumentNumber(
+                  trialDocType === 'CCCD' ? e.target.value.replace(/\D/g, '') : e.target.value.trim().toUpperCase()
+                )}
                 disabled={isClaimingTrial}
               />
             </div>
+
+            {/* Upload ảnh mặt trước & mặt sau */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+              <div>
+                <label className="portal-label" style={{ fontSize: '0.82rem' }}>
+                  Ảnh mặt trước {trialDocType} *
+                </label>
+                {trialFrontImage ? (
+                  <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                    <img src={trialFrontImage} alt="Mặt trước" style={{ maxHeight: 110, maxWidth: '100%', objectFit: 'contain' }} />
+                    <button
+                      type="button"
+                      onClick={() => setTrialFrontImage('')}
+                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12 }}
+                      title="Xóa ảnh"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: 110,
+                      marginTop: 6,
+                      borderRadius: 8,
+                      border: '1px dashed var(--portal-border)',
+                      cursor: 'pointer',
+                      background: 'var(--portal-surface)',
+                      fontSize: '0.8rem',
+                      color: 'var(--portal-muted)',
+                      textAlign: 'center',
+                      padding: 8,
+                    }}
+                  >
+                    <span>📷 Chọn ảnh mặt trước</span>
+                    <span style={{ fontSize: '0.72rem', marginTop: 4 }}>JPG, PNG (Max 5MB)</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      disabled={isClaimingTrial}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleTrialImageUpload(file, 'front');
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <label className="portal-label" style={{ fontSize: '0.82rem' }}>
+                  Ảnh mặt sau {trialDocType === 'PASSPORT' ? '(Tùy chọn)' : '*'}
+                </label>
+                {trialBackImage ? (
+                  <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                    <img src={trialBackImage} alt="Mặt sau" style={{ maxHeight: 110, maxWidth: '100%', objectFit: 'contain' }} />
+                    <button
+                      type="button"
+                      onClick={() => setTrialBackImage('')}
+                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12 }}
+                      title="Xóa ảnh"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: 110,
+                      marginTop: 6,
+                      borderRadius: 8,
+                      border: '1px dashed var(--portal-border)',
+                      cursor: 'pointer',
+                      background: 'var(--portal-surface)',
+                      fontSize: '0.8rem',
+                      color: 'var(--portal-muted)',
+                      textAlign: 'center',
+                      padding: 8,
+                    }}
+                  >
+                    <span>📷 Chọn ảnh mặt sau</span>
+                    <span style={{ fontSize: '0.72rem', marginTop: 4 }}>JPG, PNG (Max 5MB)</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      disabled={isClaimingTrial}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleTrialImageUpload(file, 'back');
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
             {trialError && (
-              <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', marginTop: 8, fontSize: '0.88rem' }}>
+              <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', marginTop: 12, fontSize: '0.88rem' }}>
                 {trialError}
               </p>
             )}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
               <button
                 type="button"
@@ -1212,9 +1490,9 @@ export function MemberPackagesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isClaimingTrial || !trialCccd.trim() || !trialFullName.trim()}
+                disabled={isClaimingTrial || !trialDocumentNumber.trim() || !trialFullName.trim()}
               >
-                {isClaimingTrial ? 'Đang xác thực…' : 'Xác minh & Kích hoạt'}
+                {isClaimingTrial ? 'Đang gửi đơn…' : 'Xác minh & Kích hoạt'}
               </button>
             </div>
           </form>

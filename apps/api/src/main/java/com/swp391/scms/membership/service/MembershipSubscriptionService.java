@@ -79,6 +79,13 @@ public class MembershipSubscriptionService {
     @Autowired(required = false)
     private SubscriptionValueCalculator valueCalculator;
 
+    @Autowired(required = false)
+    private com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRedemptionRepository;
+
+    public void setTrialRedemptionRepository(com.swp391.scms.membership.repository.MemberTrialRedemptionRepository repo) {
+        this.trialRedemptionRepository = repo;
+    }
+
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
             MembershipPackageRepository packages,
             MemberRepository members,
@@ -150,6 +157,20 @@ public class MembershipSubscriptionService {
                     "error.membership.pending_exists",
                     null,
                     "Member already has a pending payment subscription");
+        }
+
+        // Kiểm tra KYC bắt buộc trước khi đăng ký gói tập đầu tiên
+        if (trialRedemptionRepository != null) {
+            boolean hasPriorSubscriptions = subscriptions.existsByMemberUserId(member.getUserId());
+            boolean hasApprovedTrial = trialRedemptionRepository.findByMemberUserId(member.getUserId())
+                    .map(t -> com.swp391.scms.membership.entity.MemberTrialRedemption.STATUS_APPROVED.equalsIgnoreCase(t.getStatus()))
+                    .orElse(false);
+            boolean isIdentityVerified = Boolean.TRUE.equals(member.getIdentityVerified()) || hasApprovedTrial;
+
+            if (!hasPriorSubscriptions && !isIdentityVerified) {
+                throw new BadRequestException("MEMBERSHIP_KYC_REQUIRED", "error.membership.kyc_required", null,
+                        msg("error.membership.kyc_required"));
+            }
         }
 
         MembershipSubscription subscription = new MembershipSubscription();

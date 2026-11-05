@@ -35,7 +35,13 @@ public record ProfileDto(
     @Size(max = 255, message = "{validation.users.coach.certification.max}")
     String certification,
     @Size(max = 50, message = "{validation.users.receptionist.shift.max}")
-    String shift
+    String shift,
+    String documentType,
+    String citizenId,
+    String nationality,
+    String frontImageUrl,
+    String backImageUrl,
+    Boolean identityVerified
 ) {
     public ProfileDto(
         Long userId,
@@ -68,6 +74,12 @@ public record ProfileDto(
             fitnessLevel,
             emergencyContactName,
             emergencyContactPhone,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null,
             null,
             null,

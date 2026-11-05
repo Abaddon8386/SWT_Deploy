@@ -265,6 +265,13 @@ public class MemberTrialService {
         if (member.getUser() != null) {
             member.getUser().setFullName(redemption.getFullName());
         }
+        member.setDocumentType(redemption.getDocumentType());
+        member.setCitizenId(redemption.getCccdLast4());
+        member.setNationality(redemption.getNationality());
+        member.setFrontImageUrl(redemption.getFrontImageUrl());
+        member.setBackImageUrl(redemption.getBackImageUrl());
+        member.setIdentityVerified(true);
+        member.setIdentityVerifiedAt(LocalDateTime.now(clock));
 
         // Tìm gói tập trải nghiệm 3 ngày (fallback gói Gold nếu chưa seed)
         MembershipPackage trialPkg = packages.findByStatusOrderByPriceAsc("active").stream()

@@ -23,6 +23,7 @@ import {
   type PaymentResponseDto,
   type PendingSubscriptionItem,
   type RenewalCandidate,
+  type ReceptionTrialItem,
 } from './receptionApi';
 import { Link } from 'react-router-dom';
 
@@ -91,6 +92,16 @@ export function StaffReceptionPage() {
   const selectedPendingId = selectedPending?.id;
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
 
+  // Danh sách đơn đăng ký Gói Trải Nghiệm 3 Ngày chờ Lễ tân duyệt
+  const [trialList, setTrialList] = useState<ReceptionTrialItem[]>([]);
+  const [loadingTrials, setLoadingTrials] = useState(true);
+  const [processingTrialId, setProcessingTrialId] = useState<number | null>(null);
+  const [inspectingTrial, setInspectingTrial] = useState<ReceptionTrialItem | null>(null);
+  const [rejectingTrial, setRejectingTrial] = useState<ReceptionTrialItem | null>(null);
+  const [trialRejectReason, setTrialRejectReason] = useState('');
+  const [isSubmittingTrialReject, setIsSubmittingTrialReject] = useState(false);
+  const [trialRejectError, setTrialRejectError] = useState<string | null>(null);
+
   useEffect(() => {
     setReceiptImage(null);
     if (!hasAccess || selectedMemberId == null || selectedPendingId == null) return;
@@ -142,11 +153,25 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
+  const loadPendingTrials = useCallback(async () => {
+    if (!hasAccess) return;
+    setLoadingTrials(true);
+    try {
+      const items = await receptionApi.getPendingTrials();
+      setTrialList(items);
+    } catch {
+      setTrialList([]);
+    } finally {
+      setLoadingTrials(false);
+    }
+  }, [hasAccess]);
+
   useEffect(() => {
     void loadPendingSubscriptions();
     void loadPendingHolds();
     void loadUnpaidPt();
-  }, [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt]);
+    void loadPendingTrials();
+  }, [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
 
   useEffect(() => {
     let active = true;
@@ -297,6 +322,55 @@ export function StaffReceptionPage() {
       notify(msg, 'error');
     } finally {
       setProcessingHoldId(null);
+    }
+  };
+
+  const handleApproveTrial = async (item: ReceptionTrialItem) => {
+    if (processingTrialId !== null) return;
+    setProcessingTrialId(item.id);
+    try {
+      await receptionApi.approveTrial(item.id);
+      notify(
+        `Đã kích hoạt Gói Trải Nghiệm 3 Ngày cho ${item.memberName}. Họ tên đã đồng bộ theo ${item.documentType}: "${item.documentFullName}".`,
+        'success',
+        { record: true }
+      );
+      if (inspectingTrial?.id === item.id) setInspectingTrial(null);
+      await loadPendingTrials();
+    } catch (err: unknown) {
+      notify(errorMessage(err, 'Phê duyệt gói trải nghiệm thất bại.'), 'error');
+      await loadPendingTrials();
+    } finally {
+      setProcessingTrialId(null);
+    }
+  };
+
+  const handleOpenRejectTrial = (item: ReceptionTrialItem) => {
+    setRejectingTrial(item);
+    setTrialRejectReason('');
+    setTrialRejectError(null);
+  };
+
+  const handleSubmitRejectTrial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingTrial || isSubmittingTrialReject) return;
+    const reason = trialRejectReason.trim();
+    if (!reason) {
+      setTrialRejectError('Vui lòng nhập lý do từ chối để hội viên chỉnh sửa nộp lại.');
+      return;
+    }
+    setIsSubmittingTrialReject(true);
+    setTrialRejectError(null);
+    try {
+      await receptionApi.rejectTrial(rejectingTrial.id, reason);
+      notify(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, 'info', { record: true });
+      setRejectingTrial(null);
+      if (inspectingTrial?.id === rejectingTrial.id) setInspectingTrial(null);
+      await loadPendingTrials();
+    } catch (err: unknown) {
+      setTrialRejectError(errorMessage(err, 'Từ chối đơn thất bại. Vui lòng thử lại.'));
+    } finally {
+      setIsSubmittingTrialReject(false);
     }
   };
 
@@ -846,6 +920,140 @@ export function StaffReceptionPage() {
         </div>
       </div>
 
+      {/* Mục Đơn đăng ký Gói Trải Nghiệm 3 Ngày (CCCD / Hộ chiếu) */}
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 className="portal-card-title">Đơn trải nghiệm 3 ngày chờ duyệt ({trialList.length})</h2>
+          </div>
+          <RefreshButton label="Làm mới đơn thử" onClick={() => void loadPendingTrials()} disabled={loadingTrials} />
+        </div>
+
+        {loadingTrials ? (
+          <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+            <span className="sr-only">Đang tải danh sách đơn đăng ký trải nghiệm...</span>
+            <div
+              aria-hidden="true"
+              style={{
+                padding: '14px 18px',
+                borderRadius: '10px',
+                border: '1px solid var(--color-border-medium)',
+                backgroundColor: 'var(--color-bg-card)',
+              }}
+            >
+              <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
+              <div className="portal-skeleton-line" style={{ width: '70%', height: 14 }} />
+            </div>
+          </div>
+        ) : trialList.length === 0 ? (
+          <div style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+            Hiện không có đơn đăng ký Gói Trải Nghiệm 3 Ngày nào đang chờ duyệt.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+            {trialList.map((item) => {
+              const isBusy = processingTrialId === item.id;
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    padding: '16px 18px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--color-border-medium)',
+                    backgroundColor: 'var(--color-bg-warm)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span
+                        style={{
+                          fontFamily: 'monospace',
+                          fontWeight: 700,
+                          color: 'var(--portal-salmon)',
+                          fontSize: '0.92rem',
+                        }}
+                      >
+                        Đơn thử #{item.id}
+                      </span>
+                      <strong>{item.memberName}</strong>
+                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                        ({item.membershipCode || 'Hội viên mới'})
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '99px',
+                          background: item.documentType === 'PASSPORT' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 88, 12, 0.15)',
+                          color: item.documentType === 'PASSPORT' ? '#2563eb' : 'var(--portal-salmon)',
+                        }}
+                      >
+                        {item.documentType === 'PASSPORT' ? `Hộ chiếu (${item.nationality || 'Nước ngoài'})` : 'CCCD'}
+                      </span>
+                    </div>
+
+                    <div style={{ marginTop: '8px', fontSize: '0.88rem', color: 'var(--color-text-muted)', display: 'grid', gap: '4px' }}>
+                      <div>
+                        <strong>Tên trên giấy tờ:</strong>{' '}
+                        <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{item.documentFullName}</span>
+                        {item.memberName !== item.documentFullName && (
+                          <span style={{ fontSize: '0.78rem', color: 'var(--portal-salmon)', marginLeft: '6px' }}>
+                            (Đồng bộ họ tên: &quot;{item.memberName}&quot; → &quot;{item.documentFullName}&quot;)
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <strong>Số giấy tờ:</strong> {item.documentNumberMasked}
+                        {item.nationality && ` • Quốc tịch: ${item.nationality}`}
+                      </div>
+                      <div>
+                        <strong>Email/SĐT:</strong> {item.memberEmail} {item.memberPhone ? `• ${item.memberPhone}` : ''}
+                      </div>
+                      <div>
+                        <strong>Thời gian nộp:</strong> {formatCenterDate(item.requestedAt)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={() => setInspectingTrial(item)}
+                    >
+                      👁️ Xem giấy tờ & Ảnh
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary btn-sm"
+                      disabled={isBusy}
+                      onClick={() => void handleApproveTrial(item)}
+                    >
+                      {isBusy ? 'Đang duyệt…' : '✓ Duyệt & Kích hoạt'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                      disabled={isBusy}
+                      onClick={() => handleOpenRejectTrial(item)}
+                    >
+                      ✕ Từ chối
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Mục Yêu cầu bảo lưu */}
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1107,6 +1315,176 @@ export function StaffReceptionPage() {
                 disabled={isSubmittingCancel}
               >
                 {isSubmittingCancel ? 'Đang gửi...' : 'Gửi yêu cầu lên Quản lý'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal xem chi tiết & ảnh giấy tờ CCCD / Hộ chiếu */}
+      {inspectingTrial && (
+        <Modal
+          title={`Chi tiết đơn trải nghiệm #${inspectingTrial.id} - ${inspectingTrial.memberName}`}
+          onClose={() => setInspectingTrial(null)}
+          busy={processingTrialId === inspectingTrial.id}
+        >
+          <div style={{ display: 'grid', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.9rem' }}>
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>Hội viên</span>
+                <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || 'Chưa cấp thẻ'})
+              </div>
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>Loại giấy tờ</span>
+                <strong>{inspectingTrial.documentType === 'PASSPORT' ? `Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})` : 'Căn cước công dân (CCCD)'}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>Số giấy tờ</span>
+                <strong style={{ fontFamily: 'monospace' }}>{inspectingTrial.documentNumberMasked}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>Họ và tên trên giấy tờ</span>
+                <strong style={{ color: 'var(--portal-salmon)' }}>{inspectingTrial.documentFullName}</strong>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: '8px',
+                background: 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)',
+                border: '1px solid var(--portal-border)',
+                fontSize: '0.85rem',
+                color: 'var(--color-text-main)',
+              }}
+            >
+              ℹ️ <strong>Lưu ý nghiệp vụ:</strong> Khi Lễ tân bấm <strong>Duyệt & Kích hoạt</strong>, hệ thống sẽ tự động đồng bộ họ tên tài khoản thành <strong>&quot;{inspectingTrial.documentFullName}&quot;</strong> và kích hoạt gói 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.
+            </div>
+
+            {/* Ảnh mặt trước & mặt sau */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '4px' }}>
+              <div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-muted)' }}>
+                  Ảnh mặt trước ({inspectingTrial.documentType})
+                </div>
+                {inspectingTrial.frontImageUrl ? (
+                  <div style={{ border: '1px solid var(--color-border-medium)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                    <img
+                      src={inspectingTrial.frontImageUrl}
+                      alt="Mặt trước giấy tờ"
+                      style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--color-bg-card)', borderRadius: '8px', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                    Chưa có ảnh mặt trước
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-muted)' }}>
+                  Ảnh mặt sau ({inspectingTrial.documentType === 'PASSPORT' ? 'Trang thị thực (tùy chọn)' : 'Mặt sau CCCD'})
+                </div>
+                {inspectingTrial.backImageUrl ? (
+                  <div style={{ border: '1px solid var(--color-border-medium)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                    <img
+                      src={inspectingTrial.backImageUrl}
+                      alt="Mặt sau giấy tờ"
+                      style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--color-bg-card)', borderRadius: '8px', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                    Chưa có ảnh mặt sau
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--color-border-medium)', paddingTop: '14px' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={processingTrialId === inspectingTrial.id}
+                onClick={() => setInspectingTrial(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                disabled={processingTrialId === inspectingTrial.id}
+                onClick={() => handleOpenRejectTrial(inspectingTrial)}
+              >
+                ✕ Từ chối đơn
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={processingTrialId === inspectingTrial.id}
+                onClick={() => void handleApproveTrial(inspectingTrial)}
+              >
+                {processingTrialId === inspectingTrial.id ? 'Đang duyệt…' : '✓ Phê duyệt & Kích hoạt'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal từ chối đơn đăng ký gói trải nghiệm */}
+      {rejectingTrial && (
+        <Modal
+          title={`Từ chối đơn thử #${rejectingTrial.id} - ${rejectingTrial.memberName}`}
+          onClose={() => setRejectingTrial(null)}
+          busy={isSubmittingTrialReject}
+        >
+          <form onSubmit={(e) => void handleSubmitRejectTrial(e)} style={{ display: 'grid', gap: '14px' }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
+              Vui lòng nhập lý do từ chối để hội viên nhận thông báo và chỉnh sửa nộp lại giấy tờ phù hợp.
+            </p>
+
+            <div className="portal-form-group" style={{ margin: 0 }}>
+              <label className="portal-label" htmlFor="trial-reject-reason">
+                Lý do từ chối *
+              </label>
+              <textarea
+                id="trial-reject-reason"
+                className="portal-input"
+                rows={3}
+                maxLength={500}
+                required
+                placeholder="Vd: Ảnh chụp mờ không đọc được thông tin, số CCCD không khớp bản gốc, v.v."
+                value={trialRejectReason}
+                onChange={(e) => setTrialRejectReason(e.target.value)}
+                disabled={isSubmittingTrialReject}
+                style={{ width: '100%', resize: 'vertical' }}
+              />
+            </div>
+
+            {trialRejectError && (
+              <p className="form-error" role="alert" style={{ margin: 0 }}>
+                {trialRejectError}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={isSubmittingTrialReject}
+                onClick={() => setRejectingTrial(null)}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                style={{ background: 'var(--portal-danger, #ef4444)' }}
+                disabled={isSubmittingTrialReject}
+              >
+                {isSubmittingTrialReject ? 'Đang từ chối…' : 'Xác nhận từ chối'}
               </button>
             </div>
           </form>
