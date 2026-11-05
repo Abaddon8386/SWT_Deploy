@@ -308,20 +308,15 @@ describe('SCRUM-86 packages', () => {
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Gia hạn gói tập');
   });
 
-  it('allows a third paid period and displays future renewal dates', async () => {
+  it('allows a third paid period without a future-periods card', async () => {
     const third = { ...renewal, id: 6, previousSubscriptionId: 5,
       startDate: '2099-12-19', endDate: '2100-01-18' };
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active, renewal, third]);
     api.renew.mockResolvedValue({ ...pending, id: 7, previousSubscriptionId: 6 });
     await render();
-    expect(host.textContent).toContain('Kỳ đã thanh toán tiếp theo');
-    expect(host.querySelector('.membership-periods__list')).toBeNull();
-    const toggle = host.querySelector<HTMLButtonElement>('.membership-periods__toggle')!;
-    expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    await act(async () => toggle.click());
-    expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(host.querySelectorAll('.membership-periods__row')).toHaveLength(2);
+    expect(host.textContent).not.toContain('Kỳ đã thanh toán tiếp theo');
+    expect(host.querySelector('.membership-periods__toggle')).toBeNull();
 
     expect(button('Gia hạn')?.disabled).toBe(false);
     await act(async () => button('Gia hạn')?.click());
@@ -577,7 +572,8 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending]);
     api.payments.mockResolvedValue([{ ...payment, subscriptionId: 88 }, payment]);
     await render();
-    expect(host.textContent).toContain('Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.');
+    expect(noticeText()).toContain('Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.');
+    expect(host.textContent).not.toContain('Đã gửi thông báo chuyển khoản');
     expect(host.textContent).not.toContain('Thanh toán thành công');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
@@ -589,7 +585,7 @@ describe('SCRUM-86 packages', () => {
     api.payments.mockResolvedValue([{ ...payment, subscriptionId: 88 }]);
     await render();
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
-    expect(host.textContent).not.toContain('Đã gửi thông báo chuyển khoản');
+    expect(noticeText()).not.toContain('Đã gửi thông báo chuyển khoản');
   });
 
   it('shows POS payment instructions in the purchase modal without a transfer confirmation button', async () => {
@@ -624,7 +620,7 @@ describe('SCRUM-86 packages', () => {
     await render();
     await act(async () => button('Tải lại trạng thái')?.click());
     expect(api.payments).toHaveBeenCalledTimes(2);
-    expect(host.textContent).toContain('Đã gửi thông báo chuyển khoản');
+    expect(noticeText()).toContain('Đã gửi thông báo chuyển khoản');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
     expect(api.create).not.toHaveBeenCalled();
@@ -638,7 +634,7 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).toContain('Không thể kiểm tra thanh toán');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     await act(async () => button('Thử lại')?.click());
-    expect(host.textContent).toContain('Đã gửi thông báo chuyển khoản');
+    expect(noticeText()).toContain('Đã gửi thông báo chuyển khoản');
     expect(api.createPayment).not.toHaveBeenCalled();
   });
 

@@ -149,7 +149,6 @@ export function MemberPackagesPage() {
   const [isResuming, setIsResuming] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
   const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
-  const [isPeriodsOpen, setIsPeriodsOpen] = useState(false);
 
   const loadPackages = useCallback(async () => {
     syncVersion.current += 1;
@@ -291,6 +290,12 @@ export function MemberPackagesPage() {
     ? historyState.data.filter((item) => item.status === 'active' && item.startDate > todayKey())
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
     : [];
+
+  const hasPendingTransfer = paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending');
+  useEffect(() => {
+    if (!pending || !hasPendingTransfer) return;
+    notify('Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.', 'info', { key: `transfer-pending-${pending.id}`, record: true });
+  }, [pending?.id, hasPendingTransfer]);
 
   const isStatusSyncing =
     currentState.status === 'loading' ||
@@ -729,51 +734,6 @@ export function MemberPackagesPage() {
         </section>
       )}
 
-      {futurePeriods.length > 0 && (
-        <section className={`portal-card membership-periods ${isPeriodsOpen ? 'is-open' : ''}`.trim()} aria-label="Các kỳ đã thanh toán tiếp theo">
-          <button
-            type="button"
-            className="membership-periods__toggle"
-            aria-expanded={isPeriodsOpen}
-            aria-controls="membership-future-periods-list"
-            onClick={() => setIsPeriodsOpen((prev) => !prev)}
-          >
-            <div className="membership-periods__heading">
-              <div>
-                <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
-                <span className="membership-periods__summary">
-                  Kỳ kế tiếp từ {formatDate(futurePeriods[0].startDate)} đến {formatDate(futurePeriods[0].endDate)}
-                </span>
-              </div>
-            </div>
-            <div className="membership-periods__meta">
-              <span className="membership-periods__count">{futurePeriods.length} kỳ</span>
-              <span className="membership-periods__action">
-                <span>{isPeriodsOpen ? 'Thu gọn' : 'Xem chi tiết'}</span>
-                <svg className="membership-periods__chevron" viewBox="0 0 12 12" aria-hidden="true">
-                  <path d="M2.25 4.5 6 8.25 9.75 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </div>
-          </button>
-          {isPeriodsOpen && (
-            <ul id="membership-future-periods-list" className="membership-periods__list">
-              {futurePeriods.map((period) => (
-                <li className="membership-periods__row" key={period.id}>
-                  <div className="membership-periods__package">
-                    <strong>{period.packageName}</strong>
-                  </div>
-                  <dl className="membership-periods__dates">
-                    <div><dt>Từ ngày</dt><dd><time dateTime={period.startDate}>{formatDate(period.startDate)}</time></dd></div>
-                    <div><dt>Đến ngày</dt><dd><time dateTime={period.endDate}>{formatDate(period.endDate)}</time></dd></div>
-                  </dl>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-
       {pendingItems.length > 1 && (
         <div className="portal-alert" role="alert">
           <span>Có nhiều yêu cầu đang chờ. Vui lòng liên hệ nhân viên để kiểm tra.</span>
@@ -798,9 +758,6 @@ export function MemberPackagesPage() {
           </div>
           {paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage && (
             <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
-          )}
-          {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending') && (
-            <p className="row-card__meta" role="status">Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'success') && (
             <p role="alert">Thanh toán đã ghi nhận nhưng gói chưa active. Vui lòng yêu cầu nhân viên kiểm tra.</p>
