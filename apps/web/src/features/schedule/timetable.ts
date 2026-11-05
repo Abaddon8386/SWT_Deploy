@@ -8,7 +8,6 @@ export const TIMETABLE_HOURS: number[] = Array.from(
 
 const RANGE_START_MIN = TIMETABLE_START_HOUR * 60;
 const RANGE_END_MIN = TIMETABLE_END_HOUR * 60;
-const RANGE_MINUTES = RANGE_END_MIN - RANGE_START_MIN;
 
 export type TimetableTone = 'open' | 'mine' | 'full' | 'past' | 'cancelled' | 'neutral';
 
@@ -110,13 +109,20 @@ export function overlapsHour(event: Pick<TimetableEvent, 'startTime' | 'endTime'
  * Xếp các buổi học trong cùng một ngày vào làn song song: buổi chồng giờ đứng cạnh nhau,
  * mỗi cụm chồng giờ chia đều chiều rộng cột.
  */
-export function layoutDayEvents(events: TimetableEvent[]): PositionedEvent[] {
+export function layoutDayEvents(
+  events: TimetableEvent[],
+  startHour: number = TIMETABLE_START_HOUR,
+  endHour: number = TIMETABLE_END_HOUR,
+): PositionedEvent[] {
+  const rangeStart = startHour * 60;
+  const rangeEnd = endHour * 60;
+  const rangeMinutes = rangeEnd - rangeStart;
   const sorted = events
-    .filter(isWithinRange)
+    .filter((event) => toMinutes(event.endTime) > rangeStart && toMinutes(event.startTime) < rangeEnd)
     .map((event) => ({
       event,
-      start: Math.max(toMinutes(event.startTime), RANGE_START_MIN),
-      end: Math.min(toMinutes(event.endTime), RANGE_END_MIN),
+      start: Math.max(toMinutes(event.startTime), rangeStart),
+      end: Math.min(toMinutes(event.endTime), rangeEnd),
     }))
     .sort((a, b) => a.start - b.start || a.end - b.end || a.event.id.localeCompare(b.event.id));
 
@@ -132,8 +138,8 @@ export function layoutDayEvents(events: TimetableEvent[]): PositionedEvent[] {
         event: item.event,
         lane: item.lane,
         lanes,
-        topPct: ((item.start - RANGE_START_MIN) / RANGE_MINUTES) * 100,
-        heightPct: (Math.max(item.end - item.start, 15) / RANGE_MINUTES) * 100,
+        topPct: ((item.start - rangeStart) / rangeMinutes) * 100,
+        heightPct: (Math.max(item.end - item.start, 15) / rangeMinutes) * 100,
       });
     }
     cluster = [];
@@ -155,4 +161,27 @@ export function layoutDayEvents(events: TimetableEvent[]): PositionedEvent[] {
   }
   if (cluster.length > 0) flush();
   return result;
+}
+
+/** Số giờ tối thiểu của khung thu gọn, để tuần ít lịch không thành bảng quá thấp. */
+export const TIMETABLE_MIN_FIT_HOURS = 8;
+
+/**
+ * Khung giờ thu gọn theo lịch thật của tuần: từ giờ của buổi sớm nhất tới giờ kết thúc của buổi muộn nhất,
+ * nằm trong 06:00–22:00 và dài ít nhất `minHours` giờ. Tuần không có buổi nào thì trả về đủ 06:00–22:00.
+ */
+export function fitHourRange(
+  events: Pick<TimetableEvent, 'startTime' | 'endTime'>[],
+  minHours: number = TIMETABLE_MIN_FIT_HOURS,
+): number[] {
+  const inRange = events.filter(isWithinRange);
+  if (inRange.length === 0) return TIMETABLE_HOURS;
+  let start = Math.max(TIMETABLE_START_HOUR, Math.floor(Math.min(...inRange.map((event) => toMinutes(event.startTime))) / 60));
+  let end = Math.min(TIMETABLE_END_HOUR, Math.ceil(Math.max(...inRange.map((event) => toMinutes(event.endTime))) / 60));
+  const span = Math.min(minHours, TIMETABLE_END_HOUR - TIMETABLE_START_HOUR);
+  while (end - start < span) {
+    if (end < TIMETABLE_END_HOUR) end += 1;
+    if (end - start < span && start > TIMETABLE_START_HOUR) start -= 1;
+  }
+  return Array.from({ length: end - start }, (_, index) => start + index);
 }

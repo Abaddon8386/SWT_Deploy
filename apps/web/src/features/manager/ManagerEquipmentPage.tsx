@@ -15,7 +15,7 @@ const STATUS_LABEL: Record<string, { label: string; badgeClass: string }> = {
   retired: { label: 'Ngừng sử dụng', badgeClass: 'badge-secondary' },
 };
 
-const CATEGORIES = ['Tất cả', 'Cardio', 'Strength', 'Free Weights', 'Diagnostic', 'Khác'];
+const CATEGORIES = ['Tất cả', 'Cardio', 'Strength', 'Free Weights', 'Diagnostic', 'Recovery', 'Khác'];
 
 interface FormState {
   name: string;

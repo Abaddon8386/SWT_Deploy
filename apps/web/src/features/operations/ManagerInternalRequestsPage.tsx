@@ -401,8 +401,10 @@ export function ManagerInternalRequestsPage() {
                   {req.startDate && (
                     <div>
                       <strong style={{ color: 'var(--portal-muted)' }}>Thời gian:</strong>{' '}
-                      {req.startDate}
-                      {req.endDate && req.endDate !== req.startDate ? ` đến ${req.endDate}` : ''}
+                      {formatCenterDate(req.startDate)}
+                      {req.endDate && req.endDate !== req.startDate ? ` đến ${formatCenterDate(req.endDate)}` : ''}
+                      {req.replacementUserFullName ? ` · Thay thế: ${req.replacementUserFullName}` : ''}
+
                     </div>
                   )}
 
@@ -540,8 +542,10 @@ export function ManagerInternalRequestsPage() {
               </div>
               {reviewTarget.startDate && (
                 <div>
-                  <strong>Thời gian đề xuất:</strong> {reviewTarget.startDate}
-                  {reviewTarget.endDate && ` đến ${reviewTarget.endDate}`}
+                  <strong>Thời gian đề xuất:</strong> {formatCenterDate(reviewTarget.startDate)}
+                  {reviewTarget.endDate && ` đến ${formatCenterDate(reviewTarget.endDate)}`}
+                  {reviewTarget.replacementUserFullName ? ` · Thay thế: ${reviewTarget.replacementUserFullName}` : ''}
+
                 </div>
               )}
             </div>

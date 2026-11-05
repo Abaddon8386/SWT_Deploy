@@ -359,8 +359,10 @@ export function StaffInternalRequestsPage() {
                   {req.startDate && (
                     <div>
                       <strong style={{ color: 'var(--portal-muted)' }}>Thời gian:</strong>{' '}
-                      {req.startDate}
-                      {req.endDate && req.endDate !== req.startDate ? ` đến ${req.endDate}` : ''}
+                      {formatCenterDate(req.startDate)}
+                      {req.endDate && req.endDate !== req.startDate ? ` đến ${formatCenterDate(req.endDate)}` : ''}
+                      {req.replacementUserFullName ? ` · Thay thế: ${req.replacementUserFullName}` : ''}
+
                     </div>
                   )}
 

@@ -23,14 +23,36 @@ describe('WeeklyTimetable', () => {
       onWeekChange={() => {}} onEventClick={() => {}} {...props} />,
   ));
 
-  it('shows 7 day columns and 16 hour rows from 06:00 to 21:00', async () => {
+  it('fits a view-only week to the hours that have sessions and can expand to 06:00–22:00', async () => {
     await render();
     expect(host.querySelectorAll('.tt__day')).toHaveLength(7);
+    // Buổi 08:00–09:30 -> khung tối thiểu 8 giờ, kẹp trong 06:00–22:00: 06:00–14:00.
+    expect(host.querySelectorAll('.tt__gutter .tt__hour')).toHaveLength(8);
+    expect(host.querySelector('.tt__hour-end')!.textContent).toBe('14:00');
+    const toggle = host.querySelector<HTMLButtonElement>('.tt__span')!;
+    expect(toggle.textContent).toBe('Hiện đủ 06:00–22:00');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    await act(async () => toggle.click());
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.textContent).toBe('Thu gọn 06:00–14:00');
     expect(host.querySelectorAll('.tt__gutter .tt__hour')).toHaveLength(16);
     expect(host.querySelector('.tt__gutter')!.textContent).toContain('06:00');
     expect(host.querySelector('.tt__gutter')!.textContent).toContain('21:00');
     expect(host.querySelector('.tt__hour-end')!.textContent).toBe('22:00');
     expect(host.textContent).toContain('05/01 – 11/01/2099');
+  });
+
+  it('shows the full 06:00–22:00 range for an empty week without a toggle', async () => {
+    await render({ events: [] });
+    expect(host.querySelectorAll('.tt__gutter .tt__hour')).toHaveLength(16);
+    expect(host.querySelector('.tt__span')).toBeNull();
+  });
+
+  it('positions events against the fitted range', async () => {
+    await render({ events: [{ ...event, startTime: '18:00', endTime: '19:00' }] });
+    // 18:00–19:00 -> 14:00–22:00 (8 giờ, chạm đáy 22:00 nên mở về phía trên); buổi bắt đầu ở 4/8 chiều cao.
+    expect(host.querySelector('.tt__gutter .tt__hour')!.textContent).toBe('14:00');
+    expect(host.querySelector<HTMLElement>('.tt__event')!.style.top).toBe('50%');
   });
 
   it('renders the event and reports clicks', async () => {

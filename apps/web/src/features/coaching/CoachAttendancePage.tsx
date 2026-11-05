@@ -5,6 +5,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { notify } from '../../shared/lib/portalNotices';
+import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDate, formatTimeRange } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
@@ -93,8 +94,7 @@ export function CoachAttendancePage() {
       if (stored) {
         return JSON.parse(stored);
       }
-    } catch {
-      // Fallback
+    } catch {// Fallback
     }
     return [];
   });
@@ -106,8 +106,7 @@ export function CoachAttendancePage() {
       if (stored) {
         return JSON.parse(stored);
       }
-    } catch {
-      // Fallback
+    } catch {// Fallback
     }
     return [];
   });
@@ -117,8 +116,7 @@ export function CoachAttendancePage() {
     setHistory(updated);
     try {
       localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(updated));
-    } catch {
-      // ignore
+    } catch {// ignore
     }
   };
 
@@ -127,8 +125,7 @@ export function CoachAttendancePage() {
     setEvalHistory(updated);
     try {
       localStorage.setItem(STORAGE_KEY_EVAL_HISTORY, JSON.stringify(updated));
-    } catch {
-      // ignore
+    } catch {// ignore
     }
   };
 
@@ -153,8 +150,7 @@ export function CoachAttendancePage() {
             setWeekStart(mondayOf(preferred.sessionDate));
           }
         }
-      } catch {
-        if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
+      } catch {if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
       } finally {
         if (mounted) { setLoading(false); setSessionsLoaded(true); }
       }
@@ -189,8 +185,7 @@ export function CoachAttendancePage() {
           setStudents(normalized);
           setLoadedSessionId(selectedSessionId);
         }
-      } catch {
-        if (mounted) {
+      } catch {if (mounted) {
           setRosterError('Không thể tải danh sách học viên của buổi học. Vui lòng chọn lại buổi học.');
         }
       } finally {
@@ -293,8 +288,7 @@ export function CoachAttendancePage() {
           ? 'Đã cập nhật lại điểm danh thành công!'
           : 'Lưu điểm danh thành công!'
       );
-    } catch {
-      notify('Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.', 'error');
+    } catch (err) { notify(errorMessage(err, 'Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -347,8 +341,7 @@ export function CoachAttendancePage() {
       saveEvalHistoryToStorage(newEvalHistory);
 
       showCenterNotification('Đã gửi đánh giá tiến độ và thông báo đến học viên.');
-    } catch {
-      notify('Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.', 'error');
+    } catch (err) { notify(errorMessage(err, 'Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.'), 'error');
     } finally {
       setSavingEvaluation(false);
     }
@@ -437,8 +430,7 @@ export function CoachAttendancePage() {
 
       setEditingAttendanceRecord(null);
       showCenterNotification('Cập nhật thành công');
-    } catch {
-      notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
+    } catch {notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
     }
@@ -523,8 +515,7 @@ export function CoachAttendancePage() {
 
       setEditingEvalRecord(null);
       showCenterNotification('Cập nhật thành công');
-    } catch {
-      notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
+    } catch {notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
     } finally {
       setSaving(false);
     }

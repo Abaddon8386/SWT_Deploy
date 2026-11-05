@@ -10,6 +10,7 @@ import {
 } from './auditApi';
 import './manager-audit-logs.css';
 import { errorMessage } from '../../shared/lib/errorMessage';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 type ActiveTab = 'audit' | 'occupancy';
 
@@ -311,7 +312,7 @@ export function ManagerAuditLogsPage() {
                   {filteredLogs.map((log) => (
                     <tr key={log.id}>
                       <td style={{ fontSize: '0.82rem', fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>
-                        {log.createdAt ? log.createdAt.replace('T', ' ') : '—'}
+                        {log.createdAt ? formatCenterDateTime(log.createdAt) : '—'}
                       </td>
                       <td>
                         <div className="actor-meta">
@@ -480,7 +481,7 @@ export function ManagerAuditLogsPage() {
                 <strong>Người thực hiện:</strong> {diffLog.userFullName} ({diffLog.userEmail})
               </div>
               <div>
-                <strong>Thời gian:</strong> {diffLog.createdAt ? diffLog.createdAt.replace('T', ' ') : '—'}
+                <strong>Thời gian:</strong> {diffLog.createdAt ? formatCenterDateTime(diffLog.createdAt) : '—'}
               </div>
               {diffLog.ipAddress && (
                 <div>

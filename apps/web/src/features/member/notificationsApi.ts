@@ -29,9 +29,9 @@ export const markAllNotificationsRead = () =>
 
 /** Accept only internal portal routes; never follow arbitrary URLs from notification content. */
 export function safeNotificationPath(path: string | null | undefined, role = 'MEMBER'): string | null {
-  if (!path || !/^\/[a-z0-9/-]+(?:#[a-z0-9-]+)?$/.test(path)) return null;
+  if (!path || !/^\/[a-z0-9/-]+(?:\?[a-zA-Z0-9_=&%-]+)?(?:#[a-z0-9-]+)?$/.test(path)) return null;
   const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
-  return path.startsWith(prefix) || path === '/member/profile' || (role === 'COACH' && path === '/staff/attendance') || (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts'].includes(path)) || path === '/messages' ? path : null;
+  return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && ['/staff/attendance', '/staff/requests', '/staff/coach-classes', '/staff/classes'].some(p => path === p || path.startsWith(`${p}?`))) || (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts'].some(p => path === p || path.startsWith(`${p}?`))) || path === '/messages' ? path : null;
 }
 
 export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath'>, role = 'MEMBER'): string {

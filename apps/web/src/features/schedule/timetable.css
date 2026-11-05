@@ -2,6 +2,7 @@
 .tt__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .tt__nav { display: inline-flex; gap: 8px; }
 .tt__range { font-size: 15px; color: var(--portal-paper); }
+.tt__span[aria-pressed='true'] { border-color: var(--portal-salmon); color: var(--portal-salmon); }
 .tt__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--portal-muted); }
 .tt__legend li { display: inline-flex; align-items: center; gap: 6px; }
 .tt__swatch { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--portal-border-strong); background: var(--portal-surface); }
@@ -54,7 +55,7 @@
 .tt__now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--portal-danger); }
 
 /* Khối buổi học: tên lớp, nhãn trạng thái, phòng. Giờ đọc theo cột giờ bên trái; nội dung tự rút gọn theo bề rộng thật của khối. */
-.tt__event { container: tt-event / inline-size; position: absolute; z-index: 2; display: block; min-width: 0; overflow: hidden; padding: 4px 6px; text-align: left; font: inherit; font-size: 11px; line-height: 1.25; cursor: pointer;
+.tt__event { container: tt-event / size; position: absolute; z-index: 2; display: block; min-width: 0; overflow: hidden; padding: 4px 6px; text-align: left; font: inherit; font-size: 11px; line-height: 1.25; cursor: pointer;
   color: var(--portal-paper); border: 1px solid var(--portal-info); border-left-width: 3px; border-radius: 6px;
   background: color-mix(in srgb, var(--portal-info) 22%, var(--portal-surface));
   box-shadow: 0 1px 2px color-mix(in srgb, var(--portal-ink) 35%, transparent); }
@@ -75,6 +76,16 @@
 @container tt-event (max-width: 56px) {
   .tt__event-badge { display: none; }
   .tt__event-title { font-size: 11px; letter-spacing: -.01em; -webkit-line-clamp: 4; line-clamp: 4; }
+}
+
+/* Khung khớp màn hình làm giờ thấp lại: bỏ dòng phòng trước, rồi gom tên + trạng thái về một hàng */
+@container tt-event (max-height: 54px) {
+  .tt__event-meta { display: none; }
+}
+@container tt-event (max-height: 40px) {
+  .tt__event-body { flex-direction: row; align-items: center; gap: 6px; }
+  .tt__event-title { display: block; white-space: nowrap; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; }
+  .tt__event-badge { align-self: center; flex: none; }
 }
 
 /* Buổi ngắn hơn 50 phút: một hàng tên + trạng thái */

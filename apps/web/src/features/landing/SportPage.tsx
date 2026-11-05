@@ -16,7 +16,7 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
   const user = getCurrentUser();
   const joinPath = user ? (user.role === 'MEMBER' ? '/member/packages' : homePath(user.role)) : '/register';
   const sportName = DISCIPLINES.find((item) => item.id === sport.id)!.name;
-  const classesPath = user?.role === 'MEMBER' ? `/member/classes?discipline=${encodeURIComponent(sportName)}` : '/login';
+  const classesPath = user ? (user.role === 'MEMBER' ? `/member/classes?discipline=${encodeURIComponent(sportName)}` : homePath(user.role)) : '/login';
   const hasCourts = ['tennis', 'badminton', 'swimming'].includes(sport.id);
   const bookPath = user?.role === 'MEMBER' && hasCourts ? `/member/courts?discipline=${encodeURIComponent(sportName)}` : classesPath;
 

@@ -64,7 +64,7 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
     setBusy(true); setActionError('');
     try {
       await courtsApi.confirmPayment(id); onChanged(); notify('Đã xác nhận thu tiền đặt sân.', 'success');
-    } catch (failure) { setActionError(courtError(failure)); onChanged(); }
+    } catch (failure) { const msg = courtError(failure); setActionError(msg); notify(msg, 'error'); onChanged(); }
     finally { setBusy(false); }
   };
   const cancelBooking = async () => {
@@ -72,7 +72,7 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
     setBusy(true); setActionError('');
     try {
       await courtsApi.cancel(cancel.id, reason); setCancel(null); onChanged(); notify('Đã hủy lượt đặt sân.', 'success');
-    } catch (failure) { setActionError(courtError(failure)); onChanged(); }
+    } catch (failure) { const msg = courtError(failure); setActionError(msg); notify(msg, 'error'); onChanged(); }
     finally { setBusy(false); }
   };
   return <section className="court-booking-list" aria-labelledby="court-booking-list-title">
@@ -91,7 +91,7 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
       {!staff && <p className="muted">Bạn chỉ có thể hủy trước giờ bắt đầu ít nhất 2 giờ.</p>}
       <label className="portal-form-group" htmlFor="court-cancel-reason"><span className="portal-label">Lý do hủy (không bắt buộc)</span><textarea id="court-cancel-reason" className="portal-textarea" rows={2} maxLength={255} value={reason} onChange={event => setReason(event.target.value)} disabled={busy} /></label>
       {actionError && <p className="portal-alert" role="alert">{actionError}</p>}
-      <div className="court-modal-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => setCancel(null)}>Giữ lượt đặt</button><button type="button" className="btn-primary" disabled={busy} onClick={() => void cancelBooking()}>{busy ? 'Đang hủy…' : 'Xác nhận hủy'}</button></div>
+      <div className="court-modal-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => setCancel(null)}>Giữ lượt đặt</button><button type="button" className="btn-danger" disabled={busy} onClick={() => void cancelBooking()}>{busy ? 'Đang hủy…' : 'Xác nhận hủy'}</button></div>
     </Modal>}
   </section>;
 }

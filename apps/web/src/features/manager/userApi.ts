@@ -73,7 +73,7 @@ const toAccount = (u: UserDto): UserAccount => ({
   status: u.status === 'active' ? 'ACTIVE' : 'LOCKED',
   deleted_at: null,
   created_at: u.createdAt?.split('T')[0] ?? '',
-  last_login_at: u.lastLoginAt ? u.lastLoginAt.replace('T', ' ').slice(0, 16) : null,
+  last_login_at: u.lastLoginAt ?? null,
   is_frozen: Boolean(u.subscriptionFrozen),
 });
 

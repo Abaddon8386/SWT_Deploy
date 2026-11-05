@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { Link } from 'react-router-dom';
 import { getProfile, type Profile } from './profileApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { toast } from '../../shared/ui/toast';
+import { notify } from '../../shared/lib/portalNotices';
 import { cardStatus } from './cardStatus';
 import { getMembershipHistory, getMySubscription, getDynamicQr, type CardSubscription } from './memberCardApi';
 
@@ -102,9 +102,9 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
       link.href = canvas.toDataURL('image/png');
       link.download = 'the-hoi-vien.png';
       link.click();
-      toast('Đã tải thẻ hội viên về máy.');
+      notify('Đã tải thẻ hội viên về máy.', 'success');
     } catch {
-      toast('Không thể tải thẻ. Vui lòng thử lại.', 'error');
+      notify('Không thể tải thẻ. Vui lòng thử lại.', 'error');
     } finally {
       setDownloading(false);
     }
@@ -180,9 +180,9 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
               try {
                 if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
                 await navigator.clipboard.writeText(activeQrCode!);
-                toast('Đã sao chép mã QR check-in vào bộ nhớ tạm!');
+                notify('Đã sao chép mã QR check-in vào bộ nhớ tạm!', 'success');
               } catch {
-                toast('Không thể sao chép mã QR. Vui lòng thử lại.', 'error');
+                notify('Không thể sao chép mã QR. Vui lòng thử lại.', 'error');
               }
             }}
           >

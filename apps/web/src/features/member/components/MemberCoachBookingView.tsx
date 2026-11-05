@@ -1187,7 +1187,7 @@ export function MemberCoachBookingView({
               <span>Đánh giá ẩn danh (Không hiển thị họ tên của tôi với Huấn luyện viên)</span>
             </label>
 
-            {hasNoPackage && <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span><strong>Bạn chưa có gói tập đang hoạt động.</strong> Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.</span><button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>Đăng ký gói tập</button></div>}
+            {/* Review modal is for already completed sessions; no active package alert needed here */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button
                 type="button"

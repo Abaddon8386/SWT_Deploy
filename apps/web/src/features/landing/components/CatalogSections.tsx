@@ -7,7 +7,7 @@ import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
-import { DISCIPLINES, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
+import { DISCIPLINES, isStandardDiscipline, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
 
 export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
   loading: boolean; retry: () => void; kind?: 'packages' | 'trainers' | 'schedule';
@@ -68,7 +68,7 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
 }) {
   const [discipline, setDiscipline] = useState('all');
   const sportName = DISCIPLINES.find((item) => item.id === sport)?.name;
-  const matchesSport = (value: string) => !sportName || matchesDiscipline(value, sportName);
+  const matchesSport = (value: string) => sportName ? matchesDiscipline(value, sportName) : isStandardDiscipline(value);
   const sessions = catalog.sessions.filter(session => matchesSport(session.disciplineName)
     && (!coachId || session.coachId === coachId));
   const disciplines = [...new Set(sessions.map(session => session.disciplineName))];

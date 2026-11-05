@@ -926,7 +926,7 @@ export function MemberClassesPage() {
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
             <button type="button" className="btn-secondary" onClick={() => setCancelTarget(null)}>Giữ đặt chỗ</button>
-            <button type="button" className="btn-primary" onClick={() => { const target = cancelTarget; setCancelTarget(null); if (target.kind === 'booking') void handleCancelBooking(target.id, target.className); else void handleCancelEnrollment(target.id, target.className); }}>Xác nhận hủy</button>
+            <button type="button" className="btn-danger" onClick={() => { const target = cancelTarget; setCancelTarget(null); if (target.kind === 'booking') void handleCancelBooking(target.id, target.className); else void handleCancelEnrollment(target.id, target.className); }}>Xác nhận hủy</button>
           </div>
         </Modal>
       )}
@@ -935,7 +935,7 @@ export function MemberClassesPage() {
           <p className="row-card__meta">Các chỗ đã chọn sẽ được giải phóng. Buổi đã bắt đầu sẽ không hủy được.</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
             <button type="button" className="btn-secondary" onClick={() => setConfirmBulkCancel(false)}>Giữ lại</button>
-            <button type="button" className="btn-primary" onClick={() => { setConfirmBulkCancel(false); void handleBulkCancel(); }}>Xác nhận hủy</button>
+            <button type="button" className="btn-danger" onClick={() => { setConfirmBulkCancel(false); void handleBulkCancel(); }}>Xác nhận hủy</button>
           </div>
         </Modal>
       )}

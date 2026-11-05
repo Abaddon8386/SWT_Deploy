@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import {
   TIMETABLE_HOURS,
   addDays,
+  fitHourRange,
   hhmm,
   hourLabel,
   isWithinRange,
@@ -59,6 +60,10 @@ interface WeeklyTimetableProps {
 const MINUTE_MS = 60_000;
 /** Dưới mốc này bảng chuyển sang xem từng ngày thay vì 7 cột hẹp cuộn ngang. */
 const NARROW_QUERY = '(max-width: 767px)';
+/** Chiều cao một giờ khi khớp màn hình: thấp hơn mốc dưới thì khối 1 giờ không còn đọc được, nên để khung cuộn. */
+const HOUR_MIN_PX = 36;
+const HOUR_MAX_PX = 64;
+const VIEWPORT_GAP_PX = 18;
 
 function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
@@ -104,6 +109,14 @@ export function WeeklyTimetable({
   const visibleDays = narrow ? [activeDay] : days;
   const gridRef = useRef<HTMLDivElement>(null);
   const [rovingKey, setRovingKey] = useState<string | null>(null);
+  // Bảng chỉ xem mặc định thu gọn theo lịch của tuần; Quản lý cần bấm mọi ô giờ nên mặc định hiện đủ.
+  const [fullDay, setFullDay] = useState(Boolean(onSlotClick));
+  const weekEvents = useMemo(() => events.filter((event) => days.includes(event.date)), [events, days]);
+  const fittedHours = useMemo(() => fitHourRange(weekEvents), [weekEvents]);
+  const canCompact = fittedHours.length < TIMETABLE_HOURS.length;
+  const hours = fullDay || !canCompact ? TIMETABLE_HOURS : fittedHours;
+  const firstHour = hours[0];
+  const endHour = hours[hours.length - 1] + 1;
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, TimetableEvent[]>();
@@ -120,39 +133,61 @@ export function WeeklyTimetable({
   const isPastSlot = (date: string, hour: number) =>
     date < today || (date === today && (hour + 1) * 60 <= nowMinutes);
 
-  // Mở tuần: cuộn khung tới 1 giờ trước khối đang chọn, nếu không có thì trước buổi học đầu tiên của tuần.
+  // Màn rộng: chia chiều cao còn lại của màn hình cho số giờ đang hiện để cả tuần nằm gọn một màn hình.
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [hourPx, setHourPx] = useState<number | null>(null);
+  const rowCount = hours.length;
+  const hasError = Boolean(error);
+  const isEmpty = visibleCount === 0;
+  useLayoutEffect(() => {
+    const box = scrollRef.current;
+    if (narrow || !box) { setHourPx(null); return; }
+    const measure = () => {
+      const top = box.getBoundingClientRect().top + window.scrollY;
+      // Bảng nằm sâu dưới trang thì khớp theo cả màn hình (cuộn trang một lần là thấy đủ).
+      const reserve = top < window.innerHeight * 0.55 ? top : VIEWPORT_GAP_PX;
+      const head = box.querySelector<HTMLElement>('.tt__dayhead')?.offsetHeight ?? 48;
+      const available = window.innerHeight - reserve - VIEWPORT_GAP_PX - head - 2;
+      setHourPx(Math.min(HOUR_MAX_PX, Math.max(HOUR_MIN_PX, Math.floor(available / rowCount))));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+    // Đo lại khi số giờ hoặc phần tử phía trên bảng (thông báo lỗi/tuần trống) thay đổi.
+  }, [narrow, rowCount, loading, hasError, isEmpty]);
+
+  // Mở tuần: cuộn khung tới 1 giờ trước khối đang chọn, nếu không có thì trước buổi học đầu tiên của tuần.
   useEffect(() => {
     const box = scrollRef.current;
     if (!box || loading || box.scrollHeight <= box.clientHeight) return;
     const inWeek = events.filter((event) => days.includes(event.date) && isWithinRange(event));
     const selected = inWeek.find((event) => event.id === selectedId);
     const starts = (selected ? [selected] : inWeek).map((event) => toMinutes(event.startTime));
-    const target = starts.length > 0 ? Math.min(...starts) : TIMETABLE_HOURS[0] * 60;
-    const hourPx = box.querySelector<HTMLElement>('.tt__hour')?.offsetHeight ?? 64;
-    box.scrollTop = Math.max(0, ((target - 60 - TIMETABLE_HOURS[0] * 60) / 60) * hourPx);
-    // Chỉ cuộn khi đổi tuần hoặc vừa tải xong, không cuộn lại khi dữ liệu đặt chỗ làm mới.
+    const target = starts.length > 0 ? Math.min(...starts) : firstHour * 60;
+    const rowPx = box.querySelector<HTMLElement>('.tt__hour')?.offsetHeight ?? HOUR_MAX_PX;
+    box.scrollTop = Math.max(0, ((target - 60 - firstHour * 60) / 60) * rowPx);
+    // Chỉ cuộn khi đổi tuần, vừa tải xong hoặc đổi khung giờ/chiều cao giờ; không cuộn lại khi dữ liệu đặt chỗ làm mới.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, loading]);
+  }, [weekStart, loading, fullDay, hourPx]);
 
-  const firstKey = slotKey(visibleDays[0], TIMETABLE_HOURS[0]);
+  const firstKey = slotKey(visibleDays[0], firstHour);
   const activeKey = rovingKey && visibleDays.some((day) => rovingKey.startsWith(`${day}|`)) ? rovingKey : firstKey;
 
   function moveFocus(event: KeyboardEvent<HTMLButtonElement>, dayIndex: number, hour: number) {
-    const hourIndex = TIMETABLE_HOURS.indexOf(hour);
+    const hourIndex = hours.indexOf(hour);
     let nextDay = dayIndex;
     let nextHour = hourIndex;
     switch (event.key) {
       case 'ArrowLeft': nextDay = Math.max(0, dayIndex - 1); break;
       case 'ArrowRight': nextDay = Math.min(visibleDays.length - 1, dayIndex + 1); break;
       case 'ArrowUp': nextHour = Math.max(0, hourIndex - 1); break;
-      case 'ArrowDown': nextHour = Math.min(TIMETABLE_HOURS.length - 1, hourIndex + 1); break;
+      case 'ArrowDown': nextHour = Math.min(hours.length - 1, hourIndex + 1); break;
       case 'Home': nextHour = 0; break;
-      case 'End': nextHour = TIMETABLE_HOURS.length - 1; break;
+      case 'End': nextHour = hours.length - 1; break;
       default: return;
     }
     event.preventDefault();
-    const key = slotKey(visibleDays[nextDay], TIMETABLE_HOURS[nextHour]);
+    const key = slotKey(visibleDays[nextDay], hours[nextHour]);
     setRovingKey(key);
     gridRef.current?.querySelector<HTMLButtonElement>(`[data-slot="${key}"]`)?.focus();
   }
@@ -177,6 +212,18 @@ export function WeeklyTimetable({
           </button>
         </div>
         <strong className="tt__range" aria-live="polite">{weekRangeLabel(weekStart)}</strong>
+        {canCompact && (
+          <button
+            type="button"
+            className="btn-secondary btn-sm tt__span"
+            aria-pressed={fullDay}
+            onClick={() => setFullDay((value) => !value)}
+          >
+            {fullDay
+              ? `Thu gọn ${hourLabel(fittedHours[0])}–${hourLabel(fittedHours[fittedHours.length - 1] + 1)}`
+              : 'Hiện đủ 06:00–22:00'}
+          </button>
+        )}
         {toolbar}
       </div>
 
@@ -226,7 +273,12 @@ export function WeeklyTimetable({
         </div>
       )}
 
-      <div className="tt__scroll" aria-busy={loading} ref={scrollRef}>
+      <div
+        className="tt__scroll"
+        aria-busy={loading}
+        ref={scrollRef}
+        style={hourPx ? ({ '--tt-hour': `${hourPx}px` } as CSSProperties) : undefined}
+      >
         {loading && <span className="sr-only" role="status">Đang tải thời khóa biểu...</span>}
         <div
           className={`tt__grid${loading ? ' is-loading' : ''}${narrow ? ' is-single' : ''}`}
@@ -246,10 +298,10 @@ export function WeeklyTimetable({
           ))}
 
           <div className="tt__gutter" aria-hidden="true">
-            {TIMETABLE_HOURS.map((hour, index) => (
+            {hours.map((hour, index) => (
               <div key={hour} className="tt__hour">
                 <span>{hourLabel(hour)}</span>
-                {index === TIMETABLE_HOURS.length - 1 && <span className="tt__hour-end">{hourLabel(hour + 1)}</span>}
+                {index === hours.length - 1 && <span className="tt__hour-end">{hourLabel(hour + 1)}</span>}
               </div>
             ))}
           </div>
@@ -257,9 +309,8 @@ export function WeeklyTimetable({
           {visibleDays.map((day, dayIndex) => {
             const dayEvents = eventsByDay.get(day) ?? [];
             const busyEvents = dayEvents.filter((event) => event.tone !== 'cancelled');
-            const positioned = layoutDayEvents(dayEvents);
-            const showNow = day === today && nowMinutes >= TIMETABLE_HOURS[0] * 60
-              && nowMinutes < (TIMETABLE_HOURS[TIMETABLE_HOURS.length - 1] + 1) * 60;
+            const positioned = layoutDayEvents(dayEvents, firstHour, endHour);
+            const showNow = day === today && nowMinutes >= firstHour * 60 && nowMinutes < endHour * 60;
             return (
               <div
                 key={day}
@@ -267,7 +318,7 @@ export function WeeklyTimetable({
                 role="group"
                 aria-label={`${weekdayLabel(day)} ${shortDate(day)}`}
               >
-                {TIMETABLE_HOURS.map((hour) => {
+                {hours.map((hour) => {
                   const busy = busyEvents.some((event) => overlapsHour(event, hour));
                   const past = isPastSlot(day, hour);
                   const className = `tt__slot${busy ? ' is-busy' : ' is-free'}${past ? ' is-past' : ''}`;
@@ -305,7 +356,7 @@ export function WeeklyTimetable({
                   <span
                     className="tt__now"
                     aria-hidden="true"
-                    style={{ top: `${((nowMinutes - TIMETABLE_HOURS[0] * 60) / (TIMETABLE_HOURS.length * 60)) * 100}%` }}
+                    style={{ top: `${((nowMinutes - firstHour * 60) / (hours.length * 60)) * 100}%` }}
                   />
                 )}
 

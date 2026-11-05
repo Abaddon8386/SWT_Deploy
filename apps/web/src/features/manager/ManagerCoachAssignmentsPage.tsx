@@ -510,6 +510,7 @@ export function ManagerCoachAssignmentsPage() {
                       >
                         Điều chuyển
                       </button>}
+                      {item.assignmentType === 'TRAINING_PLAN' && <button type="button" className="coach-action-btn coach-action-btn--danger" disabled={busy} onClick={() => void handleRemoveAssignment(item)}>Kết thúc</button>}
                     </div>
                   </td>
                 </tr>
