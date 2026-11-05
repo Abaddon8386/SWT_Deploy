@@ -63,10 +63,10 @@ export function CourtBookingFeature() {
       if (standing) {
         const result = await courtsApi.bookRecurring({ roomId: selection.court.id, startDate: selection.date, startTime: selection.slot.startTime, ...standing, paymentMethod: 'vnpay' });
         setOutcome(result); reload();
-        notify(result.booked.length ? `Đã đặt ${result.booked.length} buổi sân định kỳ.` : 'Không đặt được buổi nào.', result.booked.length ? 'success' : 'error');
+        notify(result.booked.length ? `Đã đặt ${result.booked.length} buổi sân định kỳ.` : 'Không đặt được buổi nào.', result.booked.length ? 'success' : 'error', { record: Boolean(result.booked.length) });
       } else {
         await courtsApi.book({ roomId: selection.court.id, date: selection.date, startTime: selection.slot.startTime, ...(covered ? {} : { paymentMethod: 'vnpay' }) });
-        setSelection(null); reload(); notify(covered ? 'Đã đặt sân thành công.' : `Đã đặt sân (phụ phí ${formatVnd(price)}). Vui lòng hoàn tất thanh toán qua VNPay hoặc Ví SÖL.`, 'success');
+        setSelection(null); reload(); notify(covered ? 'Đã đặt sân thành công.' : `Đã đặt sân (phụ phí ${formatVnd(price)}). Vui lòng hoàn tất thanh toán qua VNPay hoặc Ví SÖL.`, 'success', { record: true });
       }
     } catch (reason) {
       setActionError(courtError(reason));

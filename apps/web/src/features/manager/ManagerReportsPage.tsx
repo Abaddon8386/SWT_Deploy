@@ -135,7 +135,7 @@ export function ManagerReportsPage() {
       await reportsApi.approveCancellationRequest(item.id, undefined, item.refundAmount ?? undefined);
       notify(
         `Đã phê duyệt hủy gói "${item.packageName}" của ${item.memberName || `#${item.memberId}`} và hoàn ${vnd(Number(item.refundAmount ?? 0))} vào Ví hội viên.`,
-        'success'
+        'success', { record: true }
       );
       await Promise.all([loadCancellations(), fetchReports(appliedRange.startDate, appliedRange.endDate)]);
     } catch (err: unknown) {
@@ -151,7 +151,7 @@ export function ManagerReportsPage() {
     setDecidingCancelId(item.id);
     try {
       await reportsApi.rejectCancellationRequest(item.id);
-      notify(`Đã từ chối yêu cầu hủy gói "${item.packageName}" của ${item.memberName || `#${item.memberId}`}.`, 'success');
+      notify(`Đã từ chối yêu cầu hủy gói "${item.packageName}" của ${item.memberName || `#${item.memberId}`}.`, 'success', { record: true });
       await loadCancellations();
     } catch (err: unknown) {
       notify(errorMessage(err, 'Từ chối yêu cầu hủy gói thất bại.'), 'error');
@@ -253,7 +253,7 @@ export function ManagerReportsPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      notify('Đã lưu báo cáo đối soát và xuất tệp CSV.', 'success');
+      notify('Đã lưu báo cáo đối soát và xuất tệp CSV.', 'success', { record: true });
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Xuất báo cáo thất bại.');
       notify(msg, 'error');

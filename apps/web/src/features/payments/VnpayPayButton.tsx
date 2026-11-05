@@ -61,7 +61,7 @@ export function VnpayPayButton({
       await payWithWallet(order);
       window.dispatchEvent(new CustomEvent('wallet-updated'));
       window.dispatchEvent(new CustomEvent('member-notifications-changed'));
-      notify('Thanh toán bằng Ví SÖL thành công.', 'success');
+      notify('Thanh toán bằng Ví SÖL thành công.', 'success', { record: true });
       onPaid?.();
     } catch (reason) {
       setError(errorMessage(reason, 'Không thể thanh toán bằng Ví SÖL. Vui lòng kiểm tra số dư hoặc nạp thêm tiền vào Ví.'));

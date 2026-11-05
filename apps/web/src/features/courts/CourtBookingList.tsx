@@ -63,7 +63,7 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
     if (busy) return;
     setBusy(true); setActionError('');
     try {
-      await courtsApi.confirmPayment(id); onChanged(); notify('Đã xác nhận thu tiền đặt sân.', 'success');
+      await courtsApi.confirmPayment(id); onChanged(); notify('Đã xác nhận thu tiền đặt sân.', 'success', { record: true });
     } catch (failure) { const msg = courtError(failure); setActionError(msg); notify(msg, 'error'); onChanged(); }
     finally { setBusy(false); }
   };
@@ -71,7 +71,7 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
     if (!cancel || busy) return;
     setBusy(true); setActionError('');
     try {
-      await courtsApi.cancel(cancel.id, reason); setCancel(null); onChanged(); notify('Đã hủy lượt đặt sân.', 'success');
+      await courtsApi.cancel(cancel.id, reason); setCancel(null); onChanged(); notify('Đã hủy lượt đặt sân.', 'success', { record: true });
     } catch (failure) { const msg = courtError(failure); setActionError(msg); notify(msg, 'error'); onChanged(); }
     finally { setBusy(false); }
   };

@@ -291,7 +291,7 @@ export function MemberClassesPage() {
     try {
       await bookSession(session.id);
       if (actionGenRef.current === gen) {
-        notify(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`, 'success');
+        notify(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`, 'success', { record: true });
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -317,7 +317,7 @@ export function MemberClassesPage() {
     try {
       await cancelEnrollment(enrollmentId);
       if (actionGenRef.current === gen) {
-        notify(`Đã hủy đặt chỗ lớp "${className}".`, 'success');
+        notify(`Đã hủy đặt chỗ lớp "${className}".`, 'success', { record: true });
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -342,7 +342,7 @@ export function MemberClassesPage() {
     try {
       await cancelBooking(bookingId);
       if (actionGenRef.current === gen) {
-        notify(`Đã hủy chỗ buổi học "${className}".`, 'success');
+        notify(`Đã hủy chỗ buổi học "${className}".`, 'success', { record: true });
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -368,7 +368,7 @@ export function MemberClassesPage() {
       if (actionGenRef.current === gen) {
         setBulkResult({ done: result.cancelled, skipped: result.skipped });
         setCancelSelected([]);
-        if (result.cancelled.length > 0) notify(`Đã hủy ${result.cancelled.length} buổi học.`, 'success');
+        if (result.cancelled.length > 0) notify(`Đã hủy ${result.cancelled.length} buổi học.`, 'success', { record: true });
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);

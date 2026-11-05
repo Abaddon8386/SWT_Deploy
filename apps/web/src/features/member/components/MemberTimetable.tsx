@@ -127,7 +127,7 @@ export function MemberTimetable({ discipline, onBookingChange }: MemberTimetable
     setDialogError('');
     try {
       await bookSession(selected.id);
-      notify(`Đã đặt chỗ lớp "${selected.className}" (${shortDate(selected.sessionDate)} • ${hhmm(selected.startTime)}) thành công.`, 'success');
+      notify(`Đã đặt chỗ lớp "${selected.className}" (${shortDate(selected.sessionDate)} • ${hhmm(selected.startTime)}) thành công.`, 'success', { record: true });
       setSelectedId(null);
       setRetry((value) => value + 1);
       onBookingChange();
@@ -146,7 +146,7 @@ export function MemberTimetable({ discipline, onBookingChange }: MemberTimetable
     try {
       if (selectedSeat.kind === 'booking') await cancelBooking(selectedSeat.id);
       else await cancelEnrollment(selectedSeat.id);
-      notify(`Đã hủy chỗ lớp "${selected.className}".`, 'success');
+      notify(`Đã hủy chỗ lớp "${selected.className}".`, 'success', { record: true });
       setSelectedId(null);
       setConfirmCancel(false);
       setRetry((value) => value + 1);

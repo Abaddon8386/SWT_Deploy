@@ -67,7 +67,7 @@ it.each([null, 9])('preserves existing room assignment %s when editing unrelated
   await submit();
   expect(equipmentApi.save).toHaveBeenCalledWith(1, expect.objectContaining({ roomId }));
   expect(catalogApi.saveRoom).not.toHaveBeenCalled();
-  expect(getNotices()).toEqual([expect.objectContaining({ type: 'success', message: expect.stringContaining('Thảm tập') })]);
+  expect(getNotices()).toEqual([]);
 });
 
 it('allows selection of any room and clearing the room assignment', async () => {

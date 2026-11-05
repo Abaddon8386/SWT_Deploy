@@ -279,7 +279,7 @@ export function MemberCoachBookingView({
       } else {
         notify(
           `Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
-          , 'success');
+          , 'success', { record: true });
       }
     } catch (err: unknown) {
       setErrorCode(err instanceof ApiError ? err.code : undefined);
@@ -723,7 +723,7 @@ export function MemberCoachBookingView({
                   overflowX: 'auto',
                   padding: '4px 2px 14px',
                   WebkitOverflowScrolling: 'touch',
-                  scrollbarWidth: 'thin',
+                  scrollbarWidth: 'none',
                 }}
               >
                 {daysList.map((d) => {

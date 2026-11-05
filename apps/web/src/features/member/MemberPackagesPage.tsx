@@ -133,7 +133,7 @@ export function MemberPackagesPage() {
     setTrialError('');
     try {
       await trialApi.claim({ cccd: cccdClean, fullName: trialFullName.trim() });
-      notify('Kích hoạt 3 ngày tập thử miễn phí đặc quyền Gold thành công!', 'success');
+      notify('Kích hoạt 3 ngày tập thử miễn phí đặc quyền Gold thành công!', 'success', { record: true });
       setIsTrialModalOpen(false);
       setTrialCccd('');
       setTrialFullName('');
@@ -227,9 +227,6 @@ export function MemberPackagesPage() {
       : null;
   const currentPackage = current
     ? packages.find((item) => item.id === current.packageId) ?? null
-    : null;
-  const latestCancellation = current && cancellationsState.status === 'success'
-    ? cancellationsState.data.find((item) => item.subscriptionId === current.id) ?? null
     : null;
   const frozenSubscription =
     !current && historyState.status === 'success'
@@ -377,23 +374,10 @@ export function MemberPackagesPage() {
     };
   }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId]);
 
-  const needsPackage = currentState.status === 'success' && !current && !frozenSubscription && !pending && !isStatusSyncing;
-  const holdRejected = current?.holdStatus === 'REJECTED' ? current.id : null;
-  const cancellationRejected = latestCancellation?.status === 'REJECTED' ? latestCancellation : null;
-  useEffect(() => {
-    if (needsPackage) notify('Bạn chưa có gói đang hoạt động. Hãy chọn một gói tập để đăng ký và kích hoạt thẻ hội viên.', 'info', { key: 'packages-empty' });
-  }, [needsPackage]);
-  useEffect(() => {
-    if (holdRejected !== null) notify('Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.', 'info', { key: `hold-rejected-${holdRejected}` });
-  }, [holdRejected]);
-  useEffect(() => {
-    if (cancellationRejected) notify(`Yêu cầu hủy gói trước đó đã bị từ chối. ${cancellationRejected.resolutionNote ?? ''}`.trim(), 'info', { key: `cancel-rejected-${cancellationRejected.id}` });
-  }, [cancellationRejected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     if (syncError) {
       notify('Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.', 'error', {
-        key: 'packages-sync', silent: true, action: { label: 'Thử đồng bộ lại', run: () => refreshNow.current() },
+        key: 'packages-sync', silent: true, record: true, action: { label: 'Thử đồng bộ lại', run: () => refreshNow.current() },
       });
     } else resolveNotice('packages-sync');
     return () => resolveNotice('packages-sync');
@@ -487,7 +471,7 @@ export function MemberPackagesPage() {
       setHistoryState((previous) => previous.status === 'success'
         ? { status: 'success', data: previous.data.map((item) => item.id === resumed.id ? resumed : item) }
         : previous);
-      notify('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.', 'success');
+      notify('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.', 'success', { record: true });
     } catch (error) {
       setActionError(errorMessage(error, 'Không thể mở lại gói tập. Vui lòng thử lại.'));
     } finally {
@@ -516,7 +500,7 @@ export function MemberPackagesPage() {
       setCurrentState({ status: 'success', data: updated });
       setIsHoldModalOpen(false);
       setHoldReason('');
-      notify('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.', 'success');
+      notify('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.', 'success', { record: true });
       await loadHistory();
     } catch (error) {
       await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
@@ -555,7 +539,7 @@ export function MemberPackagesPage() {
       );
       setRequestResult(null);
       setPendingToCancel(null);
-      notify(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, 'success');
+      notify(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, 'success', { record: true });
     } catch (error) {
       setActionError(
         error instanceof Error

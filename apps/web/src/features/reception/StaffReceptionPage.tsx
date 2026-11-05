@@ -208,7 +208,7 @@ export function StaffReceptionPage() {
       });
       notify(
         `Đã trình yêu cầu hủy gói tập & hoàn tiền của hội viên ${selectedMember.fullName} lên Quản lý trung tâm phê duyệt.`,
-        'success'
+        'success', { record: true }
       );
       setIsCancelModalOpen(false);
       setCancelReason('');
@@ -241,7 +241,7 @@ export function StaffReceptionPage() {
     setCancellingPendingId(item.id);
     try {
       await receptionApi.cancelPendingSubscription(item.id);
-      notify(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, 'success');
+      notify(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, 'success', { record: true });
       await loadPendingSubscriptions();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Hủy yêu cầu gói tập thất bại.'); await loadPendingSubscriptions();
@@ -258,7 +258,7 @@ export function StaffReceptionPage() {
       const res = await receptionApi.approveHoldRequest(item.id);
       notify(
         `Đã xác nhận bảo lưu gói "${item.packageName}" cho ${item.memberName}. Đã tự động hủy ${res.cancelledEnrollmentsCount} lịch sắp tới.`,
-        'success',
+        'success', { record: true },
       );
       await loadPendingHolds();
     } catch (err: unknown) {
@@ -274,7 +274,7 @@ export function StaffReceptionPage() {
     setProcessingPtId(item.id);
     try {
       await receptionApi.confirmCoachBookingPayment(item.id, method);
-      notify(`Đã thu ${vnd(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, 'success');
+      notify(`Đã thu ${vnd(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, 'success', { record: true });
       await loadUnpaidPt();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Xác nhận thu tiền buổi PT thất bại.');
@@ -290,7 +290,7 @@ export function StaffReceptionPage() {
     setProcessingHoldId(item.id);
     try {
       await receptionApi.rejectHoldRequest(item.id);
-      notify(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, 'success');
+      notify(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, 'success', { record: true });
       await loadPendingHolds();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Từ chối yêu cầu bảo lưu thất bại.'); await loadPendingHolds();
@@ -405,7 +405,7 @@ export function StaffReceptionPage() {
       setCompletedMemberName(selectedMember.fullName);
       setCompletedMembershipCode(selectedMember.membershipCode);
       setCompletedPayment(result);
-      notify(result.invoiceNumber ? `Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}` : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success');
+      notify(result.invoiceNumber ? `Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}` : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true });
       setSelectedMember(null);
       setSelectedPending(null);
       await loadPendingSubscriptions();

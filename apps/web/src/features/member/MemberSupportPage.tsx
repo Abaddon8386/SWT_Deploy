@@ -183,7 +183,7 @@ export function MemberSupportPage() {
     try {
       const created = await createSupportTicket(fullSubject, description.trim());
       if (!alive.current) return;
-      setSubject(''); setDescription(''); notify(`Đã tạo phiếu #${created.id}.`, 'success');
+      setSubject(''); setDescription(''); notify(`Đã tạo phiếu #${created.id}.`, 'success', { record: true });
       setTickets(previous => [created, ...previous.filter(ticket => ticket.id !== created.id)]);
       openChat(created);
       await loadTickets(0);
