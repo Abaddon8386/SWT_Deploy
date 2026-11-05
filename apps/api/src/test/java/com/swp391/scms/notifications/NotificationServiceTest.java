@@ -29,6 +29,37 @@ import static org.mockito.Mockito.*;
 class NotificationServiceTest {
 
     @Test
+    void sendPreservesOriginalContentForPersistenceAndExternalDelivery() {
+        var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(new User()));
+
+        service.send(101L, "Class session booked",
+                "You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).", "booking", null, null);
+
+        var saved = org.mockito.ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(saved.capture());
+        assertThat(saved.getValue().getTitle()).isEqualTo("Class session booked");
+        assertThat(saved.getValue().getMessage()).isEqualTo("You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).");
+        verify(dispatcher).dispatch(101L, "Class session booked",
+                "You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).", "booking", null, null,
+                java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.EMAIL,
+                        com.swp391.scms.notifications.port.NotificationChannel.PUSH));
+    }
+
+    @Test
+    void multiChannelDispatchPreservesOriginalContent() {
+        var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);
+
+        service.dispatchMultiChannel(101L, "Upcoming class reminder",
+                "Your class \"Sunrise Yoga\" is starting at 07:00 on 2026-11-14. Get ready!", "class_reminder", null, null);
+
+        verify(dispatcher).dispatch(101L, "Upcoming class reminder",
+                "Your class \"Sunrise Yoga\" is starting at 07:00 on 2026-11-14. Get ready!", "class_reminder", null, null);
+    }
+
+    @Test
     void evaluationNotificationHasSafeProgressLinkAndLocalizedCopy() {
         var messages = org.mockito.Mockito.mock(com.swp391.scms.common.i18n.MessageService.class);
         when(messages.getMessage("notifications.evaluation.title")).thenReturn("Evaluation");

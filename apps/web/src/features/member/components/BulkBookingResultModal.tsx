@@ -4,18 +4,16 @@ import type { BulkSkipped, SessionBookingDto } from '../memberClassesApi';
 const shortDate = (iso: string) => iso.split('-').reverse().join('/');
 
 interface Props {
-  /** "book" lists seats that were reserved, "cancel" lists seats that were released. */
-  mode: 'book' | 'cancel';
   done: SessionBookingDto[];
   skipped: BulkSkipped[];
   onClose: () => void;
 }
 
-/** Outcome of a bulk booking or cancellation: what changed and why each remaining session was left alone. */
-export function BulkBookingResultModal({ mode, done, skipped, onClose }: Props) {
-  const verb = mode === 'book' ? 'đặt' : 'hủy';
+/** Outcome of a bulk cancellation: what changed and why each remaining session was left alone. */
+export function BulkBookingResultModal({ done, skipped, onClose }: Props) {
+  const verb = 'hủy';
   return (
-    <Modal title={mode === 'book' ? 'Kết quả đặt nhiều buổi' : 'Kết quả hủy nhiều buổi'} onClose={onClose}>
+    <Modal title="Kết quả hủy nhiều buổi" onClose={onClose}>
       <div role="status" style={{ display: 'grid', gap: 12 }}>
         <p style={{ margin: 0 }}>
           {done.length > 0

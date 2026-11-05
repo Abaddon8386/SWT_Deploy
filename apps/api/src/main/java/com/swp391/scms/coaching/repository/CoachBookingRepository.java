@@ -12,6 +12,16 @@ import java.util.List;
 
 @Repository
 public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long> {
+    @Query("""
+            select b from CoachBooking b join fetch b.member m join fetch m.user u
+            left join fetch b.discipline
+            where b.coach.userId = :coachId and b.status = 'confirmed'
+              and (b.bookingDate > :today or (b.bookingDate = :today and b.startTime > :now))
+              and u.deletedAt is null and u.status = 'active'
+            order by b.bookingDate, b.startTime
+            """)
+    List<CoachBooking> findCurrentAssignments(@Param("coachId") Long coachId, @Param("today") LocalDate today,
+            @Param("now") LocalTime now);
     boolean existsByDisciplineId(Long disciplineId);
 
 

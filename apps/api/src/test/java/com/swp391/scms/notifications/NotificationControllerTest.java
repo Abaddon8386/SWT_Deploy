@@ -95,6 +95,37 @@ public class NotificationControllerTest {
     }
 
     @Test
+    void inboxHonorsEnglishHeaderAndDefaultsToVietnameseWithoutChangingStoredText() throws Exception {
+        var repository = org.mockito.Mockito.mock(NotificationRepository.class);
+        var users = org.mockito.Mockito.mock(com.swp391.scms.users.UserRepository.class);
+        var service = new NotificationService(repository, users, new NotificationMapper(new NotificationLocalizer(messageService)));
+        var entity = new com.swp391.scms.notifications.entity.Notification();
+        entity.setId(99L);
+        entity.setTitle("Upcoming class reminder");
+        entity.setMessage("Your class \"Sunrise Yoga\" is starting at 07:00 on 2026-11-14. Get ready!");
+        when(repository.findByUserIdOrderByCreatedAtDesc(eq(101L), any()))
+                .thenReturn(new PageImpl<>(Collections.singletonList(entity), PageRequest.of(0, 20), 1));
+        mockMvc = MockMvcBuilders.standaloneSetup(new NotificationController(service, messageService))
+                .setCustomArgumentResolvers(principalResolver, new PageableHandlerMethodArgumentResolver())
+                .setLocaleResolver(new com.swp391.scms.config.I18nConfig().localeResolver())
+                .build();
+
+        mockMvc.perform(get("/api/v1/notifications").header("Accept-Language", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].title").value("Upcoming class reminder"))
+                .andExpect(jsonPath("$.data.content[0].message").value("Your class \"Sunrise Yoga\" is starting at 07:00 on 2026-11-14. Get ready!"));
+        mockMvc.perform(get("/api/v1/notifications"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].title").value("Nhắc nhở lịch học sắp diễn ra"));
+        mockMvc.perform(get("/api/v1/notifications").header("Accept-Language", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].title").value("Upcoming class reminder"));
+        org.assertj.core.api.Assertions.assertThat(entity.getTitle()).isEqualTo("Upcoming class reminder");
+        org.assertj.core.api.Assertions.assertThat(entity.getMessage())
+                .isEqualTo("Your class \"Sunrise Yoga\" is starting at 07:00 on 2026-11-14. Get ready!");
+    }
+
+    @Test
     @DisplayName("GET /api/v1/notifications returns user notifications")
     void getNotifications_Success() throws Exception {
         NotificationDto dto = new NotificationDto(1L, "Test title", "Test content", "system", "support_request", 101L, false, LocalDateTime.now());

@@ -65,6 +65,9 @@ public class MembershipSubscriptionService {
     private PaymentRepository paymentRepository;
 
     @Autowired(required = false)
+    private com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository;
+
+    @Autowired(required = false)
     private EntitlementRevocationService entitlementRevocation;
 
     @Autowired(required = false)
@@ -451,10 +454,32 @@ public class MembershipSubscriptionService {
                     "Only a pending payment subscription can be cancelled");
         }
 
-        if (paymentRepository != null && paymentRepository.findAllBySubscriptionId(subscriptionId).stream()
-                .anyMatch(payment -> !"failed".equalsIgnoreCase(payment.getStatus()))) {
-            throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
-                    "error.membership.cancel_payment_unsettled", null, null);
+        if (paymentRepository != null) {
+            List<com.swp391.scms.finance.entity.Payment> subPayments = paymentRepository.findAllBySubscriptionId(subscriptionId);
+            if (subPayments.stream().anyMatch(payment -> "success".equalsIgnoreCase(payment.getStatus()))) {
+                throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
+                        "error.membership.cancel_payment_unsettled", null, null);
+            }
+            if (!isStaff && subPayments.stream().anyMatch(payment -> !"failed".equalsIgnoreCase(payment.getStatus()))) {
+                throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
+                        "error.membership.cancel_payment_unsettled", null, null);
+            }
+            if (isStaff) {
+                subPayments.stream()
+                        .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
+                        .forEach(payment -> {
+                            payment.setStatus("failed");
+                            paymentRepository.save(payment);
+                            if (vnpayTransactionRepository != null) {
+                                vnpayTransactionRepository.findAllByPaymentId(payment.getId()).stream()
+                                        .filter(t -> "pending".equalsIgnoreCase(t.getStatus()))
+                                        .forEach(t -> {
+                                            t.setStatus("failed");
+                                            vnpayTransactionRepository.save(t);
+                                        });
+                            }
+                        });
+            }
         }
 
         subscription.setStatus("cancelled");

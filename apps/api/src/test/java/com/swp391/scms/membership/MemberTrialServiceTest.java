@@ -164,7 +164,7 @@ class MemberTrialServiceTest {
         assertEquals(LocalDate.now(clock).plusDays(3), result.endDate());
 
         verify(trialRedemptions).saveAndFlush(any(MemberTrialRedemption.class));
-        verify(notifications).send(eq(10L), anyString(), anyString(), eq("membership"), eq("memberships"), eq(200L));
+        verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("membership_subscription"), eq(200L));
     }
 
     @Test
@@ -217,4 +217,34 @@ class MemberTrialServiceTest {
         assertNotEquals(h, new CccdHasher("other").hash("001200001234"));
         assertEquals("1234", hasher.last4("001200001234"));
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"uq_trial_member,TRIAL_ALREADY_CLAIMED", "uq_trial_cccd_hash,TRIAL_CCCD_ALREADY_USED"})
+    void classifiesDuplicateByConstraintRatherThanSqlColumnNames(String constraintName, String expectedCode) {
+        when(members.findById(10L)).thenReturn(Optional.of(testMember));
+        when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var duplicate = new org.hibernate.exception.ConstraintViolationException(
+                "insert into member_trial_redemptions (cccd_hash, cccd_last4, member_id)",
+                new java.sql.SQLException("duplicate value", "23505"), constraintName);
+        when(trialRedemptions.saveAndFlush(any())).thenThrow(
+                new org.springframework.dao.DataIntegrityViolationException("cccd_hash SQL insert failed", duplicate));
+        var failure = assertThrows(ConflictException.class, () -> service.claimGoldTrial(
+                new AuthenticatedPrincipal(10L, "member1", "MEMBER"),
+                new TrialClaimRequest("001200001234", "Nguyen Van A")));
+        assertEquals(expectedCode, failure.getErrorCode());
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void preservesUnknownIntegrityFailuresInsteadOfReportingAlreadyClaimed() {
+        when(members.findById(10L)).thenReturn(Optional.of(testMember));
+        when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
+        var failure = new org.springframework.dao.DataIntegrityViolationException("unrelated subscription foreign key");
+        when(subscriptions.saveAndFlush(any())).thenThrow(failure);
+        assertSame(failure, assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> service.claimGoldTrial(new AuthenticatedPrincipal(10L, "member1", "MEMBER"),
+                        new TrialClaimRequest("001200001234", "Nguyen Van A"))));
+        verifyNoInteractions(notifications);
+    }
+
 }

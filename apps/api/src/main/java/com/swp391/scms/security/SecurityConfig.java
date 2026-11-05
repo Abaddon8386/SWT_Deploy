@@ -183,6 +183,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/equipment/*/status").hasAnyRole("CENTER_MANAGER", "MANAGER", "STAFF", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").authenticated()
                     .requestMatchers("/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
+                    .requestMatchers("/api/v1/manager/coach-assignments/**", "/api/v1/manager/coach-assignments").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .anyRequest().authenticated())
             .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

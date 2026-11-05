@@ -12,9 +12,13 @@ import com.swp391.scms.facilities.dto.CatalogResponses.RoomDto;
 import com.swp391.scms.facilities.service.DisciplineService;
 import com.swp391.scms.facilities.service.PackageService;
 import com.swp391.scms.facilities.service.RoomService;
+import com.swp391.scms.facilities.repository.EquipmentRepository;
+import com.swp391.scms.facilities.repository.RoomRepository;
+import com.swp391.scms.facilities.entity.Room;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -26,7 +30,51 @@ class CatalogSeederTest {
     @Mock DisciplineService disciplines;
     @Mock RoomService rooms;
     @Mock PackageService packages;
+    @Mock EquipmentRepository equipmentRepository;
+    @Mock RoomRepository roomRepository;
     @InjectMocks CatalogSeeder seeder;
+
+    @BeforeEach
+    void existingEquipmentIsNotASeedTarget() {
+        org.springframework.test.util.ReflectionTestUtils.setField(seeder, "equipmentRepository", equipmentRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(seeder, "roomRepository", roomRepository);
+        org.mockito.Mockito.lenient().when(equipmentRepository.count()).thenReturn(1L);
+    }
+
+    @Test
+    void doesNotRecreateDeletedDemoEquipmentInAnExistingInventory() {
+        org.mockito.Mockito.lenient().when(roomRepository.findAll()).thenReturn(List.of(
+                namedRoom("Phòng Gym Tiêu chuẩn"), namedRoom("Phòng Gym VIP")));
+
+        seeder.run(null);
+
+        verify(equipmentRepository, never()).save(any());
+    }
+
+    @Test
+    void seedsAnEmptyInventoryIntoExistingNamedGymRooms() {
+        when(equipmentRepository.count()).thenReturn(0L);
+        when(rooms.list()).thenReturn(List.of(
+                new RoomDto(1L, "Phòng Gym Tiêu chuẩn", "Tầng 1", 50, "available", null, null, null, null, "STANDARD"),
+                new RoomDto(2L, "Phòng Gym VIP", "Tầng 2", 25, "available", null, null, null, null, "PLATINUM")));
+        when(roomRepository.findAll()).thenReturn(List.of(
+                namedRoom("Phòng Gym Tiêu chuẩn"), namedRoom("Phòng Gym VIP")));
+
+        seeder.run(null);
+
+        var equipment = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.entity.Equipment.class);
+        verify(equipmentRepository, times(12)).save(equipment.capture());
+        org.assertj.core.api.Assertions.assertThat(equipment.getAllValues())
+                .extracting(item -> item.getRoom().getName())
+                .containsOnly("Phòng Gym Tiêu chuẩn", "Phòng Gym VIP");
+        verify(rooms, never()).create(any());
+    }
+
+    private Room namedRoom(String name) {
+        var room = new Room();
+        room.setName(name);
+        return room;
+    }
 
     @Test
     void seedsEmptyCatalogs() {

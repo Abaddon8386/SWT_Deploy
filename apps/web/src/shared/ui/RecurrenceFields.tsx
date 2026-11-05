@@ -26,21 +26,33 @@ interface FieldsProps {
   disabled?: boolean;
   /** Upper bound the booking rules allow, shown as a hint; dates beyond it are reported as skipped by the server. */
   hint?: string;
+  /** Allowed periods to choose from. Defaults to ['once', 'week', 'month']. */
+  allowedPeriods?: RecurrencePeriod[];
 }
 
 /** Lets a member repeat one booking over a week or a month on chosen weekdays instead of booking day by day. */
-export function RecurrenceFields({ startDate, value, onChange, disabled = false, hint }: FieldsProps) {
-  const dates = expandRecurrence(startDate, value);
-  const choosePeriod = (period: RecurrencePeriod) => onChange({
-    period,
-    days: period === 'once' ? [] : value.days.length ? value.days : [isoWeekday(startDate)],
-  });
+export function RecurrenceFields({ startDate, value, onChange, disabled = false, hint, allowedPeriods }: FieldsProps) {
+  const visiblePeriods = allowedPeriods ? PERIODS.filter((p) => allowedPeriods.includes(p.id)) : PERIODS;
+  const activeDays = value.period !== 'once' && value.days.length === 0 ? [isoWeekday(startDate)] : value.days;
+  const effectiveValue: RecurrenceChoice = { ...value, days: activeDays };
+  const dates = expandRecurrence(startDate, effectiveValue);
+  const choosePeriod = (period: RecurrencePeriod) => {
+    if (allowedPeriods && !allowedPeriods.includes(period)) return;
+    onChange({
+      period,
+      days: period === 'once' ? [] : value.days.length ? value.days : [isoWeekday(startDate)],
+    });
+  };
   const toggleDay = (day: number) => {
-    const days = value.days.includes(day) ? value.days.filter((item) => item !== day) : [...value.days, day].sort();
-    onChange({ ...value, days: days.length ? days : [isoWeekday(startDate)] });
+    const currentDays = value.days.length ? value.days : [isoWeekday(startDate)];
+    const nextDays = currentDays.includes(day)
+      ? currentDays.filter((item) => item !== day)
+      : [...currentDays, day].sort();
+    // Keep the preview and recurrenceRequest on the selected start weekday.
+    onChange({ ...value, days: nextDays.length ? nextDays : [isoWeekday(startDate)] });
   };
 
-  const selectedDayNames = value.days.map((d) => FULL_WEEKDAY_NAMES[d] || `T${d}`).join(', ');
+  const selectedDayNames = activeDays.map((d) => FULL_WEEKDAY_NAMES[d] || `T${d}`).join(', ');
   const projectedCount = value.period === 'week' ? dates.length * 4 : dates.length;
 
   return (
@@ -62,7 +74,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
           flexWrap: 'wrap',
         }}
       >
-        {PERIODS.map((period) => {
+        {visiblePeriods.map((period) => {
           const active = value.period === period.id;
           return (
             <button
@@ -111,7 +123,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
           <div role="group" aria-label="Thứ trong tuần" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
             {WEEKDAY_LABELS.map((label, index) => {
               const day = index + 1;
-              const active = value.days.includes(day);
+              const active = activeDays.includes(day);
               return (
                 <button
                   key={label}

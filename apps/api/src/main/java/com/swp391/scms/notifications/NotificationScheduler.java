@@ -141,8 +141,7 @@ public class NotificationScheduler {
             String expiryDateStr = sub.getEndDate() != null ? sub.getEndDate().format(DATE_FORMATTER) : "";
 
             String title = resolveMessage("notifications.package_expiry.title", "Gói tập sắp hết hạn");
-            String message = resolveMessage(
-                    "notifications.package_expiry.body",
+            String message = resolveMessage("notifications.package_expiry.body",
                     "Gói tập \"" + packageName + "\" của bạn sẽ hết hạn vào ngày " + expiryDateStr + " (còn 7 ngày). Vui lòng gia hạn để tiếp tục sử dụng dịch vụ.",
                     packageName,
                     expiryDateStr
@@ -217,8 +216,7 @@ public class NotificationScheduler {
             String sessionDateStr = session.getSessionDate().format(DATE_FORMATTER);
 
             String title = resolveMessage("notifications.class_reminder.title", "Nhắc nhở lịch học sắp diễn ra");
-            String message = resolveMessage(
-                    "notifications.class_reminder.body",
+            String message = resolveMessage("notifications.class_reminder.body",
                     "Lớp học \"" + className + "\" của bạn sẽ bắt đầu lúc " + startTimeStr + " ngày " + sessionDateStr + ". Hãy chuẩn bị sẵn sàng!",
                     className,
                     startTimeStr,
@@ -279,3 +277,5 @@ public class NotificationScheduler {
         }
     }
 }
+
+

@@ -16,6 +16,17 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SessionBookingRepository extends JpaRepository<SessionBooking, Long> {
+    @EntityGraph(attributePaths = {"member", "member.user", "session", "session.gymClass"})
+    @Query("""
+            select b from SessionBooking b
+            where b.session.gymClass.coach.userId = :coachId and b.session.gymClass.status = 'active'
+              and b.status = 'booked' and b.session.status = 'scheduled'
+              and b.member.user.deletedAt is null and b.member.user.status = 'active'
+              and (b.session.sessionDate > :today or (b.session.sessionDate = :today and b.session.startTime > :now))
+            order by b.session.sessionDate, b.session.startTime, b.id
+            """)
+    List<SessionBooking> findCurrentCoachAssignments(@Param("coachId") Long coachId,
+            @Param("today") LocalDate today, @Param("now") java.time.LocalTime now);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from SessionBooking b where b.id = :id")

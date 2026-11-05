@@ -6,6 +6,7 @@ import java.util.Optional;
 
 public interface VnpayTransactionRepository extends JpaRepository<VnpayTransaction, String> {
     Optional<VnpayTransaction> findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(Long paymentId, String status);
+    java.util.List<VnpayTransaction> findAllByPaymentId(Long paymentId);
     boolean existsByPaymentIdAndStatus(Long paymentId, String status);
     boolean existsByPaymentId(Long paymentId);
 }

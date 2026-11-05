@@ -127,13 +127,44 @@ class CodeFirstSchemaTest {
 
     @Test
     void classUtilizationQueryCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
-        var method = com.swp391.scms.reports.repository.SessionAttendanceReportRepository.class.getMethod(
-                "classUtilization", java.time.LocalDate.class, java.time.LocalDate.class,
+        var repository = com.swp391.scms.reports.repository.SessionAttendanceReportRepository.class;
+        var all = repository.getMethod("classUtilizationAll", java.time.LocalDate.class, java.time.LocalDate.class,
+                java.time.LocalDateTime.class, java.time.LocalDateTime.class);
+        var filtered = repository.getMethod("classUtilizationByDiscipline", java.time.LocalDate.class, java.time.LocalDate.class,
                 java.time.LocalDateTime.class, java.time.LocalDateTime.class, Long.class);
-        String jpql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
         generateDdl(factory -> {
             try (var session = factory.openSession()) {
-                session.createQuery(jpql, jakarta.persistence.Tuple.class);
+                for (var method : java.util.List.of(all, filtered)) {
+                    String jpql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
+                    var query = session.createQuery(jpql, jakarta.persistence.Tuple.class)
+                            .setParameter("start", java.time.LocalDate.of(2026, 11, 1))
+                            .setParameter("end", java.time.LocalDate.of(2026, 11, 5))
+                            .setParameter("startTs", java.time.LocalDateTime.of(2026, 11, 1, 0, 0))
+                            .setParameter("endTs", java.time.LocalDateTime.of(2026, 11, 6, 0, 0));
+                    if (method.equals(filtered)) query.setParameter("disciplineId", 1L);
+                }
+            }
+        });
+    }
+
+    @Test
+    void currentCoachAssignmentQueriesCompileAgainstEntityMappingsWithoutDatabase() throws Exception {
+        var plans = com.swp391.scms.coaching.repository.TrainingPlanRepository.class.getMethod(
+                "findCurrentAssignments", Long.class, java.time.LocalDate.class);
+        var bookings = com.swp391.scms.coaching.repository.CoachBookingRepository.class.getMethod(
+                "findCurrentAssignments", Long.class, java.time.LocalDate.class, java.time.LocalTime.class);
+        var enrollments = com.swp391.scms.scheduling.repository.ClassEnrollmentRepository.class.getMethod(
+                "findCurrentCoachAssignments", Long.class, java.time.LocalDate.class, java.time.LocalTime.class);
+        var sessions = com.swp391.scms.scheduling.repository.SessionBookingRepository.class.getMethod(
+                "findCurrentCoachAssignments", Long.class, java.time.LocalDate.class, java.time.LocalTime.class);
+        generateDdl(factory -> {
+            try (var session = factory.openSession()) {
+                for (var method : java.util.List.of(plans, bookings, enrollments, sessions)) {
+                    var query = session.createQuery(method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value())
+                            .setParameter("coachId", 20L)
+                            .setParameter("today", java.time.LocalDate.of(2026, 11, 5));
+                    if (!method.equals(plans)) query.setParameter("now", java.time.LocalTime.of(8, 0));
+                }
             }
         });
     }
@@ -167,8 +198,8 @@ class CodeFirstSchemaTest {
     @Test
     void performanceOptimizedQueriesCompileAgainstEntityMappingsWithoutDatabase() throws Exception {
         var utilMethod = com.swp391.scms.reports.repository.SessionAttendanceReportRepository.class.getMethod(
-                "classUtilization", java.time.LocalDate.class, java.time.LocalDate.class,
-                java.time.LocalDateTime.class, java.time.LocalDateTime.class, Long.class);
+                "classUtilizationAll", java.time.LocalDate.class, java.time.LocalDate.class,
+                java.time.LocalDateTime.class, java.time.LocalDateTime.class);
         String utilJpql = utilMethod.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
 
         var coachMethod = com.swp391.scms.users.CoachRepository.class.getMethod("findActiveWithUser");
