@@ -149,7 +149,7 @@ public class ChatService {
         return flat.length() <= 120 ? flat : flat.substring(0, 119) + "…";
     }
     private static ChatContactDto contact(User u, boolean available) {
-        return new ChatContactDto(u.getId(), u.getFullName(), role(u), available);
+        return new ChatContactDto(u.getId(), u.getFullName(), role(u), available, u.getAvatarUrl());
     }
     private static ChatMessageDto message(ChatMessage m, Long userId) {
         return new ChatMessageDto(m.getId(), m.getConversation().getId(), m.getClientMessageId(), m.getSender().getId(),

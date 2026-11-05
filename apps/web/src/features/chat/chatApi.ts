@@ -1,6 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 
-export interface ChatContact { id: number; name: string; role: string; available: boolean }
+export interface ChatContact { id: number; name: string; role: string; available: boolean; avatarUrl?: string | null }
 export interface ChatConversation {
   id: number; peer: ChatContact; createdAt: string; lastActivityAt: string;
   /** Chỉ có trong danh sách hội thoại. */
@@ -38,4 +38,4 @@ export const markConversationRead = (id: number, lastMessageId: number) => apiFe
 export const CHAT_UNREAD_EVENT = 'sol-chat-unread';
 export const announceChatUnread = (count: number) => window.dispatchEvent(new CustomEvent<number>(CHAT_UNREAD_EVENT, { detail: count }));
 
-export const chatRoleLabel = (role: string) => ({ MEMBER: 'Hội viên', RECEPTIONIST: 'Lễ tân', COACH: 'Huấn luyện viên' })[role] ?? 'Tài khoản';
+export const chatRoleLabel = (role: string) => ({ MEMBER: 'Hội viên', RECEPTIONIST: 'Lễ tân', COACH: 'Huấn luyện viên', AI: 'Trợ lý AI' })[role] ?? 'Tài khoản';

@@ -1,4 +1,4 @@
-import { apiFetch } from '../api/client';
+import { apiFetch } from '../../shared/api/client';
 
 export interface AiChatSession { id: number; memberId: number; topic: string; startedAt: string; endedAt: string | null }
 export interface AiChatMessage { id: number; sessionId: number; sender: 'member' | 'ai'; message: string; createdAt: string }

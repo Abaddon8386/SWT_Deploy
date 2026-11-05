@@ -2,7 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTH_STORAGE_KEY } from '../api/client';
+import { AUTH_STORAGE_KEY, type UserSession } from '../api/client';
 import { AppLayout } from './AppLayout';
 
 describe('portal navigation', () => {
@@ -11,6 +11,7 @@ describe('portal navigation', () => {
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: true, data: [] }))));
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
       id: '1', name: 'Nguyễn An', identifier: 'an', role: 'MEMBER',
     }));
@@ -30,12 +31,16 @@ describe('portal navigation', () => {
     vi.unstubAllGlobals();
   });
 
-  async function renderPortal() {
+  async function renderPortal(role: UserSession['role'] = 'MEMBER') {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+      id: '1', name: 'Nguyễn An', identifier: 'an', role,
+    }));
     const router = createMemoryRouter([
       { element: <AppLayout />, children: [
         { path: '/member/dashboard', element: <h1>Tổng quan</h1> },
         { path: '/member/classes', element: <h1>Lịch học</h1> },
         { path: '/member/profile', element: <h1>Hồ sơ cá nhân</h1> },
+        { path: '/member/streak', element: <h1>Streak tập luyện</h1> },
       ] },
       { path: '/login', element: <h1>Đăng nhập</h1> },
     ], { initialEntries: ['/member/dashboard'] });
@@ -77,7 +82,8 @@ describe('portal navigation', () => {
 
   it('keeps the session when logout confirmation is dismissed', async () => {
     await renderPortal();
-    const logout = host.querySelector<HTMLButtonElement>('button[aria-label="Đăng xuất"]');
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!.click());
+    const logout = host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-logout"]');
     expect(logout).not.toBeNull();
     await act(async () => logout!.click());
     const cancel = [...host.querySelectorAll('dialog button')].find((button) => button.textContent === 'Ở lại');
@@ -86,6 +92,41 @@ describe('portal navigation', () => {
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).not.toBeNull();
     expect(host.querySelector('dialog')).toBeNull();
   });
+
+  it.each(['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] as const)(
+    'keeps only landing in the rail footer and account actions in the avatar menu for %s', async role => {
+      const router = await renderPortal(role);
+      const footer = host.querySelector('.portal-rail-footer')!;
+      expect(footer.querySelectorAll('a, button')).toHaveLength(1);
+      expect(footer.querySelector('a')?.getAttribute('href')).toBe('/');
+      const avatar = host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!;
+      expect(host.querySelector('[role="menu"]')).toBeNull();
+      await act(async () => avatar.click());
+      const menu = host.querySelector('[role="menu"]')!;
+      expect(menu.querySelector('[data-testid="avatar-menu-profile"]')?.getAttribute('href')).toBe('/member/profile');
+      expect(Boolean(menu.querySelector('[data-testid="avatar-menu-wallet"]'))).toBe(role === 'MEMBER');
+      const streakLink = menu.querySelector<HTMLAnchorElement>('[data-testid="avatar-menu-streak"]');
+      expect(Boolean(streakLink)).toBe(role === 'MEMBER');
+      expect(menu.querySelector('.member-streak')).toBeNull();
+      if (streakLink) {
+        expect(streakLink.getAttribute('href')).toBe('/member/streak');
+        await act(async () => streakLink.click());
+        expect(router.state.location.pathname).toBe('/member/streak');
+        expect(host.querySelector('[role="menu"]')).toBeNull();
+        await act(async () => avatar.click());
+      }
+      await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+      expect(host.querySelector('[role="menu"]')).toBeNull();
+      expect(document.activeElement).toBe(avatar);
+      await act(async () => avatar.click());
+      await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-logout"]')!.click());
+      expect(host.querySelector('[role="menu"]')).toBeNull();
+      const confirm = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(button => button.textContent === 'Đăng xuất')!;
+      await act(async () => confirm.click());
+      expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+      expect(router.state.location.pathname).toBe('/login');
+    },
+  );
 
   it('opens avatar dropdown menu with wallet balance, profile link, and logout option', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string) => {
