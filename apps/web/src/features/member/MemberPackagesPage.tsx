@@ -292,10 +292,11 @@ export function MemberPackagesPage() {
     : [];
 
   const hasPendingTransfer = paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending');
+  const pendingTransferId = pending?.id;
   useEffect(() => {
-    if (!pending || !hasPendingTransfer) return;
-    notify('Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.', 'info', { key: `transfer-pending-${pending.id}`, record: true });
-  }, [pending?.id, hasPendingTransfer]);
+    if (pendingTransferId == null || !hasPendingTransfer) return;
+    notify('Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.', 'info', { key: `transfer-pending-${pendingTransferId}`, record: true });
+  }, [pendingTransferId, hasPendingTransfer]);
 
   const isStatusSyncing =
     currentState.status === 'loading' ||
