@@ -17,10 +17,11 @@ public interface GymClassRepository extends JpaRepository<GymClass, Long> {
 
     boolean existsByDisciplineId(Long disciplineId);
 
-
     List<GymClass> findAllByOrderByIdDesc();
 
     List<GymClass> findByStatusOrderByIdDesc(String status);
+
+    List<GymClass> findByCoachUserId(Long coachId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from GymClass c where c.id = :id")
