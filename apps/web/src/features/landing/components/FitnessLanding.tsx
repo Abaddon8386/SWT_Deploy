@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } fr
 import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { usePublicCatalog } from '../publicCatalog';
-import { CatalogPackages, CatalogSchedule, CatalogStatus, CatalogTrainers } from './CatalogSections';
+import { CatalogPackages, CatalogStatus, CatalogTrainers } from './CatalogSections';
 import { ProductShelf } from './ProductShelf';
 import { RoundArrow } from './PublicLayout';
 import { SplitHeading } from './SplitHeading';
@@ -581,10 +581,6 @@ export function FitnessLanding() {
         <SplitHeading id="trainers-title" lines={['Our Trainers']} />
       </div>
       <div>{catalog ? <CatalogTrainers catalog={catalog} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="trainers" />}</div>
-    </section>
-    <section className="fit-section fit-schedule" id="schedule" aria-labelledby="schedule-title">
-      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="schedule-title" lines={['Weekly Class', 'Schedule']} /></div>
-      {catalog ? <CatalogSchedule catalog={catalog} joinPath={classPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} />}
     </section>
     <section className="fit-section fit-journey" id="journey" aria-labelledby="journey-title">
       <div className="fit-journey-steps" data-reveal="soft">

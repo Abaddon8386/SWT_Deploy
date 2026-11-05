@@ -178,7 +178,7 @@ Responsive bộ môn (26/10/2026): từ 1024px trở xuống bỏ rail và khung
 - Thẻ dịch vụ: ba silhouette bo góc lớn, thu ở đáy; thẻ giữa rộng/cao hơn, mép trên hai thẻ ngoài xiên, **chữ giữ ngang**. Icon SVG có màu kem/hồng và nét nâu; tiêu đề trắng, đường kẻ mảnh, mô tả căn giữa.
 - Chỉ số câu lạc bộ (`.fit-metrics`): bốn thẻ tối `#292929` bo góc `26px`, kicker salmon, con số đậm `tabular-nums` và mô tả ngắn.
 - Câu chuyện: ảnh tối, overlay ở chân ảnh, tên/sao và phần trích dẫn ngắn. Trainer: portrait bo lớn, kích thước lệch nhẹ, gradient salmon ở đáy.
-- Lịch lớp tiêu biểu (`#schedule`): switch lọc bộ môn cùng kiểu `.fit-pricing-switch`, lưới 3 cột (`.fit-schedule-card` nền `#2b2b2b`), hiển thị khung giờ salmon, badge chỗ trống, tên lớp, phòng tập/HLV và link đặt lịch.
+- Landing bỏ section Weekly Class Schedule (`#schedule`) theo PR #107 (05/11/2026); giữ lịch lớp dùng dữ liệu API trên hồ sơ HLV (`CatalogSchedule`) và portal. Giữ nguyên kệ sản phẩm, điều hướng và reveal cuộn native.
 - Hành trình tuần đầu & Tính nhanh BMI (`#journey`): bố cục 2 cột gồm 3 bước onboarding có badge tròn salmon (`01`–`03`) bên trái và thẻ tính nhanh BMI + gợi ý lộ trình (`.fit-bmi-card`) bên phải.
 - Pricing: thẻ thường tối, thẻ nổi bật salmon; nhãn thời hạn trắng, giá đậm, checklist và CTA ở cuối. Form: bề mặt tối, input tối, nút salmon, thông báo lỗi rõ.
 - Câu hỏi thường gặp (`#faq`): danh sách accordion tối (`.fit-faq-item`), nút mở/đóng tròn (`+` / `−`) chuyển sang nền salmon khi mở.
