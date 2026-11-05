@@ -572,3 +572,95 @@
     transform: none;
   }
 }
+
+/* ==========================================================================
+   LIQUID GLASS (05/11/2026): khung chat nổi trong suốt, kế thừa quang học
+   của bộ liquid-glass cũ (blur + saturate, viền sáng, highlight trong).
+   Chỉ áp dụng cho widget; nền đặc cũ được thay bằng lớp kính.
+   ========================================================================== */
+.chat-widget__trigger {
+  background: linear-gradient(145deg, rgba(52, 49, 48, 0.5) 0%, rgba(28, 26, 26, 0.62) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36), inset 0 1.5px 1px rgba(255, 255, 255, 0.34), inset 0 -1px 2px rgba(206, 145, 128, 0.22);
+  backdrop-filter: blur(22px) saturate(190%);
+  -webkit-backdrop-filter: blur(22px) saturate(190%);
+}
+.chat-widget__trigger:hover { background: linear-gradient(145deg, rgba(66, 62, 61, 0.56) 0%, rgba(36, 34, 34, 0.66) 100%); }
+.chat-widget__mini-avatar { border-color: rgba(40, 38, 38, 0.8); }
+
+.chat-widget__panel {
+  position: absolute;
+  background: linear-gradient(155deg, rgba(48, 46, 45, 0.42) 0%, rgba(28, 27, 27, 0.52) 52%, rgba(22, 21, 21, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 28px 68px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(206, 145, 128, 0.2), inset 0 1.5px 1px rgba(255, 255, 255, 0.34), inset 0 -1px 1px rgba(255, 255, 255, 0.1), inset 1px 0 1px rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+}
+.chat-widget__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(120% 55% at 12% 0%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 45%, transparent 72%), radial-gradient(90% 50% at 92% 100%, rgba(206, 145, 128, 0.16) 0%, transparent 65%);
+}
+.chat-widget__panel > * { position: relative; z-index: 1; }
+
+/* Các lớp bên trong trong suốt để lộ kính */
+.chat-widget .direct-chat__workspace,
+.chat-widget .direct-chat__thread,
+.chat-widget .direct-chat__compose,
+.chat-widget .direct-chat__inbox,
+.chat-widget .direct-chat__contacts { background: transparent; }
+.chat-widget__header,
+.chat-widget .direct-chat__thread-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-bottom-color: rgba(255, 255, 255, 0.14);
+}
+.chat-widget .direct-chat__compose {
+  background: linear-gradient(0deg, rgba(22, 21, 21, 0.4) 0%, rgba(36, 34, 34, 0.14) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.chat-widget .direct-chat__compose-pill,
+.chat-widget .direct-chat__search input,
+.chat-widget .direct-chat__search .btn-secondary {
+  background: rgba(24, 23, 23, 0.42);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.chat-widget .direct-chat__person:hover,
+.chat-widget .direct-chat__person.is-selected,
+.chat-widget .direct-chat__compose-fab { background: rgba(255, 255, 255, 0.12); }
+.chat-widget .direct-chat__bubble {
+  background: linear-gradient(145deg, rgba(60, 57, 56, 0.55) 0%, rgba(38, 36, 35, 0.62) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+.chat-widget .direct-chat__messages .is-mine .direct-chat__bubble {
+  background: linear-gradient(135deg, rgba(186, 118, 100, 0.72) 0%, rgba(146, 80, 64, 0.8) 100%);
+  border-color: rgba(255, 232, 224, 0.42);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), inset 0 1px 1px rgba(255, 255, 255, 0.36);
+}
+.chat-widget .btn-primary { background: linear-gradient(135deg, #ce9180, #a35b49); border-color: rgba(255, 232, 224, 0.4); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .chat-widget__panel { background: #212328; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .chat-widget__trigger { background: #212328; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* Canvas WebGL liquid-glass (khúc xạ viền) nằm dưới nội dung, không chặn thao tác. */
+.chat-widget__panel > .chat-widget__glass.glass-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  gap: 0;
+  display: block;
+  pointer-events: none;
+}
+.chat-widget__glass canvas { opacity: 0.36; box-shadow: none; }

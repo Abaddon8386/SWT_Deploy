@@ -6,6 +6,7 @@ import type { ChatRealtimeFeed } from './ChatPage';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { CHAT_UNREAD_EVENT, getChatUnreadCount, type ChatContact } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
+import { LiquidGlassContainer } from '../../shared/liquid-glass/LiquidGlassContainer';
 import './chat-widget.css';
 
 // Khung hội thoại (danh sách, hội thoại, SÖL AI) chỉ tải khi mở widget lần đầu.
@@ -117,6 +118,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
       </span>
     </button>
     {visited && <section ref={panel} id="sol-direct-chat" className={`chat-widget__panel${expanded ? ' is-expanded' : ''}`} role="dialog" aria-label="Tin nhắn SÖL" hidden={!open}>
+      <LiquidGlassContainer shape="rounded" borderRadius={16} tintOpacity={0.12} className="chat-widget__glass" />
       <header className="chat-widget__header">
         <div className="chat-widget__header-title">
           <strong>Tin nhắn</strong>

@@ -1,0 +1,819 @@
+/* ==========================================================================
+   LIQUID GLASS UI - APPLE-INSPIRED VISIONOS WEBGL GLASS SYSTEM
+   Ported directly from dashersw/liquid-glass-js for Söl Wellness Sanctuary
+   ========================================================================== */
+
+.glass-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 18px;
+  box-sizing: border-box;
+  background: transparent;
+  isolation: isolate;
+  z-index: 10;
+}
+
+.glass-container-circle {
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  flex-grow: 0;
+  padding: 0;
+}
+
+.glass-container-pill {
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.glass-container canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.28), 0 0 1px rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  will-change: transform;
+  contain: paint;
+}
+
+/* Glass Button Styles */
+.glass-button {
+  position: relative;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.24);
+  cursor: pointer;
+  pointer-events: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  outline: none;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  text-decoration: none;
+}
+
+.glass-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.32), 0 0 20px rgba(194, 166, 132, 0.25);
+}
+
+.glass-button:focus-visible {
+  outline: 2px solid var(--color-accent-gold);
+  outline-offset: 2px;
+}
+
+.glass-button:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.glass-button-circle {
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.glass-button canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.glass-button-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #FAF8F5;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   LIQUID GLASS AI CHATBOT SYSTEM (APPLE VISIONOS OPTICS)
+   High-Contrast Luxury Obsidian & Champagne Gold Theme
+   Guarantees 100% text readability across pure white and dark backgrounds
+   ========================================================================== */
+
+/* Floating Corner Chat Trigger */
+.liquid-glass-chat-trigger {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.liquid-glass-chat-trigger .glass-button {
+  background: rgba(26, 22, 20, 0.92) !important;
+  border: 1.5px solid rgba(194, 166, 132, 0.75) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.25), 0 0 20px rgba(194, 166, 132, 0.35) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+.liquid-glass-chat-trigger .glass-button:hover {
+  transform: translateY(-3px) scale(1.06) !important;
+  border-color: #E2CFB8 !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 0, 0, 0.3), 0 0 25px rgba(194, 166, 132, 0.5) !important;
+}
+
+.liquid-glass-chat-trigger .glass-button-content {
+  color: var(--color-accent-gold) !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8) !important;
+}
+
+.liquid-glass-beacon {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10B981;
+  border: 2px solid #1A1614;
+  box-shadow: 0 0 10px #10B981;
+  pointer-events: none;
+  animation: beaconPulse 2s infinite;
+}
+
+@keyframes beaconPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Floating Expandable Chatbot Window */
+.liquid-glass-chat-window {
+  position: fixed;
+  bottom: 104px;
+  right: 28px;
+  width: 410px;
+  height: 590px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 130px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  animation: chatWindowPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 25px 65px rgba(0, 0, 0, 0.6));
+}
+
+@keyframes chatWindowPop {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Container override to stretch all children cleanly with solid dark glass foundation */
+.liquid-glass-chat-container {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  border-radius: 24px !important;
+  border: 1.2px solid rgba(194, 166, 132, 0.5) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
+  background: rgba(22, 18, 16, 0.92) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  box-sizing: border-box !important;
+}
+
+.liquid-glass-chat-container canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-shadow: none !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* Chat Header */
+.liquid-glass-chat-header {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid rgba(194, 166, 132, 0.25) !important;
+  background: rgba(26, 22, 20, 0.95) !important;
+  flex-shrink: 0 !important;
+}
+
+.liquid-glass-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3C322C 0%, #1A1614 100%);
+  border: 1.5px solid var(--color-accent-gold);
+  color: var(--color-accent-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.liquid-glass-bot-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #FFFFFF !important;
+  line-height: 1.2;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.liquid-glass-bot-status {
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  color: #D6C7B8 !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.online-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 6px #10B981;
+}
+
+.liquid-glass-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: #D6C7B8 !important;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 8px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  line-height: 1;
+}
+
+.liquid-glass-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF !important;
+}
+
+/* Chat Body */
+.liquid-glass-chat-body {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex: 1 1 0% !important;
+  overflow-y: auto !important;
+  padding: 18px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  min-height: 0 !important;
+  background: rgba(20, 16, 14, 0.85) !important;
+}
+
+.chat-bubble-row {
+  display: flex !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.user-row {
+  justify-content: flex-end !important;
+}
+
+.bot-row {
+  justify-content: flex-start !important;
+}
+
+.chat-bubble {
+  max-width: 86% !important;
+  padding: 13px 17px !important;
+  border-radius: 16px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.85rem !important;
+  line-height: 1.6 !important;
+  box-sizing: border-box !important;
+  word-break: break-word !important;
+}
+
+.chat-bubble-text {
+  font-size: 0.85rem !important;
+  line-height: 1.6 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* User Message: Rich Warm Champagne Gold Medallion with Deep Espresso Text */
+.user-bubble {
+  background: linear-gradient(135deg, #D4B896 0%, #B89B77 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: #1A1614 !important;
+  border-bottom-right-radius: 4px !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25) !important;
+}
+
+.user-bubble .chat-bubble-text {
+  color: #1A1614 !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+}
+
+.user-bubble .chat-bubble-meta {
+  color: rgba(26, 22, 20, 0.75) !important;
+  font-weight: 500 !important;
+}
+
+/* Bot Message: Deep Smoked Obsidian Glass Card with Pure White Text */
+.bot-bubble {
+  background: rgba(36, 30, 26, 0.95) !important;
+  border: 1px solid rgba(194, 166, 132, 0.35) !important;
+  color: #FFFFFF !important;
+  border-bottom-left-radius: 4px !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
+}
+
+.bot-bubble .chat-bubble-text {
+  color: #FFFFFF !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.01em;
+}
+
+.chat-bubble-meta {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-top: 8px !important;
+  font-size: 0.7rem !important;
+  color: #C2A684 !important;
+  gap: 12px !important;
+}
+
+.chat-rating-stars {
+  display: flex !important;
+  gap: 2px !important;
+}
+
+.star-btn {
+  background: none !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.35) !important;
+  font-size: 0.88rem !important;
+  cursor: pointer !important;
+  padding: 0 2px !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease !important;
+  line-height: 1 !important;
+}
+
+.star-btn:hover,
+.star-btn.active {
+  color: #F59E0B !important;
+  transform: scale(1.15) !important;
+}
+
+/* Typing Dots */
+.typing-bubble {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 12px 18px !important;
+  width: fit-content !important;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-gold);
+  animation: typingPulse 1.4s infinite cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typingPulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Suggestions chips */
+.liquid-glass-suggestions {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  overflow-x: auto !important;
+  gap: 8px !important;
+  padding: 10px 16px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(16, 13, 11, 0.92) !important;
+  flex-shrink: 0 !important;
+  scrollbar-width: none !important;
+}
+
+.liquid-glass-suggestions::-webkit-scrollbar {
+  display: none !important;
+}
+
+.suggestion-chip {
+  background: rgba(45, 38, 33, 0.9) !important;
+  border: 1px solid rgba(194, 166, 132, 0.35) !important;
+  color: #FAF8F5 !important;
+  padding: 7px 13px !important;
+  border-radius: 16px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.suggestion-chip .chip-icon {
+  font-size: 0.85rem !important;
+  line-height: 1 !important;
+}
+
+.suggestion-chip:hover {
+  background: rgba(194, 166, 132, 0.3) !important;
+  border-color: #C2A684 !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Input Bar */
+.liquid-glass-chat-input-bar {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 14px 18px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(14, 11, 10, 0.96) !important;
+  flex-shrink: 0 !important;
+}
+
+.liquid-glass-input {
+  flex: 1 !important;
+  background: rgba(36, 30, 26, 0.95) !important;
+  border: 1px solid rgba(194, 166, 132, 0.35) !important;
+  border-radius: 20px !important;
+  padding: 10px 16px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.84rem !important;
+  color: #FFFFFF !important;
+  outline: none !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.liquid-glass-input:focus {
+  border-color: var(--color-accent-gold) !important;
+  background: rgba(45, 38, 33, 0.98) !important;
+  box-shadow: 0 0 0 2px rgba(194, 166, 132, 0.35) !important;
+}
+
+.liquid-glass-input::placeholder {
+  color: rgba(250, 248, 245, 0.6) !important;
+}
+
+.liquid-glass-send-btn {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 50% !important;
+  background: var(--color-accent-gold) !important;
+  border: none !important;
+  color: #1A1614 !important;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.liquid-glass-send-btn:hover:not(:disabled) {
+  background: #D8BD9B !important;
+  transform: scale(1.05) !important;
+}
+
+.liquid-glass-send-btn:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+}
+
+/* SCRUM-126: inherit the Member Portal palette; true Liquid Glass optics + high-contrast text readability. */
+.member-ai-chat { --color-accent-gold: var(--portal-salmon); color: var(--portal-paper); }
+.member-ai-chat .liquid-glass-chat-trigger { right: 24px; bottom: 92px; z-index: 95; }
+.member-ai-chat .liquid-glass-chat-window { right: 24px; bottom: 158px; z-index: 95; max-height: calc(100dvh - 180px); filter: drop-shadow(0 20px 48px rgba(0, 0, 0, 0.28)); }
+/* Important declarations below override the legacy chat-only important rules above. */
+.member-ai-chat .liquid-glass-chat-container {
+  background: linear-gradient(155deg, rgba(48, 46, 45, 0.56) 0%, rgba(28, 27, 27, 0.66) 52%, rgba(22, 21, 21, 0.74) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  box-shadow: 0 28px 68px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(206, 145, 128, 0.24), inset 0 1.5px 1px rgba(255, 255, 255, 0.34), inset 0 -1px 1px rgba(255, 255, 255, 0.1), inset 1px 0 1px rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+}
+.member-ai-chat .liquid-glass-chat-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(120% 55% at 12% 0%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.05) 45%, transparent 72%), radial-gradient(90% 50% at 92% 100%, rgba(206, 145, 128, 0.18) 0%, transparent 65%);
+}
+.member-ai-chat .liquid-glass-chat-container canvas { opacity: 0.36; }
+.member-ai-chat .liquid-glass-chat-container > :not(canvas) { position: relative; z-index: 1; }
+.member-ai-chat .liquid-glass-chat-trigger .glass-button {
+  background: linear-gradient(145deg, rgba(52, 49, 48, 0.68) 0%, rgba(28, 26, 26, 0.78) 100%) !important;
+  border: 1.5px solid rgba(206, 145, 128, 0.68) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36), inset 0 1.5px 1px rgba(255, 255, 255, 0.38), inset 0 -1px 2px rgba(206, 145, 128, 0.25) !important;
+  backdrop-filter: blur(22px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(190%) !important;
+}
+.member-ai-chat .liquid-glass-chat-trigger .glass-button-content { color: var(--portal-salmon) !important; font-weight: 600 !important; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important; }
+.member-ai-chat .liquid-glass-chat-trigger canvas { opacity: 0.4; }
+.member-ai-chat .liquid-glass-chat-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+.member-ai-chat .liquid-glass-chat-input-bar {
+  background: linear-gradient(0deg, rgba(22, 21, 21, 0.52) 0%, rgba(36, 34, 34, 0.28) 100%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+.member-ai-chat .liquid-glass-chat-body {
+  min-height: 0;
+  background: rgba(14, 13, 13, 0.18) !important;
+}
+.member-ai-chat .liquid-glass-bot-name { font-family: var(--font-sans); font-size: 15px; font-weight: 700; color: var(--portal-paper) !important; text-shadow: none; }
+.member-ai-chat .liquid-glass-bot-status, .member-ai-chat .liquid-glass-close-btn { color: var(--portal-muted) !important; }
+.member-ai-chat .liquid-glass-close-btn:hover { background: rgba(255, 255, 255, 0.14); color: var(--portal-paper) !important; }
+.member-ai-chat .user-bubble {
+  background: linear-gradient(135deg, rgba(186, 118, 100, 0.84) 0%, rgba(146, 80, 64, 0.9) 100%) !important;
+  border: 1px solid rgba(255, 232, 224, 0.42) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24), inset 0 1px 1px rgba(255, 255, 255, 0.36) !important;
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+}
+.member-ai-chat .user-bubble .chat-bubble-text { color: #ffffff !important; font-weight: 500 !important; }
+.member-ai-chat .user-bubble .chat-bubble-meta { color: rgba(255, 255, 255, 0.82) !important; }
+.member-ai-chat .bot-bubble {
+  background: linear-gradient(145deg, rgba(46, 44, 43, 0.86) 0%, rgba(32, 31, 30, 0.9) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: #faf9f6 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+}
+.member-ai-chat .bot-bubble .chat-bubble-text { color: #faf9f6 !important; font-weight: 450 !important; }
+.member-ai-chat .bot-bubble .chat-bubble-meta { color: rgba(250, 249, 246, 0.68) !important; }
+.member-ai-chat .liquid-glass-input {
+  resize: none;
+  min-width: 0;
+  line-height: 1.5;
+  max-height: 110px;
+  background: rgba(24, 23, 23, 0.72) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #faf9f6 !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+.member-ai-chat .liquid-glass-input::placeholder { color: var(--portal-muted) !important; }
+.member-ai-chat .liquid-glass-input:focus {
+  border-color: var(--portal-salmon) !important;
+  background: rgba(28, 27, 27, 0.84) !important;
+  box-shadow: 0 0 0 2px rgba(206, 145, 128, 0.28), inset 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+}
+.member-ai-chat .suggestion-chip {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  color: var(--portal-paper) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+.member-ai-chat .suggestion-chip:hover {
+  background: rgba(206, 145, 128, 0.24) !important;
+  border-color: var(--portal-salmon) !important;
+}
+.member-ai-chat .liquid-glass-send-btn {
+  background: linear-gradient(135deg, var(--portal-salmon) 0%, color-mix(in srgb, var(--portal-salmon) 82%, #000) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(163, 91, 73, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+.member-ai-chat .liquid-glass-send-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: scale(1.05) !important;
+}
+.member-ai-chat button:disabled { cursor: not-allowed !important; opacity: .5; }
+.member-ai-chat :is(button, select, textarea):focus-visible { outline: 2px solid var(--portal-salmon) !important; outline-offset: 2px; }
+.ai-chat-session-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  color: var(--portal-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 11px;
+  font-weight: 500;
+}
+.ai-chat-session-label select {
+  min-width: 0;
+  flex: 1;
+  background: rgba(24, 23, 23, 0.68);
+  color: var(--portal-paper);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-weight: 500;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.ai-chat-session-label select option { background: var(--portal-surface); color: var(--portal-paper); }
+.ai-chat-empty { color: var(--portal-paper); opacity: 0.78; font-size: 12.5px; font-weight: 500; }
+.ai-chat-error {
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--portal-danger, #e99090);
+  background: rgba(163, 48, 48, 0.14);
+  border-top: 1px solid rgba(233, 144, 144, 0.24);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.ai-chat-error button { display: block; border: 0; padding: 6px 0 2px; background: none; color: var(--portal-salmon); font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* Light Theme Liquid Glass Overrides — Pearl Frost Optics + Deep Espresso Contrast */
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-window {
+  filter: drop-shadow(0 22px 48px rgba(32, 24, 20, 0.16));
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-container {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.64) 0%, rgba(249, 245, 242, 0.54) 50%, rgba(242, 235, 229, 0.68) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 24px 60px rgba(32, 24, 20, 0.16), 0 4px 16px rgba(163, 91, 73, 0.08), 0 0 0 1px rgba(163, 91, 73, 0.18), inset 0 2px 2px rgba(255, 255, 255, 0.98), inset 0 -1px 2px rgba(163, 91, 73, 0.12) !important;
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-container::before {
+  background: radial-gradient(120% 55% at 15% 0%, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.2) 45%, transparent 72%), radial-gradient(90% 50% at 90% 100%, rgba(206, 145, 128, 0.22) 0%, transparent 65%);
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-container canvas { opacity: 0.3; }
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-trigger .glass-button {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.76) 0%, rgba(246, 236, 231, 0.68) 100%) !important;
+  border: 1.5px solid rgba(163, 91, 73, 0.55) !important;
+  box-shadow: 0 12px 28px rgba(32, 24, 20, 0.16), inset 0 2px 2px rgba(255, 255, 255, 0.95), inset 0 -1px 2px rgba(163, 91, 73, 0.18) !important;
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-trigger .glass-button-content {
+  color: #8f4736 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.66) 0%, rgba(255, 255, 255, 0.34) 100%) !important;
+  border-bottom: 1px solid rgba(163, 91, 73, 0.15) !important;
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-input-bar {
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.42) 100%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 -4px 16px rgba(32, 24, 20, 0.04) !important;
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-chat-body {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-close-btn:hover {
+  background: rgba(163, 91, 73, 0.12);
+}
+:root[data-theme='light'] .member-ai-chat .user-bubble {
+  background: linear-gradient(135deg, rgba(246, 222, 213, 0.88) 0%, rgba(235, 198, 185, 0.84) 100%) !important;
+  border: 1px solid rgba(163, 91, 73, 0.38) !important;
+  color: #1c1917 !important;
+  box-shadow: 0 8px 22px rgba(163, 91, 73, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.92) !important;
+}
+:root[data-theme='light'] .member-ai-chat .user-bubble .chat-bubble-text { color: #1c1917 !important; font-weight: 500 !important; }
+:root[data-theme='light'] .member-ai-chat .user-bubble .chat-bubble-meta { color: #5c4740 !important; }
+:root[data-theme='light'] .member-ai-chat .bot-bubble {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 246, 243, 0.84) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.96) !important;
+  color: #1c1917 !important;
+  box-shadow: 0 8px 24px rgba(32, 24, 20, 0.08), 0 1px 3px rgba(32, 24, 20, 0.05), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+}
+:root[data-theme='light'] .member-ai-chat .bot-bubble .chat-bubble-text { color: #1c1917 !important; font-weight: 450 !important; }
+:root[data-theme='light'] .member-ai-chat .bot-bubble .chat-bubble-meta { color: #68645f !important; }
+:root[data-theme='light'] .member-ai-chat .liquid-glass-input {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(163, 91, 73, 0.28) !important;
+  color: #1c1917 !important;
+  box-shadow: inset 0 1px 3px rgba(32, 24, 20, 0.06), 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+:root[data-theme='light'] .member-ai-chat .liquid-glass-input:focus {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: var(--portal-salmon) !important;
+  box-shadow: 0 0 0 2px rgba(163, 91, 73, 0.2), inset 0 1px 2px rgba(32, 24, 20, 0.04) !important;
+}
+:root[data-theme='light'] .member-ai-chat .suggestion-chip {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(163, 91, 73, 0.26) !important;
+  color: #1c1917 !important;
+  box-shadow: 0 4px 10px rgba(32, 24, 20, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+:root[data-theme='light'] .member-ai-chat .suggestion-chip:hover {
+  background: rgba(246, 222, 213, 0.85) !important;
+  border-color: var(--portal-salmon) !important;
+}
+:root[data-theme='light'] .ai-chat-session-label {
+  background: rgba(255, 255, 255, 0.42);
+  border-bottom: 1px solid rgba(163, 91, 73, 0.12);
+  color: #57534e;
+}
+:root[data-theme='light'] .ai-chat-session-label select {
+  background: rgba(255, 255, 255, 0.78);
+  color: #1c1917;
+  border: 1px solid rgba(163, 91, 73, 0.24);
+  box-shadow: inset 0 1px 2px rgba(32, 24, 20, 0.04), 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+:root[data-theme='light'] .ai-chat-error {
+  color: #991b1b;
+  background: rgba(254, 226, 226, 0.72);
+  border-top: 1px solid rgba(248, 113, 113, 0.35);
+}
+@media (max-width: 600px) {
+  .member-ai-chat .liquid-glass-chat-trigger { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .member-ai-chat .liquid-glass-chat-window { right: 12px; width: calc(100vw - 24px); max-width: none; bottom: 82px; max-height: calc(100dvh - 100px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .member-ai-chat *, .member-ai-chat *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 767px) {
+  .member-ai-chat .liquid-glass-chat-trigger { right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(var(--portal-mobile-nav-height, 68px) + 78px); }
+  .member-ai-chat .liquid-glass-chat-window { right: max(16px, env(safe-area-inset-right, 0px)); width: calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); max-width: 420px; bottom: calc(var(--portal-mobile-nav-height, 68px) + 144px); max-height: calc(100dvh - var(--portal-mobile-nav-height, 68px) - 168px - env(safe-area-inset-top, 0px)); }
+  .member-ai-chat :is(.liquid-glass-input, .ai-chat-session-label select) { font-size: 16px !important; }
+  .member-ai-chat :is(.liquid-glass-send-btn, .liquid-glass-close-btn, .suggestion-chip) { min-height: 44px; min-width: 44px; }
+}
+
