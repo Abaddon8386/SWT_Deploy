@@ -63,6 +63,30 @@ export interface HoldRequestItem {
   cancelledEnrollmentsCount: number;
 }
 
+export interface StaffCancellationRequestPayload {
+  memberId: number;
+  subscriptionId?: number;
+  reason: string;
+  refundAmount?: number;
+}
+
+export interface CancellationRequestItem {
+  id: number;
+  memberId: number;
+  memberName: string | null;
+  subscriptionId: number;
+  packageName: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  resolvedById?: number | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
+  refundAmount?: number | null;
+  requestedById?: number | null;
+  requestedByName?: string | null;
+}
+
 export type PaymentMethod = 'cash' | 'pos' | 'bank_transfer' | 'online_wallet';
 
 export interface ProcessPaymentPayload {
@@ -210,6 +234,16 @@ export const receptionApi = {
   rejectHoldRequest: async (subscriptionId: number): Promise<HoldRequestItem> => {
     return apiFetch<HoldRequestItem>(`/memberships/subscriptions/${subscriptionId}/hold/reject`, {
       method: 'POST',
+    });
+  },
+
+  /**
+   * Lễ tân trình yêu cầu hủy gói tập & hoàn tiền lên Quản lý trung tâm phê duyệt
+   */
+  requestSubscriptionCancellation: async (payload: StaffCancellationRequestPayload): Promise<CancellationRequestItem> => {
+    return apiFetch<CancellationRequestItem>('/memberships/cancellations/staff-request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 

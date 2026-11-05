@@ -3,9 +3,10 @@ import { getCurrentUser } from '../../shared/api/client';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { DatePicker } from '../../shared/ui/DatePicker';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { notify } from '../../shared/lib/portalNotices';
 import { formatCenterDate } from '../../shared/lib/centerTime';
-import { reportsApi, type ReportSummary } from './reportsApi';
+import { reportsApi, type CancellationRequestDto, type ReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
 
 const vnd = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} đ`;
@@ -64,6 +65,10 @@ export function ManagerReportsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const latestRequest = useRef(0);
 
+  const [cancellationRequests, setCancellationRequests] = useState<CancellationRequestDto[]>([]);
+  const [loadingCancellations, setLoadingCancellations] = useState(false);
+  const [decidingCancelId, setDecidingCancelId] = useState<number | null>(null);
+
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
 
   const isInvalidRange = Boolean(startDate && endDate && startDate > endDate);
@@ -84,6 +89,19 @@ export function ManagerReportsPage() {
     }
     setEndDate(val);
   };
+
+  const loadCancellations = useCallback(async () => {
+    if (!hasAccess || typeof reportsApi.getCancellationRequests !== 'function') return;
+    setLoadingCancellations(true);
+    try {
+      const items = await reportsApi.getCancellationRequests();
+      setCancellationRequests(items ?? []);
+    } catch {
+      setCancellationRequests([]);
+    } finally {
+      setLoadingCancellations(false);
+    }
+  }, [hasAccess]);
 
   const fetchReports = useCallback(async (start: string, end: string) => {
     if (start > end) return;
@@ -107,7 +125,41 @@ export function ManagerReportsPage() {
   useEffect(() => {
     if (!hasAccess) return;
     void fetchReports(thirtyDaysAgoStr, todayStr);
-  }, [hasAccess, fetchReports, thirtyDaysAgoStr, todayStr]);
+    void loadCancellations();
+  }, [hasAccess, fetchReports, loadCancellations, thirtyDaysAgoStr, todayStr]);
+
+  const handleApproveCancellation = async (item: CancellationRequestDto) => {
+    if (decidingCancelId !== null || typeof reportsApi.approveCancellationRequest !== 'function') return;
+    setDecidingCancelId(item.id);
+    try {
+      await reportsApi.approveCancellationRequest(item.id, undefined, item.refundAmount ?? undefined);
+      notify(
+        `Đã phê duyệt hủy gói "${item.packageName}" của ${item.memberName || `#${item.memberId}`} và hoàn ${vnd(Number(item.refundAmount ?? 0))} vào Ví hội viên.`,
+        'success'
+      );
+      await Promise.all([loadCancellations(), fetchReports(appliedRange.startDate, appliedRange.endDate)]);
+    } catch (err: unknown) {
+      notify(errorMessage(err, 'Phê duyệt hủy gói & hoàn tiền thất bại.'), 'error');
+      await loadCancellations();
+    } finally {
+      setDecidingCancelId(null);
+    }
+  };
+
+  const handleRejectCancellation = async (item: CancellationRequestDto) => {
+    if (decidingCancelId !== null || typeof reportsApi.rejectCancellationRequest !== 'function') return;
+    setDecidingCancelId(item.id);
+    try {
+      await reportsApi.rejectCancellationRequest(item.id);
+      notify(`Đã từ chối yêu cầu hủy gói "${item.packageName}" của ${item.memberName || `#${item.memberId}`}.`, 'success');
+      await loadCancellations();
+    } catch (err: unknown) {
+      notify(errorMessage(err, 'Từ chối yêu cầu hủy gói thất bại.'), 'error');
+      await loadCancellations();
+    } finally {
+      setDecidingCancelId(null);
+    }
+  };
 
   const handleApplyFilter = (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,6 +376,111 @@ export function ManagerReportsPage() {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (từ Lễ tân) */}
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2 className="portal-card-title">
+              Duyệt yêu cầu hủy gói tập &amp; Hoàn tiền về Ví ({cancellationRequests.filter((r) => r.status === 'PENDING').length})
+            </h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
+              Yêu cầu do Lễ tân tiếp nhận từ hội viên tại quầy. Khi phê duyệt, gói tập sẽ được hủy và số tiền hoàn sẽ cộng trực tiếp vào Ví hội viên.
+            </p>
+          </div>
+          <RefreshButton label="Làm mới yêu cầu hủy" onClick={() => void loadCancellations()} disabled={loadingCancellations} />
+        </div>
+
+        {loadingCancellations ? (
+          <p className="row-card__meta" role="status" style={{ marginTop: 12 }}>Đang tải danh sách yêu cầu hủy gói…</p>
+        ) : cancellationRequests.length === 0 ? (
+          <div style={{ padding: '16px 0 4px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+            Hiện không có yêu cầu hủy gói tập &amp; hoàn tiền nào cần duyệt.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
+            {cancellationRequests.map((req) => {
+              const isBusy = decidingCancelId === req.id;
+              const isPending = req.status === 'PENDING';
+              return (
+                <div
+                  key={req.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    padding: '16px 18px',
+                    borderRadius: '10px',
+                    border: isPending ? '1px solid var(--color-accent-gold)' : '1px solid var(--color-border-subtle)',
+                    backgroundColor: isPending ? 'var(--color-bg-warm)' : 'var(--color-bg-card)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
+                        Yêu cầu #{req.id}
+                      </span>
+                      <strong>{req.memberName || `Hội viên #${req.memberId}`}</strong>
+                      <span
+                        className={`badge ${
+                          req.status === 'PENDING'
+                            ? 'badge-warning'
+                            : req.status === 'APPROVED'
+                              ? 'badge-success'
+                              : 'badge-neutral'
+                        }`}
+                      >
+                        {req.status === 'PENDING' ? 'CHỜ DUYỆT' : req.status === 'APPROVED' ? 'ĐÃ HOÀN VỀ VÍ' : 'ĐÃ TỪ CHỐI'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
+                      Gói tập: <strong>{req.packageName}</strong> • Số tiền hoàn về Ví:{' '}
+                      <strong style={{ color: 'var(--portal-success, #86efac)' }}>{vnd(Number(req.refundAmount ?? 0))}</strong>
+                      {req.requestedByName && <span> • Trình bởi: {req.requestedByName}</span>}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--color-bg-card)',
+                        border: '1px solid var(--color-border-subtle)',
+                        fontSize: '0.88rem',
+                        color: 'var(--color-text-main)',
+                      }}
+                    >
+                      <strong>Lý do hủy gói:</strong> {req.reason}
+                    </div>
+                  </div>
+
+                  {isPending && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        disabled={decidingCancelId !== null}
+                        onClick={() => void handleRejectCancellation(req)}
+                      >
+                        {isBusy ? 'Đang xử lý...' : 'Từ chối'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary btn-sm"
+                        disabled={decidingCancelId !== null}
+                        onClick={() => void handleApproveCancellation(req)}
+                      >
+                        {isBusy ? 'Đang xử lý...' : 'Phê duyệt & Hoàn tiền về Ví'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Error state */}

@@ -35,6 +35,9 @@ public class VnpayPaymentService {
     private final NotificationService notifications;
     private final MessageService messages;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.wallet.WalletService walletService;
+
     public VnpayPaymentService(VnpayTransactionRepository transactions, PaymentRepository payments, MemberRepository members,
             MembershipSubscriptionRepository subscriptions, PaymentService settlement, InvoiceService invoices,
             VnpayGateway gateway, Clock clock, EntityManager entities, CoachBookingRepository coaches, CourtBookingRepository courts,
@@ -117,8 +120,15 @@ public class VnpayPaymentService {
     }
     private Payment findOrCreate(List<Payment> existing,Long memberId,BigDecimal amount) {
         if(existing!=null && !existing.isEmpty()) {
-            if(existing.size()!=1 || !"pending".equals(existing.getFirst().getStatus())) throw unavailable();
-            Payment p=existing.getFirst(); entities.refresh(p); if(!"pending".equals(p.getStatus())) throw unavailable(); return p;
+            if(existing.stream().anyMatch(p -> !"pending".equals(p.getStatus()))) throw unavailable();
+            List<Payment> reusable = existing.stream()
+                    .filter(p -> p.getReceiptImage() == null || p.getReceiptImage().isBlank())
+                    .toList();
+            if(reusable.size() > 1) throw unavailable();
+            if(reusable.size() == 1) {
+                Payment p=reusable.getFirst(); entities.refresh(p); if(!"pending".equals(p.getStatus())) throw unavailable();
+                if(p.getReceiptImage() == null || p.getReceiptImage().isBlank()) return p;
+            }
         }
         Payment p=new Payment();p.setMember(members.findById(memberId).orElseThrow(this::unavailable));
         p.setAmount(amount);p.setMethod("online_wallet");p.setStatus("pending");return p;
@@ -159,6 +169,16 @@ public class VnpayPaymentService {
             settlement.updatePaymentStatus(p.getId(),"success");
             markBookingPaid(p);
             invoices.autoIssueInvoiceForPayment(p.getId());
+            if (walletService != null) {
+                String desc = p.getSubscriptionId() != null
+                        ? "Thanh toán gói tập hội viên (#" + reference + ")"
+                        : p.getCoachBookingId() != null
+                                ? "Thanh toán lịch PT 1:1 (#" + reference + ")"
+                                : p.getCourtBookingId() != null
+                                        ? "Thanh toán đặt sân (#" + reference + ")"
+                                        : "Thanh toán dịch vụ (#" + reference + ")";
+                walletService.recordVnpayTopupAndDebit(p.getMember().getUserId(), t.getAmount(), reference, desc);
+            }
             notifications.send(p.getMember().getUserId(), messages.getMessage("notifications.payment.vnpay_success.title"),
                     messages.getMessage("notifications.payment.vnpay_success.body", t.getAmount().toPlainString(), reference),
                     "payment", "payment", p.getId());

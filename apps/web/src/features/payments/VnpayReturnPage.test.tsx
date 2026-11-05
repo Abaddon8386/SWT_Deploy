@@ -6,7 +6,7 @@ import { VnpayReturnPage } from './VnpayReturnPage';
 import * as api from './vnpayApi';
 import { toast } from '../../shared/ui/toast';
 vi.mock('../../shared/ui/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('./vnpayApi', () => ({ getVnpayStatus: vi.fn() }));
+vi.mock('./vnpayApi', () => ({ getVnpayStatus: vi.fn(), verifyVnpayReturn: vi.fn() }));
 let host: HTMLDivElement; let root: Root;
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); host=document.createElement('div');document.body.append(host);root=createRoot(host); });
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();vi.clearAllMocks();vi.unstubAllGlobals();});
@@ -23,3 +23,9 @@ it('shows confirmed server success even if the return code says failure',async()
  expect(toast.success).toHaveBeenCalledTimes(1); expect(toast.error).not.toHaveBeenCalled();
 });
 it('requires a reference and makes no callback or settlement request',async()=>{await render('');expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(api.getVnpayStatus).not.toHaveBeenCalled();});
+it('verifies signed VNPay return parameters with the server',async()=>{
+ vi.mocked(api.verifyVnpayReturn).mockResolvedValue({reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'success',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'});
+ await render('?vnp_TxnRef=ABC123&vnp_ResponseCode=00&vnp_SecureHash=signed123');
+ expect(api.verifyVnpayReturn).toHaveBeenCalledWith({vnp_TxnRef:'ABC123',vnp_ResponseCode:'00',vnp_SecureHash:'signed123'});
+ expect(host.textContent).toContain('Thanh toán thành công');
+});

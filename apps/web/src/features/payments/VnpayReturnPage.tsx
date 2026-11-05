@@ -5,7 +5,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { toast } from '../../shared/ui/toast';
-import { getVnpayStatus, type VnpayStatus } from './vnpayApi';
+import { getVnpayStatus, verifyVnpayReturn, type VnpayStatus } from './vnpayApi';
 
 const destinations = new Set(['/member/packages', '/member/courts', '/member/classes?tab=pt', '/member/invoices']);
 export function VnpayReturnPage() {
@@ -22,7 +22,10 @@ export function VnpayReturnPage() {
     if (!valid) { setLoading(false); return; }
     async function load() {
       try {
-        const status = await getVnpayStatus(reference);
+        const hasSignedCallback = params.has('vnp_SecureHash') && params.has('vnp_ResponseCode');
+        const status = (hasSignedCallback && attempts === 0 && typeof verifyVnpayReturn === 'function')
+          ? await verifyVnpayReturn(Object.fromEntries(params.entries()))
+          : await getVnpayStatus(reference);
         if (!active) return;
         setData(status); setError('');
         if (!notified && status.status !== 'pending') {
@@ -36,7 +39,7 @@ export function VnpayReturnPage() {
     }
     void load();
     return () => { active = false; if (timer) clearTimeout(timer); };
-  }, [reference, valid, retry]);
+  }, [params, reference, valid, retry]);
   const title = data?.status === 'success' ? 'Thanh toán thành công' : data?.status === 'failed' ? 'Thanh toán chưa thành công' : data?.status === 'refunded' ? 'Giao dịch đã hoàn tiền' : 'Đang xác nhận thanh toán';
   return <div className="portal-container">
     <PageHeader eyebrow="VNPay Sandbox" title="Kết quả thanh toán" />

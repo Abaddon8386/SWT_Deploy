@@ -3,6 +3,7 @@ package com.swp391.scms.membership.entity;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,6 +23,11 @@ public class MembershipCancellationRequest {
     private MembershipSubscription subscription;
     @Column(name = "reason", nullable = false, length = 500)
     private String reason;
+    @Column(name = "refund_amount", precision = 15, scale = 2)
+    private BigDecimal refundAmount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requested_by")
+    private User requestedBy;
     @Column(name = "status", nullable = false, length = 20)
     private String status = "PENDING";
     @Column(name = "requested_at", nullable = false, updatable = false)
@@ -42,6 +48,10 @@ public class MembershipCancellationRequest {
     public void setSubscription(MembershipSubscription subscription) { this.subscription = subscription; }
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
+    public BigDecimal getRefundAmount() { return refundAmount; }
+    public void setRefundAmount(BigDecimal refundAmount) { this.refundAmount = refundAmount; }
+    public User getRequestedBy() { return requestedBy; }
+    public void setRequestedBy(User requestedBy) { this.requestedBy = requestedBy; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public LocalDateTime getRequestedAt() { return requestedAt; }

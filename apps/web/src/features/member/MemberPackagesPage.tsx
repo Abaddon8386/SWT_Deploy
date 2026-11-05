@@ -811,7 +811,7 @@ export function MemberPackagesPage() {
             <div>
               <h2 className="portal-card-title">{pending.packageName}</h2>
               <p className="row-card__meta" style={{ margin: '4px 0 0' }}>
-                Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
+                Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pending.upgradeCharge ?? pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
               </p>
             </div>
             <span className="badge badge-warning">Đang chờ thanh toán</span>

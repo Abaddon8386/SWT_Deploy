@@ -34,6 +34,23 @@ export interface ReportSummary {
   recentTransactions: RecentTransaction[];
 }
 
+export interface CancellationRequestDto {
+  id: number;
+  memberId: number;
+  memberName: string | null;
+  subscriptionId: number;
+  packageName: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  resolvedById?: number | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
+  refundAmount?: number | null;
+  requestedById?: number | null;
+  requestedByName?: string | null;
+}
+
 export const reportsApi = {
   getDailyRevenue: async (startDate?: string, endDate?: string): Promise<DailyRevenue[]> => {
     const params = new URLSearchParams();
@@ -96,6 +113,27 @@ export const reportsApi = {
    */
   getSnapshots: async (): Promise<ReportSnapshotDto[]> => {
     return apiFetch<ReportSnapshotDto[]>('/reports/snapshots');
+  },
+
+  /**
+   * Lấy danh sách yêu cầu hủy gói tập & hoàn tiền về Ví do Lễ tân trình duyệt
+   */
+  getCancellationRequests: async (): Promise<CancellationRequestDto[]> => {
+    return apiFetch<CancellationRequestDto[]>('/memberships/cancellations');
+  },
+
+  approveCancellationRequest: async (id: number, note?: string, refundAmount?: number): Promise<CancellationRequestDto> => {
+    return apiFetch<CancellationRequestDto>(`/memberships/cancellations/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ note: note || 'Quản lý phê duyệt hủy gói & hoàn tiền về Ví', refundAmount }),
+    });
+  },
+
+  rejectCancellationRequest: async (id: number, note?: string): Promise<CancellationRequestDto> => {
+    return apiFetch<CancellationRequestDto>(`/memberships/cancellations/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ note: note || 'Quản lý từ chối yêu cầu hủy gói' }),
+    });
   },
 };
 

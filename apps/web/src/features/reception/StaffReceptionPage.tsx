@@ -5,6 +5,7 @@ import { errorMessage } from '../../shared/lib/errorMessage';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
+import { Modal } from '../../shared/ui/Modal';
 import { PaymentInvoice } from './PaymentInvoice';
 import { GateQrPanel } from './GateQrPanel';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
@@ -73,6 +74,13 @@ export function StaffReceptionPage() {
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const paymentInFlight = useRef(false);
   const checkoutRef = useRef<HTMLDivElement>(null);
+
+  // Modal Yêu cầu hủy gói tập & hoàn tiền (Lễ tân trình Quản lý)
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelRefundAmount, setCancelRefundAmount] = useState('');
+  const [cancelModalError, setCancelModalError] = useState<string | null>(null);
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
   // Popup Hóa đơn điện tử sau khi thanh toán thành công (BR-04)
   const [completedPayment, setCompletedPayment] = useState<PaymentResponseDto | null>(null);
@@ -159,6 +167,57 @@ export function StaffReceptionPage() {
       .finally(() => { if (active) setLoadingOffers(false); });
     return () => { active = false; };
   }, [hasAccess, selectedMemberId, selectedPendingId, offersRetry]);
+
+  const activeCandidate = useMemo(
+    () => renewalCandidates.find((c) => c.status?.toLowerCase() === 'active') ?? null,
+    [renewalCandidates]
+  );
+
+  const handleOpenCancelModal = () => {
+    if (!selectedMember) return;
+    const matchedPkg = activeCandidate
+      ? packages.find((p) => p.id === activeCandidate.packageId)
+      : undefined;
+    setCancelReason('');
+    setCancelRefundAmount(matchedPkg ? String(matchedPkg.price) : '');
+    setCancelModalError(null);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleSubmitCancellationRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMember || isSubmittingCancel) return;
+    const trimmedReason = cancelReason.trim();
+    if (!trimmedReason) {
+      setCancelModalError('Vui lòng nhập lý do hủy gói tập để trình Quản lý duyệt.');
+      return;
+    }
+    const parsedRefund = cancelRefundAmount.trim() !== '' ? Number(cancelRefundAmount) : undefined;
+    if (parsedRefund !== undefined && (isNaN(parsedRefund) || parsedRefund < 0)) {
+      setCancelModalError('Số tiền hoàn dự kiến không hợp lệ.');
+      return;
+    }
+    setIsSubmittingCancel(true);
+    setCancelModalError(null);
+    try {
+      await receptionApi.requestSubscriptionCancellation({
+        memberId: selectedMember.userId,
+        subscriptionId: activeCandidate?.id,
+        reason: trimmedReason,
+        refundAmount: parsedRefund,
+      });
+      notify(
+        `Đã trình yêu cầu hủy gói tập & hoàn tiền của hội viên ${selectedMember.fullName} lên Quản lý trung tâm phê duyệt.`,
+        'success'
+      );
+      setIsCancelModalOpen(false);
+      setCancelReason('');
+    } catch (err: unknown) {
+      setCancelModalError(errorMessage(err, 'Không thể gửi yêu cầu hủy gói tập. Vui lòng thử lại.'));
+    } finally {
+      setIsSubmittingCancel(false);
+    }
+  };
 
   const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
     setSelectedPending(item);
@@ -612,7 +671,9 @@ export function StaffReceptionPage() {
                   <strong>
                     {selectedPending
                       ? `${selectedPending.packageName} (Yêu cầu #${selectedPending.id})`
-                      : selectedMember.currentPackage || 'Chưa có yêu cầu gói tập chờ thanh toán'}
+                      : activeCandidate
+                        ? `${activeCandidate.packageName} (Đang hoạt động)`
+                        : selectedMember.currentPackage || 'Chưa có yêu cầu gói tập chờ thanh toán'}
                   </strong>
                 </div>
 
@@ -621,7 +682,9 @@ export function StaffReceptionPage() {
                   <span style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
                     {selectedPending
                       ? `${selectedPending.startDate} → ${selectedPending.endDate} (${selectedPending.durationDays} ngày)`
-                      : selectedMember.endDate || 'Chưa kích hoạt'}
+                      : activeCandidate
+                        ? `${activeCandidate.startDate} → ${activeCandidate.endDate}`
+                        : selectedMember.endDate || 'Chưa kích hoạt'}
                   </span>
                 </div>
 
@@ -638,6 +701,22 @@ export function StaffReceptionPage() {
                   </div>
                 )}
               </div>
+
+              {!selectedPending && (activeCandidate || selectedMember.status?.toUpperCase() === 'ACTIVE') && (
+                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <span style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+                    Hội viên yêu cầu hủy gói tại quầy? Trình Quản lý phê duyệt hoàn tiền về Ví:
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                    onClick={handleOpenCancelModal}
+                  >
+                    Yêu cầu hủy gói &amp; hoàn tiền
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             /* BR-01: Trạng thái trống rõ ràng */
@@ -675,14 +754,18 @@ export function StaffReceptionPage() {
                   onChange={(event) => setSelectedOffer(event.target.value)}
                   disabled={!selectedMember || loadingPending || loadingOffers || !!offersError || isSubmittingPayment}>
                   <option value="">Chọn gói tập</option>
-                  {renewalCandidates.length === 0
-                    ? packages.map((pkg) => <option key={pkg.id} value={`buy:${pkg.id}`}>
-                        Mua mới: {pkg.name} — {vnd(pkg.price)}
-                      </option>)
-                    : renewalCandidates.filter((candidate) => packages.some((pkg) => pkg.id === candidate.packageId))
-                      .map((candidate) => <option key={candidate.id} value={`renew:${candidate.id}`}>
+                  {renewalCandidates
+                    .filter((candidate) => packages.some((pkg) => pkg.id === candidate.packageId))
+                    .map((candidate) => (
+                      <option key={`renew:${candidate.id}`} value={`renew:${candidate.id}`}>
                         Gia hạn: {candidate.packageName} — kỳ đến {candidate.endDate}
-                      </option>)}
+                      </option>
+                    ))}
+                  {packages.map((pkg) => (
+                    <option key={`buy:${pkg.id}`} value={`buy:${pkg.id}`}>
+                      Mua mới: {pkg.name} — {vnd(pkg.price)}
+                    </option>
+                  ))}
                 </Select>
               )}
               {offersError && <p role="alert">{offersError} <button type="button" className="btn-secondary" onClick={() => setOffersRetry((n) => n + 1)}>Thử lại</button></p>}
@@ -909,7 +992,6 @@ export function StaffReceptionPage() {
           <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
             {unpaidPt.map((item) => {
               const isBusy = processingPtId === item.id;
-              const paidWith = 'cash';
               return (
                 <div
                   key={item.id}
@@ -943,9 +1025,17 @@ export function StaffReceptionPage() {
                       type="button"
                       className="btn-primary btn-sm"
                       disabled={processingPtId !== null}
-                      onClick={() => void handleConfirmPt(item, paidWith)}
+                      onClick={() => void handleConfirmPt(item, 'cash')}
                     >
                       {isBusy ? 'Đang xử lý...' : 'Đã thu tiền mặt'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      disabled={processingPtId !== null}
+                      onClick={() => void handleConfirmPt(item, 'bank_transfer')}
+                    >
+                      {isBusy ? 'Đang xử lý...' : 'Đã nhận chuyển khoản'}
                     </button>
                   </div>
                 </div>
@@ -956,6 +1046,85 @@ export function StaffReceptionPage() {
       </div>
 
       {selectedMember && currentUser?.role === 'STAFF' && <CoachHealthMetrics memberId={selectedMember.userId} memberName={selectedMember.fullName} intakeOnly />}
+
+      {isCancelModalOpen && selectedMember && (
+        <Modal
+          title="Yêu cầu hủy gói tập & Hoàn tiền về Ví"
+          onClose={() => setIsCancelModalOpen(false)}
+          busy={isSubmittingCancel}
+        >
+          <form onSubmit={(e) => void handleSubmitCancellationRequest(e)} style={{ display: 'grid', gap: '14px' }}>
+            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
+              Hội viên: <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
+              {activeCandidate && (
+                <>
+                  <br />
+                  Gói đang hoạt động: <strong>{activeCandidate.packageName}</strong> ({activeCandidate.startDate} → {activeCandidate.endDate})
+                </>
+              )}
+            </div>
+
+            <div className="portal-form-group" style={{ margin: 0 }}>
+              <label className="portal-label" htmlFor="reception-cancel-reason">
+                Lý do hủy gói tập (bắt buộc trình Quản lý) *
+              </label>
+              <textarea
+                id="reception-cancel-reason"
+                className="portal-input"
+                rows={4}
+                maxLength={500}
+                required
+                placeholder="Nhập rõ lý do hội viên yêu cầu hủy gói tập (ví dụ: Chuyển nơi ở, chấn thương có xác nhận y tế...)"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                disabled={isSubmittingCancel}
+                style={{ width: '100%', resize: 'vertical' }}
+              />
+            </div>
+
+            <div className="portal-form-group" style={{ margin: 0 }}>
+              <label className="portal-label" htmlFor="reception-cancel-refund">
+                Số tiền đề xuất hoàn về Ví hội viên (VNĐ)
+              </label>
+              <input
+                id="reception-cancel-refund"
+                type="number"
+                min={0}
+                step={1000}
+                className="portal-input"
+                placeholder="Nhập số tiền hoàn dự kiến..."
+                value={cancelRefundAmount}
+                onChange={(e) => setCancelRefundAmount(e.target.value)}
+                disabled={isSubmittingCancel}
+              />
+            </div>
+
+            {cancelModalError && (
+              <p className="form-error" role="alert" style={{ margin: 0 }}>
+                {cancelModalError}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={isSubmittingCancel}
+                onClick={() => setIsCancelModalOpen(false)}
+              >
+                Đóng
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isSubmittingCancel}
+              >
+                {isSubmittingCancel ? 'Đang gửi...' : 'Gửi yêu cầu lên Quản lý'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* BR-04: Popup Hóa đơn điện tử chỉ hiện khi Payment thành công */}
       {completedPayment && (
