@@ -542,12 +542,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
               {walletLoading ? t('Đang tải…', 'Loading…') : t('Làm mới', 'Refresh')}
             </button>
           </div>
-          <p className="portal-subtitle" style={{ marginBottom: 16 }}>
-            {t(
-              'Khi thanh toán qua VNPay, tiền được nạp tự động vào Ví và trừ ngay cho dịch vụ đăng ký. Khi yêu cầu hủy gói tập được Quản lý phê duyệt hoàn tiền, tiền hoàn sẽ cộng trực tiếp vào Ví của bạn.',
-              'When paying via VNPay, funds are credited to your Wallet and immediately debited for your service. Approved membership cancellation refunds are credited directly to your Wallet.',
-            )}
-          </p>
           {isMember && (
             <div
               style={{

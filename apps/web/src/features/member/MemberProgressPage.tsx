@@ -97,7 +97,7 @@ function DailyProgress({ today }: { today: string }) {
   const points = metrics.kind === 'ready' ? weeklyMeasurements(metrics.data) : [];
   const exercises = plans.kind === 'ready' ? dailyExercises(plans.data, today) : [];
   return <div className="portal-container member-progress">
-    <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" subtitle="Số đo đã ghi nhận và bài tập từ huấn luyện viên." />
+    <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" />
     <CoachEvaluations />
     <section className="portal-card" aria-labelledby="progress-metrics-title">
       <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">Thay đổi qua các tuần</h2></div>

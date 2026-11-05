@@ -399,11 +399,6 @@ export function CoachClassesPage() {
       <PageHeader
         eyebrow="Huấn luyện viên"
         title="Thời khóa biểu & học viên phụ trách"
-        subtitle={
-          activeTab === 'schedule'
-            ? `HLV: ${currentUser?.name || 'Huấn luyện viên'} | Lịch đứng lớp và kèm 1:1 của riêng bạn theo tuần, từ 06:00 đến 22:00.`
-            : `HLV: ${currentUser?.name || 'Huấn luyện viên'} | Quản lý thông tin sức khỏe, mục tiêu thể lực và thông tin liên hệ của học viên.`
-        }
       />
 
       {/* Phân hệ Tab: Thời khóa biểu vs Học viên phụ trách */}
@@ -534,9 +529,6 @@ export function CoachClassesPage() {
           <div className="coach-students-header">
             <div>
               <h3 className="coach-students-title">Danh sách học viên phụ trách</h3>
-              <p style={{ margin: '4px 0 0', fontSize: '0.86rem', color: 'var(--portal-muted)' }}>
-                Theo dõi tình trạng sức khỏe, mục tiêu thể lực và lập lộ trình huấn luyện cho học viên.
-              </p>
             </div>
             <span className="coach-students-count">
               Tổng số: <strong>{allStudents.length} học viên</strong>

@@ -557,15 +557,6 @@ export function CoachAttendancePage() {
             ? 'Lịch sử đánh giá học viên'
             : 'Điểm danh buổi học'
         }
-        subtitle={
-          activeTab === 'evaluation'
-            ? 'Khu vực đánh giá chuyên biệt: Chấm thang điểm tiến bộ và nhận xét kỹ thuật, bài tập cho từng học viên.'
-            : activeTab === 'attendance-history'
-            ? 'Lịch sử điểm danh của tài khoản này đã lưu trên trình duyệt này. Cập nhật được lưu lên hệ thống; ẩn bản ghi chỉ áp dụng trên trình duyệt.'
-            : activeTab === 'eval-history'
-            ? 'Lịch sử đánh giá của tài khoản này đã lưu trên trình duyệt này. Chỉnh sửa được lưu lên hệ thống.'
-            : 'Ghi nhận chuyên cần nhanh chóng cho học viên tham gia buổi học với 2 trạng thái: Có mặt hoặc Vắng mặt.'
-        }
       />
 
       {/* Tabs chuyển đổi giữa 4 mục: Điểm danh, Đánh giá, Lịch sử điểm danh, Lịch sử đánh giá */}
@@ -841,9 +832,6 @@ export function CoachAttendancePage() {
           <div className="evaluation-section-header">
             <div>
               <h3 className="section-title">Đánh giá tiến bộ kỹ thuật học viên</h3>
-              <p className="section-desc">
-                Chấm điểm theo thang điểm 1-100 và ghi nhận xét tư thế, kỹ năng động tác cho từng học viên.
-              </p>
             </div>
           </div>
 
@@ -938,9 +926,6 @@ export function CoachAttendancePage() {
           <div className="history-header-bar">
             <div>
               <h3 className="section-title">Lịch sử các buổi đã điểm danh</h3>
-              <p className="section-desc">
-                Xem lại danh sách, tỷ lệ chuyên cần và bấm "Sửa điểm danh" để chỉnh sửa trực tiếp trong khung giữa màn hình.
-              </p>
             </div>
           </div>
 
@@ -1025,9 +1010,6 @@ export function CoachAttendancePage() {
           <div className="history-header-bar">
             <div>
               <h3 className="section-title">Lịch sử đánh giá tiến bộ học viên</h3>
-              <p className="section-desc">
-                Xem lại thang điểm kỹ thuật và nhận xét từng buổi tập, bấm "Sửa đánh giá" để chỉnh sửa trong khung giữa màn hình.
-              </p>
             </div>
           </div>
 

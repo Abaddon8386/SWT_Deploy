@@ -402,7 +402,6 @@ export function MemberClassesPage() {
       <PageHeader
         eyebrow="Hội viên"
         title="Lịch học & đặt chỗ"
-        subtitle="Đặt lịch tập cùng Huấn luyện viên, quản lý chỗ ngồi theo thời gian thực."
       />
 
       <div className="portal-tabs" role="tablist" aria-label="Lịch học" style={{ marginBottom: 18 }}>

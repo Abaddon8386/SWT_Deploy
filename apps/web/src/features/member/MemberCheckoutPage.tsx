@@ -128,9 +128,6 @@ export function MemberCheckoutPage() {
         <div className="stack">
           <section className="portal-card stack" aria-label="Phương thức thanh toán trực tuyến">
             <h2 className="portal-card-title">Thanh toán qua VNPay hoặc Ví điện tử SÖL</h2>
-            <p className="row-card__meta">
-              Chọn thanh toán trực tuyến qua cổng VNPay Sandbox hoặc trừ trực tiếp từ số dư Ví điện tử SÖL của bạn. Gói tập sẽ được kích hoạt ngay sau khi giao dịch hoàn tất.
-            </p>
             <VnpayPayButton
               prepare={preparePaymentTarget}
               onPaid={() => navigate('/member/packages', { replace: true })}

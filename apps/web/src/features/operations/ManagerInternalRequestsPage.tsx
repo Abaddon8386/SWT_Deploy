@@ -127,7 +127,6 @@ export function ManagerInternalRequestsPage() {
       <PageHeader
         eyebrow="Quản lý trung tâm"
         title="Phê duyệt đơn từ nội bộ"
-        subtitle="Tiếp nhận, xử lý và phê duyệt đơn xin nghỉ phép, đổi ca làm việc và đổi lịch dạy từ đội ngũ nhân sự."
       />
 
       {/* Filter and controls bar */}

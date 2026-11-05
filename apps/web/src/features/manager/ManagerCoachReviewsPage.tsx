@@ -127,7 +127,6 @@ export function ManagerCoachReviewsPage() {
       <PageHeader
         eyebrow="Quản lý Trung tâm"
         title="Bảng xếp hạng & đánh giá huấn luyện viên tháng"
-        subtitle="Tổng hợp ý kiến đánh giá từ hội viên, xếp hạng thành tích và trao thưởng/danh hiệu cho Huấn luyện viên."
       />
 
       {/* Bar điều khiển Tháng / Năm & Thao tác */}

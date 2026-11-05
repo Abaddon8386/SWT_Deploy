@@ -220,7 +220,7 @@ export function MemberSupportPage() {
   }
 
   return <div className="portal-container member-support">
-    <PageHeader eyebrow="Hội viên" title="Hỗ trợ & khiếu nại" subtitle="Kết nối trực tiếp với đội ngũ SÖL qua từng phiếu hỗ trợ." />
+    <PageHeader eyebrow="Hội viên" title="Hỗ trợ & khiếu nại" />
     <div className="member-support-grid">
       <section className="portal-card" aria-labelledby="support-create-title">
         <div className="portal-card-header"><h2 id="support-create-title" className="portal-card-title">Gửi yêu cầu</h2></div>

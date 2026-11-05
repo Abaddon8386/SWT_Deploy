@@ -490,9 +490,6 @@ export function StaffReceptionPage() {
             <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 className="portal-card-title">Gói tập chờ thanh toán ({pendingList.length})</h2>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
-                  Xác nhận thu tiền cho gói tập hội viên đã chọn.
-                </p>
               </div>
               <RefreshButton label="Làm mới danh sách" onClick={() => void loadPendingSubscriptions()} disabled={loadingPending} />
             </div>
@@ -854,11 +851,6 @@ export function StaffReceptionPage() {
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 className="portal-card-title">Yêu cầu bảo lưu ({holdList.length})</h2>
-            {holdList.length > 0 && (
-              <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
-                Duyệt bảo lưu sẽ hủy lịch lớp, PT 1:1 và lịch sân sắp tới của hội viên. Gói tự mở lại sau tối đa 90 ngày.
-              </p>
-            )}
           </div>
           <RefreshButton label="Làm mới bảo lưu" onClick={() => void loadPendingHolds()} disabled={loadingHolds} />
         </div>
@@ -968,11 +960,6 @@ export function StaffReceptionPage() {
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 className="portal-card-title">Buổi PT chưa thanh toán ({unpaidPt.length})</h2>
-            {unpaidPt.length > 0 && (
-              <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
-                Mỗi hội viên chỉ đặt được tối đa 2 buổi trả phí khi chưa thanh toán.
-              </p>
-            )}
           </div>
           <RefreshButton label="Làm mới buổi PT" onClick={() => void loadUnpaidPt()} disabled={loadingPt} />
         </div>

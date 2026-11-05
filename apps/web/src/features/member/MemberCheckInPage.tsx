@@ -50,7 +50,7 @@ export function MemberCheckInPage() {
   const granted = result?.status.toUpperCase() === 'GRANTED';
 
   return <div className="portal-container">
-    <PageHeader eyebrow="Hội viên" title="Quét QR check-in" subtitle="Quét mã cổng tại lễ tân để ghi nhận lượt vào trung tâm." />
+    <PageHeader eyebrow="Hội viên" title="Quét QR check-in" />
     <div className="qr-checkin-layout">
       <div className="portal-card">
         {!online && <p className="qr-checkin-error" role="alert">Bạn đang mất mạng. Check-in cần kết nối với trung tâm.</p>}
@@ -67,7 +67,6 @@ export function MemberCheckInPage() {
         <section className="portal-card">
           <h2 className="portal-card-title">Trước khi vào tập</h2>
           <ol className="qr-checkin-steps"><li>Mở camera và cho phép quyền truy cập.</li><li>Quét mã QR cổng trên màn hình lễ tân.</li><li>Chờ xác nhận check-in thành công.</li></ol>
-          <p className="qr-checkin-hint">Gói tập cần đang có hiệu lực. Nếu gặp khó khăn, xuất trình thẻ hội viên để lễ tân hỗ trợ.</p>
           <Link className="btn-secondary" to="/member/card">Mở thẻ hội viên</Link>
         </section>
         <section className="portal-card" aria-label="Lịch sử ra vào hôm nay">
