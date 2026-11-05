@@ -1077,7 +1077,7 @@ export function MemberCoachBookingView({
                         </span>
                       )}
 
-                      {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && <VnpayPayButton target={{ coachBookingId: b.id }} />}
+                      {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && <VnpayPayButton target={{ coachBookingId: b.id }} onPaid={() => void getMyCoachBookings().then(setMyBookings)} />}
                       {b.paymentMethod !== 'package_quota' && (
                         <button
                           type="button"
@@ -1504,7 +1504,7 @@ export function MemberCoachBookingView({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                       <strong style={{ fontSize: 14, color: 'var(--portal-paper)' }}>
-                        Đăng ký trả phí theo giờ ({formatPrice(selectedCoach.defaultHourlyRate || 200000)} / giờ)
+                        Đăng ký trả phí theo giờ qua VNPay / Ví SÖL ({formatPrice(selectedCoach.defaultHourlyRate || 200000)} / giờ)
                       </strong>
                       {!hasRemainingQuota && !hasNoPackage && (
                         <span
@@ -1522,7 +1522,7 @@ export function MemberCoachBookingView({
                       )}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 4, lineHeight: 1.4 }}>
-                      Thanh toán tại quầy lễ tân hoặc chuyển khoản theo thông tin do lễ tân cung cấp.
+                      Thanh toán trực tuyến qua VNPay Sandbox hoặc Ví điện tử SÖL. Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy.
                     </div>
                   </div>
                 </div>
@@ -1693,7 +1693,7 @@ export function MemberCoachBookingView({
             describe={(b) => `${b.bookingDate} · ${b.startTime.slice(0, 5)}–${b.endTime.slice(0, 5)} · HLV ${formatCoachName(b.coachName)}`}
           />
           {recurringOutcome.booked.some((b) => b.paymentMethod !== 'package_quota') && (
-            <p className="muted">Các buổi trả phí theo giờ cần được thanh toán tại quầy lễ tân.</p>
+            <p className="muted">Các buổi trả phí theo giờ có thể thanh toán qua VNPay Sandbox hoặc Ví SÖL tại danh sách lịch tập. Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy.</p>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
             <button type="button" className="btn-primary" onClick={() => setRecurringOutcome(null)}>Đóng</button>
@@ -1707,7 +1707,7 @@ export function MemberCoachBookingView({
           title="Thanh toán Buổi tập PT 1:1"
           onClose={() => setPaymentModalBooking(null)}
         >
-          <VnpayPayButton target={{ coachBookingId: paymentModalBooking.id }} />
+          <VnpayPayButton target={{ coachBookingId: paymentModalBooking.id }} onPaid={() => { setPaymentModalBooking(null); void getMyCoachBookings().then(setMyBookings); }} />
           <div style={{ display: 'grid', gap: 16 }}>
             <div
               style={{
@@ -1738,11 +1738,11 @@ export function MemberCoachBookingView({
               }}
             >
               <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
-                <div>Vui lòng liên hệ quầy Lễ tân để xác nhận thông tin và hoàn tất thanh toán.</div>
+                <div>Chọn <strong>Thanh toán VNPay Sandbox</strong> hoặc <strong>Thanh toán bằng Ví SÖL</strong> ở trên để hoàn tất thanh toán trực tuyến.</div>
                 <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                 <div>Nội dung chuyển khoản: <strong style={{ color: 'var(--portal-salmon)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
                 <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted)' }}>
-                  * Bạn cũng có thể thanh toán trực tiếp bằng tiền mặt hoặc thẻ tại quầy Lễ tân trước giờ tập.
+                  Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy trước giờ tập để được hỗ trợ thu tiền.
                 </div>
               </div>
             </div>

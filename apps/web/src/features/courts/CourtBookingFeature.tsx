@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
-import { Select } from '../../shared/ui/Select';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { notify } from '../../shared/lib/portalNotices';
 import { ApiError } from '../../shared/api/client';
@@ -11,7 +10,7 @@ import { RecurrenceFields, RecurrenceSummary } from '../../shared/ui/RecurrenceF
 import { recurrenceRequest, type RecurrenceChoice } from '../../shared/lib/recurrence';
 import { matchesDiscipline } from '../../shared/lib/disciplines';
 import { CourtBookingList, CourtLoadError } from './CourtBookingList';
-import { courtsApi, type RecurringCourtResult, type CourtQuota, type CourtPaymentMethod, PAYMENT_METHODS, formatVnd, COURT_DISCIPLINES, centerDate, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
+import { courtsApi, type RecurringCourtResult, type CourtQuota, formatVnd, COURT_DISCIPLINES, centerDate, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
 import './courts.css';
 
 const SLOT_LABELS = { free: 'Trống', booked: 'Đã đặt', class: 'Đang có lớp', past: 'Đã qua' };
@@ -31,7 +30,6 @@ export function CourtBookingFeature() {
   const [recurrence, setRecurrence] = useState<RecurrenceChoice>({ period: 'once', days: [] });
   const [outcome, setOutcome] = useState<RecurringCourtResult | null>(null);
   const [quota, setQuota] = useState<CourtQuota | null>(null);
-  const [method, setMethod] = useState<CourtPaymentMethod>('vnpay');
   const gridHeading = useRef<HTMLHeadingElement>(null);
   const today = centerDate();
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= today;
@@ -63,12 +61,12 @@ export function CourtBookingFeature() {
     try {
       const standing = recurrenceRequest(recurrence, selection.date);
       if (standing) {
-        const result = await courtsApi.bookRecurring({ roomId: selection.court.id, startDate: selection.date, startTime: selection.slot.startTime, ...standing, paymentMethod: method });
+        const result = await courtsApi.bookRecurring({ roomId: selection.court.id, startDate: selection.date, startTime: selection.slot.startTime, ...standing, paymentMethod: 'vnpay' });
         setOutcome(result); reload();
         notify(result.booked.length ? `Đã đặt ${result.booked.length} buổi sân định kỳ.` : 'Không đặt được buổi nào.', result.booked.length ? 'success' : 'error');
       } else {
-        await courtsApi.book({ roomId: selection.court.id, date: selection.date, startTime: selection.slot.startTime, ...(covered ? {} : { paymentMethod: method }) });
-        setSelection(null); reload(); notify(covered ? 'Đã đặt sân thành công.' : `Đã đặt sân (phụ phí ${formatVnd(price)}). Vui lòng hoàn tất thanh toán.`, 'success');
+        await courtsApi.book({ roomId: selection.court.id, date: selection.date, startTime: selection.slot.startTime, ...(covered ? {} : { paymentMethod: 'vnpay' }) });
+        setSelection(null); reload(); notify(covered ? 'Đã đặt sân thành công.' : `Đã đặt sân (phụ phí ${formatVnd(price)}). Vui lòng hoàn tất thanh toán qua VNPay hoặc Ví SÖL.`, 'success');
       }
     } catch (reason) {
       setActionError(courtError(reason));
@@ -102,16 +100,15 @@ export function CourtBookingFeature() {
       <RecurrenceFields startDate={selection.date} value={recurrence} onChange={setRecurrence} disabled={busy} hint="Đặt định kỳ được đặt trước tối đa 1 tháng; buổi trùng lịch hoặc ngoài thời hạn gói tập sẽ được bỏ qua và báo lại." />
       <div className="court-pricing">
         {covered && recurrence.period === 'once' ? <p>Còn <strong>{quota?.remaining}</strong> lượt đặt sân miễn phí trong tháng này; buổi này sẽ dùng 1 lượt.</p>
-          : <>
-            <p>Còn <strong>{quota?.remaining ?? 0}</strong> lượt đặt sân miễn phí trong tháng này.</p>
-            <label className="portal-form-group" htmlFor="court-pay-method"><span className="portal-label">Phương thức thanh toán</span><Select id="court-pay-method" className="portal-select" value={method} disabled={busy} onChange={event => setMethod(event.target.value as CourtPaymentMethod)}>{PAYMENT_METHODS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></label>
-          </>}
+          : <p>Còn <strong>{quota?.remaining ?? 0}</strong> lượt đặt sân miễn phí trong tháng này. Phụ phí đặt sân: <strong>{formatVnd(price)}</strong>.</p>}
       </div>
-      {!covered && method === 'vnpay' && <p className="muted">Sau khi đặt, chọn “Thanh toán VNPay Sandbox” tại lượt đặt của bạn để hoàn tất. Mỗi buổi định kỳ được thanh toán riêng. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.</p>}
-      {!covered && method === 'cash' && <p className="muted">Thanh toán tiền mặt tại quầy lễ tân. Lượt đặt chưa được xác nhận thu tiền khi đến giờ bắt đầu sẽ tự hủy.</p>}
+      {!covered && <>
+        <p className="muted">Sau khi đặt, chọn “Thanh toán VNPay Sandbox” hoặc “Thanh toán bằng Ví SÖL” tại lượt đặt của bạn để hoàn tất. Mỗi buổi định kỳ được thanh toán riêng. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.</p>
+        <p className="muted">Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy để được hỗ trợ thu tiền.</p>
+      </>}
       <p className="muted">Hủy trước giờ bắt đầu ít nhất 2 giờ.</p></>}
       {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{actionError}</p>{needsMembership && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">Xem / Đăng ký gói tập</Link></div>}</div>}
-      <div className="court-modal-actions">{outcome ? <button type="button" className="btn-primary" onClick={() => setSelection(null)}>Đóng</button> : <><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>Quay lại</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? 'Đang đặt…' : recurrence.period !== 'once' ? 'Xác nhận đặt định kỳ' : covered ? 'Xác nhận đặt' : method === 'vnpay' ? 'Đặt sân & Thanh toán sau qua VNPay' : 'Đặt sân & thanh toán tại quầy'}</button></>}</div>
+      <div className="court-modal-actions">{outcome ? <button type="button" className="btn-primary" onClick={() => setSelection(null)}>Đóng</button> : <><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>Quay lại</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? 'Đang đặt…' : recurrence.period !== 'once' ? 'Xác nhận đặt định kỳ' : covered ? 'Xác nhận đặt' : 'Đặt sân & Thanh toán sau qua VNPay / Ví SÖL'}</button></>}</div>
     </Modal>}
   </div>;
 }

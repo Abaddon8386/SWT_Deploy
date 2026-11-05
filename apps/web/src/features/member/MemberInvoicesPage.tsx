@@ -77,7 +77,8 @@ export function MemberInvoicesPage() {
       <PageHeader eyebrow="Hội viên" title="Giao dịch & hóa đơn" subtitle="Theo dõi khoản chờ thanh toán và hóa đơn của bạn." />
       {!loading && !error && pending.length > 0 && <section className="portal-card stack" aria-label="Khoản chờ thanh toán">
         <h2 className="portal-card-title">Khoản chờ thanh toán</h2>
-        {pending.map(payment => <div className="row-card" key={payment.id}><span>Giao dịch #{payment.id} · {formatPrice(payment.amount)}</span><VnpayPayButton target={{ paymentId: payment.id }} /></div>)}
+        {pending.map(payment => <div className="row-card" key={payment.id}><span>Giao dịch #{payment.id} · {formatPrice(payment.amount)}</span><VnpayPayButton target={{ paymentId: payment.id }} onPaid={() => setReload((n) => n + 1)} /></div>)}
+        <p className="row-card__meta" style={{ margin: 0 }}>Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy.</p>
       </section>}
       <section className="portal-card member-invoices__card" aria-label="Lịch sử giao dịch">
         {loading ? <LoadingSkeleton label="Đang tải giao dịch…" variant="table" count={4} /> : error ? (

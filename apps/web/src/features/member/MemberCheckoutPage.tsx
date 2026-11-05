@@ -1,14 +1,11 @@
 import { VnpayPayButton } from '../payments/VnpayPayButton';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { notify } from '../../shared/lib/portalNotices';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
-import { readReceiptImage } from '../../shared/lib/receiptImage';
 import {
   getMembershipHistory,
   getMembershipPackages,
-  createCashReceiptPayment,
   createMembershipSubscription,
   MembershipPackage,
 } from './membershipApi';
@@ -28,17 +25,8 @@ export function MemberCheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<MembershipPackage | null>(null);
-  // Số tiền thật phải thanh toán: yêu cầu nâng cấp đã được backend báo giá (bù chênh lệch hoặc đủ giá gói mới)
+  // Số tiền thật phải thanh toán: yêu cầu nâng cấp hoặc gia hạn đã được backend báo giá
   const [quotedAmount, setQuotedAmount] = useState<number | null>(null);
-
-  const [receiptImage, setReceiptImage] = useState<string | null>(null);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [completedResult, setCompletedResult] = useState<{
-    subscriptionId: number;
-    amount: number;
-  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -54,12 +42,11 @@ export function MemberCheckoutPage() {
         if (!active) return;
 
         if (existingSubscriptionId) {
-          const subscription = history.find(item => item.id === existingSubscriptionId);
+          const subscription = history.find((item) => item.id === existingSubscriptionId);
           if (!subscription || subscription.status !== 'pending_payment' || (parsedPackageId && subscription.packageId !== parsedPackageId)) {
             setError('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.');
             return;
           }
-          // Số tiền đã chốt lúc tạo yêu cầu (nâng cấp hoặc đăng ký/gia hạn); yêu cầu cũ không có thì theo giá gói.
           const quoted = subscription.upgradeCharge ?? subscription.quotedPrice;
           setQuotedAmount(typeof quoted === 'number' ? quoted : null);
         }
@@ -84,63 +71,21 @@ export function MemberCheckoutPage() {
     }
 
     void initCheckout();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [parsedPackageId, existingSubscriptionId]);
 
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
 
-  async function prepareVnpay() {
+  async function preparePaymentTarget() {
     if (!selectedPackage) throw new Error('Không tìm thấy gói tập.');
     if (!preparedSubscriptionId.current) {
       const history = await getMembershipHistory();
-      const pending = history.find(item => item.packageId === selectedPackage.id && item.status === 'pending_payment');
+      const pending = history.find((item) => item.packageId === selectedPackage.id && item.status === 'pending_payment');
       preparedSubscriptionId.current = pending?.id ?? (await createMembershipSubscription(selectedPackage.id)).id;
     }
     return { subscriptionId: preparedSubscriptionId.current };
-  }
-
-  async function handleReceiptChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setFormError(null);
-    try {
-      setReceiptImage(await readReceiptImage(file));
-    } catch (err) {
-      setReceiptImage(null);
-      setFormError(errorMessage(err, 'Không đọc được ảnh hóa đơn.'));
-    }
-  }
-
-  // Tiền mặt: hội viên gửi ảnh hóa đơn, lễ tân đối chiếu rồi xác nhận thanh toán trên web.
-  async function handleConfirm(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedPackage || isSubmitting) return;
-    if (!receiptImage) {
-      setFormError('Vui lòng chụp hoặc chọn ảnh hóa đơn thanh toán.');
-      return;
-    }
-
-    setFormError(null);
-    setIsSubmitting(true);
-    try {
-      // Yêu cầu đăng ký/nâng cấp/gia hạn đã có từ trang gói tập; chỉ tạo mới khi vào thẳng trang này
-      let subscriptionId = preparedSubscriptionId.current;
-      if (!subscriptionId) {
-        subscriptionId = (await createMembershipSubscription(selectedPackage.id)).id;
-        preparedSubscriptionId.current = subscriptionId;
-      }
-      const subscription = (await getMembershipHistory()).find(item => item.id === subscriptionId);
-      if (!subscription) throw new Error('Không tìm thấy yêu cầu gói tập.');
-      await createCashReceiptPayment(subscription, amount, receiptImage);
-
-      setCompletedResult({ subscriptionId, amount });
-      notify('Đã gửi ảnh hóa đơn. Lễ tân sẽ xác nhận thanh toán trên hệ thống.', 'success');
-    } catch (err) {
-      setFormError(errorMessage(err, 'Không thể gửi hóa đơn. Vui lòng thử lại.'));
-    } finally {
-      setIsSubmitting(false);
-    }
   }
 
   if (loading) {
@@ -169,62 +114,6 @@ export function MemberCheckoutPage() {
     );
   }
 
-  if (completedResult) {
-    return (
-      <div className="portal-container checkout-container">
-        <div className="checkout-success-view">
-
-          <h2 style={{ fontSize: '1.45rem', color: 'var(--portal-paper, var(--color-text-main, #202020))', marginBottom: 8, fontWeight: 700 }}>
-            Đã gửi ảnh hóa đơn
-          </h2>
-
-          <p style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.95rem', margin: 0 }}>
-            Gói tập có hiệu lực sau khi lễ tân đối chiếu hóa đơn và xác nhận thanh toán trên hệ thống.
-          </p>
-
-          <div className="appointment-voucher">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
-              <div>
-                <span className="voucher-code-badge">Đơn #{completedResult.subscriptionId}</span>
-                <h3 style={{ margin: '4px 0', fontSize: '1.2rem', fontWeight: 800, color: 'var(--portal-paper, var(--color-text-main, #202020))' }}>
-                  {selectedPackage.name}
-                </h3>
-                <div style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.85rem' }}>
-                  Thời hạn: {selectedPackage.durationDays} ngày
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--portal-salmon, #a35b49)' }}>
-                  {formatPrice(completedResult.amount)}
-                </div>
-                <span className="badge badge-warning" style={{ marginTop: 4 }}>
-                  Chờ lễ tân xác nhận
-                </span>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--portal-border, #e4e2de)', fontSize: '0.92rem', color: 'var(--portal-paper, var(--color-text-main, #202020))' }}>
-              <div style={{ display: 'grid', gap: 6 }}>
-                <div style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.84rem' }}>
-                  Mã đơn #{completedResult.subscriptionId}. Bạn có thể theo dõi trạng thái ở trang Gói tập.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <Link to="/member/packages" className="btn-secondary">
-              Về trang gói tập
-            </Link>
-            <Link to="/member/card" className="btn-primary">
-              Xem Thẻ Hội Viên
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="portal-container checkout-container">
       <div className="checkout-breadcrumb">
@@ -233,68 +122,27 @@ export function MemberCheckoutPage() {
         <span style={{ color: 'var(--portal-paper, var(--color-text-main, #202020))', fontWeight: 600 }}>Thanh toán</span>
       </div>
 
-      <PageHeader
-        eyebrow="Thanh toán"
-        title="Thanh toán gói tập"
-      />
+      <PageHeader eyebrow="Thanh toán" title="Thanh toán gói tập" />
 
       <div className="checkout-layout">
-        <div>
-          <section className="portal-card stack" aria-label="Thanh toán VNPay Sandbox">
-            <h2 className="portal-card-title">VNPay Sandbox</h2>
-            <p>Thanh toán thử nghiệm qua ngân hàng, thẻ hoặc QR trên VNPay. Gói tập được cập nhật khi hệ thống nhận xác nhận giao dịch.</p>
-            <VnpayPayButton prepare={prepareVnpay} disabled={isSubmitting} onPaid={() => navigate('/member/packages', { replace: true })} />
-            <div>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => window.dispatchEvent(new CustomEvent('open-wallet-modal'))}
-              >
-                Mở Ví SÖL &amp; Nạp thêm tiền
-              </button>
-            </div>
-          </section>
-          <div className="appointment-form-box">
-            <h3 className="appointment-form-title">
-              <span>Thanh toán tiền mặt — gửi ảnh hóa đơn</span>
-            </h3>
-            <p style={{ color: 'var(--portal-muted, #68645f)', fontSize: '0.9rem', margin: '0 0 12px' }}>
-              Sau khi thanh toán tiền mặt, chụp ảnh hóa đơn rồi gửi lên đây. Lễ tân đối chiếu và xác nhận thanh toán thì gói tập mới có hiệu lực.
+        <div className="stack">
+          <section className="portal-card stack" aria-label="Phương thức thanh toán trực tuyến">
+            <h2 className="portal-card-title">Thanh toán qua VNPay hoặc Ví điện tử SÖL</h2>
+            <p className="row-card__meta">
+              Chọn thanh toán trực tuyến qua cổng VNPay Sandbox hoặc trừ trực tiếp từ số dư Ví điện tử SÖL của bạn. Gói tập sẽ được kích hoạt ngay sau khi giao dịch hoàn tất.
             </p>
+            <VnpayPayButton
+              prepare={preparePaymentTarget}
+              onPaid={() => navigate('/member/packages', { replace: true })}
+            />
+          </section>
 
-            <form onSubmit={handleConfirm}>
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="receipt-image">
-                  Ảnh hóa đơn *
-                </label>
-                <input
-                  id="receipt-image"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  capture="environment"
-                  className="portal-input"
-                  onChange={(e) => void handleReceiptChange(e)}
-                />
-                {receiptImage && (
-                  <img
-                    src={receiptImage}
-                    alt="Xem trước ảnh hóa đơn"
-                    style={{ marginTop: 10, maxWidth: '100%', maxHeight: 320, borderRadius: 8, border: '1px solid var(--portal-border, #e4e2de)' }}
-                  />
-                )}
-              </div>
-
-              {formError && <p className="form-error" role="alert">{formError}</p>}
-              <button
-                type="submit"
-                className="btn-primary"
-                style={{ width: '100%', marginTop: 12, padding: '14px' }}
-                disabled={isSubmitting || !receiptImage}
-              >
-                {isSubmitting ? 'Đang gửi...' : 'Gửi hóa đơn và chờ xác nhận'}
-              </button>
-            </form>
-          </div>
+          <section className="portal-card stack" aria-label="Lưu ý thanh toán tiền mặt">
+            <h3 className="portal-card-title">Thanh toán tiền mặt</h3>
+            <p className="row-card__meta" style={{ margin: 0 }}>
+              Lưu ý: Nếu bạn muốn thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy để được hỗ trợ thu tiền và kích hoạt gói tập.
+            </p>
+          </section>
         </div>
 
         <div>
@@ -320,7 +168,7 @@ export function MemberCheckoutPage() {
               </div>
               {amount !== selectedPackage.price && (
                 <div className="order-breakdown-row">
-                  <span>Nâng cấp từ gói hiện tại</span>
+                  <span>Số tiền theo yêu cầu hiện tại</span>
                   <span>{formatPrice(amount)}</span>
                 </div>
               )}
