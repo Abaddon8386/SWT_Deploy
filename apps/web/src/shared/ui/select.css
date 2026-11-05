@@ -98,7 +98,8 @@
   border: 1px solid var(--color-border-medium);
   border-radius: 12px;
   box-shadow: 0 18px 42px -12px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.18);
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   scrollbar-color: var(--color-accent-gold) transparent;
   will-change: transform, opacity;
 }

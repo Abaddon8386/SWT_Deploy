@@ -3,6 +3,7 @@ import { purchaseAuthPath } from '../../../shared/lib/purchaseIntent';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
+import { LanguageSetting, useDomLanguageSync, useI18n } from '../../../shared/i18n';
 import { useComponentReveal } from '../hooks/useComponentReveal';
 import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
 import { ChatWidget } from '../../chat/ChatWidget';
@@ -10,11 +11,10 @@ import '../fitness-public.css';
 import { SPORT_PAGES, sportIdFromPath } from '../sportPages';
 
 const links = [
-  { to: '/#about', hash: 'about', label: 'Về SÖL' },
-  { to: '/#multisport', hash: 'multisport', label: 'Bộ môn' },
-  { to: '/#trainers', hash: 'trainers', label: 'Huấn luyện viên' },
-  { to: '/#packages', hash: 'packages', label: 'Gói tập' },
-
+  { to: '/#about', hash: 'about', label: 'Về SÖL', labelEn: 'About SÖL' },
+  { to: '/#multisport', hash: 'multisport', label: 'Bộ môn', labelEn: 'Disciplines' },
+  { to: '/#trainers', hash: 'trainers', label: 'Huấn luyện viên', labelEn: 'Coaches' },
+  { to: '/#packages', hash: 'packages', label: 'Gói tập', labelEn: 'Memberships' },
 ];
 
 const scrollToSection = (targetId: string) => {
@@ -33,11 +33,13 @@ export function RoundArrow({ diagonal = false }: { diagonal?: boolean }) {
 }
 
 export function PublicLayout({ children }: { children: ReactNode }) {
+  const { lang, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname, hash, search } = useLocation();
   const user = getCurrentUser();
   const root = useRef<HTMLDivElement>(null);
   useComponentReveal(root, pathname);
+  useDomLanguageSync(root);
 
   const isNavActive = (to: string, target?: string) => {
     const sportTarget = sportIdFromPath(to);
@@ -49,13 +51,13 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const pageTitle = pathname === '/login'
-      ? 'Đăng nhập'
+      ? (lang === 'en' ? 'Sign In' : 'Đăng nhập')
       : pathname === '/register'
-        ? 'Đăng ký hội viên'
+        ? (lang === 'en' ? 'Member Registration' : 'Đăng ký hội viên')
         : sportIdFromPath(pathname)
           ? SPORT_PAGES[sportIdFromPath(pathname)!].title
           : pathname.startsWith('/trainers')
-            ? 'Huấn luyện viên'
+            ? (lang === 'en' ? 'Coaches' : 'Huấn luyện viên')
             : 'Build your body. Find your balance.';
     document.title = `${pageTitle} · SÖL Fitness`;
     if (hash) {
@@ -74,16 +76,16 @@ export function PublicLayout({ children }: { children: ReactNode }) {
       };
     }
     window.scrollTo(0, 0);
-  }, [pathname, hash]);
+  }, [pathname, hash, lang]);
 
   return <div className={`fit-site${pathname === '/' ? ' fit-site--landing' : ''}`} ref={root}>
     <div className="fit-scroll-progress" aria-hidden="true" />
-    <a className="fit-skip" href="#public-main">Đến nội dung chính</a>
+    <a className="fit-skip" href="#public-main">{t('Đến nội dung chính', 'Skip to main content')}</a>
     <div className="fit-canvas">
       <header className="fit-header">
-        <Link className="fit-brand" to="/" aria-label="SÖL Fitness · Trang chủ" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>SÖL</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
-        <nav className={`fit-nav ${menuOpen ? 'is-open' : ''}`} id="public-navigation" aria-label="Điều hướng chính">
-          {links.map(({ to, hash: target, label }) => <Link
+        <Link className="fit-brand" to="/" aria-label={t('SÖL Fitness · Trang chủ', 'SÖL Fitness · Home')} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>SÖL</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
+        <nav className={`fit-nav ${menuOpen ? 'is-open' : ''}`} id="public-navigation" aria-label={t('Điều hướng chính', 'Main navigation')}>
+          {links.map(({ to, hash: target, label, labelEn }) => <Link
             key={label}
             to={to}
             data-nav-target={target}
@@ -99,14 +101,14 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-          >{label}</Link>)}
+          >{lang === 'en' ? labelEn : label}</Link>)}
         </nav>
         <div className="fit-header-actions">
           <ThemeToggle />
           <Link to={user ? homePath(user.role) : pathname === '/login' ? purchaseAuthPath('/register', search) : purchaseAuthPath('/login', search)} className="fit-pill fit-header-cta">
-            <span className="fit-header-cta-label">{user ? 'Vào portal' : pathname === '/login' ? 'Tham gia ngay' : 'Đăng nhập'}</span><RoundArrow />
+            <span className="fit-header-cta-label">{user ? t('Vào portal', 'Enter portal') : pathname === '/login' ? t('Tham gia ngay', 'Join now') : t('Đăng nhập', 'Sign in')}</span><RoundArrow />
           </Link>
-          <button type="button" className="fit-menu" aria-controls="public-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'} onClick={() => setMenuOpen(!menuOpen)}>
+          <button type="button" className="fit-menu" aria-controls="public-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? t('Đóng menu', 'Close menu') : t('Mở menu', 'Open menu')} onClick={() => setMenuOpen(!menuOpen)}>
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
               {menuOpen ? <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /> : <path d="M3.5 5h9M3.5 8h9M3.5 11h9" />}
             </svg>
@@ -116,8 +118,11 @@ export function PublicLayout({ children }: { children: ReactNode }) {
       {children}
       <footer className="fit-footer" id="contact">
         <div className="fit-footer-main">
-          <div><Link to="/" className="fit-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>SÖL</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link><p>Mạnh mẽ hơn mỗi ngày.<br />Cân bằng theo cách của bạn.</p></div>
-          <nav aria-label="Điều hướng chân trang">{links.map(({ to, hash: target, label }) => <Link
+          <div>
+            <Link to="/" className="fit-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>SÖL</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
+            <p>{t('Mạnh mẽ hơn mỗi ngày.', 'Stronger every day.')}<br />{t('Cân bằng theo cách của bạn.', 'Balanced your way.')}</p>
+          </div>
+          <nav aria-label={t('Điều hướng chân trang', 'Footer navigation')}>{links.map(({ to, hash: target, label, labelEn }) => <Link
             key={label}
             to={to}
             onClick={(event) => {
@@ -130,10 +135,15 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-          >{label}</Link>)}</nav>
+          >{lang === 'en' ? labelEn : label}</Link>)}</nav>
           <address><span>120 Hai Bà Trưng, Quận 1, TP.HCM</span><a href="tel:19006868">1900 6868 ↗</a><a href="mailto:concierge@sol-wellness.vn">concierge@sol-wellness.vn</a></address>
         </div>
-        <div className="fit-footer-bottom"><span>© 2026 SÖL Fitness</span><span>06:00 — 22:00 mỗi ngày</span><Link to={user ? homePath(user.role) : '/login'}>{user ? 'Không gian hội viên' : 'Đăng nhập hội viên'} ↗</Link></div>
+        <div className="fit-footer-bottom">
+          <span>© 2026 SÖL Fitness</span>
+          <span>{t('06:00 — 22:00 mỗi ngày', '06:00 — 22:00 daily')}</span>
+          <LanguageSetting variant="footer" />
+          <Link to={user ? homePath(user.role) : '/login'}>{user ? t('Không gian hội viên', 'Member workspace') : t('Đăng nhập hội viên', 'Member sign in')} ↗</Link>
+        </div>
         <div className="fit-footer-watermark" aria-hidden="true">SÖL FITNESS</div>
       </footer>
     </div>
@@ -142,12 +152,17 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 }
 
 export function AuthLayout({ children, mode }: { children: ReactNode; mode: 'login' | 'register' }) {
+  const { lang, t } = useI18n();
   return <PublicLayout>
     <main id="public-main" className="fit-auth">
       <div className="fit-auth-story" data-reveal="soft">
-        <h1>{mode === 'login' ? <>Trở lại<br /><em>lịch tập của bạn.</em></> : <>Bắt đầu<br /><em>cùng SÖL.</em></>}</h1>
-        <p>{mode === 'login' ? 'Đăng nhập để xem gói tập, đặt lịch lớp và theo dõi lịch tập của bạn.' : 'Tạo tài khoản và xác thực email để bắt đầu chọn gói tập.'}</p>
-        <div className="fit-auth-photo"><LoadingImage src="/images/fitness/strength-session.jpg" alt="Vận động viên tập luyện sức mạnh với tạ tại phòng gym" /><span>SHOW UP FOR YOURSELF.<RoundArrow diagonal /></span></div>
+        <h1>
+          {mode === 'login'
+            ? (lang === 'en' ? <>Return to<br /><em>your training schedule.</em></> : <>Trở lại<br /><em>lịch tập của bạn.</em></>)
+            : (lang === 'en' ? <>Begin<br /><em>with SÖL.</em></> : <>Bắt đầu<br /><em>cùng SÖL.</em></>)}
+        </h1>
+        <p>{mode === 'login' ? t('Đăng nhập để xem gói tập, đặt lịch lớp và theo dõi lịch tập của bạn.', 'Sign in to view your memberships, book classes, and track your schedule.') : t('Tạo tài khoản và xác thực email để bắt đầu chọn gói tập.', 'Create an account and verify your email to start choosing a membership.')}</p>
+        <div className="fit-auth-photo"><LoadingImage src="/images/fitness/strength-session.jpg" alt={t('Vận động viên tập luyện sức mạnh với tạ tại phòng gym', 'Athlete performing strength training in the gym')} /><span>SHOW UP FOR YOURSELF.<RoundArrow diagonal /></span></div>
       </div>
       <div className="fit-auth-form" data-reveal="lift">{children}</div>
     </main>
