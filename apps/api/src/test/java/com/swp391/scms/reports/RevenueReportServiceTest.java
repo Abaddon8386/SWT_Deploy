@@ -256,7 +256,7 @@ class RevenueReportServiceTest {
 
         LocalDate start = LocalDate.of(2026, 10, 1);
         LocalDate end = LocalDate.of(2026, 10, 5);
-        when(sessionAttendanceReportRepository.classUtilization(
+        when(sessionAttendanceReportRepository.classUtilizationByDiscipline(
                 start, end, start.atStartOfDay(), end.plusDays(1).atStartOfDay(), 2L))
                 .thenReturn(List.of(row1, row2));
 

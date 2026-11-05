@@ -150,7 +150,11 @@ public class MemberTrialService {
             MemberTrialRedemption redemption = new MemberTrialRedemption(member, cccdHash, cccdHasher.last4(cccd), fullName, savedSub);
             trialRedemptions.saveAndFlush(redemption);
         } catch (DataIntegrityViolationException e) {
-            // Hai yêu cầu đồng thời cùng vượt qua bước kiểm tra: unique constraint member/cccd chặn bản thứ hai.
+            String msgStr = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+            if (msgStr.contains("cccd")) {
+                throw new ConflictException("TRIAL_CCCD_ALREADY_USED", "trial.already_claimed.cccd", null,
+                        msg("trial.already_claimed.cccd"));
+            }
             throw new ConflictException("TRIAL_ALREADY_CLAIMED", "trial.already_claimed.member", null,
                     msg("trial.already_claimed.member"));
         }
@@ -161,8 +165,8 @@ public class MemberTrialService {
                     memberId,
                     msg("trial.claimed.title"),
                     msg("trial.claimed.success"),
-                    "membership",
-                    "memberships",
+                    "system",
+                    "membership_subscription",
                     savedSub.getId()
             );
         }
