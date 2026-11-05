@@ -1,0 +1,175 @@
+{
+  "status": "PASS",
+  "timezone": "America/Los_Angeles",
+  "fixedInstant": "2026-11-04T02:00:00Z",
+  "checks": [
+    {
+      "theme": "light",
+      "width": 320,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "light",
+      "width": 768,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "light",
+      "width": 1024,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "light",
+      "width": 1920,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "light",
+      "width": 2560,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "dark",
+      "width": 768,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "dark",
+      "width": 1024,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "dark",
+      "width": 1920,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    },
+    {
+      "theme": "dark",
+      "width": 2560,
+      "w": 52,
+      "h": 52,
+      "dx": 0,
+      "dy": 0,
+      "pathDx": 0,
+      "pathDy": 0,
+      "status": "PASS"
+    }
+  ],
+  "flows": [
+    "legacy URL -> this week",
+    "discipline filtering",
+    "three center calendar weeks",
+    "single booking pending/success/full (intercepted, not backend E2E)",
+    "single and bulk cancel confirmation (intercepted)",
+    "all six supported sport filters and reset",
+    "hover and disabled geometry",
+    "loading/empty/error/retry"
+  ],
+  "sharedDatabaseAccess": false,
+  "apiDbE2E": "NOT RUN",
+  "baseUrl": "http://localhost:5173",
+  "dataMode": "isolated browser fixtures; no backend booking claim"
+}
