@@ -357,4 +357,49 @@ class ProfileControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/profile/kyc successfully verifies CCCD and synchronizes full name")
+    void submitKycCccdSuccess() throws Exception {
+        User user = sampleUser();
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+        com.swp391.scms.users.entity.Member member = new com.swp391.scms.users.entity.Member();
+        member.setUserId(101L);
+        member.setUser(user);
+        when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
+
+        com.swp391.scms.users.dto.MemberKycRequest request = new com.swp391.scms.users.dto.MemberKycRequest(
+                "CCCD", "012345678901", "NGUYEN VAN A", "Việt Nam", "front.jpg", "back.jpg"
+        );
+
+        mockMvc.perform(post("/api/v1/profile/kyc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.fullName").value("NGUYEN VAN A"))
+                .andExpect(jsonPath("$.data.identityVerified").value(true))
+                .andExpect(jsonPath("$.data.citizenId").value("012345678901"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/profile/kyc rejects Vietnamese citizen using passport")
+    void submitKycPassportVietnameseRejected() throws Exception {
+        User user = sampleUser();
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+        com.swp391.scms.users.entity.Member member = new com.swp391.scms.users.entity.Member();
+        member.setUserId(101L);
+        member.setUser(user);
+        when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
+
+        com.swp391.scms.users.dto.MemberKycRequest request = new com.swp391.scms.users.dto.MemberKycRequest(
+                "PASSPORT", "P12345678", "JOHN DOE", "Vietnam", "passport.jpg", null
+        );
+
+        mockMvc.perform(post("/api/v1/profile/kyc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("TRIAL_PASSPORT_FOREIGN_ONLY"));
+    }
 }

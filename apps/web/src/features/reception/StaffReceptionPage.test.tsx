@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), getPendingHoldRequests: vi.fn(),
   getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(), getPendingReceipt: vi.fn(),
   getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
+  getPendingTrials: vi.fn(), approveTrial: vi.fn(), rejectTrial: vi.fn(),
 }));
 vi.mock('./receptionApi', () => ({ receptionApi: api, maskCitizenId: () => '—' }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn() }));
@@ -35,6 +36,7 @@ beforeEach(() => {
   api.getActivePackages.mockResolvedValue([pkg]);
   api.getRenewalCandidates.mockResolvedValue([]);
   api.getPendingReceipt.mockResolvedValue(null);
+  api.getPendingTrials.mockResolvedValue([]);
   api.processPayment.mockResolvedValue({ id: 42, memberId: 10, amount: 200, method: 'pos', status: 'success', paidAt: '2026-10-01T10:00:00', invoiceNumber: 'INV-42' });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
@@ -159,6 +161,62 @@ it('lets the desk record payment for an unpaid hourly 1:1 session', async () => 
   expect(host.textContent).toContain('Không có buổi PT nào chờ thu tiền.');
 });
 
+it('renders pending trial applications and lets the desk approve a trial with name sync', async () => {
+  const trialItem = {
+    id: 55,
+    memberId: 10,
+    membershipCode: 'MB-10',
+    memberName: 'an_google_account',
+    memberEmail: 'an@example.test',
+    memberPhone: '0901234567',
+    documentType: 'CCCD' as const,
+    documentNumberMasked: '••••••••1234',
+    documentFullName: 'NGUYỄN VĂN AN',
+    nationality: null,
+    frontImageUrl: 'data:image/png;base64,front',
+    backImageUrl: 'data:image/png;base64,back',
+    status: 'PENDING_APPROVAL' as const,
+    requestedAt: '2026-11-05T10:00:00',
+  };
+  api.getPendingTrials.mockResolvedValueOnce([trialItem]).mockResolvedValue([]);
+  api.approveTrial.mockResolvedValue({ ...trialItem, status: 'APPROVED' });
+
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.textContent).toContain('Đơn trải nghiệm 3 ngày chờ duyệt (1)');
+  expect(host.textContent).toContain('Đơn thử #55');
+  expect(host.textContent).toContain('NGUYỄN VĂN AN');
+  expect(host.textContent).toContain('Đồng bộ họ tên');
+
+  const approveBtn = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duyệt & Kích hoạt'))!;
+  expect(approveBtn).toBeDefined();
+  await act(async () => approveBtn.click());
+  expect(api.approveTrial).toHaveBeenCalledWith(55);
+});
+
+it('renders passport document type and nationality for foreign trial applicants', async () => {
+  const passportItem = {
+    id: 56,
+    memberId: 12,
+    membershipCode: 'MB-12',
+    memberName: 'john_smith',
+    memberEmail: 'john@example.test',
+    memberPhone: '0909999999',
+    documentType: 'PASSPORT' as const,
+    documentNumberMasked: '••••••••5678',
+    documentFullName: 'JOHNATHAN SMITH',
+    nationality: 'United States',
+    frontImageUrl: 'data:image/png;base64,passport_front',
+    backImageUrl: null,
+    status: 'PENDING_APPROVAL' as const,
+    requestedAt: '2026-11-05T11:00:00',
+  };
+  api.getPendingTrials.mockResolvedValueOnce([passportItem]);
+
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.textContent).toContain('Hộ chiếu (United States)');
+  expect(host.textContent).toContain('JOHNATHAN SMITH');
+});
+
 it('shows a retry when unpaid 1:1 sessions fail to load', async () => {
   api.getUnpaidCoachBookings.mockRejectedValueOnce(new Error('Mất kết nối')).mockResolvedValue([]);
   await act(async () => root.render(<StaffReceptionPage />));
@@ -166,4 +224,60 @@ it('shows a retry when unpaid 1:1 sessions fail to load', async () => {
   const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Thử lại')!;
   await act(async () => retry.click());
   expect(host.textContent).toContain('Không có buổi PT nào chờ thu tiền.');
+});
+
+it('renders pending trial applications and lets the desk approve a trial with name sync', async () => {
+  const trialItem = {
+    id: 55,
+    memberId: 10,
+    membershipCode: 'MB-10',
+    memberName: 'an_google_account',
+    memberEmail: 'an@example.test',
+    memberPhone: '0901234567',
+    documentType: 'CCCD' as const,
+    documentNumberMasked: '••••••••1234',
+    documentFullName: 'NGUYỄN VĂN AN',
+    nationality: null,
+    frontImageUrl: 'data:image/png;base64,front',
+    backImageUrl: 'data:image/png;base64,back',
+    status: 'PENDING_APPROVAL' as const,
+    requestedAt: '2026-11-05T10:00:00',
+  };
+  api.getPendingTrials.mockResolvedValueOnce([trialItem]).mockResolvedValue([]);
+  api.approveTrial.mockResolvedValue({ ...trialItem, status: 'APPROVED' });
+
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.textContent).toContain('Đơn trải nghiệm 3 ngày chờ duyệt (1)');
+  expect(host.textContent).toContain('Đơn thử #55');
+  expect(host.textContent).toContain('NGUYỄN VĂN AN');
+  expect(host.textContent).toContain('Đồng bộ họ tên');
+
+  const approveBtn = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duyệt & Kích hoạt'))!;
+  expect(approveBtn).toBeDefined();
+  await act(async () => approveBtn.click());
+  expect(api.approveTrial).toHaveBeenCalledWith(55);
+});
+
+it('renders passport document type and nationality for foreign trial applicants', async () => {
+  const passportItem = {
+    id: 56,
+    memberId: 12,
+    membershipCode: 'MB-12',
+    memberName: 'john_smith',
+    memberEmail: 'john@example.test',
+    memberPhone: '0909999999',
+    documentType: 'PASSPORT' as const,
+    documentNumberMasked: '••••••••5678',
+    documentFullName: 'JOHNATHAN SMITH',
+    nationality: 'United States',
+    frontImageUrl: 'data:image/png;base64,passport_front',
+    backImageUrl: null,
+    status: 'PENDING_APPROVAL' as const,
+    requestedAt: '2026-11-05T11:00:00',
+  };
+  api.getPendingTrials.mockResolvedValueOnce([passportItem]);
+
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.textContent).toContain('Hộ chiếu (United States)');
+  expect(host.textContent).toContain('JOHNATHAN SMITH');
 });

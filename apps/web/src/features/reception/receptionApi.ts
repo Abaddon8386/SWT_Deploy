@@ -16,6 +16,30 @@ export interface MemberLookupResult {
   endDate?: string;
 }
 
+export interface ReceptionTrialItem {
+  id: number;
+  memberId: number;
+  membershipCode: string | null;
+  memberName: string;
+  memberEmail: string;
+  memberPhone: string | null;
+  documentType: 'CCCD' | 'PASSPORT';
+  documentNumberMasked: string;
+  documentFullName: string;
+  nationality?: string | null;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  reviewedBy?: number | null;
+  reviewedAt?: string | null;
+  rejectionReason?: string | null;
+  subscriptionId?: number | null;
+  subscriptionStartDate?: string | null;
+  subscriptionEndDate?: string | null;
+  subscriptionStatus?: string | null;
+}
+
 export interface PendingSubscriptionItem {
   id: number;
   memberId: number;
@@ -282,5 +306,32 @@ export const receptionApi = {
     });
 
     return res;
+  },
+
+  /**
+   * Lễ tân lấy danh sách đơn đăng ký Gói Trải Nghiệm 3 Ngày (mặc định chờ duyệt)
+   */
+  getPendingTrials: async (search?: string): Promise<ReceptionTrialItem[]> => {
+    const q = search ? `?search=${encodeURIComponent(search)}` : '';
+    return apiFetch<ReceptionTrialItem[]>(`/reception/trials${q}`);
+  },
+
+  /**
+   * Lễ tân phê duyệt đơn đăng ký gói trải nghiệm: kích hoạt 3 ngày & đồng bộ tên tài khoản
+   */
+  approveTrial: async (trialId: number): Promise<ReceptionTrialItem> => {
+    return apiFetch<ReceptionTrialItem>(`/reception/trials/${trialId}/approve`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Lễ tân từ chối đơn đăng ký gói trải nghiệm kèm lý do
+   */
+  rejectTrial: async (trialId: number, reason: string): Promise<ReceptionTrialItem> => {
+    return apiFetch<ReceptionTrialItem>(`/reception/trials/${trialId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
   },
 };

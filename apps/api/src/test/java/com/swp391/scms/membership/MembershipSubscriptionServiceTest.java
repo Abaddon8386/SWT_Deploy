@@ -259,6 +259,55 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void create_failsWhenFirstTimeSubscriptionAndKycNotVerified() {
+        Member member = new Member();
+        member.setUserId(10L);
+        member.setIdentityVerified(false);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setStatus("active");
+        pack.setDurationDays(30);
+
+        com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRepo = 
+                org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MemberTrialRedemptionRepository.class);
+        service.setTrialRedemptionRepository(trialRepo);
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(packages.findById(1L)).thenReturn(Optional.of(pack));
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(trialRepo.findByMemberUserId(10L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(1L)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("error.membership.kyc_required");
+    }
+
+    @Test
+    void create_succeedsWhenFirstTimeSubscriptionWithVerifiedKyc() {
+        Member member = new Member();
+        member.setUserId(10L);
+        member.setIdentityVerified(true);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setStatus("active");
+        pack.setDurationDays(30);
+
+        com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRepo = 
+                org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MemberTrialRedemptionRepository.class);
+        service.setTrialRedemptionRepository(trialRepo);
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(packages.findById(1L)).thenReturn(Optional.of(pack));
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionDto result = service.create(principal, new SubscriptionRequests.Create(1L));
+        assertThat(result.status()).isEqualTo("pending_payment");
+    }
+
+    @Test
     void renew_extendsFromPreviousEndDateWhenNotExpired() {
         Member member = new Member();
         member.setUserId(10L);

@@ -9,6 +9,7 @@ import {
   createMembershipSubscription,
   MembershipPackage,
 } from './membershipApi';
+import { getProfile, submitMemberKyc, Profile } from './profileApi';
 import './member-checkout.css';
 import { errorMessage } from '../../shared/lib/errorMessage';
 
@@ -28,6 +29,19 @@ export function MemberCheckoutPage() {
   // Số tiền thật phải thanh toán: yêu cầu nâng cấp hoặc gia hạn đã được backend báo giá
   const [quotedAmount, setQuotedAmount] = useState<number | null>(null);
 
+  // Identity / KYC state for first-time package purchase
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [hasPriorSubscriptions, setHasPriorSubscriptions] = useState(false);
+  const [kycDocType, setKycDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
+  const [kycNumber, setKycNumber] = useState('');
+  const [kycFullName, setKycFullName] = useState('');
+  const [kycNationality, setKycNationality] = useState('');
+  const [kycFrontImage, setKycFrontImage] = useState('');
+  const [kycBackImage, setKycBackImage] = useState('');
+  const [kycSubmitting, setKycSubmitting] = useState(false);
+  const [kycError, setKycError] = useState('');
+  const [kycSuccess, setKycSuccess] = useState('');
+
   useEffect(() => {
     let active = true;
     preparedSubscriptionId.current = existingSubscriptionId;
@@ -35,11 +49,18 @@ export function MemberCheckoutPage() {
       setLoading(true);
       setError(null);
       try {
-        const [packages, history] = await Promise.all([
+        const [packages, history, userProfile] = await Promise.all([
           getMembershipPackages(),
-          existingSubscriptionId ? getMembershipHistory() : Promise.resolve([]),
+          getMembershipHistory(),
+          getProfile().catch(() => null),
         ]);
         if (!active) return;
+
+        setProfile(userProfile);
+        setHasPriorSubscriptions(history.length > 0);
+        if (userProfile?.fullName) {
+          setKycFullName(userProfile.fullName);
+        }
 
         if (existingSubscriptionId) {
           const subscription = history.find((item) => item.id === existingSubscriptionId);
@@ -77,6 +98,78 @@ export function MemberCheckoutPage() {
   }, [parsedPackageId, existingSubscriptionId]);
 
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
+  const isKycVerified = Boolean(profile?.identityVerified || hasPriorSubscriptions);
+
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>, target: 'front' | 'back') {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setKycError('Dung lượng ảnh tối đa 2MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = reader.result as string;
+      if (target === 'front') setKycFrontImage(b64);
+      else setKycBackImage(b64);
+      setKycError('');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleKycSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setKycError('');
+    if (!kycNumber.trim()) {
+      setKycError('Vui lòng nhập số CCCD hoặc Hộ chiếu.');
+      return;
+    }
+    if (kycDocType === 'CCCD' && !/^\d{12}$/.test(kycNumber.trim())) {
+      setKycError('Số Căn cước công dân (CCCD) phải bao gồm đúng 12 chữ số.');
+      return;
+    }
+    if (kycDocType === 'PASSPORT') {
+      if (!kycNationality.trim()) {
+        setKycError('Vui lòng nhập quốc tịch của bạn.');
+        return;
+      }
+      const nat = kycNationality.trim().toLowerCase();
+      if (nat.includes('việt nam') || nat.includes('vietnam') || nat.includes('viet nam') || nat === 'vn') {
+        setKycError('Hộ chiếu chỉ áp dụng cho người nước ngoài. Công dân Việt Nam vui lòng sử dụng CCCD.');
+        return;
+      }
+    }
+    if (!kycFullName.trim()) {
+      setKycError('Vui lòng nhập họ và tên đúng như trên giấy tờ.');
+      return;
+    }
+    if (!kycFrontImage) {
+      setKycError('Vui lòng tải lên ảnh mặt trước của giấy tờ.');
+      return;
+    }
+    if (kycDocType === 'CCCD' && !kycBackImage) {
+      setKycError('Vui lòng tải lên ảnh mặt sau của CCCD.');
+      return;
+    }
+
+    setKycSubmitting(true);
+    try {
+      const updated = await submitMemberKyc({
+        documentType: kycDocType,
+        citizenId: kycNumber.trim(),
+        fullName: kycFullName.trim(),
+        nationality: kycDocType === 'PASSPORT' ? kycNationality.trim() : 'Việt Nam',
+        frontImageUrl: kycFrontImage,
+        backImageUrl: kycDocType === 'CCCD' ? kycBackImage : undefined,
+      });
+      setProfile(updated);
+      setKycSuccess('Đã xác minh danh tính và đồng bộ họ tên tài khoản thành công! Bạn có thể tiếp tục thanh toán bên dưới.');
+    } catch (err) {
+      setKycError(errorMessage(err, 'Không thể gửi xác minh danh tính. Vui lòng kiểm tra lại.'));
+    } finally {
+      setKycSubmitting(false);
+    }
+  }
 
   async function preparePaymentTarget() {
     if (!selectedPackage) throw new Error('Không tìm thấy gói tập.');
@@ -126,8 +219,164 @@ export function MemberCheckoutPage() {
 
       <div className="checkout-layout">
         <div className="stack">
-          <section className="portal-card stack" aria-label="Phương thức thanh toán trực tuyến">
+          {!isKycVerified ? (
+            <section className="portal-card stack" aria-label="Xác minh CCCD hoặc Hộ chiếu trước khi đăng ký gói tập đầu tiên">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: '1.25rem' }}>🪪</span>
+                <h2 className="portal-card-title" style={{ margin: 0 }}>
+                  Xác minh danh tính trước khi đăng ký gói tập đầu tiên
+                </h2>
+              </div>
+              <p className="row-card__meta" style={{ margin: 0, color: '#f59e0b' }}>
+                Hội viên mới cần cập nhật CCCD (hoặc Hộ chiếu cho người nước ngoài) để xác thực hợp đồng hội viên.
+                Họ tên tài khoản sẽ được đồng bộ chính xác theo họ tên trên giấy tờ này.
+              </p>
+
+              {kycError && (
+                <div role="alert" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.9rem' }}>
+                  {kycError}
+                </div>
+              )}
+              {kycSuccess && (
+                <div role="status" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(34, 197, 94, 0.1)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.2)', fontSize: '0.9rem' }}>
+                  {kycSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleKycSubmit} className="stack" style={{ gap: 14 }}>
+                <div>
+                  <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>Loại giấy tờ định danh:</label>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.95rem' }}>
+                      <input
+                        type="radio"
+                        name="checkoutDocType"
+                        value="CCCD"
+                        checked={kycDocType === 'CCCD'}
+                        onChange={() => setKycDocType('CCCD')}
+                      />
+                      <span>Căn cước công dân (Việt Nam)</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.95rem' }}>
+                      <input
+                        type="radio"
+                        name="checkoutDocType"
+                        value="PASSPORT"
+                        checked={kycDocType === 'PASSPORT'}
+                        onChange={() => setKycDocType('PASSPORT')}
+                      />
+                      <span>Hộ chiếu (Người nước ngoài)</span>
+                    </label>
+                  </div>
+                </div>
+
+                {kycDocType === 'PASSPORT' && (
+                  <div>
+                    <label htmlFor="checkout-nationality" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
+                      Quốc tịch (Nationality) <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      id="checkout-nationality"
+                      type="text"
+                      className="portal-input"
+                      placeholder="Ví dụ: United States, France, Japan..."
+                      value={kycNationality}
+                      onChange={(e) => setKycNationality(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="checkout-doc-number" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
+                    {kycDocType === 'CCCD' ? 'Số Căn cước công dân (12 chữ số)' : 'Số Hộ chiếu (Passport Number)'} <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    id="checkout-doc-number"
+                    type="text"
+                    className="portal-input"
+                    placeholder={kycDocType === 'CCCD' ? 'Nhập 12 chữ số CCCD' : 'Nhập mã số hộ chiếu'}
+                    value={kycNumber}
+                    onChange={(e) => setKycNumber(e.target.value)}
+                    maxLength={30}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="checkout-fullname" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
+                    Họ và tên đầy đủ (trên CCCD / Hộ chiếu) <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    id="checkout-fullname"
+                    type="text"
+                    className="portal-input"
+                    placeholder="Ví dụ: NGUYỄN VĂN A hoặc JOHN DOE"
+                    value={kycFullName}
+                    onChange={(e) => setKycFullName(e.target.value)}
+                    required
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#9ca3af', display: 'block', marginTop: 4 }}>
+                    Họ tên tài khoản sẽ được đồng bộ theo tên này.
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: kycDocType === 'CCCD' ? '1fr 1fr' : '1fr', gap: 12 }}>
+                  <div>
+                    <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
+                      Ảnh mặt trước {kycDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'} <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    {kycFrontImage ? (
+                      <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
+                        <img src={kycFrontImage} alt="Mặt trước" style={{ width: '100%', height: 110, objectFit: 'cover' }} />
+                        <button type="button" onClick={() => setKycFrontImage('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}>Xóa</button>
+                      </div>
+                    ) : (
+                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'front')} className="portal-input" style={{ fontSize: '0.85rem' }} />
+                    )}
+                  </div>
+
+                  {kycDocType === 'CCCD' && (
+                    <div>
+                      <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
+                        Ảnh mặt sau CCCD <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      {kycBackImage ? (
+                        <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
+                          <img src={kycBackImage} alt="Mặt sau" style={{ width: '100%', height: 110, objectFit: 'cover' }} />
+                          <button type="button" onClick={() => setKycBackImage('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}>Xóa</button>
+                        </div>
+                      ) : (
+                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'back')} className="portal-input" style={{ fontSize: '0.85rem' }} />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={kycSubmitting}
+                  className="btn-primary"
+                  style={{ marginTop: 8 }}
+                >
+                  {kycSubmitting ? 'Đang xác minh & đồng bộ họ tên...' : 'Xác minh & Đồng bộ họ tên'}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', color: '#4ade80', fontSize: '0.9rem' }}>
+              <span>✓</span>
+              <span>Đã xác minh định danh theo {profile?.documentType || 'CCCD'}: <strong>{profile?.fullName}</strong> {profile?.citizenId ? `(Số: ${profile.citizenId})` : ''}</span>
+            </div>
+          )}
+
+          <section className="portal-card stack" aria-label="Phương thức thanh toán trực tuyến" style={{ opacity: !isKycVerified ? 0.6 : 1, pointerEvents: !isKycVerified ? 'none' : 'auto' }}>
             <h2 className="portal-card-title">Thanh toán qua VNPay hoặc Ví điện tử SÖL</h2>
+            {!isKycVerified && (
+              <p style={{ color: '#f59e0b', fontSize: '0.9rem', margin: 0 }}>
+                ⚠️ Vui lòng hoàn tất biểu mẫu xác minh danh tính ở trên để mở khóa các nút thanh toán.
+              </p>
+            )}
             <VnpayPayButton
               prepare={preparePaymentTarget}
               onPaid={() => navigate('/member/packages', { replace: true })}

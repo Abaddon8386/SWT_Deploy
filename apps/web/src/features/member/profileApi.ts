@@ -19,6 +19,21 @@ export interface Profile {
   bio?: string | null;
   certification?: string | null;
   shift?: string | null;
+  documentType?: string | null;
+  citizenId?: string | null;
+  nationality?: string | null;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
+  identityVerified?: boolean | null;
+}
+
+export interface MemberKycRequest {
+  documentType?: 'CCCD' | 'PASSPORT';
+  citizenId: string;
+  fullName: string;
+  nationality?: string;
+  frontImageUrl: string;
+  backImageUrl?: string;
 }
 
 export interface CoachProfileUpdate {
@@ -49,6 +64,9 @@ export const getProfile = () => apiFetch<Profile>('/profile');
 
 export const updateProfile = (profile: Profile) =>
   apiFetch<Profile>('/profile', { method: 'PUT', body: JSON.stringify(profile) });
+
+export const submitMemberKyc = (data: MemberKycRequest) =>
+  apiFetch<Profile>('/profile/kyc', { method: 'POST', body: JSON.stringify(data) });
 
 export const uploadAvatar = (avatarUrl: string | null) =>
   apiFetch<Profile>('/profile/avatar', { method: 'POST', body: JSON.stringify({ avatarUrl }) });

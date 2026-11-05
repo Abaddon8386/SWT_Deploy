@@ -38,12 +38,54 @@ public class Member {
     @Column(name = "emergency_contact_phone", length = 20)
     private String emergencyContactPhone;
 
+    @Column(name = "document_type", length = 20)
+    private String documentType; // CCCD, PASSPORT
+
+    @Column(name = "citizen_id", length = 30)
+    private String citizenId;
+
+    @Column(name = "nationality", length = 100)
+    private String nationality;
+
+    @Column(name = "front_image_url", columnDefinition = "TEXT")
+    private String frontImageUrl;
+
+    @Column(name = "back_image_url", columnDefinition = "TEXT")
+    private String backImageUrl;
+
+    @Column(name = "identity_verified")
+    private Boolean identityVerified = false;
+
+    @Column(name = "identity_verified_at")
+    private java.time.LocalDateTime identityVerifiedAt;
+
     // Capability for data-free Realtime invalidations; never serialized in member DTOs.
     @Column(name = "payment_realtime_topic")
     private java.util.UUID paymentRealtimeTopic;
 
     public java.util.UUID getPaymentRealtimeTopic() { return paymentRealtimeTopic; }
     public void setPaymentRealtimeTopic(java.util.UUID topic) { paymentRealtimeTopic = topic; }
+
+    public String getDocumentType() { return documentType; }
+    public void setDocumentType(String documentType) { this.documentType = documentType; }
+
+    public String getCitizenId() { return citizenId; }
+    public void setCitizenId(String citizenId) { this.citizenId = citizenId; }
+
+    public String getNationality() { return nationality; }
+    public void setNationality(String nationality) { this.nationality = nationality; }
+
+    public String getFrontImageUrl() { return frontImageUrl; }
+    public void setFrontImageUrl(String frontImageUrl) { this.frontImageUrl = frontImageUrl; }
+
+    public String getBackImageUrl() { return backImageUrl; }
+    public void setBackImageUrl(String backImageUrl) { this.backImageUrl = backImageUrl; }
+
+    public Boolean getIdentityVerified() { return identityVerified; }
+    public void setIdentityVerified(Boolean identityVerified) { this.identityVerified = identityVerified; }
+
+    public java.time.LocalDateTime getIdentityVerifiedAt() { return identityVerifiedAt; }
+    public void setIdentityVerifiedAt(java.time.LocalDateTime identityVerifiedAt) { this.identityVerifiedAt = identityVerifiedAt; }
 
     // Getters and Setters
     public Long getUserId() { return userId; }

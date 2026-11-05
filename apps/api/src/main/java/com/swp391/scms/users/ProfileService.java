@@ -215,6 +215,83 @@ public class ProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
     }
 
+    private static final java.util.regex.Pattern CCCD_PATTERN = java.util.regex.Pattern.compile("^\\d{12}$");
+    private static final java.util.regex.Pattern PASSPORT_PATTERN = java.util.regex.Pattern.compile("^[A-Z0-9]{6,12}$", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    @Transactional
+    @Audited(action = "MEMBER_KYC_SUBMIT", entity = "members")
+    public ProfileDto submitMemberKyc(Long userId, com.swp391.scms.users.dto.MemberKycRequest request) {
+        User user = findActiveUser(userId);
+        Member member = memberRepository.findById(userId).orElseGet(() -> {
+            Member m = new Member();
+            m.setUserId(userId);
+            m.setUser(user);
+            m.setMembershipCode("MEM-" + userId);
+            m.setJoinDate(java.time.LocalDate.now());
+            return memberRepository.save(m);
+        });
+
+        String docType = request.resolvedDocumentType();
+        String citizenId = request.citizenId() != null ? request.citizenId().trim() : "";
+        String fullName = request.fullName() != null ? request.fullName().trim() : "";
+
+        if (fullName.isBlank()) {
+            throw new BadRequestException("INVALID_FULL_NAME", "validation.users.full_name.not_blank", null, "Họ và tên không được để trống.");
+        }
+
+        if ("PASSPORT".equalsIgnoreCase(docType)) {
+            String nationality = request.nationality() != null ? request.nationality().trim() : "";
+            if (nationality.isBlank() || isVietnamese(nationality)) {
+                throw new BadRequestException("TRIAL_PASSPORT_FOREIGN_ONLY", "trial.passport.foreign_only", null,
+                        "Hộ chiếu chỉ áp dụng cho người nước ngoài. Công dân Việt Nam vui lòng sử dụng CCCD.");
+            }
+            if (!PASSPORT_PATTERN.matcher(citizenId).matches()) {
+                throw new BadRequestException("TRIAL_PASSPORT_INVALID", "trial.passport.format", null,
+                        "Số hộ chiếu không hợp lệ. Vui lòng nhập từ 6-12 ký tự chữ và số.");
+            }
+            member.setNationality(nationality);
+        } else {
+            docType = "CCCD";
+            if (!CCCD_PATTERN.matcher(citizenId).matches()) {
+                throw new BadRequestException("TRIAL_CCCD_INVALID", "trial.cccd.format", null,
+                        "Số Căn cước công dân (CCCD) phải bao gồm đúng 12 chữ số.");
+            }
+            if (request.backImageUrl() == null || request.backImageUrl().isBlank()) {
+                throw new BadRequestException("KYC_BACK_IMAGE_REQUIRED", "validation.users.kyc.back_image.required", null,
+                        "Vui lòng tải lên ảnh mặt sau của CCCD.");
+            }
+            member.setNationality("Việt Nam");
+        }
+
+        if (request.frontImageUrl() == null || request.frontImageUrl().isBlank()) {
+            throw new BadRequestException("KYC_FRONT_IMAGE_REQUIRED", "validation.users.kyc.front_image.not_blank", null,
+                    "Vui lòng tải lên ảnh mặt trước của giấy tờ.");
+        }
+
+        member.setDocumentType(docType);
+        member.setCitizenId(citizenId);
+        member.setFrontImageUrl(request.frontImageUrl().trim());
+        if (request.backImageUrl() != null && !request.backImageUrl().isBlank()) {
+            member.setBackImageUrl(request.backImageUrl().trim());
+        }
+        member.setIdentityVerified(true);
+        member.setIdentityVerifiedAt(java.time.LocalDateTime.now());
+        memberRepository.save(member);
+
+        // Đồng bộ họ tên tài khoản User theo CCCD / Hộ chiếu
+        user.setFullName(fullName);
+        userRepository.save(user);
+
+        Coach coach = coachRepository.findById(userId).orElse(null);
+        Receptionist receptionist = receptionistRepository.findById(userId).orElse(null);
+        return toDto(user, member, coach, receptionist);
+    }
+
+    private boolean isVietnamese(String nationality) {
+        String lower = nationality.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("việt nam") || lower.contains("viet nam") || lower.contains("vietnam") || "vn".equals(lower);
+    }
+
     private ProfileDto toDto(User user, Member member, Coach coach, Receptionist receptionist) {
         return new ProfileDto(
                 user.getId(),
@@ -234,7 +311,13 @@ public class ProfileService {
                 coach != null ? coach.getSpecialization() : null,
                 coach != null ? coach.getBio() : null,
                 coach != null ? coach.getCertification() : null,
-                receptionist != null ? receptionist.getShift() : null
+                receptionist != null ? receptionist.getShift() : null,
+                member != null ? member.getDocumentType() : null,
+                member != null ? member.getCitizenId() : null,
+                member != null ? member.getNationality() : null,
+                member != null ? member.getFrontImageUrl() : null,
+                member != null ? member.getBackImageUrl() : null,
+                member != null ? member.getIdentityVerified() : null
         );
     }
 }
