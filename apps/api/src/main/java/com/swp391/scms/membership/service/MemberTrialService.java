@@ -32,6 +32,8 @@ import java.util.UUID;
 @Service
 public class MemberTrialService {
 
+    public static final int TRIAL_DAYS = 3;
+
     private final MemberTrialRedemptionRepository trialRedemptions;
     private final MemberRepository members;
     private final MembershipSubscriptionRepository subscriptions;
@@ -137,7 +139,7 @@ public class MemberTrialService {
         subscription.setMember(member);
         subscription.setMembershipPackage(goldPkg);
         subscription.setStartDate(today);
-        subscription.setEndDate(today.plusDays(3));
+        subscription.setEndDate(today.plusDays(TRIAL_DAYS));
         subscription.setStatus("active");
         subscription.setUpgradeCharge(BigDecimal.ZERO);
         subscription.setQrCode(UUID.randomUUID().toString());

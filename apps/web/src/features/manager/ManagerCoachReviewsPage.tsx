@@ -48,12 +48,23 @@ export function ManagerCoachReviewsPage() {
       ]);
       setReviews(monthlyList);
 
-      // Load sample member reviews for all coaches
+      // Load member reviews for all coaches and filter by selected period
       if (coachList.length > 0) {
         const allReviewsArrays = await Promise.all(
-          coachList.slice(0, 5).map((c) => getCoachReviews(c.id).catch(() => []))
+          coachList.map((c) => getCoachReviews(c.id).catch(() => []))
         );
-        setMemberReviews(allReviewsArrays.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+        const filtered = allReviewsArrays
+          .flat()
+          .filter((item) => {
+            if (!item.createdAt) return true;
+            const d = new Date(item.createdAt);
+            if (Number.isNaN(d.getTime())) return true;
+            return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
+          })
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setMemberReviews(filtered);
+      } else {
+        setMemberReviews([]);
       }
     } catch (err: unknown) {
       setError((errorMessage(err, 'Không thể tải dữ liệu bảng xếp hạng.')));
@@ -298,7 +309,9 @@ export function ManagerCoachReviewsPage() {
 
                       <p className="row-card__meta" style={{ margin: '4px 0 0', fontSize: 13 }}>
                         Chuyên môn: <strong>{r.coachSpecialization}</strong> • Đánh giá:{' '}
-                        <strong style={{ color: 'var(--portal-star)' }}>{r.averageRating?.toFixed(1) || '5.0'} / 5.0</strong> ({r.totalReviews} lượt) • Tổng số buổi dạy:{' '}
+                        <strong style={{ color: 'var(--portal-star)' }}>
+                          {r.averageRating != null ? r.averageRating.toFixed(1) : '0.0'} / 5.0
+                        </strong> ({r.totalReviews} lượt) • Tổng số buổi dạy:{' '}
                         <strong>{r.totalSessions} buổi</strong>
                       </p>
 

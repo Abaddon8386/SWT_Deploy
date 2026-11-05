@@ -34,6 +34,9 @@ public class MembershipPackage {
     @Column(nullable = false, length = 20)
     private String status = "active"; // active, inactive
 
+    @Column(length = 30)
+    private String tier; // SILVER, GOLD, PLATINUM
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -68,6 +71,8 @@ public class MembershipPackage {
     public void setClassCreditLimit(Integer classCreditLimit) { this.classCreditLimit = classCreditLimit; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getTier() { return tier; }
+    public void setTier(String tier) { this.tier = tier; }
     public User getCreatedBy() { return createdBy; }
     public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
 }

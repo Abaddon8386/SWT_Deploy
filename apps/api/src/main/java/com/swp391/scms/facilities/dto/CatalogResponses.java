@@ -35,10 +35,27 @@ public final class CatalogResponses {
     }
 
     public record PackageDto(Long id, String name, String description, BigDecimal price, int durationDays,
-                             Integer classCreditLimit, String status) {
+                             Integer classCreditLimit, String status, String tier) {
+        public PackageDto(Long id, String name, String description, BigDecimal price, int durationDays,
+                          Integer classCreditLimit, String status) {
+            this(id, name, description, price, durationDays, classCreditLimit, status, inferTier(name, null));
+        }
+
         public static PackageDto of(MembershipPackage p) {
             return new PackageDto(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getDurationDays(),
-                    p.getClassCreditLimit(), p.getStatus());
+                    p.getClassCreditLimit(), p.getStatus(), inferTier(p.getName(), p.getTier()));
+        }
+
+        public static String inferTier(String name, String explicitTier) {
+            if (explicitTier != null && !explicitTier.isBlank()) {
+                return explicitTier.trim().toUpperCase();
+            }
+            if (name != null) {
+                String upper = name.toUpperCase();
+                if (upper.contains("PLATINUM") || upper.contains("VIP")) return "PLATINUM";
+                if (upper.contains("GOLD") || upper.contains("STANDARD")) return "GOLD";
+            }
+            return "SILVER";
         }
     }
 }

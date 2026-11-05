@@ -37,7 +37,13 @@ public final class CatalogRequests {
             @DecimalMin(value = "0.0", message = "{validation.catalog.price.min}") BigDecimal price,
             @Min(value = 1, message = "{validation.catalog.duration.min}") int durationDays,
             @Min(value = 0, message = "{validation.catalog.credit.min}") Integer classCreditLimit,
-            @Pattern(regexp = "active|inactive", message = "{validation.catalog.package_status.pattern}") String status) {}
+            @Pattern(regexp = "active|inactive", message = "{validation.catalog.package_status.pattern}") String status,
+            @Pattern(regexp = "(?i)|SILVER|GOLD|PLATINUM", message = "{validation.catalog.room_tier.pattern}") String tier) {
+        public PackageRequest(String name, String description, BigDecimal price, int durationDays,
+                              Integer classCreditLimit, String status) {
+            this(name, description, price, durationDays, classCreditLimit, status, null);
+        }
+    }
 
     public record PackageStatusRequest(
             @NotBlank(message = "{validation.catalog.package_status.pattern}")

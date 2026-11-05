@@ -25,7 +25,7 @@ public class TrainingPlanProgressService {
   var plan=plans.findById(planId).orElseThrow(()->new ResourceNotFoundException("resource.training_plan",planId));
   Long memberId=plan.getMember()==null?null:plan.getMember().getUserId();
   if(memberId==null) throw new ResourceNotFoundException("resource.member",planId);
-  if("COACH".equals(role)) access.requireCoachOf(userId,memberId);
+  if("COACH".equals(role) && (plan.getCoach()==null || !userId.equals(plan.getCoach().getUserId()))) access.requireCoachOf(userId,memberId);
   if(date.isBefore(plan.getStartDate())||date.isAfter(plan.getEndDate())) return new PlanProgress(planId,date,List.of());
   var scheduled=items.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId).stream()
    .filter(item->Objects.equals(item.getDayOfWeek(),date.getDayOfWeek().getValue())).toList();
