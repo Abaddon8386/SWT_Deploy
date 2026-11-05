@@ -59,8 +59,8 @@ it('loads an empty inventory without creating rooms or exposing browser demo wri
   expect(host.textContent).not.toContain('Nạp 12 máy móc mẫu');
 });
 
-it.each([10, 11])('preserves existing room assignment %s when editing unrelated fields', async roomId => {
-  vi.mocked(equipmentApi.list).mockResolvedValue([{ ...equipment, roomId, roomName: roomId === 11 ? vip.name : standard.name }]);
+it.each([null, 9, 10, 11])('preserves existing room assignment %s when editing unrelated fields', async roomId => {
+  vi.mocked(equipmentApi.list).mockResolvedValue([{ ...equipment, roomId, roomName: [studio, standard, vip].find(room => room.id === roomId)?.name ?? null }]);
   await render();
   await click('Sửa');
   await submit();
@@ -138,4 +138,26 @@ it('locks dialog dismissal while equipment is saving', async () => {
   expect(dialog.querySelector<HTMLButtonElement>('[aria-label="Đóng hộp thoại"]')!.disabled).toBe(true);
   await act(async () => finish(equipment));
   expect(host.querySelector('dialog')).toBeNull();
+});
+
+it('keeps non-gym rooms and unassigned equipment available in the unified filter and editor', async () => {
+  vi.mocked(equipmentApi.list).mockResolvedValue([
+    equipment,
+    { ...equipment, id: 2, name: 'Bóng yoga', roomId: 9, roomName: studio.name },
+  ]);
+  await render();
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Lọc theo phòng tập"]')!.click());
+  const roomOption = [...host.querySelectorAll<HTMLElement>('[role="option"]')].find(node => node.textContent === studio.name);
+  expect(roomOption).toBeTruthy();
+  await act(async () => roomOption!.click());
+  expect(host.querySelectorAll('tbody tr')).toHaveLength(1);
+  expect(host.querySelector('tbody')?.textContent).toContain('Bóng yoga');
+  await click('Sửa');
+  expect(host.querySelector('#eq-room')?.textContent).toContain(studio.name);
+  await act(async () => host.querySelector<HTMLButtonElement>('#eq-room')!.click());
+  const unassigned = [...host.querySelectorAll<HTMLElement>('[role="option"]')].find(node => node.textContent === 'Chưa xếp phòng');
+  expect(unassigned).toBeTruthy();
+  await act(async () => unassigned!.click());
+  await submit();
+  expect(equipmentApi.save).toHaveBeenLastCalledWith(2, expect.objectContaining({ roomId: null }));
 });

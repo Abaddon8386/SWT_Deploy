@@ -53,7 +53,7 @@ export function ManagerEquipmentPage() {
   const [error, setError] = useState('');
 
   // Filters (gộp phân loại khu vực & sort chi tiết phòng tập)
-  const [filterRoom, setFilterRoom] = useState<'ALL' | 'STANDARD' | 'VIP'>('ALL');
+  const [filterRoom, setFilterRoom] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('Tất cả');
 
@@ -95,6 +95,7 @@ export function ManagerEquipmentPage() {
   const filteredItems = items.filter((item) => {
     if (filterRoom === 'STANDARD' && !isStandardGymItem(item)) return false;
     if (filterRoom === 'VIP' && !isVipItem(item)) return false;
+    if (!['ALL', 'STANDARD', 'VIP'].includes(filterRoom) && String(item.roomId) !== filterRoom) return false;
     if (filterStatus && item.status !== filterStatus) return false;
     if (filterCategory !== 'Tất cả' && item.category !== filterCategory) return false;
     return true;
@@ -128,7 +129,7 @@ export function ManagerEquipmentPage() {
     } else {
       const defaultRoom = filterRoom === 'VIP'
         ? rooms.find(isVipGymRoom)
-        : rooms.find(isStandardGymRoom);
+        : filterRoom === 'STANDARD' ? rooms.find(isStandardGymRoom) : rooms.find(room => String(room.id) === filterRoom);
       setEditing({ id: null, form: { ...emptyForm(), roomId: defaultRoom ? String(defaultRoom.id) : '' } });
     }
   };
@@ -339,12 +340,13 @@ export function ManagerEquipmentPage() {
             className="portal-select"
             aria-label="Lọc theo phòng tập"
             value={filterRoom}
-            onChange={(e) => setFilterRoom(e.target.value as 'ALL' | 'STANDARD' | 'VIP')}
+            onChange={(e) => setFilterRoom(e.target.value)}
             style={{ minWidth: 240 }}
           >
             <option value="ALL">Tất cả phòng tập ({totalQuantity} máy)</option>
             <option value="STANDARD">Gym Tiêu chuẩn ({standardGymCount} máy)</option>
             <option value="VIP">Gym VIP Platinum ({vipGymCount} máy)</option>
+            {rooms.map(room => <option key={room.id} value={room.id}>{room.name}</option>)}
           </Select>
         </div>
 
@@ -607,7 +609,7 @@ export function ManagerEquipmentPage() {
 
             <div className="grid-2">
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="eq-room">Khu vực phòng tập lắp đặt *</label>
+                <label className="portal-label" htmlFor="eq-room">Phòng lắp đặt</label>
                 <Select
                   id="eq-room"
                   className="portal-select"
@@ -615,6 +617,10 @@ export function ManagerEquipmentPage() {
                   onChange={e => setFormField('roomId', e.target.value)}
                   disabled={isSubmitting}
                 >
+                  <option value="">Chưa xếp phòng</option>
+                  {rooms.filter(room => !isStandardGymRoom(room) && !isVipGymRoom(room)).map(room => (
+                    <option key={room.id} value={room.id}>{room.name}</option>
+                  ))}
                   {standardGymRooms.map(r => (
                     <option key={r.id} value={r.id}>
                       Gym Tiêu chuẩn ({r.name})
