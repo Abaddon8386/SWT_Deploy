@@ -1,0 +1,205 @@
+{
+  "cases": [
+    {
+      "path": "/member/dashboard",
+      "width": 390,
+      "first": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "76.6392deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 141.609375,
+        "height": 44,
+        "hostPosition": "relative",
+        "labelColor": "rgb(32, 32, 32)"
+      },
+      "second": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "89.9592deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 141.609375,
+        "height": 44,
+        "hostPosition": "relative",
+        "labelColor": "rgb(32, 32, 32)"
+      },
+      "disabled": "checked for buttons",
+      "light": "static",
+      "reducedMotion": "static"
+    },
+    {
+      "path": "/login",
+      "width": 390,
+      "first": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "73.3deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 289.40625,
+        "height": 48,
+        "hostPosition": "relative",
+        "labelColor": "rgb(43, 32, 27)"
+      },
+      "second": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "86.625deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 289.40625,
+        "height": 48,
+        "hostPosition": "relative",
+        "labelColor": "rgb(43, 32, 27)"
+      },
+      "disabled": "checked for buttons",
+      "light": "static",
+      "reducedMotion": "static"
+    },
+    {
+      "path": "/",
+      "width": 390,
+      "first": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "75.8111deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 26,
+        "height": 26,
+        "hostPosition": "relative",
+        "labelColor": "rgb(255, 255, 255)"
+      },
+      "second": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "91.6328deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 26,
+        "height": 26,
+        "hostPosition": "relative",
+        "labelColor": "rgb(255, 255, 255)"
+      },
+      "disabled": "checked for buttons",
+      "light": "static",
+      "reducedMotion": "static"
+    },
+    {
+      "path": "/member/dashboard",
+      "width": 1440,
+      "first": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "79.959deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 141.6875,
+        "height": 42,
+        "hostPosition": "relative",
+        "labelColor": "rgb(32, 32, 32)"
+      },
+      "second": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "94.1207deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 141.6875,
+        "height": 42,
+        "hostPosition": "relative",
+        "labelColor": "rgb(32, 32, 32)"
+      },
+      "disabled": "checked for buttons",
+      "light": "static",
+      "reducedMotion": "static"
+    },
+    {
+      "path": "/login",
+      "width": 1440,
+      "first": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "74.97deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 481.828125,
+        "height": 48,
+        "hostPosition": "relative",
+        "labelColor": "rgb(43, 32, 27)"
+      },
+      "second": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "89.95deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 481.828125,
+        "height": 48,
+        "hostPosition": "relative",
+        "labelColor": "rgb(43, 32, 27)"
+      },
+      "disabled": "checked for buttons",
+      "light": "static",
+      "reducedMotion": "static"
+    },
+    {
+      "path": "/",
+      "width": 1440,
+      "first": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "78.2975deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 26,
+        "height": 26,
+        "hostPosition": "relative",
+        "labelColor": "rgb(255, 255, 255)"
+      },
+      "second": {
+        "animation": "sol-button-glow-orbit",
+        "angle": "91.6225deg",
+        "duration": "7.2s",
+        "mask": "exclude, exclude",
+        "pointerEvents": "none",
+        "opacity": "0.65",
+        "content": "\"\"",
+        "width": 26,
+        "height": 26,
+        "hostPosition": "relative",
+        "labelColor": "rgb(255, 255, 255)"
+      },
+      "disabled": "checked for buttons",
+      "light": "static",
+      "reducedMotion": "static"
+    }
+  ],
+  "absoluteBadgesPreserved": true,
+  "loginClickAndError": true,
+  "errors": []
+}

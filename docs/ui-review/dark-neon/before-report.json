@@ -1,0 +1,182 @@
+[
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 390,
+    "overflow": false,
+    "columns": 1,
+    "railShadow": "none",
+    "cardShadow": "none",
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 6.700686610692225
+  },
+  {
+    "path": "/",
+    "theme": "dark",
+    "width": 390,
+    "overflow": false,
+    "columns": null,
+    "railShadow": null,
+    "cardShadow": null,
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      43,
+      43,
+      43
+    ],
+    "contrast": 7.188544155271669
+  },
+  {
+    "path": "/login",
+    "theme": "dark",
+    "width": 390,
+    "overflow": false,
+    "columns": null,
+    "railShadow": null,
+    "cardShadow": null,
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      43,
+      43,
+      43
+    ],
+    "contrast": 7.188544155271669
+  },
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 768,
+    "overflow": false,
+    "columns": 2,
+    "railShadow": "none",
+    "cardShadow": "none",
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 6.700686610692225
+  },
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "columns": 4,
+    "railShadow": "none",
+    "cardShadow": "none",
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 6.700686610692225
+  },
+  {
+    "path": "/",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "columns": null,
+    "railShadow": null,
+    "cardShadow": null,
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      43,
+      43,
+      43
+    ],
+    "contrast": 7.188544155271669
+  },
+  {
+    "path": "/login",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "columns": null,
+    "railShadow": null,
+    "cardShadow": null,
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      43,
+      43,
+      43
+    ],
+    "contrast": 7.188544155271669
+  },
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 1920,
+    "overflow": false,
+    "columns": 4,
+    "railShadow": "none",
+    "cardShadow": "none",
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 6.700686610692225
+  },
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 2560,
+    "overflow": false,
+    "columns": 4,
+    "railShadow": "none",
+    "cardShadow": "none",
+    "muted": [
+      188,
+      184,
+      181
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 6.700686610692225
+  }
+]

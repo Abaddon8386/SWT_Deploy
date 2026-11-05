@@ -1,0 +1,205 @@
+{
+  "cases": [
+    {
+      "role": "MEMBER",
+      "width": 320,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "STAFF",
+      "width": 320,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "COACH",
+      "width": 320,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "MANAGER",
+      "width": 320,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "ADMIN",
+      "width": 320,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "MEMBER",
+      "width": 390,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "STAFF",
+      "width": 390,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "COACH",
+      "width": 390,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "MANAGER",
+      "width": 390,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "ADMIN",
+      "width": 390,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "MEMBER",
+      "width": 768,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "STAFF",
+      "width": 768,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "COACH",
+      "width": 768,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "MANAGER",
+      "width": 768,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "ADMIN",
+      "width": 768,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "MEMBER",
+      "width": 1440,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "STAFF",
+      "width": 1440,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "COACH",
+      "width": 1440,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "MANAGER",
+      "width": 1440,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    },
+    {
+      "role": "ADMIN",
+      "width": 1440,
+      "avatar": "visible, 44px target",
+      "railFooter": "landing only",
+      "menu": "inside viewport",
+      "escape": "closes and restores focus",
+      "outside": "closes",
+      "logout": "confirmation and cancel work"
+    }
+  ],
+  "errors": []
+}

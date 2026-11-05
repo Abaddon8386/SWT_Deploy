@@ -1,0 +1,182 @@
+[
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 390,
+    "overflow": false,
+    "columns": 1,
+    "railShadow": "color(srgb 0.980392 0.976471 0.964706 / 0.35) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 12px 0px",
+    "cardShadow": "rgb(206, 145, 128) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 18px -8px",
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 7.853943520575683
+  },
+  {
+    "path": "/",
+    "theme": "dark",
+    "width": 390,
+    "overflow": false,
+    "columns": null,
+    "railShadow": null,
+    "cardShadow": null,
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      43,
+      43,
+      43
+    ],
+    "contrast": 8.42576635364172
+  },
+  {
+    "path": "/login",
+    "theme": "dark",
+    "width": 390,
+    "overflow": false,
+    "columns": null,
+    "railShadow": null,
+    "cardShadow": null,
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      43,
+      43,
+      43
+    ],
+    "contrast": 8.42576635364172
+  },
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 768,
+    "overflow": false,
+    "columns": 2,
+    "railShadow": "color(srgb 0.980392 0.976471 0.964706 / 0.35) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 12px 0px",
+    "cardShadow": "rgb(206, 145, 128) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 18px -8px",
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 7.853943520575683
+  },
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "columns": 4,
+    "railShadow": "color(srgb 0.980392 0.976471 0.964706 / 0.35) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 12px 0px",
+    "cardShadow": "rgb(206, 145, 128) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 18px -8px",
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 7.853943520575683
+  },
+  {
+    "path": "/",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "columns": null,
+    "railShadow": null,
+    "cardShadow": null,
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      43,
+      43,
+      43
+    ],
+    "contrast": 8.42576635364172
+  },
+  {
+    "path": "/login",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "columns": null,
+    "railShadow": null,
+    "cardShadow": null,
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      43,
+      43,
+      43
+    ],
+    "contrast": 8.42576635364172
+  },
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 1920,
+    "overflow": false,
+    "columns": 4,
+    "railShadow": "color(srgb 0.980392 0.976471 0.964706 / 0.35) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 12px 0px",
+    "cardShadow": "rgb(206, 145, 128) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 18px -8px",
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 7.853943520575683
+  },
+  {
+    "path": "/member/dashboard",
+    "theme": "dark",
+    "width": 2560,
+    "overflow": false,
+    "columns": 4,
+    "railShadow": "color(srgb 0.980392 0.976471 0.964706 / 0.35) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 12px 0px",
+    "cardShadow": "rgb(206, 145, 128) 0px 1px 0px 0px inset, color(srgb 0.807843 0.568627 0.501961 / 0.18) 0px 0px 18px -8px",
+    "muted": [
+      203,
+      199,
+      195
+    ],
+    "background": [
+      48,
+      48,
+      48
+    ],
+    "contrast": 7.853943520575683
+  }
+]

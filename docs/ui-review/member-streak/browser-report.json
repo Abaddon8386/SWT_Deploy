@@ -1,0 +1,91 @@
+{
+  "results": [
+    {
+      "width": 320,
+      "height": 640,
+      "columns": 13,
+      "cells": 91,
+      "activeDates": 41,
+      "snake": "moves",
+      "positions": [
+        {
+          "x": 50.97142791748047,
+          "y": 365.39300537109375
+        },
+        {
+          "x": 67.42857360839844,
+          "y": 362.7479248046875
+        }
+      ],
+      "overflow": false,
+      "chartHeight": 144
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "columns": 13,
+      "cells": 91,
+      "activeDates": 41,
+      "snake": "moves",
+      "positions": [
+        {
+          "x": 85.97142791748047,
+          "y": 361.4644470214844
+        },
+        {
+          "x": 102.42857360839844,
+          "y": 367.9875183105469
+        }
+      ],
+      "overflow": false,
+      "chartHeight": 144
+    },
+    {
+      "width": 768,
+      "height": 1000,
+      "columns": 13,
+      "cells": 91,
+      "activeDates": 41,
+      "snake": "moves",
+      "positions": [
+        {
+          "x": 224.96673583984375,
+          "y": 481.19171142578125
+        },
+        {
+          "x": 255.31138610839844,
+          "y": 493.107421875
+        }
+      ],
+      "overflow": false,
+      "chartHeight": 265.515625
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "columns": 13,
+      "cells": 91,
+      "activeDates": 41,
+      "snake": "moves",
+      "positions": [
+        {
+          "x": 560.9667358398438,
+          "y": 497.25982666015625
+        },
+        {
+          "x": 591.3114013671875,
+          "y": 499.633056640625
+        }
+      ],
+      "overflow": false,
+      "chartHeight": 265.515625
+    }
+  ],
+  "reducedMotion": "static grid",
+  "light": "themed",
+  "empty": "honest zero, no snake",
+  "loading": "no fake zero",
+  "error": "retry works",
+  "nonMembers": "hidden, no request",
+  "errors": []
+}
