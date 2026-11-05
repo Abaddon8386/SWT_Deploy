@@ -59,7 +59,8 @@ export function MemberCheckoutPage() {
             setError('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.');
             return;
           }
-          const quoted = subscription.upgradeCharge;
+          // Số tiền đã chốt lúc tạo yêu cầu (nâng cấp hoặc đăng ký/gia hạn); yêu cầu cũ không có thì theo giá gói.
+          const quoted = subscription.upgradeCharge ?? subscription.quotedPrice;
           setQuotedAmount(typeof quoted === 'number' ? quoted : null);
         }
 

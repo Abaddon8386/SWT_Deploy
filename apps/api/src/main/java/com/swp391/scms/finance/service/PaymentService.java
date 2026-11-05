@@ -690,12 +690,15 @@ public class PaymentService {
                     "error.membership.future_paid_renewal", null,
                     "Paid future renewal requires manager review");
         }
+        // A prorated quote credits the old period up to its quote day, so the new period runs from that day too and
+        // days used between quoting and paying are not credited twice. Legacy quotes (no credit) start on payment day.
+        java.time.LocalDate upgradeStart = isUpgrade ? proratedUpgradeStart(subscription, previous, today) : today;
         if (isUpgrade && "active".equalsIgnoreCase(previous.getStatus())) {
             previous.setStatus("expired");
             previous.setHoldStatus(null);
-            if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
+            if (previous.getEndDate() != null && previous.getEndDate().isAfter(upgradeStart)) {
                 subscription.setReplacedEndDate(previous.getEndDate());
-                previous.setEndDate(today);
+                previous.setEndDate(upgradeStart);
             }
             previous.setUpdatedAt(LocalDateTime.now(clock));
             membershipSubscriptionRepository.save(previous);
@@ -706,8 +709,9 @@ public class PaymentService {
                 && subscription.getMembershipPackage().getDurationDays() > 0
                 && (isUpgrade || subscription.getStartDate() == null || subscription.getStartDate().isBefore(today))) {
             int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
-            subscription.setStartDate(today);
-            subscription.setEndDate(today.plusDays(durationDays - 1L));
+            java.time.LocalDate start = isUpgrade ? upgradeStart : today;
+            subscription.setStartDate(start);
+            subscription.setEndDate(start.plusDays(durationDays - 1L));
         } else if (subscription.getPreviousSubscription() != null && !isUpgrade
                 && subscription.getStartDate() != null && subscription.getEndDate() != null
                 && subscription.getStartDate().isBefore(today)) {
@@ -722,6 +726,18 @@ public class PaymentService {
         }
         subscription.setUpdatedAt(LocalDateTime.now(clock));
         membershipSubscriptionRepository.save(subscription);
+    }
+
+    /**
+     * Start of a paid upgrade: its quote day when the charge was prorated, never before the replaced period began
+     * nor after today; otherwise (quotes made before proration existed) the payment day.
+     */
+    private static java.time.LocalDate proratedUpgradeStart(MembershipSubscription upgrade, MembershipSubscription previous,
+                                                            java.time.LocalDate today) {
+        java.time.LocalDate quotedOn = upgrade.getStartDate();
+        if (upgrade.getCreditApplied() == null || quotedOn == null || quotedOn.isAfter(today)) return today;
+        if (previous.getStartDate() != null && quotedOn.isBefore(previous.getStartDate())) return previous.getStartDate();
+        return quotedOn;
     }
 
     private void validateCheckoutAmount(BigDecimal amount, BigDecimal payable, Payment existing) {

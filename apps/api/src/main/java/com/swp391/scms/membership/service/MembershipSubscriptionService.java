@@ -28,7 +28,6 @@ import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -75,6 +74,9 @@ public class MembershipSubscriptionService {
 
     @Autowired(required = false)
     private EntityManager entityManager;
+
+    @Autowired(required = false)
+    private SubscriptionValueCalculator valueCalculator;
 
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
             MembershipPackageRepository packages,
@@ -155,6 +157,8 @@ public class MembershipSubscriptionService {
         int durationDays = Math.max(1, membershipPackage.getDurationDays());
         subscription.setStartDate(today);
         subscription.setEndDate(today.plusDays(durationDays - 1L));
+        // Giá chốt lúc tạo yêu cầu, giống báo giá nâng cấp: Quản lý đổi giá sau đó không làm đổi số tiền phải thu.
+        subscription.setQuotedPrice(membershipPackage.getPrice());
         subscription.setStatus(STATUS_PENDING_PAYMENT);
         subscription.setCreatedAt(LocalDateTime.now(clock));
         subscription.setUpdatedAt(LocalDateTime.now(clock));
@@ -292,6 +296,7 @@ public class MembershipSubscriptionService {
         renewal.setPreviousSubscription(tail);
         renewal.setStartDate(startDate);
         renewal.setEndDate(endDate);
+        renewal.setQuotedPrice(membershipPackage.getPrice());
         renewal.setStatus(STATUS_PENDING_PAYMENT);
         renewal.setCreatedAt(LocalDateTime.now(clock));
         renewal.setUpdatedAt(LocalDateTime.now(clock));
@@ -395,14 +400,29 @@ public class MembershipSubscriptionService {
                     "Target package must be higher than current package");
         }
 
+        // Phần quy đổi lấy từ tiền hội viên thực trả cho kỳ hiện tại; giá gói mới lấy theo danh mục lúc báo giá.
+        // Cả hai được chốt trên yêu cầu nên Quản lý đổi giá sau đó không làm lệch số tiền phải thu.
+        BigDecimal credit = valueCalculator().remainingValue(current, today);
+        BigDecimal targetPrice = targetPackage.getPrice() != null ? targetPackage.getPrice() : BigDecimal.ZERO;
+        BigDecimal charge = SubscriptionValueCalculator.upgradeCharge(targetPrice, credit);
+        if (charge.signum() <= 0) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_UPGRADE_CREDIT_EXCEEDS",
+                    "error.membership.upgrade_credit_exceeds",
+                    new Object[]{credit.toPlainString(), targetPrice.toPlainString()},
+                    "Unused value of the current period already covers the target package");
+        }
+
         MembershipSubscription upgradeSub = new MembershipSubscription();
         upgradeSub.setMember(current.getMember());
         upgradeSub.setMembershipPackage(targetPackage);
         upgradeSub.setPreviousSubscription(current);
         int durationDays = Math.max(1, targetPackage.getDurationDays());
+        // Ngày bắt đầu là ngày báo giá: phần quy đổi tính tới hôm nay, nên gói mới cũng tính từ hôm nay.
         upgradeSub.setStartDate(today);
         upgradeSub.setEndDate(today.plusDays(durationDays - 1L));
-        upgradeSub.setUpgradeCharge(upgradeCharge(current, currentPackage, targetPackage, today));
+        upgradeSub.setCreditApplied(credit);
+        upgradeSub.setUpgradeCharge(charge);
         upgradeSub.setStatus(STATUS_PENDING_PAYMENT);
         upgradeSub.setCreatedAt(LocalDateTime.now(clock));
         upgradeSub.setUpdatedAt(LocalDateTime.now(clock));
@@ -482,24 +502,8 @@ public class MembershipSubscriptionService {
         return toDto(subscriptions.saveAndFlush(subscription));
     }
 
-    /**
-     * What an upgrade costs at the counter. Once more than half of the current period is used the member pays the
-     * full price of the new package; within the first half only the difference to the new package is charged.
-     * A package that is not cheaper than the old one (same price, longer term) has no difference to charge, so it
-     * is billed at its full price rather than as a zero payment.
-     */
-    public static BigDecimal upgradeCharge(MembershipSubscription current, MembershipPackage currentPackage,
-                                    MembershipPackage targetPackage, LocalDate today) {
-        BigDecimal targetPrice = targetPackage.getPrice() != null ? targetPackage.getPrice() : BigDecimal.ZERO;
-        BigDecimal currentPrice = currentPackage != null && currentPackage.getPrice() != null
-                ? currentPackage.getPrice() : BigDecimal.ZERO;
-        LocalDate start = current.getStartDate();
-        LocalDate end = current.getEndDate();
-        long totalDays = start != null && end != null ? ChronoUnit.DAYS.between(start, end) + 1 : 0;
-        long usedDays = start != null ? Math.max(0, ChronoUnit.DAYS.between(start, today)) : 0;
-        boolean usedMoreThanHalf = totalDays > 0 && usedDays * 2 > totalDays;
-        BigDecimal difference = targetPrice.subtract(currentPrice);
-        return usedMoreThanHalf || difference.signum() <= 0 ? targetPrice : difference;
+    private SubscriptionValueCalculator valueCalculator() {
+        return valueCalculator != null ? valueCalculator : new SubscriptionValueCalculator(paymentRepository);
     }
 
     private boolean isHigherPackage(MembershipPackage currentPackage, MembershipPackage targetPackage) {
@@ -930,7 +934,10 @@ public class MembershipSubscriptionService {
                 s.getHoldRequestedAt(),
                 s.getHoldResolvedAt(),
                 paidThroughDate,
-                s.getUpgradeCharge());
+                s.getUpgradeCharge(),
+                s.getQuotedPrice(),
+                s.getCreditApplied(),
+                isActiveOn(s, LocalDate.now(clock)) ? valueCalculator().remainingValue(s, LocalDate.now(clock)) : null);
     }
 
     private com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto toPendingDto(MembershipSubscription s) {

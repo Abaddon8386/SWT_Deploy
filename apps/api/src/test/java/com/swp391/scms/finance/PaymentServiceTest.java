@@ -633,6 +633,50 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
     @Test
+    @DisplayName("A prorated upgrade paid later keeps its quote: price, credit and start day survive catalog repricing")
+    void proratedUpgradeKeepsItsQuoteAfterRepricing() {
+        Member member = new Member(); member.setUserId(2L);
+        MembershipPackage basic = new MembershipPackage();
+        basic.setId(1L); basic.setPrice(new BigDecimal("199000")); basic.setDurationDays(30); basic.setStatus("active");
+        MembershipPackage vip = new MembershipPackage();
+        vip.setId(2L); vip.setPrice(new BigDecimal("299000")); vip.setDurationDays(30); vip.setStatus("active");
+        MembershipSubscription current = new MembershipSubscription();
+        current.setId(10L); current.setMember(member); current.setMembershipPackage(basic); current.setStatus("active");
+        current.setStartDate(java.time.LocalDate.of(2026, 9, 15)); current.setEndDate(java.time.LocalDate.of(2026, 10, 14));
+        MembershipSubscription upgrade = new MembershipSubscription();
+        upgrade.setId(12L); upgrade.setMember(member); upgrade.setMembershipPackage(vip);
+        upgrade.setPreviousSubscription(current); upgrade.setStatus("pending_payment");
+        // Quoted on 28/09: 17 of 30 days left of 199,000 paid -> 112,000 credit, 187,000 due.
+        upgrade.setStartDate(java.time.LocalDate.of(2026, 9, 28)); upgrade.setEndDate(java.time.LocalDate.of(2026, 10, 27));
+        upgrade.setCreditApplied(new BigDecimal("112000")); upgrade.setUpgradeCharge(new BigDecimal("187000"));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(12L)).thenReturn(Optional.of(upgrade));
+        when(membershipSubscriptionRepository.findByMemberUserId(2L)).thenReturn(List.of(current, upgrade));
+
+        // A quote waiting for payment is not repriced: the raised catalog price is refused at the counter.
+        basic.setPrice(new BigDecimal("249000"));
+        vip.setPrice(new BigDecimal("399000"));
+        PaymentProcessDto repriced = new PaymentProcessDto(2L, 12L, null, new BigDecimal("399000"), "pos", null, null);
+        repriced.setPackageId(2L);
+        assertThrows(BadRequestException.class, () -> paymentService.processPayment(repriced));
+        assertEquals("pending_payment", upgrade.getStatus());
+
+        // The member pays the quoted amount on 01/10.
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 12L, null, new BigDecimal("187000"), "pos", null, null);
+        dto.setPackageId(2L);
+        paymentService.processPayment(dto);
+
+        assertEquals("active", upgrade.getStatus());
+        assertEquals(new BigDecimal("187000"), upgrade.payableAmount());
+        // New period runs from the quote day; the old one ends that day, so credited days are not used twice.
+        assertEquals(java.time.LocalDate.of(2026, 9, 28), upgrade.getStartDate());
+        assertEquals(java.time.LocalDate.of(2026, 10, 27), upgrade.getEndDate());
+        assertEquals("expired", current.getStatus());
+        assertEquals(java.time.LocalDate.of(2026, 9, 28), current.getEndDate());
+        assertEquals(java.time.LocalDate.of(2026, 10, 14), upgrade.getReplacedEndDate());
+    }
+
+    @Test
     void posCannotConfirmUpgradeWhenPaidFutureRenewalAppears() {
         Member member = new Member(); member.setUserId(2L);
         MembershipPackage basic = new MembershipPackage();

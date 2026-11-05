@@ -23,14 +23,30 @@ public final class SubscriptionResponses {
             LocalDateTime holdRequestedAt,
             LocalDateTime holdResolvedAt,
             LocalDate paidThroughDate,
-            java.math.BigDecimal upgradeCharge
+            java.math.BigDecimal upgradeCharge,
+            /** Pending registration or renewal: catalog price fixed when the request was made. */
+            java.math.BigDecimal quotedPrice,
+            /** Pending upgrade: unused value of the replaced period already deducted from the price. */
+            java.math.BigDecimal creditApplied,
+            /** Period active today: unused value that an upgrade would deduct (from the amount actually paid). */
+            java.math.BigDecimal remainingValue
     ) {
+        public SubscriptionDto(Long id, Long memberId, Long packageId, String packageName,
+                Long previousSubscriptionId, LocalDate startDate, LocalDate endDate, String status,
+                String qrCode, LocalDateTime createdAt, String holdStatus, String holdReason,
+                LocalDateTime holdRequestedAt, LocalDateTime holdResolvedAt, LocalDate paidThroughDate,
+                java.math.BigDecimal upgradeCharge) {
+            this(id, memberId, packageId, packageName, previousSubscriptionId, startDate, endDate, status, qrCode,
+                    createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, paidThroughDate, upgradeCharge,
+                    null, null, null);
+        }
+
         public SubscriptionDto(Long id, Long memberId, Long packageId, String packageName,
                 Long previousSubscriptionId, LocalDate startDate, LocalDate endDate, String status,
                 String qrCode, LocalDateTime createdAt, String holdStatus, String holdReason,
                 LocalDateTime holdRequestedAt, LocalDateTime holdResolvedAt, LocalDate paidThroughDate) {
             this(id, memberId, packageId, packageName, previousSubscriptionId, startDate, endDate,
-                    status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, paidThroughDate, null);
+                    status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, paidThroughDate, null, null, null, null);
         }
 
         public SubscriptionDto(Long id, Long memberId, Long packageId, String packageName,
@@ -38,7 +54,7 @@ public final class SubscriptionResponses {
                 String qrCode, LocalDateTime createdAt, String holdStatus, String holdReason,
                 LocalDateTime holdRequestedAt, LocalDateTime holdResolvedAt) {
             this(id, memberId, packageId, packageName, previousSubscriptionId, startDate, endDate,
-                    status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, null, null);
+                    status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, null, null, null, null, null);
         }
 
         public SubscriptionDto(

@@ -51,6 +51,9 @@ public class MembershipCancellationService {
     @Autowired(required = false)
     private NotificationService notificationService;
 
+    @Autowired(required = false)
+    private SubscriptionValueCalculator valueCalculator;
+
     public MembershipCancellationService(MembershipCancellationRequestRepository requests,
             MembershipSubscriptionRepository subscriptions, MemberRepository members,
             UserRepository users, EnrollmentService enrollments, MessageService messages, Clock clock,
@@ -90,9 +93,7 @@ public class MembershipCancellationService {
         request.setMember(member);
         request.setSubscription(subscription);
         request.setReason(reason);
-        if (subscription.getMembershipPackage() != null) {
-            request.setRefundAmount(subscription.getMembershipPackage().getPrice());
-        }
+        request.setRefundAmount(defaultRefund(subscription));
         request.setRequestedAt(LocalDateTime.now(clock));
         return toDto(requests.saveAndFlush(request));
     }
@@ -139,9 +140,7 @@ public class MembershipCancellationService {
             throw new ConflictException("CANCELLATION_PENDING_EXISTS", "error.membership.cancellation_pending_exists", null, null);
         }
 
-        BigDecimal defaultRefund = subscription.getMembershipPackage() != null && subscription.getMembershipPackage().getPrice() != null
-                ? subscription.getMembershipPackage().getPrice()
-                : BigDecimal.ZERO;
+        BigDecimal defaultRefund = defaultRefund(subscription);
         BigDecimal refundAmount = (body.refundAmount() != null && body.refundAmount().compareTo(BigDecimal.ZERO) >= 0)
                 ? body.refundAmount()
                 : defaultRefund;
@@ -231,8 +230,8 @@ public class MembershipCancellationService {
             BigDecimal refundAmount = (body != null && body.refundAmount() != null)
                     ? body.refundAmount()
                     : request.getRefundAmount();
-            if (refundAmount == null && subscription.getMembershipPackage() != null) {
-                refundAmount = subscription.getMembershipPackage().getPrice();
+            if (refundAmount == null) {
+                refundAmount = defaultRefund(subscription);
             }
             request.setRefundAmount(refundAmount);
             if (walletService != null && refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -341,6 +340,15 @@ public class MembershipCancellationService {
         return subscription;
     }
 
+    /**
+     * Suggested refund: the unused share of what the member actually paid for this period (including value carried
+     * over from an upgraded package), never the current catalog price. A manager may still override it.
+     */
+    private BigDecimal defaultRefund(MembershipSubscription subscription) {
+        SubscriptionValueCalculator calculator = valueCalculator != null ? valueCalculator : new SubscriptionValueCalculator(payments);
+        return calculator.remainingValue(subscription, LocalDate.now(clock));
+    }
+
     private boolean isActiveNow(MembershipSubscription subscription) {
         LocalDate today = LocalDate.now(clock);
         return "active".equalsIgnoreCase(subscription.getStatus())
@@ -352,8 +360,8 @@ public class MembershipCancellationService {
         Member member = request.getMember();
         MembershipSubscription subscription = request.getSubscription();
         BigDecimal refund = request.getRefundAmount();
-        if (refund == null && subscription != null && subscription.getMembershipPackage() != null) {
-            refund = subscription.getMembershipPackage().getPrice();
+        if (refund == null && subscription != null) {
+            refund = defaultRefund(subscription);
         }
         return new CancellationDtos.Response(request.getId(), member.getUserId(),
                 member.getUser() == null ? null : member.getUser().getFullName(),

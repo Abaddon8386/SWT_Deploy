@@ -811,7 +811,7 @@ export function MemberPackagesPage() {
             <div>
               <h2 className="portal-card-title">{pending.packageName}</h2>
               <p className="row-card__meta" style={{ margin: '4px 0 0' }}>
-                Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pending.upgradeCharge ?? pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
+                Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pending.upgradeCharge ?? pending.quotedPrice ?? pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
               </p>
             </div>
             <span className="badge badge-warning">Đang chờ thanh toán</span>
@@ -964,6 +964,8 @@ export function MemberPackagesPage() {
             const renewalConflict = renewFrom && historyState.status === 'success' ? renewalPath(renewFrom.id).conflict : false;
             const nextRenewals = upgradeFrom ? renewalCount(upgradeFrom.id) : 0;
             const hasPaidFutureUpgrade = upgradeFrom !== null && futurePeriods.length > 0;
+            const quote = upgradeFrom ? upgradeQuote(upgradeFrom, membershipPackage.price, todayKey()) : null;
+            const upgradeCovered = quote !== null && !quote.allowed;
 
             const isPending =
               pending?.packageId ===
@@ -986,7 +988,8 @@ export function MemberPackagesPage() {
               hasPaidFutureUpgrade ||
               renewalConflict ||
               ambiguousRenewal ||
-              hasLowerOrNonUpgradableCurrentPackage;
+              hasLowerOrNonUpgradableCurrentPackage ||
+              upgradeCovered;
 
             const blockedReason = syncError ? 'Chờ đồng bộ trạng thái mới nhất.'
               : hasPendingHold ? 'Yêu cầu bảo lưu đang chờ xử lý. Gói hiện tại vẫn có hiệu lực.'
@@ -998,6 +1001,7 @@ export function MemberPackagesPage() {
               : nextRenewals > 0 ? 'Đã có kỳ tiếp theo; vui lòng liên hệ nhân viên trước khi nâng cấp.'
               : frozenSubscription ? 'Mở lại gói bảo lưu trước khi tiếp tục.'
               : hasLowerOrNonUpgradableCurrentPackage ? 'Chỉ có thể gia hạn gói hiện tại hoặc nâng lên gói cao hơn.'
+              : upgradeCovered ? 'Giá trị còn lại của gói hiện tại đã bằng hoặc vượt giá gói này. Hãy chọn gói cao hơn hoặc gia hạn khi gói sắp hết.'
               : ambiguousRenewal ? 'Có nhiều kỳ cùng ngày kết thúc. Vui lòng liên hệ nhân viên.' : null;
 
             let buttonText = historyState.status === 'success' && historyState.data.length === 0
@@ -1096,16 +1100,19 @@ export function MemberPackagesPage() {
                     {formatPrice(membershipPackage.price)}
                     <span className="package-price-term"> / {membershipPackage.durationDays} ngày</span>
                   </div>
-                  {upgradeFrom && currentPackage && (() => {
-                    const quote = upgradeQuote(upgradeFrom, currentPackage.price, membershipPackage.price, todayKey());
-                    return <p className="row-card__meta" data-testid="upgrade-quote" style={{ margin: '8px 0 0' }}>
-                      <strong>Nâng cấp: thanh toán {formatPrice(quote.amount)}</strong>
-                      {quote.mode === 'full'
-                        ? ` — đã dùng ${quote.usedDays}/${quote.totalDays} ngày (quá nửa) nên đóng đủ giá gói mới.`
-                        : ` — bù chênh lệch so với gói hiện tại (đã dùng ${quote.usedDays}/${quote.totalDays} ngày).`}
-                      {' '}Gói hiện tại hết hiệu lực khi thanh toán được xác nhận.
-                    </p>;
-                  })()}
+                  {quote && (
+                    <p className="row-card__meta" data-testid="upgrade-quote" style={{ margin: '8px 0 0' }}>
+                      {quote.allowed ? (
+                        <>
+                          <strong>Nâng cấp: thanh toán {formatPrice(quote.amount)}</strong>
+                          {` — đã trừ ${formatPrice(quote.credit)} giá trị còn lại của gói hiện tại (${quote.remainingDays}/${quote.totalDays} ngày chưa dùng).`}
+                          {' '}Gói mới tính từ hôm nay; gói hiện tại kết thúc khi thanh toán được xác nhận.
+                        </>
+                      ) : (
+                        <>Giá trị còn lại của gói hiện tại ({formatPrice(quote.credit)}) đã bằng hoặc vượt giá gói này nên không nâng cấp được.</>
+                      )}
+                    </p>
+                  )}
 
                   <button
                     type="button"
@@ -1156,8 +1163,10 @@ export function MemberPackagesPage() {
             <p>{requestResult.action === 'upgrade' ? 'Nâng cấp gói tập' : requestResult.action === 'renew' ? 'Gia hạn gói tập' : 'Đăng ký gói tập'} · #{requestResult.subscription.id}</p>
             <p>Yêu cầu của bạn đang chờ xử lý.</p>
             {requestResult.action === 'upgrade' && requestResult.subscription.upgradeCharge != null
-              ? <p className="row-card__meta">Số tiền cần thanh toán để nâng cấp: <strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> (giá gói mới {formatPrice(requestResult.membershipPackage.price)}). Gói hiện tại hết hiệu lực khi thanh toán được xác nhận.</p>
-              : <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán được hệ thống xác nhận khi mở VNPay hoặc tại quầy.</p>}
+              ? <p className="row-card__meta">Số tiền cần thanh toán để nâng cấp: <strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> (giá gói mới {formatPrice(requestResult.membershipPackage.price)}{requestResult.subscription.creditApplied ? `, đã trừ ${formatPrice(requestResult.subscription.creditApplied)} giá trị còn lại của gói hiện tại` : ''}). Số tiền này đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán. Gói hiện tại kết thúc khi thanh toán được xác nhận.</p>
+              : requestResult.subscription.quotedPrice != null
+                ? <p className="row-card__meta">Số tiền cần thanh toán: <strong>{formatPrice(requestResult.subscription.quotedPrice)}</strong>. Giá đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán.</p>
+                : <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán được hệ thống xác nhận khi mở VNPay hoặc tại quầy.</p>}
             <p className="row-card__meta">{paymentInstructionsNotice}</p>
             <div className="package-result__actions">
               <Link

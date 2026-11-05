@@ -175,11 +175,11 @@ export function StaffReceptionPage() {
 
   const handleOpenCancelModal = () => {
     if (!selectedMember) return;
-    const matchedPkg = activeCandidate
-      ? packages.find((p) => p.id === activeCandidate.packageId)
-      : undefined;
     setCancelReason('');
-    setCancelRefundAmount(matchedPkg ? String(matchedPkg.price) : '');
+    // Đề xuất theo phần chưa dùng của số tiền hội viên thực trả (backend tính), không theo giá niêm yết của gói.
+    // Để trống thì backend tự điền cùng con số này.
+    const suggested = activeCandidate?.remainingValue;
+    setCancelRefundAmount(typeof suggested === 'number' ? String(suggested) : '');
     setCancelModalError(null);
     setIsCancelModalOpen(true);
   };

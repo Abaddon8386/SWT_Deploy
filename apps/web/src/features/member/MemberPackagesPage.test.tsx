@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberPackagesPage } from './MemberPackagesPage';
 import type { MemberSubscription } from './membershipApi';
 import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 
 const noticeText = () => getNotices().map((notice) => notice.message).join(' ');
 
@@ -336,16 +337,17 @@ describe('SCRUM-86 packages', () => {
       status: 'pending_payment',
     };
     api.packages.mockResolvedValue([lowerPackage, membershipPackage, higherPackage]);
-    api.current.mockResolvedValue(active);
-    api.history.mockResolvedValue([active]);
-    api.upgrade.mockResolvedValue({ ...upgradePending, upgradeCharge: 1234000 });
+    const activeWithValue = { ...active, remainingValue: 266000 };
+    api.current.mockResolvedValue(activeWithValue);
+    api.history.mockResolvedValue([activeWithValue]);
+    api.upgrade.mockResolvedValue({ ...upgradePending, upgradeCharge: 1234000, creditApplied: 266000 });
 
     await render();
 
-    // The card previews the charge and the rule behind it before the member commits.
+    // The card previews the charge: the new price minus the unused value the backend computed from what was paid.
     const quote = host.querySelector('[data-testid="upgrade-quote"]');
-    expect(quote?.textContent).toContain('Nâng cấp: thanh toán');
-    expect(quote?.textContent).toMatch(/quá nửa|bù chênh lệch/);
+    expect(quote?.textContent).toContain(`Nâng cấp: thanh toán ${formatPrice(higherPackage.price - 266000)}`);
+    expect(quote?.textContent).toContain(`đã trừ ${formatPrice(266000)} giá trị còn lại`);
 
     expect(button('Đang có gói hoạt động')?.disabled).toBe(false);
     expect(button('Gia hạn')?.disabled).toBe(false);

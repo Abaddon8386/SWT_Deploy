@@ -42,6 +42,8 @@ export interface RenewalCandidate {
   endDate: string;
   status: string;
   createdAt: string;
+  /** Kỳ đang hiệu lực hôm nay: phần chưa dùng của số tiền thực trả, cũng là số tiền hoàn đề xuất khi hủy gói. */
+  remainingValue?: number | null;
 }
 
 export interface HoldRequestItem {

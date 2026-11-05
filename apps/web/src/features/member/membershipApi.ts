@@ -19,8 +19,14 @@ export interface MemberSubscription {
   startDate: string;
   endDate: string;
   paidThroughDate?: string | null;
-  /** Quoted amount of a pending upgrade; null for other subscriptions. */
+  /** Quoted amount of a pending upgrade: new package price minus `creditApplied`; null for other subscriptions. */
   upgradeCharge?: number | null;
+  /** Pending registration or renewal: catalog price fixed when the request was made; null for older requests. */
+  quotedPrice?: number | null;
+  /** Pending upgrade: unused value of the replaced period already deducted from the price. */
+  creditApplied?: number | null;
+  /** Period active today: unused share of what was actually paid, deducted by an upgrade. */
+  remainingValue?: number | null;
   status: string;
   qrCode: string | null;
   createdAt: string;

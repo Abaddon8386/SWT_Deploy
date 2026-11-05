@@ -81,6 +81,24 @@ class MembershipCancellationServiceTest {
     }
 
     @Test
+    void requestSuggestsUnusedShareOfWhatWasPaidNotTheCatalogPrice() {
+        // Bought for 320,000; the manager has since raised the package to 500,000.
+        active.getMembershipPackage().setPrice(new java.math.BigDecimal("500000"));
+        com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
+        paid.setSubscriptionId(100L);
+        paid.setAmount(new java.math.BigDecimal("320000"));
+        paid.setStatus("success");
+        when(payments.findAllBySubscriptionId(100L)).thenReturn(List.of(paid));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CancellationDtos.Response result = service.request(owner, 100L, new CancellationDtos.Request("Moving"));
+
+        // 01/10–01/11 is 32 days; on 22/10, 11 days are left: 320,000 × 11/32 = 110,000.
+        assertThat(result.refundAmount()).isEqualByComparingTo("110000");
+    }
+
+    @Test
     void requestRequiresOwnerAndNonblankReason() {
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
         assertThatThrownBy(() -> service.request(new AuthenticatedPrincipal(11L, "other", "MEMBER"),

@@ -163,6 +163,18 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.textContent).toContain('Đơn #55');
   });
 
+  it('charges the price fixed on a pending renewal after the package was repriced', async () => {
+    // Requested at 600,000; the catalog now lists the package at 650,000.
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{
+      ...pendingUpgrade, id: 56, packageId: 1, packageName: 'Gói Tiêu Chuẩn 1 Tháng',
+      upgradeCharge: null, quotedPrice: 600000,
+    }]);
+    await renderCheckout('/member/packages/checkout?packageId=1&subscriptionId=56');
+
+    expect(host.querySelector('.order-breakdown-row.total')?.textContent).toContain('600.000');
+    expect(host.querySelector('.order-breakdown-row.total')?.textContent).not.toContain('650.000');
+  });
+
   it('shows the error and does not claim success when the receipt cannot be sent', async () => {
     vi.mocked(membershipApi.createCashReceiptPayment).mockRejectedValue(new Error('Đã có thanh toán cho yêu cầu này'));
     await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
