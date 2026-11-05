@@ -4,6 +4,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemberProgressPage } from './MemberProgressPage';
 import * as api from './memberProgressApi';
+import { memberCheckinApi } from './memberCheckinApi';
+vi.mock('./memberCheckinApi', () => ({ memberCheckinApi: { history: vi.fn().mockResolvedValue([]) } }));
 
 vi.mock('./memberProgressApi', () => ({ getMyEvaluations: vi.fn().mockResolvedValue([]), getMyProgressMetrics: vi.fn(), getMyTrainingPlans: vi.fn(), getMyCompletedItemIds: vi.fn(), setTrainingItemCompleted: vi.fn() }));
 let host: HTMLDivElement;
@@ -163,4 +165,19 @@ it('distinguishes a future or expired active plan from a rest day', async () => 
  const {date,plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([{...plan,startDate:'2099-01-01',endDate:'2099-01-31'}]);
  await render();expect(host.textContent).toContain('Chưa có giáo án có hiệu lực trong hôm nay.');
  expect(api.getMyCompletedItemIds).toHaveBeenCalledWith(date);
+});
+
+it('provides a separate workout history tab while preserving progress', async () => {
+  await render();
+  const history = [...host.querySelectorAll('button')].find(button => button.textContent === 'Lịch sử tập luyện');
+  expect(history).toBeDefined();
+  expect(memberCheckinApi.history).not.toHaveBeenCalled();
+  await act(async () => history!.click());
+  expect(memberCheckinApi.history).toHaveBeenCalledTimes(1);
+  expect(host.textContent).toContain('Nhịp tập luyện của bạn');
+  await act(async () => ([...host.querySelectorAll('button')].find(button => button.textContent === 'Tiến độ & Giáo án') as HTMLButtonElement).click());
+  expect(host.querySelectorAll('svg.member-progress-chart')).toHaveLength(2);
+  expect(api.getMyProgressMetrics).toHaveBeenCalledTimes(1);
+  await act(async () => history!.click());
+  expect(memberCheckinApi.history).toHaveBeenCalledTimes(2);
 });
