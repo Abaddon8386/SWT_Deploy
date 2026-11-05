@@ -163,7 +163,7 @@ public class CatalogSeeder implements ApplicationRunner {
             retirePackage(retired);
         }
 
-        if (equipmentRepository != null && equipmentRepository.count() == 0 && roomRepository != null) {
+        if (equipmentRepository != null && roomRepository != null) {
             seedInitialEquipment();
         }
     }
@@ -178,21 +178,39 @@ public class CatalogSeeder implements ApplicationRunner {
                 .findFirst().orElse(null);
 
         if (standard != null) {
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy chạy bộ điện Commercial Pro", "EQ-RUN-01", "Cardio", standard, 8, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Xe đạp tập Upright Bike", "EQ-BIKE-01", "Cardio", standard, 6, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Giàn tạ đa năng Smith Machine", "EQ-SMI-01", "Strength", standard, 3, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy kéo xô đôi Dual Lat Pulldown", "EQ-LAT-01", "Strength", standard, 2, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Dàn tạ tay cao su Dumbbell (2.5-40kg)", "EQ-DUMB-01", "Free Weights", standard, 2, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Khung gánh tạ Squat Rack", "EQ-SQUAT-01", "Strength", standard, 2, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Ghế đẩy ngực đa năng Adjustable Bench", "EQ-BENCH-01", "Free Weights", standard, 6, "active"));
+            seedEquipmentIfMissing("Máy chạy bộ điện Commercial Pro", "EQ-RUN-01", "Cardio", standard, 8, "active");
+            seedEquipmentIfMissing("Xe đạp tập Upright Bike", "EQ-BIKE-01", "Cardio", standard, 6, "active");
+            seedEquipmentIfMissing("Giàn tạ đa năng Smith Machine", "EQ-SMI-01", "Strength", standard, 3, "active");
+            seedEquipmentIfMissing("Máy kéo xô đôi Dual Lat Pulldown", "EQ-LAT-01", "Strength", standard, 2, "active");
+            seedEquipmentIfMissing("Dàn tạ tay cao su Dumbbell (2.5-40kg)", "EQ-DUMB-01", "Free Weights", standard, 2, "active");
+            seedEquipmentIfMissing("Khung gánh tạ Squat Rack", "EQ-SQUAT-01", "Strength", standard, 2, "active");
+            seedEquipmentIfMissing("Ghế đẩy ngực đa năng Adjustable Bench", "EQ-BENCH-01", "Free Weights", standard, 6, "active");
         }
         if (vip != null) {
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy chạy bộ cao cấp Technogym Artis Run", "EQ-VIP-RUN-01", "Cardio", vip, 4, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy tập toàn thân Synchro Elliptical VIP", "EQ-VIP-SYN-01", "Cardio", vip, 3, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Dàn tạ khối thông minh Technogym Kinesis One", "EQ-VIP-KIN-01", "Strength", vip, 2, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Dàn tạ đơn Urethane bọc crôm VIP", "EQ-VIP-DUMB-01", "Free Weights", vip, 1, "active"));
-            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment("Máy đo chỉ số cơ thể chuyên sâu InBody 770", "EQ-VIP-INBODY-01", "Diagnostic", vip, 1, "active"));
+            seedEquipmentIfMissing("Máy chạy bộ cao cấp Technogym Artis Run", "EQ-VIP-RUN-01", "Cardio", vip, 4, "active");
+            seedEquipmentIfMissing("Máy tập toàn thân Synchro Elliptical VIP", "EQ-VIP-SYN-01", "Cardio", vip, 3, "active");
+            seedEquipmentIfMissing("Dàn tạ khối thông minh Technogym Kinesis One", "EQ-VIP-KIN-01", "Strength", vip, 2, "active");
+            seedEquipmentIfMissing("Dàn tạ đơn Urethane bọc crôm VIP", "EQ-VIP-DUMB-01", "Free Weights", vip, 1, "active");
+            seedEquipmentIfMissing("Máy đo chỉ số cơ thể chuyên sâu InBody 770", "EQ-VIP-INBODY-01", "Diagnostic", vip, 1, "active");
         }
+    }
+
+    private void seedEquipmentIfMissing(String name, String code, String category, com.swp391.scms.facilities.entity.Room room, int quantity, String status) {
+        if (equipmentRepository != null && !equipmentRepository.existsByCode(code)) {
+            equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment(name, code, category, room, quantity, status));
+        }
+    }
+
+    private void upsertRoom(String name, String location, int capacity, String status, String tier) {
+        for (var r : rooms.list()) {
+            if (name.equalsIgnoreCase(r.name())) {
+                if (tier != null && !tier.equalsIgnoreCase(r.tier())) {
+                    rooms.update(r.id(), new RoomRequest(r.name(), r.location(), r.capacity(), r.status(), r.disciplineId(), r.openTime(), r.closeTime(), tier));
+                }
+                return;
+            }
+        }
+        rooms.create(new RoomRequest(name, location, capacity, status, null, null, null, tier));
     }
 
     /** Tạo bộ môn chuẩn nếu chưa có; đổi tên bộ môn cũ tương ứng (giữ nguyên id và lớp học đang gắn). */
