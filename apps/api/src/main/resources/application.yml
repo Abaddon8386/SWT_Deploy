@@ -107,10 +107,10 @@ app:
     class-reminder:
       cron: ${APP_SCHEDULER_CLASS_REMINDER_CRON:0 */30 * * * ?}
   shop:
-    shipping-fee-vnd: ${APP_SHOP_SHIPPING_FEE_VND:30000}
-    free-shipping-threshold-vnd: ${APP_SHOP_FREE_SHIPPING_THRESHOLD_VND:800000}
-    reservation-minutes: ${APP_SHOP_RESERVATION_MINUTES:30}
-    max-unpaid-orders-per-member: ${APP_SHOP_MAX_UNPAID_ORDERS:3}
-    pickup-address: "Quầy lễ tân SÖL Fitness — Tầng 1, Khu liên hợp thể thao trung tâm"
-    pickup-hours: "06:00 – 22:00 (Thứ 2 – Chủ nhật)"
-    seed-enabled: ${APP_SHOP_SEED_ENABLED:false}
+    shipping-fee: ${APP_SHOP_SHIPPING_FEE_VND:30000}
+    free-shipping-threshold: ${APP_SHOP_FREE_SHIPPING_THRESHOLD_VND:500000}
+    payment-window-minutes: ${APP_SHOP_RESERVATION_MINUTES:30}
+    counter-hold-hours: ${APP_SHOP_COUNTER_HOLD_HOURS:48}
+    pickup-address: "120 Hai Bà Trưng, Phường Sài Gòn, TP. Hồ Chí Minh — quầy lễ tân"
+    seed-samples: ${APP_SHOP_SEED_ENABLED:false}
+    expiry-interval-ms: ${APP_SHOP_EXPIRY_INTERVAL_MS:60000}
