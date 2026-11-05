@@ -31,6 +31,7 @@ class AuditAspectTest {
         user.setId(42L);
         user.setFullName("Before");
         user.setPasswordHash("secret");
+        user.setAvatarUrl("data:image/png;base64,c2Vuc2l0aXZlLWltYWdl");
         when(point.getArgs()).thenReturn(new Object[]{42L});
         when(entityManager.find(com.swp391.scms.users.entity.User.class, 42L, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)).thenReturn(user);
         when(point.proceed()).thenAnswer(invocation -> { user.setFullName("After"); return null; });
@@ -43,6 +44,8 @@ class AuditAspectTest {
         assertEquals("Before", new ObjectMapper().readTree(captor.getValue().getOldValue()).get("fullName").asText());
         assertEquals("After", new ObjectMapper().readTree(captor.getValue().getNewValue()).get("fullName").asText());
         org.junit.jupiter.api.Assertions.assertFalse(captor.getValue().getOldValue().contains("secret"));
+        org.junit.jupiter.api.Assertions.assertFalse(captor.getValue().getOldValue().contains("c2Vuc2l0aXZlLWltYWdl"));
+        org.junit.jupiter.api.Assertions.assertFalse(captor.getValue().getNewValue().contains("c2Vuc2l0aXZlLWltYWdl"));
     }
 
     @Mock AuditLogRepository repository;

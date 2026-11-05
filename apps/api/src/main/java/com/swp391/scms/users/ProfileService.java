@@ -70,7 +70,7 @@ public class ProfileService {
                 ? null
                 : request.gender().trim().toLowerCase(java.util.Locale.ROOT);
         if (gender != null && !List.of("male", "female", "other").contains(gender)) {
-            gender = null;
+            throw new BadRequestException("INVALID_GENDER", "validation.users.gender.invalid", null, null);
         }
         user.setGender(gender);
         user.setAvatarUrl(request.avatarUrl() == null || request.avatarUrl().isBlank() ? User.DEFAULT_AVATAR_URL : request.avatarUrl().trim());
@@ -82,9 +82,10 @@ public class ProfileService {
             member.setFitnessGoal(request.fitnessGoal());
             if (request.fitnessLevel() != null && !request.fitnessLevel().isBlank()) {
                 String level = request.fitnessLevel().trim().toLowerCase(java.util.Locale.ROOT);
-                if (List.of("beginner", "intermediate", "advanced").contains(level)) {
-                    member.setFitnessLevel(level);
+                if (!List.of("beginner", "intermediate", "advanced").contains(level)) {
+                    throw new BadRequestException("INVALID_FITNESS_LEVEL", "validation.users.fitness_level.invalid", null, null);
                 }
+                member.setFitnessLevel(level);
             }
             member.setEmergencyContactName(request.emergencyContactName());
             member.setEmergencyContactPhone(request.emergencyContactPhone());

@@ -95,7 +95,7 @@ public class AuditAspect {
                     if (user == null) return null;
                     node.put("id", id).put("fullName", user.getFullName()).put("email", user.getEmail())
                             .put("phone", user.getPhone()).put("status", user.getStatus())
-                            .put("gender", user.getGender()).put("avatarUrl", user.getAvatarUrl())
+                            .put("gender", user.getGender())
                             .put("address", user.getAddress());
                     if (user.getDob() != null) node.put("dob", user.getDob().toString());
                     if (user.getDeletedAt() != null) node.put("deletedAt", user.getDeletedAt().toString());

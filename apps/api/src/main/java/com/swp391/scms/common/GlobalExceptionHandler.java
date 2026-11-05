@@ -191,7 +191,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
         String rootMsg = ex.getRootCause() != null ? ex.getRootCause().getMessage() : ex.getMessage();
         String normalizedRootMsg = rootMsg == null ? "" : rootMsg.toLowerCase(java.util.Locale.ROOT);
-        log.error("Data integrity violation from {}: {}", ex.getMostSpecificCause().getClass().getSimpleName(), rootMsg);
+        log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
             String courtCode = null;

@@ -168,6 +168,35 @@ class ProfileControllerTest {
     }
 
     @Test
+    void rejectsInvalidGenderInsteadOfSilentlyClearingIt() throws Exception {
+        User user = sampleUser();
+        user.setGender("male");
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+        var payload = objectMapper.valueToTree(sampleProfile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) payload).put("gender", "invalid");
+        mockMvc.perform(put("/api/v1/profile").header("Accept-Language", "en")
+                        .contentType(MediaType.APPLICATION_JSON).content(payload.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_GENDER"))
+                .andExpect(jsonPath("$.message").value("Invalid gender. Allowed values: male, female, other"));
+    }
+
+    @Test
+    void rejectsInvalidFitnessLevelInsteadOfReportingSuccessfulSave() throws Exception {
+        var member = new com.swp391.scms.users.entity.Member();
+        member.setFitnessLevel("beginner");
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(sampleUser()));
+        when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
+        var payload = objectMapper.valueToTree(sampleProfile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) payload).put("fitnessLevel", "expert");
+        mockMvc.perform(put("/api/v1/profile").header("Accept-Language", "en")
+                        .contentType(MediaType.APPLICATION_JSON).content(payload.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_FITNESS_LEVEL"))
+                .andExpect(jsonPath("$.message").value("Fitness level must be beginner, intermediate or advanced"));
+    }
+
+    @Test
     @DisplayName("POST /api/v1/profile/avatar accepts valid PNG base64 and rejects unsupported MIME or >2MB payload")
     void validateAvatarUploadConstraints() throws Exception {
         when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(sampleUser()));
