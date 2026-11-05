@@ -209,6 +209,11 @@ export function splitIntoHours(events: TimetableEvent[]): HourlyTimetableEvent[]
   });
 }
 
+/** Lớp CSS theo chiều cao thật của khối lịch: thấp thì bỏ phòng, khoảng 1 giờ thì tên một dòng. */
+export function blockClass(heightPx: number): string {
+  return heightPx < 64 ? ' is-short' : heightPx < 100 ? ' is-compact' : '';
+}
+
 /** Số giờ tối thiểu của khung thu gọn, để tuần ít lịch không thành bảng quá thấp. */
 export const TIMETABLE_MIN_FIT_HOURS = 8;
 
