@@ -254,8 +254,8 @@ body:has(.portal-backdrop) .sol-toast__icon { display: none; }
 .portal-account { gap: 9px; min-height: 44px; padding: 4px 8px; border: 0; border-radius: 10px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .portal-account-name { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
 .portal-account-name small { display: block; font-size: 11px; font-weight: 400; color: var(--portal-muted); }
-.portal-avatar-dropdown__link { display: flex; align-items: center; width: 100%; min-height: 44px; margin-bottom: 4px; padding: 10px 12px; border-radius: 10px; color: var(--portal-paper); font: 500 12px var(--font-sans); text-decoration: none; }
-.portal-avatar-dropdown__link:hover { background: var(--portal-raised); }
+.portal-avatar-dropdown__link { display: flex; align-items: center; width: 100%; min-height: 44px; margin-bottom: 4px; padding: 10px 12px; border-radius: 10px; color: var(--portal-paper); font: 500 12px var(--font-sans); text-decoration: none; border: 1px solid transparent; transition: background-color .15s ease, border-color .15s ease; }
+.portal-avatar-dropdown__link:hover, .portal-avatar-dropdown__link:focus-visible { background: var(--portal-raised); border-color: var(--portal-border, #ffffff1a); outline: none; }
 .portal-icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 14px; background: var(--portal-surface); color: var(--portal-muted); line-height: 1; cursor: pointer; }
 .portal-mobile-menu, .portal-mobile-logout { display: none; }
 .portal-mobile-nav { display: none; }

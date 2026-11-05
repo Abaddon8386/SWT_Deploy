@@ -448,19 +448,8 @@ function PortalShellContent({ user }: { user: UserSession }) {
                     to="/member/profile"
                     role="menuitem"
                     data-testid="avatar-menu-profile"
+                    className="portal-avatar-dropdown__link"
                     onClick={() => setAvatarMenuOpen(false)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: 10,
-                      color: 'var(--portal-paper, #faf9f6)',
-                      font: '500 12px var(--font-sans)',
-                      textDecoration: 'none',
-                      marginBottom: 4,
-                    }}
                   >
                     <span>{t('Thông tin cá nhân', 'Personal Profile')}</span>
                   </Link>
