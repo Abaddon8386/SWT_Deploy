@@ -67,7 +67,7 @@ public class ProfileService {
         }
         user.setDob(request.dob());
         user.setGender(request.gender());
-        user.setAvatarUrl(request.avatarUrl() == null || request.avatarUrl().isBlank() ? null : request.avatarUrl().trim());
+        user.setAvatarUrl(request.avatarUrl() == null || request.avatarUrl().isBlank() ? User.DEFAULT_AVATAR_URL : request.avatarUrl().trim());
         user.setAddress(request.address());
 
         Member member = memberRepository.findById(userId).orElse(null);
@@ -112,7 +112,7 @@ public class ProfileService {
     public ProfileDto updateAvatar(Long userId, String avatarUrl) {
         User user = findActiveUser(userId);
         validateAvatarUrl(avatarUrl);
-        user.setAvatarUrl(avatarUrl == null || avatarUrl.isBlank() ? null : avatarUrl.trim());
+        user.setAvatarUrl(avatarUrl == null || avatarUrl.isBlank() ? User.DEFAULT_AVATAR_URL : avatarUrl.trim());
         Member member = memberRepository.findById(userId).orElse(null);
         Coach coach = coachRepository.findById(userId).orElse(null);
         Receptionist receptionist = receptionistRepository.findById(userId).orElse(null);

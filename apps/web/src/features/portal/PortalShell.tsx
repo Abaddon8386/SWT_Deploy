@@ -291,22 +291,24 @@ function PortalShellContent({ user }: { user: UserSession }) {
     }
   }, [canReceiveNotifications, location.state, location.pathname, navigate]);
 
-  const initials = user.name.trim().split(/\s+/).slice(-2).map((part) => part[0]).join('').toUpperCase() || 'S';
   const openNavigation = (mode: 'search' | 'menu') => {
     setQuery('');
     setDialog(mode);
   };
 
-  const renderAvatarContent = () =>
-    avatarUrl ? (
-      <img
-        src={avatarUrl}
-        alt=""
-        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
-      />
-    ) : (
-      initials
-    );
+  const renderAvatarContent = () => (
+    <img
+      src={avatarUrl || '/images/default-avatar.png'}
+      alt={user.name || 'Avatar'}
+      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+      onError={(e) => {
+        const target = e.currentTarget;
+        if (!target.src.endsWith('/images/default-avatar.png')) {
+          target.src = '/images/default-avatar.png';
+        }
+      }}
+    />
+  );
 
   const roleLabel = getRoleLabel(user.role, lang);
 

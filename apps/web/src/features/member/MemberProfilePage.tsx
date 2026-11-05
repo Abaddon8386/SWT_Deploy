@@ -146,13 +146,13 @@ export function MemberProfilePage() {
     setError('');
     setAvatarBusy(true);
     try {
-      const nextProfile: Profile = { ...profile, avatarUrl: null };
+      const nextProfile: Profile = { ...profile, avatarUrl: '/images/default-avatar.png' };
       const updated = await updateProfile(nextProfile);
       setProfile(updated);
       window.dispatchEvent(new Event('profile-updated'));
-      notify('Đã cập nhật ảnh đại diện.', 'success');
+      notify('Đã đặt lại ảnh đại diện mặc định.', 'success');
     } catch (err) {
-      setError(errorMessage(err, 'Không thể xóa ảnh đại diện.'));
+      setError(errorMessage(err, 'Không thể đặt lại ảnh đại diện.'));
     } finally {
       setAvatarBusy(false);
     }
@@ -224,13 +224,6 @@ export function MemberProfilePage() {
     );
   }
 
-  const initials = (profile.fullName || currentUser?.name || 'S')
-    .trim()
-    .split(/\s+/)
-    .slice(-2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || 'S';
 
   return (
     <div className="portal-container">
@@ -283,15 +276,17 @@ export function MemberProfilePage() {
                 overflow: 'hidden',
               }}
             >
-              {profile.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt="Ảnh đại diện hiện tại"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
-                />
-              ) : (
-                initials
-              )}
+              <img
+                src={profile.avatarUrl || '/images/default-avatar.png'}
+                alt="Ảnh đại diện hiện tại"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.src.endsWith('/images/default-avatar.png')) {
+                    target.src = '/images/default-avatar.png';
+                  }
+                }}
+              />
             </div>
             <div style={{ flex: '1 1 220px', minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14 }}>Ảnh đại diện tài khoản</div>
@@ -316,14 +311,14 @@ export function MemberProfilePage() {
                 >
                   {avatarBusy ? 'Đang xử lý…' : 'Tải ảnh đại diện lên'}
                 </button>
-                {profile.avatarUrl && (
+                {profile.avatarUrl && profile.avatarUrl !== '/images/default-avatar.png' && (
                   <button
                     type="button"
-                    className="btn-danger btn-sm"
+                    className="btn-secondary btn-sm"
                     disabled={avatarBusy}
                     onClick={() => void handleRemoveAvatar()}
                   >
-                    Xóa ảnh
+                    Đặt lại ảnh mặc định
                   </button>
                 )}
               </div>

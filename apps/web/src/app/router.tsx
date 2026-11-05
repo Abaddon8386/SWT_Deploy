@@ -120,6 +120,10 @@ export const router = createBrowserRouter([
             path: '/member/profile',
             lazy: async () => ({ Component: (await import('../features/member/MemberProfilePage')).MemberProfilePage }),
           },
+          {
+            path: '/profile',
+            lazy: async () => ({ Component: (await import('../features/member/MemberProfilePage')).MemberProfilePage }),
+          },
         ],
       },
 
