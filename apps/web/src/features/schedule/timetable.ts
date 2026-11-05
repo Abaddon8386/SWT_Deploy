@@ -25,8 +25,8 @@ export interface TimetableEvent {
   ariaLabel: string;
 }
 
-export interface PositionedEvent {
-  event: TimetableEvent;
+export interface PositionedEvent<T extends TimetableEvent = TimetableEvent> {
+  event: T;
   lane: number;
   lanes: number;
   topPct: number;
@@ -109,11 +109,11 @@ export function overlapsHour(event: Pick<TimetableEvent, 'startTime' | 'endTime'
  * Xếp các buổi học trong cùng một ngày vào làn song song: buổi chồng giờ đứng cạnh nhau,
  * mỗi cụm chồng giờ chia đều chiều rộng cột.
  */
-export function layoutDayEvents(
-  events: TimetableEvent[],
+export function layoutDayEvents<T extends TimetableEvent>(
+  events: T[],
   startHour: number = TIMETABLE_START_HOUR,
   endHour: number = TIMETABLE_END_HOUR,
-): PositionedEvent[] {
+): PositionedEvent<T>[] {
   const rangeStart = startHour * 60;
   const rangeEnd = endHour * 60;
   const rangeMinutes = rangeEnd - rangeStart;
@@ -126,8 +126,8 @@ export function layoutDayEvents(
     }))
     .sort((a, b) => a.start - b.start || a.end - b.end || a.event.id.localeCompare(b.event.id));
 
-  const result: PositionedEvent[] = [];
-  let cluster: { event: TimetableEvent; start: number; end: number; lane: number }[] = [];
+  const result: PositionedEvent<T>[] = [];
+  let cluster: { event: T; start: number; end: number; lane: number }[] = [];
   let clusterEnd = -1;
   let laneEnds: number[] = [];
 
@@ -161,6 +161,52 @@ export function layoutDayEvents(
   }
   if (cluster.length > 0) flush();
   return result;
+}
+
+/** Giờ bắt đầu/kết thúc làm tròn ra giờ chẵn bao trọn buổi: 11:00–14:30 -> 11–15. Luôn dài ít nhất 1 giờ. */
+export function roundedHourSpan(event: Pick<TimetableEvent, 'startTime' | 'endTime'>): { start: number; end: number } {
+  const start = Math.floor(toMinutes(event.startTime) / 60);
+  const end = Math.max(start + 1, Math.ceil(toMinutes(event.endTime) / 60));
+  return { start, end };
+}
+
+/** Khoảng giờ chẵn của buổi, ví dụ "11:00–15:00". */
+export function roundedRangeLabel(event: Pick<TimetableEvent, 'startTime' | 'endTime'>): string {
+  const { start, end } = roundedHourSpan(event);
+  return `${hourLabel(start)}–${hourLabel(end)}`;
+}
+
+/** Một ô 1 giờ của một buổi học. */
+export interface HourlyTimetableEvent extends TimetableEvent {
+  /** id của buổi gốc (id của ô có thêm hậu tố giờ). */
+  sourceId: string;
+  hour: number;
+  /** Thứ tự ô trong buổi (bắt đầu từ 1) và tổng số ô. */
+  part: number;
+  parts: number;
+}
+
+/**
+ * Tách mỗi buổi thành từng ô 1 giờ theo giờ chẵn: buổi 11:00–14:30 thành 4 ô 11, 12, 13, 14.
+ * Bảng tuần vẽ mỗi giờ một ô thay vì gộp thành một khối cao.
+ */
+export function splitIntoHours(events: TimetableEvent[]): HourlyTimetableEvent[] {
+  return events.flatMap((event) => {
+    const { start, end } = roundedHourSpan(event);
+    return Array.from({ length: end - start }, (_, index) => {
+      const hour = start + index;
+      return {
+        ...event,
+        id: `${event.id}@${hour}`,
+        sourceId: event.id,
+        startTime: hourLabel(hour),
+        endTime: hourLabel(hour + 1),
+        hour,
+        part: index + 1,
+        parts: end - start,
+      };
+    });
+  });
 }
 
 /** Số giờ tối thiểu của khung thu gọn, để tuần ít lịch không thành bảng quá thấp. */

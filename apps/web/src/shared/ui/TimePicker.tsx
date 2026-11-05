@@ -10,6 +10,8 @@ export interface TimePickerProps {
   placeholder?: string;
   className?: string;
   style?: React.CSSProperties;
+  /** Chỉ cho chọn giờ chẵn (phút luôn là 00), ẩn cột phút. */
+  wholeHour?: boolean;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => (i < 10 ? `0${i}` : `${i}`));
@@ -24,6 +26,7 @@ export function TimePicker({
   placeholder = 'Chọn giờ...',
   className = '',
   style,
+  wholeHour = false,
 }: TimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -78,7 +81,7 @@ export function TimePicker({
   }, [isOpen]);
 
   const handleSelectHour = (h: string) => {
-    const newVal = `${h}:${minute}`;
+    const newVal = `${h}:${wholeHour ? '00' : minute}`;
     onChange({ target: { value: newVal } });
   };
 
@@ -130,7 +133,7 @@ export function TimePicker({
           <div className="ltp-header">
             <span className="ltp-title">Khung Giờ</span>
             <span className="ltp-preview-badge">
-              {hour}:{minute}
+              {hour}:{wholeHour ? '00' : minute}
             </span>
           </div>
 
@@ -151,7 +154,7 @@ export function TimePicker({
               </div>
             </div>
 
-            <div className="ltp-col">
+            {!wholeHour && <div className="ltp-col">
               <span className="ltp-col-label">Phút</span>
               <div className="ltp-col-scroll" ref={minuteScrollRef}>
                 {MINUTES.map((m) => (
@@ -165,7 +168,7 @@ export function TimePicker({
                   </button>
                 ))}
               </div>
-            </div>
+            </div>}
           </div>
 
           <div className="ltp-footer">

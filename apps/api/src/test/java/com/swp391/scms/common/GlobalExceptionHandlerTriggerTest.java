@@ -47,6 +47,14 @@ class GlobalExceptionHandlerTriggerTest {
         org.junit.jupiter.api.Assertions.assertEquals("SCHEDULE_UPDATE_IN_PROGRESS", response.getBody().getCode());
     }
 
+    @Test
+    void memberScheduleOverlapReturnsConflict() {
+        var response = new GlobalExceptionHandler().handleDataIntegrity(
+                new DataIntegrityViolationException("ERROR: trg_member_schedule_conflict"));
+        org.junit.jupiter.api.Assertions.assertEquals(409, response.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("SCHEDULING_MEMBER_TIME_OVERLAP", response.getBody().getCode());
+    }
+
     @ParameterizedTest
     @MethodSource("triggerFailures")
     void preservesPostgresTriggerResponses(TriggerFailure trigger, String databaseMessage, String language) throws Exception {

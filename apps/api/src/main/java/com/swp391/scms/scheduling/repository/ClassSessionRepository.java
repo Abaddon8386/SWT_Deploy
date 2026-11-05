@@ -95,6 +95,33 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             "and b.member.userId = :memberId and b.status = 'booked'))")
     List<ClassSession> findActiveByMemberAndDate(@Param("memberId") Long memberId, @Param("date") LocalDate date);
 
+    /**
+     * Scheduled sessions of other classes on {@code date} overlapping {@code [start, end)} that a member of this
+     * session also attends. Members of the session are those enrolled in {@code classId} or holding a seat in
+     * {@code sessionId} (use -1 for a session that does not exist yet).
+     */
+    @Query("""
+            select s from ClassSession s
+            where s.status = 'scheduled' and s.sessionDate = :date and s.id <> :sessionId
+              and s.gymClass.id <> :classId
+              and s.startTime < :endTime and s.endTime > :startTime
+              and exists (
+                  select m.userId from Member m
+                  where (exists (select e.id from ClassEnrollment e where e.member = m
+                                 and e.gymClass.id = :classId and e.status = 'booked')
+                         or exists (select b.id from SessionBooking b where b.member = m
+                                 and b.session.id = :sessionId and b.status = 'booked'))
+                    and (exists (select e2.id from ClassEnrollment e2 where e2.member = m
+                                 and e2.gymClass = s.gymClass and e2.status = 'booked')
+                         or exists (select b2.id from SessionBooking b2 where b2.member = m
+                                 and b2.session = s and b2.status = 'booked')))
+            order by s.startTime
+            """)
+    List<ClassSession> findMemberOverlaps(@Param("classId") Long classId, @Param("sessionId") Long sessionId,
+                                          @Param("date") LocalDate date,
+                                          @Param("startTime") java.time.LocalTime startTime,
+                                          @Param("endTime") java.time.LocalTime endTime);
+
     @Query("""
             select (count(s) > 0) from ClassSession s
             where s.gymClass.coach.userId = :coachId and s.status = 'scheduled' and s.sessionDate >= :today

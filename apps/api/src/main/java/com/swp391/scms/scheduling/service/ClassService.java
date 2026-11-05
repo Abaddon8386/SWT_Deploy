@@ -512,6 +512,7 @@ public class ClassService {
                 request.endTime(),
                 null,
                 classId);
+        ensureNoMemberOverlap(classId, null, request.sessionDate(), request.startTime(), request.endTime());
 
         List<ClassSession> existingOnDate = sessions.searchSessions(request.sessionDate(), request.sessionDate(), null, null);
         if (existingOnDate != null) {
@@ -594,6 +595,7 @@ public class ClassService {
                 request.endTime(),
                 sessionId,
                 null);
+        ensureNoMemberOverlap(classId, sessionId, request.sessionDate(), request.startTime(), request.endTime());
 
         session.setSessionDate(request.sessionDate());
         session.setStartTime(request.startTime());
@@ -689,6 +691,31 @@ public class ClassService {
                                 + " (" + rangeStart + " - " + rangeEnd + ")");
             }
         }
+    }
+
+    /**
+     * A member attends one class at a time: a new or moved session must not overlap another class that one of its
+     * members (class-wide enrollment or seat in this session) already attends. The database trigger
+     * {@code trg_member_schedule_conflict} repeats this check.
+     */
+    private void ensureNoMemberOverlap(Long classId, Long sessionId, LocalDate sessionDate,
+                                       LocalTime startTime, LocalTime endTime) {
+        if (classId == null || sessionDate == null || startTime == null || endTime == null) {
+            return;
+        }
+        List<ClassSession> overlaps = sessions.findMemberOverlaps(classId, sessionId != null ? sessionId : -1L,
+                sessionDate, startTime, endTime);
+        if (overlaps == null || overlaps.isEmpty()) {
+            return;
+        }
+        ClassSession other = overlaps.get(0);
+        String otherName = other.getGymClass() != null && other.getGymClass().getName() != null
+                ? other.getGymClass().getName() : "";
+        throw new ConflictException(
+                "SCHEDULING_MEMBER_TIME_OVERLAP",
+                "error.scheduling.session_member_overlap",
+                new Object[]{otherName, formatTime(other.getStartTime()), formatTime(other.getEndTime())},
+                "A booked member already attends class " + otherName + " at this time");
     }
 
     private static String formatTime(LocalTime time) {

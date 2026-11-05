@@ -1,4 +1,4 @@
-.tt { --tt-hour: 64px; --tt-gutter: 56px; font-variant-numeric: tabular-nums; display: grid; gap: 12px; min-width: 0; }
+.tt { --tt-hour: 64px; font-variant-numeric: tabular-nums; display: grid; gap: 12px; min-width: 0; }
 .tt__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .tt__nav { display: inline-flex; gap: 8px; }
 .tt__range { font-size: 15px; color: var(--portal-paper); }
@@ -13,32 +13,22 @@
 .tt__swatch--past { background: var(--portal-raised); border-style: dashed; }
 .tt__swatch--cancelled { background: color-mix(in srgb, var(--portal-danger) 22%, var(--portal-surface)); border-color: var(--portal-danger); }
 
-.tt__scroll { isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 300px)); border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-surface); scrollbar-color: var(--portal-salmon) transparent; }
-.tt__grid { display: grid; grid-template-columns: var(--tt-gutter) repeat(var(--tt-days, 7), minmax(100px, 1fr)); grid-template-rows: auto auto; min-width: 760px; }
-.tt__grid.is-single { grid-template-columns: var(--tt-gutter) minmax(0, 1fr); min-width: 0; }
+.tt__scroll { isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 300px)); border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-surface); scrollbar-width: none; -ms-overflow-style: none; }
+.tt__scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.tt__grid { display: grid; grid-template-columns: repeat(var(--tt-days, 7), minmax(100px, 1fr)); grid-template-rows: auto auto; min-width: 700px; }
+.tt__grid.is-single { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 /* Xem một ngày: dải chọn ngày đã ghi thứ/ngày nên bỏ hàng tiêu đề lặp lại */
-.tt__grid.is-single :is(.tt__corner, .tt__dayhead) { display: none; }
+.tt__grid.is-single .tt__dayhead { display: none; }
 .tt__grid.is-loading { opacity: .55; }
 
-/* Tiêu đề ngày và cột giờ dính khi cuộn trong khung */
-.tt__corner, .tt__dayhead { position: sticky; top: 0; z-index: 4; background: var(--portal-raised); border-bottom: 1px solid var(--portal-border-strong); }
-.tt__corner { left: 0; z-index: 6; }
-.tt__dayhead { display: grid; gap: 2px; justify-items: center; padding: 8px 4px; border-left: 1px solid var(--portal-border); font-size: 12px; color: var(--portal-muted); }
+/* Tiêu đề ngày dính khi cuộn trong khung */
+.tt__dayhead { position: sticky; top: 0; z-index: 4; background: var(--portal-raised); border-bottom: 1px solid var(--portal-border-strong); display: grid; gap: 2px; justify-items: center; padding: 8px 4px; border-left: 1px solid var(--portal-border); font-size: 12px; color: var(--portal-muted); }
 .tt__dayhead strong { font-size: 15px; color: var(--portal-paper); }
 .tt__dayhead.is-today { background: color-mix(in srgb, var(--portal-salmon) 22%, var(--portal-raised)); color: var(--portal-paper); }
 .tt__dayhead.is-today strong { color: var(--portal-salmon); }
 
-.tt__gutter { position: sticky; left: 0; z-index: 3; background: var(--portal-surface); border-right: 1px solid var(--portal-border-strong); }
-/* Cột giờ là mốc chính: nhãn nằm đúng trên vạch giờ, gạch ngắn đánh dấu giờ và nửa giờ */
-.tt__hour { position: relative; height: var(--tt-hour); font-size: 12px; font-weight: 600; color: var(--portal-muted); }
-.tt__hour::before, .tt__hour::after { content: ''; position: absolute; right: 0; border-top: 1px solid var(--portal-border-strong); }
-.tt__hour::before { top: 0; width: 8px; }
-.tt__hour::after { top: 50%; width: 4px; border-color: var(--portal-border); }
-.tt__hour span { position: absolute; right: 12px; top: 0; line-height: 1; transform: translateY(-50%); white-space: nowrap; }
-.tt__hour:first-child span:first-child { transform: translateY(3px); }
-.tt__hour .tt__hour-end { top: auto; bottom: 0; transform: translateY(50%); }
-
 .tt__day { position: relative; border-left: 1px solid var(--portal-border); }
+.tt__day.is-first, .tt__dayhead.is-first { border-left: 0; }
 .tt__day.is-today { background: color-mix(in srgb, var(--portal-salmon) 5%, transparent); }
 
 /* Ô giờ: mỗi giờ một ô bằng nhau, chỉ có vạch giờ */
@@ -51,8 +41,10 @@
 .tt__slot.is-action:not(.is-past):is(:hover, :focus-visible) .tt__plus { opacity: 1; }
 .tt__slot.is-action:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: -2px; z-index: 1; }
 
-.tt__now { position: absolute; left: 0; right: 0; height: 2px; background: var(--portal-danger); z-index: 3; pointer-events: none; }
-.tt__now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--portal-danger); }
+/* Vạch giờ hiện tại nằm DƯỚI khối buổi học (không tạo stacking context, z thấp hơn .tt__event) để không đè lên chữ như gạch ngang.
+   Chỉ chấm tròn ở mép cột nổi lên trên cùng nên vẫn thấy mốc giờ khi vạch bị khối che. */
+.tt__now { position: absolute; left: 0; right: 0; height: 2px; margin-top: -1px; background: var(--portal-danger); pointer-events: none; }
+.tt__now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--portal-danger); z-index: 3; }
 
 /* Khối buổi học: tên lớp, nhãn trạng thái, phòng. Giờ đọc theo cột giờ bên trái; nội dung tự rút gọn theo bề rộng thật của khối. */
 .tt__event { container: tt-event / size; position: absolute; z-index: 2; display: block; min-width: 0; overflow: hidden; padding: 4px 6px; text-align: left; font: inherit; font-size: 11px; line-height: 1.25; cursor: pointer;
@@ -81,6 +73,8 @@
 /* Khung khớp màn hình làm giờ thấp lại: bỏ dòng phòng trước, rồi gom tên + trạng thái về một hàng */
 @container tt-event (max-height: 54px) {
   .tt__event-meta { display: none; }
+  /* Khối thấp không đủ chỗ cho dòng giờ: giờ bắt đầu đứng trước tên (không có cột giờ để đối chiếu) */
+  .tt__event-title::before { content: attr(data-start) ' '; font-weight: 600; font-variant-numeric: tabular-nums; opacity: .75; }
 }
 @container tt-event (max-height: 40px) {
   .tt__event-body { flex-direction: row; align-items: center; gap: 6px; }
@@ -117,7 +111,7 @@
 .tt__daychip:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
 
 @media (max-width: 767px) {
-  .tt { --tt-gutter: 48px; --tt-hour: 72px; }
+  .tt { --tt-hour: 72px; }
   .tt__legend { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; white-space: nowrap; scrollbar-width: none; }
   .tt__legend-note { margin-left: 0; }
   .portal-v2 .tt-chips.filter-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }

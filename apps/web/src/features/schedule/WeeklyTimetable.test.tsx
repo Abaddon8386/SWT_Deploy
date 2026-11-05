@@ -27,32 +27,30 @@ describe('WeeklyTimetable', () => {
     await render();
     expect(host.querySelectorAll('.tt__day')).toHaveLength(7);
     // Buổi 08:00–09:30 -> khung tối thiểu 8 giờ, kẹp trong 06:00–22:00: 06:00–14:00.
-    expect(host.querySelectorAll('.tt__gutter .tt__hour')).toHaveLength(8);
-    expect(host.querySelector('.tt__hour-end')!.textContent).toBe('14:00');
+    expect(host.querySelectorAll('.tt__day.is-first .tt__slot')).toHaveLength(8);
+    // Không còn giờ ở mép trái: không cột giờ, không nhãn mốc giờ.
+    expect(host.querySelector('.tt__gutter')).toBeNull();
+    expect(host.querySelector('.tt__mark')).toBeNull();
     const toggle = host.querySelector<HTMLButtonElement>('.tt__span')!;
     expect(toggle.textContent).toBe('Hiện đủ 06:00–22:00');
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
     await act(async () => toggle.click());
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     expect(toggle.textContent).toBe('Thu gọn 06:00–14:00');
-    expect(host.querySelectorAll('.tt__gutter .tt__hour')).toHaveLength(16);
-    expect(host.querySelector('.tt__gutter')!.textContent).toContain('06:00');
-    expect(host.querySelector('.tt__gutter')!.textContent).toContain('21:00');
-    expect(host.querySelector('.tt__hour-end')!.textContent).toBe('22:00');
+    expect(host.querySelectorAll('.tt__day.is-first .tt__slot')).toHaveLength(16);
     expect(host.textContent).toContain('05/01 – 11/01/2099');
   });
 
   it('shows the full 06:00–22:00 range for an empty week without a toggle', async () => {
     await render({ events: [] });
-    expect(host.querySelectorAll('.tt__gutter .tt__hour')).toHaveLength(16);
+    expect(host.querySelectorAll('.tt__day.is-first .tt__slot')).toHaveLength(16);
     expect(host.querySelector('.tt__span')).toBeNull();
   });
 
   it('positions events against the fitted range', async () => {
     await render({ events: [{ ...event, startTime: '18:00', endTime: '19:00' }] });
     // 18:00–19:00 -> 14:00–22:00 (8 giờ, chạm đáy 22:00 nên mở về phía trên); buổi bắt đầu ở 4/8 chiều cao.
-    expect(host.querySelector('.tt__gutter .tt__hour')!.textContent).toBe('14:00');
-    expect(host.querySelector<HTMLElement>('.tt__event')!.style.top).toBe('50%');
+    expect(host.querySelector<HTMLElement>('.tt__event')!.style.top).toBe('calc(50% + 2px)');
   });
 
   it('renders the event and reports clicks', async () => {
@@ -142,11 +140,21 @@ describe('WeeklyTimetable', () => {
     expect(host.querySelector('.tt__day')!.getAttribute('aria-label')).toContain('09/01');
   });
 
-  it('shows name, status and room in each block and leaves the time to the hour axis', async () => {
+  it('shows name, status, time and room in each block since there is no hour column', async () => {
     await render();
     const body = host.querySelector('.tt__event-body')!;
-    expect([...body.children].map((node) => node.textContent)).toEqual(['Yoga Flow', '3/12 chỗ', 'Studio · HLV An']);
-    expect(body.textContent).not.toContain('08:00');
-    expect(host.querySelector('.tt__event')!.getAttribute('title')).toContain('08:00–09:30');
+    expect([...body.children].map((node) => node.textContent)).toEqual(['Yoga Flow', '3/12 chỗ', '08:00–09:00 · Studio · HLV An']);
+    expect(host.querySelector('.tt__event')!.getAttribute('title')).toContain('08:00–10:00');
+  });
+
+  it('draws one block per hour, rounded out to whole hours, and every block opens the same session', async () => {
+    const onEventClick = vi.fn();
+    await render({ onEventClick, events: [{ ...event, startTime: '11:00', endTime: '14:30' }] });
+    const blocks = [...host.querySelectorAll<HTMLButtonElement>('.tt__event')];
+    expect(blocks.map((block) => block.querySelector('.tt__event-meta')!.textContent!.slice(0, 11)))
+      .toEqual(['11:00–12:00', '12:00–13:00', '13:00–14:00', '14:00–15:00']);
+    expect(blocks[1].getAttribute('aria-label')).toContain('giờ 2/4');
+    await act(async () => blocks[2].click());
+    expect(onEventClick).toHaveBeenCalledWith('7');
   });
 });

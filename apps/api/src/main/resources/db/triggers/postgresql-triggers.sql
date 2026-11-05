@@ -586,3 +586,98 @@ FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
 DROP TRIGGER IF EXISTS trg_pt_schedule_class ON classes;
 CREATE TRIGGER trg_pt_schedule_class BEFORE UPDATE OF coach_id ON classes
 FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
+
+-- Một hội viên không được học hai buổi lớp trùng giờ, dù giữ chỗ từng buổi (session_bookings) hay đăng ký cả lớp
+-- (class_enrollments). Chặn cả khi Quản lý thêm/đổi giờ một buổi mà hội viên đã đặt làm buổi đó chồng lên lớp khác.
+-- Chỉ xét buổi chưa qua để dữ liệu cũ không chặn các thao tác mới.
+CREATE OR REPLACE FUNCTION scms_member_session_overlaps(p_member BIGINT, p_session BIGINT, p_today DATE)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM class_sessions target
+        JOIN class_sessions other
+          ON other.session_date = target.session_date
+         AND other.id <> target.id
+         AND other.class_id <> target.class_id
+         AND other.status = 'scheduled'
+         AND other.start_time < target.end_time
+         AND other.end_time > target.start_time
+        WHERE target.id = p_session
+          AND target.status = 'scheduled'
+          AND target.session_date >= p_today
+          AND (EXISTS (SELECT 1 FROM session_bookings b
+                       WHERE b.session_id = other.id AND b.member_id = p_member AND b.status = 'booked')
+               OR EXISTS (SELECT 1 FROM class_enrollments e
+                          WHERE e.class_id = other.class_id AND e.member_id = p_member AND e.status = 'booked'))
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION scms_guard_member_class_overlap()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    today DATE := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+    has_conflict BOOLEAN := FALSE;
+BEGIN
+    IF TG_TABLE_NAME = 'session_bookings' THEN
+        IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
+        IF TG_OP = 'UPDATE' AND OLD.status = 'booked' AND OLD.session_id = NEW.session_id
+           AND OLD.member_id = NEW.member_id THEN
+            RETURN NEW;
+        END IF;
+        PERFORM pg_advisory_xact_lock(hashtextextended('member-schedule:' || NEW.member_id::TEXT, 0));
+        has_conflict := scms_member_session_overlaps(NEW.member_id, NEW.session_id, today);
+    ELSIF TG_TABLE_NAME = 'class_enrollments' THEN
+        IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
+        IF TG_OP = 'UPDATE' AND OLD.status = 'booked' AND OLD.class_id = NEW.class_id
+           AND OLD.member_id = NEW.member_id THEN
+            RETURN NEW;
+        END IF;
+        PERFORM pg_advisory_xact_lock(hashtextextended('member-schedule:' || NEW.member_id::TEXT, 0));
+        SELECT EXISTS (
+            SELECT 1 FROM class_sessions s
+            WHERE s.class_id = NEW.class_id AND s.status = 'scheduled' AND s.session_date >= today
+              AND scms_member_session_overlaps(NEW.member_id, s.id, today)
+        ) INTO has_conflict;
+    ELSIF TG_TABLE_NAME = 'class_sessions' THEN
+        IF NEW.status <> 'scheduled' OR NEW.session_date < today THEN RETURN NEW; END IF;
+        IF TG_OP = 'UPDATE' AND OLD.status = NEW.status AND OLD.class_id = NEW.class_id
+           AND OLD.session_date = NEW.session_date AND OLD.start_time = NEW.start_time
+           AND OLD.end_time = NEW.end_time THEN
+            RETURN NEW;
+        END IF;
+        SELECT EXISTS (
+            SELECT 1
+            FROM (
+                SELECT b.member_id FROM session_bookings b WHERE b.session_id = NEW.id AND b.status = 'booked'
+                UNION
+                SELECT e.member_id FROM class_enrollments e WHERE e.class_id = NEW.class_id AND e.status = 'booked'
+            ) attendees
+            WHERE scms_member_session_overlaps(attendees.member_id, NEW.id, today)
+        ) INTO has_conflict;
+    END IF;
+
+    IF has_conflict THEN
+        RAISE EXCEPTION 'trg_member_schedule_conflict'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_member_schedule_conflict';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_member_overlap_session_booking ON session_bookings;
+CREATE TRIGGER trg_member_overlap_session_booking
+AFTER INSERT OR UPDATE OF session_id, member_id, status ON session_bookings
+FOR EACH ROW EXECUTE FUNCTION scms_guard_member_class_overlap();
+DROP TRIGGER IF EXISTS trg_member_overlap_enrollment ON class_enrollments;
+CREATE TRIGGER trg_member_overlap_enrollment
+AFTER INSERT OR UPDATE OF class_id, member_id, status ON class_enrollments
+FOR EACH ROW EXECUTE FUNCTION scms_guard_member_class_overlap();
+DROP TRIGGER IF EXISTS trg_member_overlap_session ON class_sessions;
+CREATE TRIGGER trg_member_overlap_session
+AFTER INSERT OR UPDATE OF class_id, session_date, start_time, end_time, status ON class_sessions
+FOR EACH ROW EXECUTE FUNCTION scms_guard_member_class_overlap();

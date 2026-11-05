@@ -330,7 +330,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(saved.textContent).toContain('Đã điểm danh');
     expect(host.querySelector('.tt__event--full')!.textContent).toContain('Chưa điểm danh');
     // Chỉ hiện khung giờ có buổi (tối thiểu 8 giờ) thay vì đủ 16 giờ.
-    expect(host.querySelectorAll('.tt__gutter .tt__hour').length).toBeGreaterThanOrEqual(8);
+    expect(host.querySelectorAll('.tt__day.is-first .tt__slot').length).toBeGreaterThanOrEqual(8);
     expect(host.querySelector('.tt__span')!.textContent).toBe('Hiện đủ 06:00–22:00');
 
     await act(async () => { host.querySelector<HTMLButtonElement>('.tt__event--full')!.click(); });

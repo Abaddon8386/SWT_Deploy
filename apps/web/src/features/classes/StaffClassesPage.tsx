@@ -15,7 +15,14 @@ import {
 } from './classesApi';
 import { Link } from 'react-router-dom';
 import { WeeklyTimetable, type TimetableSlot } from '../schedule/WeeklyTimetable';
-import { hhmm, mondayOf, shortDate, todayISO, type TimetableEvent } from '../schedule/timetable';
+import { hhmm, hourLabel, mondayOf, toMinutes, shortDate, todayISO, type TimetableEvent } from '../schedule/timetable';
+
+
+/** Lịch lớp chỉ dùng giờ chẵn: làm tròn giờ cũ lẻ phút (xuống cho giờ bắt đầu, lên cho giờ kết thúc). */
+function wholeHourTime(time: string, mode: 'floor' | 'ceil'): string {
+  const hours = toMinutes(time) / 60;
+  return hourLabel(Math.min(23, mode === 'floor' ? Math.floor(hours) : Math.ceil(hours)));
+}
 
 type DisciplineOption = Awaited<ReturnType<typeof classesApi.getDisciplines>>[number];
 type RoomOption = Awaited<ReturnType<typeof classesApi.getAvailableRooms>>[number];
@@ -70,7 +77,7 @@ const defaultFormData = (): FormState => ({
   description: '',
   sessionDate: getTodayString(),
   startTime: '08:00',
-  endTime: '09:30',
+  endTime: '09:00',
 });
 
 export function StaffClassesPage() {
@@ -121,7 +128,7 @@ export function StaffClassesPage() {
     sessionId: '',
     sessionDate: getTodayString(),
     startTime: '08:00',
-    endTime: '09:30',
+    endTime: '09:00',
   });
   const [rescheduleModalError, setRescheduleModalError] = useState<string | null>(null);
 
@@ -654,8 +661,8 @@ export function StaffClassesPage() {
     setRescheduleFormData({
       sessionId: targetSession ? String(targetSession.id) : 'NEW',
       sessionDate: targetSession ? targetSession.sessionDate : getTodayString(),
-      startTime: targetSession ? targetSession.startTime.slice(0, 5) : '08:00',
-      endTime: targetSession ? targetSession.endTime.slice(0, 5) : '09:30',
+      startTime: targetSession ? wholeHourTime(targetSession.startTime, 'floor') : '08:00',
+      endTime: targetSession ? wholeHourTime(targetSession.endTime, 'ceil') : '09:00',
     });
   };
 
@@ -1463,8 +1470,8 @@ export function StaffClassesPage() {
                   setRescheduleFormData({
                     sessionId: val,
                     sessionDate: found ? found.sessionDate : getTodayString(),
-                    startTime: found ? found.startTime.slice(0, 5) : '08:00',
-                    endTime: found ? found.endTime.slice(0, 5) : '09:30',
+                    startTime: found ? wholeHourTime(found.startTime, 'floor') : '08:00',
+                    endTime: found ? wholeHourTime(found.endTime, 'ceil') : '09:00',
                   });
                 }}
                 disabled={isSubmitting}
@@ -1500,6 +1507,7 @@ export function StaffClassesPage() {
                   Giờ bắt đầu mới *
                 </label>
                 <TimePicker
+                  wholeHour
                   id="reschedule-start"
                   required
                   value={rescheduleFormData.startTime}
@@ -1513,6 +1521,7 @@ export function StaffClassesPage() {
                   Giờ kết thúc mới *
                 </label>
                 <TimePicker
+                  wholeHour
                   id="reschedule-end"
                   required
                   value={rescheduleFormData.endTime}
@@ -1720,6 +1729,7 @@ export function StaffClassesPage() {
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="add-session-start">Giờ bắt đầu *</label>
                   <TimePicker
+                    wholeHour
                     id="add-session-start"
                     required
                     value={formData.startTime}
@@ -1730,6 +1740,7 @@ export function StaffClassesPage() {
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="add-session-end">Giờ kết thúc *</label>
                   <TimePicker
+                    wholeHour
                     id="add-session-end"
                     required
                     value={formData.endTime}
@@ -1942,6 +1953,7 @@ export function StaffClassesPage() {
                     Giờ bắt đầu *
                   </label>
                   <TimePicker
+                    wholeHour
                     id="session-start"
                     required
                     value={formData.startTime}
@@ -1955,6 +1967,7 @@ export function StaffClassesPage() {
                     Giờ kết thúc *
                   </label>
                   <TimePicker
+                    wholeHour
                     id="session-end"
                     required
                     value={formData.endTime}

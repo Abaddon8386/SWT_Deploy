@@ -1426,7 +1426,7 @@ paths:
         '403':
           description: Quyền truy cập bị từ chối
         '409':
-          description: Trùng lịch phòng hoặc huấn luyện viên (Trigger P3)
+          description: Trùng lịch phòng hoặc huấn luyện viên (Trigger P3), hoặc SCHEDULING_MEMBER_TIME_OVERLAP khi hội viên của lớp đã có lớp khác trùng giờ (trg_member_schedule_conflict)
 
   /classes/sessions:
     get:

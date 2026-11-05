@@ -184,6 +184,7 @@ public class GlobalExceptionHandler {
      * Invariants from AGENTS.md & PROJECT_MASTER_GUIDE.md:
      * - trg_enrollments_check_capacity (Capacity Exceeded)
      * - trg_sessions_check_conflict (Coach / Room Schedule Overlap)
+     * - trg_member_schedule_conflict (one member in two overlapping classes)
      * - trg_enrollments_check_membership & trg_checkins_check_membership (Active Subscription)
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -242,6 +243,12 @@ public class GlobalExceptionHandler {
                                 resolveMessage("error.scheduling.class_full", "invariant.capacity_exceeded"))
                 );
             }
+            if (normalizedRootMsg.contains("trg_member_schedule_conflict")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULING_MEMBER_TIME_OVERLAP",
+                                resolveMessage("error.scheduling.member_class_overlap", "error.scheduling.member_class_overlap"))
+                );
+            }
             if (normalizedRootMsg.contains("trg_sessions_check_conflict")
                     || normalizedRootMsg.contains("coach_schedule_conflict")
                     || normalizedRootMsg.contains("member_schedule_conflict")
@@ -257,6 +264,13 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                         ApiResponse.error(HttpStatus.FORBIDDEN.value(), "MEMBERSHIP_INACTIVE_OR_EXPIRED",
                                 resolveMessage("error.scheduling.membership_expired_or_inactive", "invariant.membership_inactive_or_expired"))
+                );
+            }
+            if (normalizedRootMsg.contains("ck_product_variants_stock_nonneg")
+                    || normalizedRootMsg.contains("ck_product_variants_values")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "PRODUCT_OUT_OF_STOCK",
+                                resolveMessage("error.shop.order.out_of_stock", "error.shop.order.out_of_stock", "", 0))
                 );
             }
             if (normalizedRootMsg.contains("duplicate") || normalizedRootMsg.contains("unique constraint") || normalizedRootMsg.contains("uq_")) {

@@ -3,13 +3,14 @@ import {
   TIMETABLE_HOURS,
   addDays,
   fitHourRange,
-  hhmm,
   hourLabel,
   isWithinRange,
   layoutDayEvents,
   mondayOf,
   overlapsHour,
+  roundedRangeLabel,
   shortDate,
+  splitIntoHours,
   toMinutes,
   todayISO,
   weekRangeLabel,
@@ -118,6 +119,7 @@ export function WeeklyTimetable({
   const firstHour = hours[0];
   const endHour = hours[hours.length - 1] + 1;
 
+  const eventsById = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
   const eventsByDay = useMemo(() => {
     const map = new Map<string, TimetableEvent[]>();
     for (const day of days) map.set(day, []);
@@ -164,7 +166,7 @@ export function WeeklyTimetable({
     const selected = inWeek.find((event) => event.id === selectedId);
     const starts = (selected ? [selected] : inWeek).map((event) => toMinutes(event.startTime));
     const target = starts.length > 0 ? Math.min(...starts) : firstHour * 60;
-    const rowPx = box.querySelector<HTMLElement>('.tt__hour')?.offsetHeight ?? HOUR_MAX_PX;
+    const rowPx = box.querySelector<HTMLElement>('.tt__slot')?.offsetHeight ?? HOUR_MAX_PX;
     box.scrollTop = Math.max(0, ((target - 60 - firstHour * 60) / 60) * rowPx);
     // Chỉ cuộn khi đổi tuần, vừa tải xong hoặc đổi khung giờ/chiều cao giờ; không cuộn lại khi dữ liệu đặt chỗ làm mới.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -285,11 +287,10 @@ export function WeeklyTimetable({
           style={{ '--tt-days': visibleDays.length } as CSSProperties}
           ref={gridRef}
         >
-          <div className="tt__corner" aria-hidden="true" />
-          {visibleDays.map((day) => (
+          {visibleDays.map((day, dayIndex) => (
             <div
               key={day}
-              className={`tt__dayhead${day === today ? ' is-today' : ''}`}
+              className={`tt__dayhead${day === today ? ' is-today' : ''}${dayIndex === 0 ? ' is-first' : ''}`}
               aria-current={day === today ? 'date' : undefined}
             >
               <span>{weekdayLabel(day)}{day === today ? ' · Hôm nay' : ''}</span>
@@ -297,30 +298,23 @@ export function WeeklyTimetable({
             </div>
           ))}
 
-          <div className="tt__gutter" aria-hidden="true">
-            {hours.map((hour, index) => (
-              <div key={hour} className="tt__hour">
-                <span>{hourLabel(hour)}</span>
-                {index === hours.length - 1 && <span className="tt__hour-end">{hourLabel(hour + 1)}</span>}
-              </div>
-            ))}
-          </div>
-
           {visibleDays.map((day, dayIndex) => {
             const dayEvents = eventsByDay.get(day) ?? [];
             const busyEvents = dayEvents.filter((event) => event.tone !== 'cancelled');
-            const positioned = layoutDayEvents(dayEvents, firstHour, endHour);
+            // Mỗi giờ một ô: buổi 3 giờ hiện thành 3 ô liền nhau, giờ làm tròn về giờ chẵn.
+            const positioned = layoutDayEvents(splitIntoHours(dayEvents), firstHour, endHour);
             const showNow = day === today && nowMinutes >= firstHour * 60 && nowMinutes < endHour * 60;
             return (
               <div
                 key={day}
-                className={`tt__day${day === today ? ' is-today' : ''}`}
+                className={`tt__day${day === today ? ' is-today' : ''}${dayIndex === 0 ? ' is-first' : ''}`}
                 role="group"
                 aria-label={`${weekdayLabel(day)} ${shortDate(day)}`}
               >
                 {hours.map((hour) => {
                   const busy = busyEvents.some((event) => overlapsHour(event, hour));
                   const past = isPastSlot(day, hour);
+                  // Không ghi giờ ở mép trái: mỗi ô buổi học tự ghi giờ của nó.
                   const className = `tt__slot${busy ? ' is-busy' : ' is-free'}${past ? ' is-past' : ''}`;
                   if (!onSlotClick) {
                     return <div key={hour} className={className} aria-hidden="true" />;
@@ -360,30 +354,34 @@ export function WeeklyTimetable({
                   />
                 )}
 
-                {positioned.map(({ event, lane, lanes, topPct, heightPct }) => (
-                  <button
-                    key={event.id}
-                    type="button"
-                    className={`tt__event tt__event--${event.tone}${event.id === selectedId ? ' is-selected' : ''}${toMinutes(event.endTime) - toMinutes(event.startTime) < 50 ? ' is-compact' : ''}`}
-                    style={{
-                      top: `${topPct}%`,
-                      height: `${heightPct}%`,
-                      left: `calc(${(lane / lanes) * 100}% + 2px)`,
-                      width: `calc(${100 / lanes}% - 4px)`,
-                    } as CSSProperties}
-                    aria-label={event.ariaLabel}
-                    disabled={disabled}
-                    aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
-                    title={[event.title, `${hhmm(event.startTime)}–${hhmm(event.endTime)}`, event.meta, event.badge].filter(Boolean).join(' · ')}
-                    onClick={() => onEventClick(event.id)}
-                  >
-                    <span className="tt__event-body">
-                      <strong className="tt__event-title">{event.title}</strong>
-                      {event.badge && <span className="tt__event-badge">{event.badge}</span>}
-                      {event.meta && <span className="tt__event-meta">{event.meta}</span>}
-                    </span>
-                  </button>
-                ))}
+                {positioned.map(({ event, lane, lanes, topPct, heightPct }) => {
+                  const slotRange = `${hourLabel(event.hour)}–${hourLabel(event.hour + 1)}`;
+                  const fullRange = roundedRangeLabel(eventsById.get(event.sourceId) ?? event);
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      className={`tt__event tt__event--${event.tone}${event.sourceId === selectedId ? ' is-selected' : ''}`}
+                      style={{
+                        top: `calc(${topPct}% + 2px)`,
+                        height: `calc(${heightPct}% - 4px)`,
+                        left: `calc(${(lane / lanes) * 100}% + 2px)`,
+                        width: `calc(${100 / lanes}% - 4px)`,
+                      } as CSSProperties}
+                      aria-label={event.parts > 1 ? `${event.ariaLabel} (giờ ${event.part}/${event.parts}: ${slotRange})` : event.ariaLabel}
+                      disabled={disabled}
+                      aria-pressed={selectedId === undefined ? undefined : event.sourceId === selectedId}
+                      title={[event.title, fullRange, event.meta, event.badge].filter(Boolean).join(' · ')}
+                      onClick={() => onEventClick(event.sourceId)}
+                    >
+                      <span className="tt__event-body">
+                        <strong className="tt__event-title" data-start={hourLabel(event.hour)}>{event.title}</strong>
+                        {event.badge && <span className="tt__event-badge">{event.badge}</span>}
+                        <span className="tt__event-meta">{slotRange}{event.meta ? ` · ${event.meta}` : ''}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
