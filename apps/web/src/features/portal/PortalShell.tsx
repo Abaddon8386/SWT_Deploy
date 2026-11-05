@@ -462,7 +462,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                       marginBottom: 4,
                     }}
                   >
-                    <span>{t('Thông tin cá nhân & Ảnh đại diện', 'Personal Profile & Avatar')}</span>
+                    <span>{t('Thông tin cá nhân', 'Personal Profile')}</span>
                   </Link>
 
                   <LanguageSetting variant="menu" />
