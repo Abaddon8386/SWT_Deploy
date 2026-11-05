@@ -1,9 +1,11 @@
 package com.swp391.scms.membership;
 
+import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
+import com.swp391.scms.membership.dto.ReceptionTrialDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
 import com.swp391.scms.membership.dto.TrialClaimRequest;
 import com.swp391.scms.membership.dto.TrialStatusDto;
@@ -247,4 +249,144 @@ class MemberTrialServiceTest {
         verifyNoInteractions(notifications);
     }
 
+    @Test
+    @DisplayName("requestTrial: Successfully submits CCCD trial request in PENDING_APPROVAL status")
+    void testRequestTrial_CccdSuccess() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
+        TrialClaimRequest request = new TrialClaimRequest("CCCD", "001200001234", "001200001234", "Nguyen Van A", "VN", "front.jpg", "back.jpg");
+
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
+        when(trialRedemptions.existsByCccdHash(anyString())).thenReturn(false);
+        when(members.findById(10L)).thenReturn(Optional.of(testMember));
+        when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> {
+            MemberTrialRedemption r = inv.getArgument(0);
+            r.setId(50L);
+            return r;
+        });
+
+        TrialStatusDto status = service.requestTrial(principal, request);
+
+        assertNotNull(status);
+        assertEquals("PENDING_APPROVAL", status.status());
+        assertFalse(status.alreadyClaimed());
+        assertEquals("CCCD", status.documentType());
+        assertEquals("Nguyen Van A", status.fullName());
+        verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("member_trial_redemption"), eq(50L));
+    }
+
+    @Test
+    @DisplayName("requestTrial: Successfully submits foreign passport request in PENDING_APPROVAL status")
+    void testRequestTrial_ForeignPassportSuccess() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
+        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "P12345678", null, "John Doe", "United States", "passport.jpg", null);
+
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
+        when(trialRedemptions.existsByCccdHash(anyString())).thenReturn(false);
+        when(members.findById(10L)).thenReturn(Optional.of(testMember));
+        when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> {
+            MemberTrialRedemption r = inv.getArgument(0);
+            r.setId(51L);
+            return r;
+        });
+
+        TrialStatusDto status = service.requestTrial(principal, request);
+
+        assertNotNull(status);
+        assertEquals("PENDING_APPROVAL", status.status());
+        assertEquals("PASSPORT", status.documentType());
+        assertEquals("John Doe", status.fullName());
+    }
+
+    @Test
+    @DisplayName("requestTrial: Rejects Vietnamese citizen trying to use Passport")
+    void testRequestTrial_VietnamesePassportRejected() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
+        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "P12345678", null, "Nguyen Van B", "Vietnam", "passport.jpg", null);
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> service.requestTrial(principal, request));
+        assertEquals("TRIAL_PASSPORT_FOREIGN_ONLY", ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("requestTrial: Rejects invalid passport number format")
+    void testRequestTrial_InvalidPassportFormat() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
+        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "AB", null, "John Doe", "France", "passport.jpg", null);
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> service.requestTrial(principal, request));
+        assertEquals("TRIAL_PASSPORT_INVALID", ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("approveTrial: Receptionist approves trial, syncs user fullName, and creates 3-day active subscription")
+    void testApproveTrial_Success() {
+        AuthenticatedPrincipal receptionist = new AuthenticatedPrincipal(99L, "receptionist1", "RECEPTIONIST");
+        MemberTrialRedemption pending = new MemberTrialRedemption();
+        pending.setId(55L);
+        pending.setMember(testMember);
+        pending.setFullName("Nguyen Van Verified");
+        pending.setStatus(MemberTrialRedemption.STATUS_PENDING);
+
+        when(trialRedemptions.findById(55L)).thenReturn(Optional.of(pending));
+        when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
+        when(subscriptions.saveAndFlush(any(MembershipSubscription.class))).thenAnswer(inv -> {
+            MembershipSubscription s = inv.getArgument(0);
+            s.setId(300L);
+            return s;
+        });
+        when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ReceptionTrialDto result = service.approveTrial(receptionist, 55L);
+
+        assertNotNull(result);
+        assertEquals(300L, result.subscriptionId());
+        assertEquals("APPROVED", result.status());
+        assertEquals("Nguyen Van Verified", testMember.getUser().getFullName());
+        verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("membership_subscription"), eq(300L));
+    }
+
+    @Test
+    @DisplayName("rejectTrial: Receptionist rejects trial with a stated reason")
+    void testRejectTrial_Success() {
+        AuthenticatedPrincipal receptionist = new AuthenticatedPrincipal(99L, "receptionist1", "RECEPTIONIST");
+        MemberTrialRedemption pending = new MemberTrialRedemption();
+        pending.setId(56L);
+        pending.setMember(testMember);
+        pending.setStatus(MemberTrialRedemption.STATUS_PENDING);
+
+        when(trialRedemptions.findById(56L)).thenReturn(Optional.of(pending));
+        when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ReceptionTrialDto result = service.rejectTrial(receptionist, 56L, "CCCD mờ không đọc được thông tin");
+
+        assertNotNull(result);
+        assertEquals("REJECTED", result.status());
+        assertEquals("CCCD mờ không đọc được thông tin", result.rejectionReason());
+        verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("member_trial_redemption"), eq(56L));
+    }
+
+    @Test
+    @DisplayName("listTrials: Filters by status and search keyword")
+    void testListTrials() {
+        MemberTrialRedemption r1 = new MemberTrialRedemption();
+        r1.setId(1L);
+        r1.setFullName("Alice Smith");
+        r1.setStatus("PENDING_APPROVAL");
+        r1.setMember(testMember);
+
+        MemberTrialRedemption r2 = new MemberTrialRedemption();
+        r2.setId(2L);
+        r2.setFullName("Bob Jones");
+        r2.setStatus("PENDING_APPROVAL");
+        r2.setMember(testMember);
+
+        when(trialRedemptions.findByStatusOrderByRedeemedAtDesc("PENDING_APPROVAL")).thenReturn(List.of(r1, r2));
+
+        List<ReceptionTrialDto> results = service.listTrials("PENDING_APPROVAL", "Alice");
+
+        assertEquals(1, results.size());
+        assertEquals("Alice Smith", results.get(0).documentFullName());
+    }
 }

@@ -110,6 +110,17 @@ export function MemberCoachBookingView({
   const [errorCode, setErrorCode] = useState<string | undefined>();
   // quotaStatus stays null while loading or when the request fails; only a loaded answer without a package means none.
   const hasNoPackage = quotaStatus !== null && !quotaStatus.packageName;
+  const isTrial = Boolean(
+    quotaStatus &&
+    (quotaStatus.monthlyQuota === 1 ||
+     (quotaStatus.packageName && (
+       quotaStatus.packageName.includes('Trải Nghiệm') ||
+       quotaStatus.packageName.toUpperCase().includes('TRIAL')
+     )))
+  );
+  const displayedPackageName = isTrial
+    ? 'Gói Trải Nghiệm 3 Ngày'
+    : (quotaStatus?.packageName || 'Gold / Platinum');
   const [myReviews, setMyReviews] = useState<CoachReviewDto[]>([]);
 
   const [loadingCoaches, setLoadingCoaches] = useState(true);
@@ -413,9 +424,22 @@ export function MemberCoachBookingView({
           </div>
 
           <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--portal-muted)' }}>
-            {quotaStatus?.monthlyQuota && quotaStatus.monthlyQuota > 0 ? (
+            {isTrial ? (
               <>
-                Gói {quotaStatus.packageName} được tặng <strong>{quotaStatus.monthlyQuota} lượt PT miễn phí/tháng</strong>.
+                <strong>{displayedPackageName}</strong> bao gồm đặc quyền <strong>01 buổi tập HLV 1:1 miễn phí</strong> duy nhất trong suốt thời gian trải nghiệm.
+                {quotaStatus && (
+                  <>
+                    {' '}Bạn đã dùng <strong>{quotaStatus.usedThisMonth} lượt</strong> (còn lại:{' '}
+                    <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
+                      {quotaStatus.remainingQuota} lượt
+                    </strong>).
+                  </>
+                )}
+                {quotaStatus && quotaStatus.remainingQuota <= 0 && ' Khi đã sử dụng hết buổi trải nghiệm 1:1, bạn có thể đăng ký thêm HLV theo giờ (200.000 đ / giờ).'}
+              </>
+            ) : quotaStatus?.monthlyQuota && quotaStatus.monthlyQuota > 0 ? (
+              <>
+                Gói {displayedPackageName} được tặng <strong>{quotaStatus.monthlyQuota} lượt PT miễn phí/tháng</strong>.
                 Tháng này bạn đã dùng <strong>{quotaStatus.usedThisMonth} lượt</strong> (còn lại:{' '}
                 <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
                   {quotaStatus.remainingQuota} lượt
@@ -425,7 +449,7 @@ export function MemberCoachBookingView({
               </>
             ) : (
               <>
-                {hasNoPackage ? 'Bạn chưa đăng ký gói tập hoặc gói tập chưa được kích hoạt (cần có gói tập đang hoạt động để đặt lịch HLV 1:1).' : `Gói ${quotaStatus?.packageName || 'hiện tại'} không bao gồm lượt tập PT 1:1 miễn phí.`} Phí đặt lịch HLV kèm riêng là{' '}
+                {hasNoPackage ? 'Bạn chưa đăng ký gói tập hoặc gói tập chưa được kích hoạt (cần có gói tập đang hoạt động để đặt lịch HLV 1:1).' : `Gói ${displayedPackageName} không bao gồm lượt tập PT 1:1 miễn phí.`} Phí đặt lịch HLV kèm riêng là{' '}
                 <strong style={{ color: 'var(--portal-salmon)' }}>200.000 đ / giờ</strong>. (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).
               </>
             )}
@@ -459,7 +483,7 @@ export function MemberCoachBookingView({
             Chọn Huấn luyện viên cá nhân (PT 1:1)
           </h3>
           <span className="row-card__meta" style={{ fontSize: 13 }}>
-            Phí tập tiêu chuẩn: <strong>{formatPrice(200000)} / giờ</strong> (Miễn phí với gói Gold/Platinum)
+            Phí tập tiêu chuẩn: <strong>{formatPrice(200000)} / giờ</strong> ({isTrial ? 'Miễn phí 01 buổi với Gói Trải Nghiệm' : 'Miễn phí với gói Gold/Platinum'})
           </span>
         </div>
 
@@ -1416,7 +1440,9 @@ export function MemberCoachBookingView({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                       <strong style={{ fontSize: 14, color: 'var(--portal-paper)' }}>
-                        Sử dụng quyền lợi PT trong gói tập (Gold / Platinum)
+                        {isTrial
+                          ? 'Sử dụng đặc quyền PT 1:1 trong Gói Trải Nghiệm (01 buổi miễn phí)'
+                          : `Sử dụng quyền lợi PT trong gói tập (${displayedPackageName})`}
                       </strong>
                       {hasRemainingQuota ? (
                         <span
@@ -1448,8 +1474,12 @@ export function MemberCoachBookingView({
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 4, lineHeight: 1.4 }}>
                       {hasRemainingQuota
-                        ? 'Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn (0 đ).'
-                        : 'Gói hiện tại không có lượt PT miễn phí hoặc bạn đã dùng hết quota tháng. Vui lòng chọn đóng phí ' + formatPrice(selectedCoach.defaultHourlyRate || 200000) + '.'}
+                        ? (isTrial
+                            ? 'Tự động áp dụng đặc quyền 01 buổi tập HLV 1:1 miễn phí của Gói Trải Nghiệm (0 đ).'
+                            : 'Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn (0 đ).')
+                        : (isTrial
+                            ? 'Bạn đã sử dụng buổi tập HLV 1:1 miễn phí của gói trải nghiệm. Vui lòng chọn đóng phí ' + formatPrice(selectedCoach.defaultHourlyRate || 200000) + ' nếu muốn tập thêm cùng HLV.'
+                            : 'Gói hiện tại không có lượt PT miễn phí hoặc bạn đã dùng hết quota tháng. Vui lòng chọn đóng phí ' + formatPrice(selectedCoach.defaultHourlyRate || 200000) + '.')}
                     </div>
                   </div>
                 </div>

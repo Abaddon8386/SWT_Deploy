@@ -86,11 +86,11 @@ class CatalogSeederTest {
 
         verify(disciplines, times(6)).create(any());
         verify(rooms, times(5)).create(any());
-        verify(packages, times(6)).create(any());
+        verify(packages, times(7)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
-        verify(packages, times(6)).create(requests.capture());
+        verify(packages, times(7)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(199000, 299000, 599000, 549000, 799000, 1599000);
+                .containsExactly(0, 199000, 299000, 599000, 549000, 799000, 1599000);
     }
 
     @Test
@@ -105,7 +105,7 @@ class CatalogSeederTest {
         verify(disciplines, times(5)).create(any());
         verify(disciplines, never()).update(any(), any());
         verify(rooms, never()).create(any());
-        verify(packages, times(6)).create(any());
+        verify(packages, times(7)).create(any());
     }
     @Test
     void correctsOriginalCatalogPricesWithoutChangingTermsOrManagerPrices() {

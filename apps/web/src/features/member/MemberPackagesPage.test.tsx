@@ -705,10 +705,10 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).not.toHaveBeenCalled();
   });
 
-  it('renders and claims the 3-day gold trial with cccd', async () => {
+  it('renders and claims the 3-day trial with cccd', async () => {
     trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
     await render();
-    expect(host.textContent).toContain('Trải nghiệm 3 ngày tập miễn phí với đặc quyền Gold');
+    expect(host.textContent).toContain('Gói Trải Nghiệm 3 Ngày miễn phí');
     expect(button('Nhận 3 ngày tập miễn phí')).toBeDefined();
     await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
     expect(host.textContent).toContain('Xác minh Căn cước công dân (CCCD)');
@@ -718,6 +718,34 @@ describe('SCRUM-86 packages', () => {
     expect(cccdInput).not.toBeNull();
     const submitBtn = button('Xác minh & Kích hoạt');
     expect(submitBtn).toBeDefined();
+  });
+
+  it('hides hold button and displays Gói Trải Nghiệm 3 Ngày when current subscription is a 3-day trial', async () => {
+    const trialSub: MemberSubscription = {
+      id: 99,
+      memberId: 1,
+      packageId: 2,
+      packageName: 'GOLD',
+      previousSubscriptionId: null,
+      startDate: '2026-11-05',
+      endDate: '2026-11-08',
+      status: 'active',
+      qrCode: 'qr-123',
+      createdAt: '2026-11-05T08:00:00',
+      holdStatus: null,
+      holdReason: null,
+      holdRequestedAt: null,
+      holdResolvedAt: null,
+      paidThroughDate: '2026-11-08',
+      upgradeCharge: 0,
+      remainingValue: 0,
+    };
+    api.current.mockResolvedValue(trialSub);
+    await render();
+
+    expect(host.textContent).toContain('Gói Trải Nghiệm 3 Ngày');
+    expect(button('Quản lý gói')).toBeUndefined();
+    expect(button('Bảo lưu gói tập')).toBeUndefined();
   });
 
   it.each(['failed', 'refunded'])('explains a %s payment without offering another POST', async (status) => {

@@ -5,6 +5,7 @@ import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.facilities.CatalogSeeder;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.finance.repository.PaymentRepository;
@@ -548,6 +549,14 @@ public class MembershipSubscriptionService {
                     "Only an active subscription can be placed on hold");
         }
 
+        if (isTrialSubscription(subscription)) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_TRIAL_CANNOT_HOLD",
+                    "error.membership.trial_cannot_hold",
+                    null,
+                    "Gói tập trải nghiệm không hỗ trợ bảo lưu.");
+        }
+
         if (HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus())) {
             throw new ConflictException(
                     "MEMBERSHIP_HOLD_ALREADY_PENDING",
@@ -918,11 +927,17 @@ public class MembershipSubscriptionService {
     }
 
     private SubscriptionDto toDto(MembershipSubscription s, LocalDate paidThroughDate) {
+        String pkgName;
+        if (isTrialSubscription(s)) {
+            pkgName = CatalogSeeder.TRIAL_PACKAGE_NAME;
+        } else {
+            pkgName = s.getMembershipPackage() != null ? s.getMembershipPackage().getName() : null;
+        }
         return new SubscriptionDto(
                 s.getId(),
                 s.getMember() != null ? s.getMember().getUserId() : null,
                 s.getMembershipPackage() != null ? s.getMembershipPackage().getId() : null,
-                s.getMembershipPackage() != null ? s.getMembershipPackage().getName() : null,
+                pkgName,
                 s.getPreviousSubscription() != null ? s.getPreviousSubscription().getId() : null,
                 s.getStartDate(),
                 s.getEndDate(),
@@ -991,5 +1006,22 @@ public class MembershipSubscriptionService {
                 s.getHoldRequestedAt(),
                 s.getHoldResolvedAt(),
                 cancelledEnrollmentsCount);
+    }
+
+    private boolean isTrialSubscription(MembershipSubscription sub) {
+        if (sub == null) return false;
+        if (sub.getMembershipPackage() != null) {
+            String name = sub.getMembershipPackage().getName();
+            if (name != null) {
+                String upper = name.toUpperCase(java.util.Locale.ROOT);
+                if (upper.contains("TRẢI NGHIỆM") || upper.contains("TRIAL")) return true;
+            }
+            if (sub.getMembershipPackage().getDurationDays() > 0 && sub.getMembershipPackage().getDurationDays() <= 3) return true;
+        }
+        if (sub.getStartDate() != null && sub.getEndDate() != null) {
+            long days = java.time.temporal.ChronoUnit.DAYS.between(sub.getStartDate(), sub.getEndDate());
+            if (days <= 3) return true;
+        }
+        return false;
     }
 }
