@@ -170,6 +170,18 @@ class CodeFirstSchemaTest {
     }
 
     @Test
+    void abandonedVnpayAttemptQueryCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
+        var method = com.swp391.scms.finance.repository.VnpayTransactionRepository.class.getMethod(
+                "findPaymentIdsWithPendingExpiredBefore", java.time.LocalDateTime.class);
+        generateDdl(factory -> {
+            try (var session = factory.openSession()) {
+                session.createQuery(method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value(), Long.class)
+                        .setParameter("cutoff", java.time.LocalDateTime.of(2026, 11, 5, 12, 0));
+            }
+        });
+    }
+
+    @Test
     void authenticationProjectionCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
         var method = com.swp391.scms.users.UserRepository.class.getMethod("findAuthenticationById", Long.class);
         String jpql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();

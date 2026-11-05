@@ -120,6 +120,8 @@ public class InvoiceService {
     /**
      * Automatically generates and issues an electronic invoice for a successful payment.
      */
+    // Callers treat auto-issue as best effort: a rejected issue must not mark the payment's transaction rollback-only.
+    @Transactional(noRollbackFor = com.swp391.scms.common.exception.AppException.class)
     public InvoiceDto autoIssueInvoiceForPayment(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", paymentId));

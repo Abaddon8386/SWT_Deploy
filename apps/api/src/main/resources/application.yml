@@ -10,6 +10,9 @@ scms:
 
 server:
   port: 8080
+  # Behind the hosting proxy (Render), take the client address from X-Forwarded-For sent by trusted internal
+  # proxies only; rate limiting and VNPay vnp_IpAddr would otherwise see one proxy address for every user.
+  forward-headers-strategy: native
   servlet:
     session:
       timeout: 5m

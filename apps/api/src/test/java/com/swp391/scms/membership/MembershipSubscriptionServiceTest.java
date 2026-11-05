@@ -631,6 +631,48 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void cancelPending_memberWithdrawsUnpaidOnlineCheckoutOnceNoGatewayAttemptIsLive() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipSubscription sub = new MembershipSubscription(); sub.setId(150L);
+        sub.setMember(member); sub.setStatus("pending_payment");
+        Payment payment = new Payment(); payment.setId(9L); payment.setStatus("pending"); payment.setMethod("online_wallet");
+        var guard = org.mockito.Mockito.mock(com.swp391.scms.finance.service.VnpayPaymentGuard.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "vnpayGuard", guard);
+        when(subscriptions.findById(150L)).thenReturn(Optional.of(sub));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByIdForUpdate(150L)).thenReturn(Optional.of(sub));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentRepository.findAllBySubscriptionId(150L)).thenReturn(List.of(payment));
+
+        assertThat(service.cancelPending(principal, 150L).status()).isEqualTo("cancelled");
+        assertThat(payment.getStatus()).isEqualTo("failed");
+        org.mockito.Mockito.verify(guard).subscription(150L);
+    }
+
+    @Test
+    void cancelPending_staffCannotCancelWhileGatewayMayStillSettle() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipSubscription sub = new MembershipSubscription(); sub.setId(150L);
+        sub.setMember(member); sub.setStatus("pending_payment");
+        Payment payment = new Payment(); payment.setId(9L); payment.setStatus("pending"); payment.setMethod("online_wallet");
+        var guard = org.mockito.Mockito.mock(com.swp391.scms.finance.service.VnpayPaymentGuard.class);
+        org.mockito.Mockito.doThrow(new ConflictException("VNPAY_AWAITING_CONFIRMATION", "finance.vnpay.awaiting_confirmation", null, null))
+                .when(guard).subscription(150L);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "vnpayGuard", guard);
+        when(subscriptions.findById(150L)).thenReturn(Optional.of(sub));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByIdForUpdate(150L)).thenReturn(Optional.of(sub));
+        when(paymentRepository.findAllBySubscriptionId(150L)).thenReturn(List.of(payment));
+
+        assertThatThrownBy(() -> service.cancelPending(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 150L))
+                .isInstanceOf(ConflictException.class);
+        assertThat(sub.getStatus()).isEqualTo("pending_payment");
+        assertThat(payment.getStatus()).isEqualTo("pending");
+    }
+
+    @Test
     void mine_returnsListOrdered() {
         Member member = new Member();
         member.setUserId(10L);

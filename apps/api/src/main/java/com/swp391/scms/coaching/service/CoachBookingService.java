@@ -471,6 +471,13 @@ public class CoachBookingService {
         if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
             throw new BadRequestException("ALREADY_CANCELLED", "error.coach_booking.already_cancelled", "Lịch này đã được hủy trước đó.");
         }
+        // A session that was held (or has started) is part of attendance, quota and revenue history.
+        if ("completed".equalsIgnoreCase(booking.getStatus()) || booking.getBookingDate() == null
+                || booking.getStartTime() == null
+                || !LocalDateTime.of(booking.getBookingDate(), booking.getStartTime()).isAfter(LocalDateTime.now(clock))) {
+            throw new BadRequestException("COACH_BOOKING_CANCEL_TOO_LATE", "error.coach_booking.cancel_too_late", null,
+                    "A 1:1 session that has started can no longer be cancelled.");
+        }
 
         if (paymentRepository != null) {
             paymentRepository.findAllByCoachBookingId(bookingId).stream()

@@ -65,7 +65,7 @@ public class MembershipSubscriptionService {
     private PaymentRepository paymentRepository;
 
     @Autowired(required = false)
-    private com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository;
+    private com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
     @Autowired(required = false)
     private EntitlementRevocationService entitlementRevocation;
@@ -460,26 +460,20 @@ public class MembershipSubscriptionService {
                 throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
                         "error.membership.cancel_payment_unsettled", null, null);
             }
-            if (!isStaff && subPayments.stream().anyMatch(payment -> !"failed".equalsIgnoreCase(payment.getStatus()))) {
+            // A VNPay attempt the gateway may still settle blocks everyone; an abandoned one is closed here.
+            if (vnpayGuard != null) vnpayGuard.subscription(subscriptionId);
+            // A member may withdraw an unpaid online checkout; a cash receipt under review is decided by reception.
+            if (!isStaff && subPayments.stream().anyMatch(payment -> "pending".equalsIgnoreCase(payment.getStatus())
+                    && !"online_wallet".equalsIgnoreCase(payment.getMethod()))) {
                 throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
                         "error.membership.cancel_payment_unsettled", null, null);
             }
-            if (isStaff) {
-                subPayments.stream()
-                        .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
-                        .forEach(payment -> {
-                            payment.setStatus("failed");
-                            paymentRepository.save(payment);
-                            if (vnpayTransactionRepository != null) {
-                                vnpayTransactionRepository.findAllByPaymentId(payment.getId()).stream()
-                                        .filter(t -> "pending".equalsIgnoreCase(t.getStatus()))
-                                        .forEach(t -> {
-                                            t.setStatus("failed");
-                                            vnpayTransactionRepository.save(t);
-                                        });
-                            }
-                        });
-            }
+            subPayments.stream()
+                    .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
+                    .forEach(payment -> {
+                        payment.setStatus("failed");
+                        paymentRepository.save(payment);
+                    });
         }
 
         subscription.setStatus("cancelled");

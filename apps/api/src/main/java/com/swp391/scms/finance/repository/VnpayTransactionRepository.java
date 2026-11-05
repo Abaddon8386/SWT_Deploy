@@ -9,4 +9,12 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
     java.util.List<VnpayTransaction> findAllByPaymentId(Long paymentId);
     boolean existsByPaymentIdAndStatus(Long paymentId, String status);
     boolean existsByPaymentId(Long paymentId);
+
+    /** Payments with a pending attempt whose gateway expiry passed before {@code cutoff}. */
+    @org.springframework.data.jpa.repository.Query("""
+            select distinct t.payment.id from VnpayTransaction t
+            where t.status = 'pending' and t.expiresAt < :cutoff
+            """)
+    java.util.List<Long> findPaymentIdsWithPendingExpiredBefore(
+            @org.springframework.data.repository.query.Param("cutoff") java.time.LocalDateTime cutoff);
 }

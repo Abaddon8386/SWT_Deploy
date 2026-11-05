@@ -30,6 +30,22 @@ class RateLimitingFilterTest {
         assertEquals(429, json.get("status").asInt());
     }
 
+    @Test
+    void sessionReadOnEveryPortalLoadDoesNotUseTheLoginBudget() throws Exception {
+        for (int i = 0; i < 100; i++) {
+            MockHttpServletRequest me = new MockHttpServletRequest("GET", "/api/v1/auth/me");
+            me.setRemoteAddr("10.0.0.11");
+            MockHttpServletResponse meResponse = new MockHttpServletResponse();
+            filter.doFilterInternal(me, meResponse, filterChain);
+            assertEquals(200, meResponse.getStatus());
+        }
+        MockHttpServletRequest login = new MockHttpServletRequest("POST", "/api/v1/auth/login");
+        login.setRemoteAddr("10.0.0.11");
+        MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+        filter.doFilterInternal(login, loginResponse, filterChain);
+        assertEquals(200, loginResponse.getStatus());
+    }
+
     private RateLimitingFilter filter;
     private FilterChain filterChain;
 

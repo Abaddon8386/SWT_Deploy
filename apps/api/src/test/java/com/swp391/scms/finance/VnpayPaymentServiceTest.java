@@ -111,15 +111,41 @@ class VnpayPaymentServiceTest {
         var svc=new VnpayPaymentService(transactions,payments,members,subscriptions,settlement,invoices,gateway,clock,mock(jakarta.persistence.EntityManager.class),mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),repo,mock(com.swp391.scms.notifications.NotificationService.class),mock(com.swp391.scms.common.i18n.MessageService.class));
         assertEquals("00",svc.ipn(callback("00","00","65000000")));assertEquals("paid",booking.getPaymentStatus());verify(settlement).updatePaymentStatus(9L,"success");
     }
-    @Test void reusesPendingCheckoutAndRequiresReconciliationAfterExpiry() {
+    @Test void reusesPendingCheckoutWaitsOutIpnGraceThenStartsAFreshAttempt() {
         var sub=new MembershipSubscription();sub.setId(11L);sub.setMember(payment.getMember());sub.setStatus("pending_payment");
         when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
         when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));when(payments.save(payment)).thenReturn(payment);
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L,"pending")).thenReturn(Optional.of(transaction));
         assertEquals("ABC123",service.checkout(owner,11L,"127.0.0.1").reference());verify(transactions,never()).save(any());
-        var expired=new VnpayTransaction("OLD",payment,payment.getAmount(),LocalDateTime.of(2026,11,2,12,0),LocalDateTime.of(2026,11,2,12,15),"127.0.0.1");
-        when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L,"pending")).thenReturn(Optional.of(expired));
+        // Expired 10 minutes ago: a delayed IPN may still arrive, so the order stays blocked.
+        var recent=new VnpayTransaction("RECENT",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,35),LocalDateTime.of(2026,11,3,11,50),"127.0.0.1");
+        when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L,"pending")).thenReturn(Optional.of(recent));
         assertThrows(com.swp391.scms.common.exception.ConflictException.class,()->service.checkout(owner,11L,"127.0.0.1"));verify(transactions,never()).save(any());
+        assertEquals("pending",recent.getStatus());
+        // Abandoned a day ago: closed as failed and the member can pay again.
+        var abandoned=new VnpayTransaction("OLD",payment,payment.getAmount(),LocalDateTime.of(2026,11,2,12,0),LocalDateTime.of(2026,11,2,12,15),"127.0.0.1");
+        when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L,"pending")).thenReturn(Optional.of(abandoned));
+        var fresh=service.checkout(owner,11L,"127.0.0.1");
+        assertEquals("failed",abandoned.getStatus());assertNotEquals("OLD",fresh.reference());
+        verify(transactions).save(abandoned);verify(transactions).save(argThat(t->t!=abandoned && "pending".equals(t.getStatus())));
+    }
+    @Test void delayedSuccessForAnAttemptClosedAfterExpiryStillSettlesAnUnpaidOrder() {
+        var closed=new VnpayTransaction("ABC123",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,0),LocalDateTime.of(2026,11,3,11,15),"127.0.0.1");
+        closed.setStatus("failed");when(transactions.findById("ABC123")).thenReturn(Optional.of(closed));
+        assertEquals("00",service.ipn(callback("00","00","65000000")));
+        verify(settlement).updatePaymentStatus(9L,"success");assertEquals("success",closed.getStatus());
+    }
+    @Test void delayedSuccessIsNotSettledOnceTheOrderWasClosed() {
+        var closed=new VnpayTransaction("ABC123",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,0),LocalDateTime.of(2026,11,3,11,15),"127.0.0.1");
+        closed.setStatus("failed");payment.setStatus("failed");when(transactions.findById("ABC123")).thenReturn(Optional.of(closed));
+        assertEquals("02",service.ipn(callback("00","00","65000000")));
+        verifyNoInteractions(settlement,invoices);
+    }
+    @Test void delayedFailureForAClosedAttemptChangesNothing() {
+        var closed=new VnpayTransaction("ABC123",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,0),LocalDateTime.of(2026,11,3,11,15),"127.0.0.1");
+        closed.setStatus("failed");when(transactions.findById("ABC123")).thenReturn(Optional.of(closed));
+        assertEquals("02",service.ipn(callback("24","02","65000000")));
+        verifyNoInteractions(settlement,invoices);assertEquals("failed",closed.getStatus());
     }
     @Test void unknownOrderIsNotFound() {
         when(transactions.findById("ABC123")).thenReturn(Optional.empty());

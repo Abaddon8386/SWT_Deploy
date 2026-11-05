@@ -99,8 +99,13 @@ public class VnpayPaymentService {
         payment=payments.save(payment);
         var existing=transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(),"pending");
         if(existing.isPresent()) {
-            if(!existing.get().getExpiresAt().isAfter(now())) throw new ConflictException("VNPAY_AWAITING_CONFIRMATION","finance.vnpay.awaiting_confirmation",null,null);
-            return checkoutDto(existing.get());
+            VnpayTransaction current=existing.get();
+            if(current.getExpiresAt().isAfter(now())) return checkoutDto(current);
+            // The gateway refuses payment after expiry; wait out the IPN grace period, then start a fresh attempt.
+            if(!current.getExpiresAt().plus(VnpayPaymentGuard.SETTLEMENT_GRACE).isBefore(now()))
+                throw new ConflictException("VNPAY_AWAITING_CONFIRMATION","finance.vnpay.awaiting_confirmation",null,null);
+            current.setStatus("failed");
+            transactions.save(current);
         }
         String reference=UUID.randomUUID().toString().replace("-","");
         var created=now();
@@ -138,7 +143,11 @@ public class VnpayPaymentService {
         lockMember(p.getMember().getUserId());lockTargets(p);entities.refresh(t);entities.refresh(p);
         String amount=fields.get("vnp_Amount");
         if(amount==null || !amount.matches("[0-9]{1,12}") || t.getAmount().multiply(BigDecimal.valueOf(100)).compareTo(new BigDecimal(amount))!=0) return "04";
-        if(!"pending".equals(t.getStatus()) || !"pending".equals(p.getStatus())) return "02";
+        // An attempt closed locally after its gateway expiry may still report a delayed success: honour it while the
+        // payment is unsettled so the customer's money is never taken without the order being paid.
+        boolean lateAfterLocalExpiry="failed".equals(t.getStatus()) && t.getGatewayTransactionNo()==null
+                && "pending".equals(p.getStatus()) && !t.getExpiresAt().isAfter(now());
+        if((!"pending".equals(t.getStatus()) && !lateAfterLocalExpiry) || !"pending".equals(p.getStatus())) return "02";
         String response=fields.get("vnp_ResponseCode"),status=fields.get("vnp_TransactionStatus");
         if(response==null || status==null || !response.matches("[0-9]{2}") || !status.matches("[0-9]{2}")) return "97";
         if("00".equals(response) && "00".equals(status)) {
@@ -154,6 +163,7 @@ public class VnpayPaymentService {
                     messages.getMessage("notifications.payment.vnpay_success.body", t.getAmount().toPlainString(), reference),
                     "payment", "payment", p.getId());
         } else {
+            if (lateAfterLocalExpiry) return "02"; // already closed as failed
             // A provisional/unknown status is not proof of a failed debit; keep it blocked for reconciliation.
             if (!Set.of("02", "04", "07").contains(status)) return "99";
             t.setStatus("failed");

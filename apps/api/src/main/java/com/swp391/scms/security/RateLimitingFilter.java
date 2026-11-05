@@ -34,6 +34,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final String SCAN_PATH = "/api/v1/check-in/scan";
     private static final String DYNAMIC_QR_PATH = "/api/v1/memberships/subscriptions/my/dynamic-qr";
     private static final String AUTH_PATH = "/api/v1/auth/";
+    private static final String AUTH_ME_PATH = "/api/v1/auth/me";
 
     private final Map<String, WindowCounter> requestCounts = new ConcurrentHashMap<>();
     private final AtomicLong lastCleanupMinute = new AtomicLong(-1);
@@ -102,6 +103,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private int getRateLimitForUri(String uri) {
+        // The portal reads the current session on every load; it is authenticated and not a guessing target.
+        if (uri.equals(AUTH_ME_PATH)) {
+            return 0;
+        }
         if (uri.startsWith(AUTH_PATH)) {
             return AUTH_LIMIT_PER_MINUTE;
         }
@@ -114,6 +119,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         return 0; // Not rate limited
     }
 
+    /**
+     * The client address. Behind the hosting proxy this is the real client only because
+     * {@code server.forward-headers-strategy=native} lets Tomcat take X-Forwarded-For from trusted internal proxies;
+     * the header is never read here directly, so a client cannot spoof it to dodge the limit.
+     */
     private String getClientIp(HttpServletRequest request) {
         return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
     }

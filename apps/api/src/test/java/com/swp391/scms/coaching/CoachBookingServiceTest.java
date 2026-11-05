@@ -301,6 +301,28 @@ class CoachBookingServiceTest {
     }
 
     @Test
+    void memberCannotCancelASessionThatStartedOrWasCompleted() {
+        CoachBooking started = new CoachBooking();
+        started.setId(78L); started.setMember(member); started.setCoach(coach); started.setStatus("confirmed");
+        started.setBookingDate(java.time.LocalDate.now(fixedClock));
+        started.setStartTime(java.time.LocalTime.now(fixedClock).minusMinutes(30));
+        when(coachBookingRepository.findByIdForUpdate(78L)).thenReturn(Optional.of(started));
+        AuthenticatedPrincipal owner = new AuthenticatedPrincipal(member.getUserId(), "member", "MEMBER");
+        assertThatThrownBy(() -> service.cancelBooking(owner, 78L, null))
+                .isInstanceOf(com.swp391.scms.common.exception.BadRequestException.class);
+        assertThat(started.getStatus()).isEqualTo("confirmed");
+
+        CoachBooking completed = new CoachBooking();
+        completed.setId(79L); completed.setMember(member); completed.setCoach(coach); completed.setStatus("completed");
+        completed.setBookingDate(java.time.LocalDate.now(fixedClock).plusDays(1));
+        completed.setStartTime(java.time.LocalTime.of(9, 0));
+        when(coachBookingRepository.findByIdForUpdate(79L)).thenReturn(Optional.of(completed));
+        assertThatThrownBy(() -> service.cancelBooking(owner, 79L, null))
+                .isInstanceOf(com.swp391.scms.common.exception.BadRequestException.class);
+        assertThat(completed.getStatus()).isEqualTo("completed");
+    }
+
+    @Test
     void paidBookingRequiresActiveMembership() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
