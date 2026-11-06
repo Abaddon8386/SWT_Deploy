@@ -22,6 +22,7 @@ import { QuantityStepper } from './QuantityStepper';
 import { ShopDisclaimer } from './ShopDisclaimer';
 import { VariantPicker } from './VariantPicker';
 
+import { Select } from '../../../shared/ui/Select';
 const SORT_OPTIONS: Array<{ value: 'newest' | 'price_per_serving' | 'price_asc' | 'price_desc'; label: string }> = [
   { value: 'newest', label: 'Mới nhất' },
   { value: 'price_per_serving', label: 'Giá mỗi lần dùng' },
@@ -147,7 +148,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
             <label className="shop-sr-only" htmlFor="portal-shop-category">
               Danh mục sản phẩm
             </label>
-            <select
+            <Select
               id="portal-shop-category"
               className="shop-select"
               aria-label="Danh mục sản phẩm"
@@ -163,14 +164,14 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                   {c.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="shop-field">
             <label className="shop-sr-only" htmlFor="portal-shop-sort">
               Sắp xếp
             </label>
-            <select
+            <Select
               id="portal-shop-sort"
               className="shop-select"
               aria-label="Sắp xếp sản phẩm"
@@ -185,7 +186,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <label className="portal-shop-stock-toggle">

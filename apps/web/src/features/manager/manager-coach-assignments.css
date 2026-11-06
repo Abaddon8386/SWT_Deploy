@@ -78,6 +78,12 @@
   border-color: var(--portal-salmon);
 }
 
+.coach-assignments-filters .ui-select {
+  width: auto;
+  flex: 0 1 260px;
+  min-width: 200px;
+}
+
 .coach-filter-select {
   background: var(--portal-ink);
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.12));
@@ -419,6 +425,7 @@
   .coach-student-actions { flex-wrap: wrap; }
   .coach-search-input { min-width: 0; width: 100%; }
   .coach-filter-select { min-width: 0; max-width: 100%; }
+  .coach-assignments-filters .ui-select { flex: 1 1 100%; min-width: 0; }
   .coach-assignments-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .coach-info-main, .coach-text-details { min-width: 0; overflow-wrap: anywhere; }
 }

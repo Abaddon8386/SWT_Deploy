@@ -16,6 +16,7 @@ import { ActionMenu } from '../../shared/ui/ActionMenu';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
+import { Select } from '../../shared/ui/Select';
 export function ManagerCoachReviewsPage() {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
@@ -143,31 +144,31 @@ export function ManagerCoachReviewsPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 14, fontWeight: 700 }}>Kỳ đánh giá:</span>
-          <select
+          <Select
             className="portal-input"
-            value={selectedMonth}
+            value={String(selectedMonth)}
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            style={{ width: 130, padding: '6px 12px' }}
+            style={{ width: 130 }}
           >
             {Array.from({ length: 12 }).map((_, i) => (
               <option key={i + 1} value={i + 1}>
                 Tháng {i + 1}
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             className="portal-input"
-            value={selectedYear}
+            value={String(selectedYear)}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            style={{ width: 100, padding: '6px 12px' }}
+            style={{ width: 100 }}
           >
             {[2025, 2026, 2027].map((y) => (
               <option key={y} value={y}>
                 {y}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

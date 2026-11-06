@@ -278,8 +278,8 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(host.textContent).toContain('09:00 10/11/2026');
     expect(host.textContent).toContain('Hạn: 05/12/2026');
     await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('+ Phân công'))?.click(); });
-    expect((host.querySelector('#assign-start-date') as HTMLInputElement).value).toBe('2026-11-05');
-    expect((host.querySelector('#assign-end-date') as HTMLInputElement).value).toBe('2026-12-05');
+    expect(host.querySelector('#assign-start-date')!.textContent).toContain('05/11/2026');
+    expect(host.querySelector('#assign-end-date')!.textContent).toContain('05/12/2026');
   });
 
   it('keeps target coach options after filtering and sends the selected PT relationship only', async () => {
@@ -289,7 +289,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     await act(async () => { filter.value = '10'; filter.dispatchEvent(new Event('change', { bubbles: true })); });
     await act(async () => { await new Promise(r => setTimeout(r, 260)); });
     await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent === 'Điều chuyển HLV')?.click(); });
-    const target = host.querySelector('#reassign-target-coach') as HTMLSelectElement;
+    const target = host.querySelector('#reassign-target-coach')!.closest('.ui-select')!.querySelector('select.ui-select__native') as HTMLSelectElement;
     expect([...target.options].map(o => o.value)).toContain('11');
     await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
     await act(async () => { host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });

@@ -242,7 +242,7 @@ it('counter payment asks for the method and refreshes the order', async () => {
 
   await renderPage();
   await click('Mở');
-  const select = host.querySelector<HTMLSelectElement>('#staff-counter-method')!;
+  const select = host.querySelector('#staff-counter-method')!.closest('.ui-select')!.querySelector<HTMLSelectElement>('select.ui-select__native')!;
   await act(async () => {
     setInputValue(select, 'pos');
   });

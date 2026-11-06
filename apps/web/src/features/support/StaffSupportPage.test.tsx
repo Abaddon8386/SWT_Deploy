@@ -35,8 +35,11 @@ function deferred<T>() {
 }
 const reply: api.SupportMessage = { id: 31, senderId: 20, senderName: 'Lễ tân', senderRole: 'RECEPTIONIST', message: 'Phản hồi đã lưu', createdAt: ticket.createdAt };
 async function close() { await act(async () => host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click()); }
+function nativeSelect(selector: string) {
+  return host.querySelector(selector)!.closest('.ui-select')!.querySelector<HTMLSelectElement>('select.ui-select__native')!;
+}
 async function change(selector: string, value: string) {
-  await act(async () => { const field = host.querySelector<HTMLSelectElement>(selector)!; field.value = value; field.dispatchEvent(new Event('change', { bubbles: true })); });
+  await act(async () => { const field = nativeSelect(selector); field.value = value; field.dispatchEvent(new Event('change', { bubbles: true })); });
 }
 async function submit() {
   await act(async () => host.querySelector('.member-support-compose')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
@@ -91,7 +94,7 @@ it.each(['send', 'status'] as const)('refreshes the current filter/page after pe
   await act(async () => { if (kind === 'send') sending.resolve(reply); else updating.resolve({ ...ticket, status: 'resolved' }); });
   expect(api.getSupportInbox).toHaveBeenLastCalledWith(1, 'resolved');
   await act(async () => staleList.resolve({ content: [{ ...ticket, subject: 'STALE QUERY' }], totalPages: 9 }));
-  expect(host.querySelector<HTMLSelectElement>('#staff-support-filter')!.value).toBe('resolved');
+  expect(nativeSelect('#staff-support-filter').value).toBe('resolved');
   expect(host.textContent).toContain('Résolved page 1');
   expect(host.textContent).toContain('2/2');
   expect(host.textContent).not.toContain('STALE QUERY');
@@ -124,7 +127,7 @@ it.each([
     if (timing === 'after') await finishOld();
     expect(host.querySelectorAll('.member-support-messages li')).toHaveLength(1);
     expect(host.querySelector('.member-support-messages')!.textContent).toContain(reply.message);
-    expect(host.querySelector<HTMLSelectElement>('#staff-support-status')!.value).toBe(committed.status);
+    expect(nativeSelect('#staff-support-status').value).toBe(committed.status);
     expect(host.querySelector('textarea')!.value).toBe('');
     expect(host.querySelector('dialog')!.textContent).toContain(kind === 'send' ? 'Đã gửi tin nhắn.' : 'Đã cập nhật trạng thái.');
   } finally { vi.useRealTimers(); }
@@ -211,7 +214,7 @@ it('rejects stale history after closing and opening a different ticket', async (
 it('keeps authoritative status when status update fails', async () => {
   vi.mocked(api.updateSupportStatus).mockRejectedValue(new Error('offline'));
   await render(); await open();
-  const select = host.querySelector<HTMLSelectElement>('#staff-support-status')!;
+  const select = nativeSelect('#staff-support-status');
   await act(async () => { select.value = 'resolved'; select.dispatchEvent(new Event('change', { bubbles: true })); });
   expect(api.updateSupportStatus).toHaveBeenCalledWith(7, 'resolved');
   expect(select.value).toBe('open');

@@ -544,7 +544,7 @@ export function CoachClassesPage() {
               value={allStudentsSearch}
               onChange={(e) => setAllStudentsSearch(e.target.value)}
             />
-            <select
+            <Select
               className="portal-select"
               style={{ flex: '0 0 200px' }}
               value={allStudentsLevelFilter}
@@ -554,7 +554,7 @@ export function CoachClassesPage() {
               <option value="beginner">Cơ bản (Beginner)</option>
               <option value="intermediate">Trung cấp (Intermediate)</option>
               <option value="advanced">Nâng cao (Advanced)</option>
-            </select>
+            </Select>
           </div>
 
           {allStudentsLoading ? (

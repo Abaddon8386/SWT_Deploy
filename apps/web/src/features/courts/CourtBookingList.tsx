@@ -10,6 +10,7 @@ import { catalogApi, type Room } from '../manager/catalogApi';
 import { courtsApi, bookingEnded, centerDate, courtError, displayDate, shortTime, formatVnd, type BookingPage, type CourtBooking } from './courtsApi';
 import './courts.css';
 
+import { DatePicker } from '../../shared/ui/DatePicker';
 export function CourtLoadError({ message, retry }: { message: string; retry: () => void }) {
   return <div className="portal-alert" role="alert"><span>{message}</span><button type="button" className="btn-secondary btn-sm" onClick={retry}>Thử lại</button></div>;
 }
@@ -30,7 +31,7 @@ export function StaffCourtBookings() {
   return <div className="portal-container court-page">
     <PageHeader eyebrow="Vận hành" title="Lượt đặt sân" actions={<RefreshButton label="Làm mới lượt đặt sân" onClick={reload} />} />
     <div className="court-filters">
-      <label className="portal-form-group" htmlFor="staff-court-date"><span className="portal-label">Ngày đặt</span><input id="staff-court-date" className="portal-input" type="date" required value={date} onChange={event => setDate(event.target.value)} /></label>
+      <label className="portal-form-group" htmlFor="staff-court-date"><span className="portal-label">Ngày đặt</span><DatePicker id="staff-court-date" required value={date} onChange={event => setDate(event.target.value)} /></label>
       <div className="portal-form-group"><label className="portal-label" htmlFor="staff-court-room">Sân / làn</label><Select id="staff-court-room" className="portal-select" value={roomId} onChange={event => setRoomId(event.target.value)}><option value="">Tất cả sân / làn</option>{rooms.map(room => <option key={room.id} value={room.id}>{room.name}</option>)}</Select></div>
     </div>
     {roomError && <CourtLoadError message={roomError} retry={reload} />}

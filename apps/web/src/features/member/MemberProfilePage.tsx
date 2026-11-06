@@ -7,6 +7,7 @@ import { errorMessage } from '../../shared/lib/errorMessage';
 import { notify } from '../../shared/lib/portalNotices';
 import { PageHeader } from '../../shared/ui/PageHeader';
 
+import { DatePicker } from '../../shared/ui/DatePicker';
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const MIN_AVATAR_DIMENSION = 100;
@@ -391,10 +392,8 @@ export function MemberProfilePage() {
             <div className="grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="dob">Ngày sinh</label>
-                <input
+                <DatePicker
                   id="dob"
-                  type="date"
-                  className="portal-input"
                   value={profile.dob ?? ''}
                   onChange={(e) => patch({ dob: e.target.value || null })}
                 />

@@ -14,6 +14,7 @@ import { notify } from '../../shared/lib/portalNotices';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 
+import { DatePicker } from '../../shared/ui/DatePicker';
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
   LEAVE: { label: 'Xin nghỉ phép', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
   SHIFT_EXCHANGE: { label: 'Đổi ca trực', bg: 'color-mix(in srgb, var(--portal-violet) 12%, transparent)', color: 'var(--portal-violet)' },
@@ -482,28 +483,24 @@ export function StaffInternalRequestsPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                <label htmlFor="internal-request-start" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                   {createType === 'LEAVE' ? 'Ngày bắt đầu nghỉ:' : 'Ngày áp dụng:'}
                 </label>
-                <input
-                  type="date"
-                  className="portal-input"
+                <DatePicker
+                  id="internal-request-start"
                   value={createStartDate}
                   onChange={(e) => setCreateStartDate(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8 }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                <label htmlFor="internal-request-end" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                   {createType === 'LEAVE' ? 'Ngày kết thúc nghỉ:' : 'Ngày kết thúc (tùy chọn):'}
                 </label>
-                <input
-                  type="date"
-                  className="portal-input"
+                <DatePicker
+                  id="internal-request-end"
                   value={createEndDate}
                   onChange={(e) => setCreateEndDate(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8 }}
                 />
               </div>
             </div>

@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useI18n } from '../i18n/language';
+import { popoverPlacement, type PopoverPlacement } from './popoverPlacement';
 import './timepicker.css';
 
 export interface TimePickerProps {
@@ -23,12 +25,15 @@ export function TimePicker({
   onChange,
   disabled = false,
   required = false,
-  placeholder = 'Chọn giờ...',
+  placeholder,
   className = '',
   style,
   wholeHour = false,
 }: TimePickerProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
+  const [placement, setPlacement] = useState<PopoverPlacement>({ v: 'down', h: 'left' });
+  const triggerPlaceholder = placeholder ?? t('Chọn giờ...', 'Select time...');
   const containerRef = useRef<HTMLDivElement>(null);
   const hourScrollRef = useRef<HTMLDivElement>(null);
   const minuteScrollRef = useRef<HTMLDivElement>(null);
@@ -80,6 +85,13 @@ export function TimePicker({
     }
   }, [isOpen]);
 
+  // Lật lên / căn phải khi thiếu chỗ
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const trigger = containerRef.current?.querySelector<HTMLElement>('.luxury-timepicker-trigger');
+    if (trigger) setPlacement(popoverPlacement(trigger, 252, 330));
+  }, [isOpen]);
+
   const handleSelectHour = (h: string) => {
     const newVal = `${h}:${wholeHour ? '00' : minute}`;
     onChange({ target: { value: newVal } });
@@ -102,7 +114,7 @@ export function TimePicker({
         aria-expanded={isOpen}
       >
         <span className={`luxury-timepicker-value ${!value ? 'luxury-timepicker-placeholder' : ''}`}>
-          {value || placeholder}
+          {value || triggerPlaceholder}
         </span>
         <span className="luxury-timepicker-icon" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -129,9 +141,13 @@ export function TimePicker({
       )}
 
       {isOpen && (
-        <div className="luxury-timepicker-popover" role="dialog" aria-label="Chọn giờ">
+        <div
+          className={`luxury-timepicker-popover luxury-timepicker-popover--${placement.v} luxury-timepicker-popover--${placement.h}`}
+          role="dialog"
+          aria-label={t('Chọn giờ', 'Select time')}
+        >
           <div className="ltp-header">
-            <span className="ltp-title">Khung Giờ</span>
+            <span className="ltp-title">{t('Khung giờ', 'Time')}</span>
             <span className="ltp-preview-badge">
               {hour}:{wholeHour ? '00' : minute}
             </span>
@@ -139,7 +155,7 @@ export function TimePicker({
 
           <div className="ltp-columns">
             <div className="ltp-col">
-              <span className="ltp-col-label">Giờ</span>
+              <span className="ltp-col-label">{t('Giờ', 'Hour')}</span>
               <div className="ltp-col-scroll" ref={hourScrollRef}>
                 {HOURS.map((h) => (
                   <button
@@ -155,7 +171,7 @@ export function TimePicker({
             </div>
 
             {!wholeHour && <div className="ltp-col">
-              <span className="ltp-col-label">Phút</span>
+              <span className="ltp-col-label">{t('Phút', 'Min')}</span>
               <div className="ltp-col-scroll" ref={minuteScrollRef}>
                 {MINUTES.map((m) => (
                   <button
@@ -177,7 +193,7 @@ export function TimePicker({
               className="ltp-done-btn"
               onClick={() => setIsOpen(false)}
             >
-              Xong
+              {t('Xong', 'Done')}
             </button>
           </div>
         </div>

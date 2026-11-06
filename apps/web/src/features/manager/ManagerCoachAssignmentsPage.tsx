@@ -16,6 +16,8 @@ import { apiFetch } from '../../shared/api/client';
 import { errorMessage as safeMessage } from '../../shared/lib/errorMessage';
 import './manager-coach-assignments.css';
 
+import { Select } from '../../shared/ui/Select';
+import { DatePicker } from '../../shared/ui/DatePicker';
 interface MemberLookupItem {
   userId: number;
   fullName: string;
@@ -270,7 +272,7 @@ export function ManagerCoachAssignmentsPage() {
             aria-label="Tìm kiếm"
           />
 
-          <select
+          <Select
             className="coach-filter-select"
             value={coachFilter}
             onChange={(e) => setCoachFilter(e.target.value)}
@@ -282,9 +284,9 @@ export function ManagerCoachAssignmentsPage() {
                 {c.coachName} ({c.specialization})
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             className="coach-filter-select"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -294,7 +296,7 @@ export function ManagerCoachAssignmentsPage() {
             <option value="TRAINING_PLAN">Theo giáo án riêng</option>
             <option value="PT_1_1">Tập 1:1 với HLV (PT)</option>
             <option value="CLASS">Lớp học nhóm</option>
-          </select>
+          </Select>
         </div>
 
         <div className="coach-view-toggle">
@@ -523,10 +525,10 @@ export function ManagerCoachAssignmentsPage() {
             {formError && <p className="portal-alert portal-alert--error" role="alert">{formError}</p>}
             <div className="coach-form-group">
               <label htmlFor="assign-coach-select">Chọn Huấn luyện viên phụ trách *</label>
-              <select
+              <Select
                 id="assign-coach-select"
                 className="coach-form-control"
-                value={assignCoachId}
+                value={String(assignCoachId)}
                 onChange={(e) => setAssignCoachId(Number(e.target.value))}
                 required
               >
@@ -535,7 +537,7 @@ export function ManagerCoachAssignmentsPage() {
                     {c.coachName} - Chuyên môn: {c.specialization}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="coach-form-group">
@@ -611,10 +613,8 @@ export function ManagerCoachAssignmentsPage() {
             <div className="coach-form-row">
               <div className="coach-form-group">
                 <label htmlFor="assign-start-date">Ngày bắt đầu *</label>
-                <input
+                <DatePicker
                   id="assign-start-date"
-                  type="date"
-                  className="coach-form-control"
                   value={assignStartDate}
                   onChange={(e) => setAssignStartDate(e.target.value)}
                   required
@@ -622,10 +622,8 @@ export function ManagerCoachAssignmentsPage() {
               </div>
               <div className="coach-form-group">
                 <label htmlFor="assign-end-date">Ngày kết thúc *</label>
-                <input
+                <DatePicker
                   id="assign-end-date"
-                  type="date"
-                  className="coach-form-control"
                   value={assignEndDate}
                   onChange={(e) => setAssignEndDate(e.target.value)}
                   required
@@ -688,10 +686,10 @@ export function ManagerCoachAssignmentsPage() {
 
             <div className="coach-form-group">
               <label htmlFor="reassign-target-coach">Chọn Huấn luyện viên tiếp nhận mới *</label>
-              <select
+              <Select
                 id="reassign-target-coach"
                 className="coach-form-control"
-                value={targetCoachId}
+                value={String(targetCoachId)}
                 onChange={(e) => setTargetCoachId(Number(e.target.value))}
                 required
               >
@@ -703,7 +701,7 @@ export function ManagerCoachAssignmentsPage() {
                       {c.coachName} - Chuyên môn: {c.specialization}
                     </option>
                   ))}
-              </select>
+              </Select>
             </div>
 
             <div className="coach-form-group">

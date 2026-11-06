@@ -5,6 +5,7 @@ import { Modal } from '../../../shared/ui/Modal';
 import { shopApi } from '../shopApi';
 import type { VariantAdminDto } from '../shopTypes';
 
+import { Select } from '../../../shared/ui/Select';
 export interface StockAdjustDialogProps {
   variant: { id: number; sku: string; label: string; stock: number };
   onClose: () => void;
@@ -74,7 +75,7 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
           <label className="shop-label" htmlFor="stock-adjust-reason">
             Lý do điều chỉnh
           </label>
-          <select
+          <Select
             id="stock-adjust-reason"
             className="shop-select"
             value={reason}
@@ -83,7 +84,7 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
           >
             <option value="restock">Nhập thêm hàng</option>
             <option value="adjustment">Kiểm kê / điều chỉnh</option>
-          </select>
+          </Select>
         </div>
 
         <div className="shop-field">

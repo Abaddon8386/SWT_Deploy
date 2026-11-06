@@ -8,6 +8,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { isCourtDiscipline } from '../courts/courtsApi';
 import { errorMessage } from '../../shared/lib/errorMessage';
 
+import { TimePicker } from '../../shared/ui/TimePicker';
 type Tab = 'disciplines' | 'rooms' | 'packages';
 type Form = Record<string, string>;
 
@@ -371,8 +372,8 @@ export function ManagerCatalogsPage() {
                   </Select>
                 </div>
                 {editing.form.disciplineId && <div className="grid-2">
-                  <label className="portal-form-group" htmlFor="cat-open"><span className="portal-label">Giờ mở cửa</span><input id="cat-open" className="portal-input" type="time" step="3600" required value={editing.form.openTime ?? ''} onChange={event => set('openTime', event.target.value)} /></label>
-                  <label className="portal-form-group" htmlFor="cat-close"><span className="portal-label">Giờ đóng cửa</span><input id="cat-close" className="portal-input" type="time" step="3600" required value={editing.form.closeTime ?? ''} onChange={event => set('closeTime', event.target.value)} /></label>
+                  <label className="portal-form-group" htmlFor="cat-open"><span className="portal-label">Giờ mở cửa</span><TimePicker id="cat-open" wholeHour required value={editing.form.openTime ?? ''} onChange={event => set('openTime', event.target.value)} /></label>
+                  <label className="portal-form-group" htmlFor="cat-close"><span className="portal-label">Giờ đóng cửa</span><TimePicker id="cat-close" wholeHour required value={editing.form.closeTime ?? ''} onChange={event => set('closeTime', event.target.value)} /></label>
                 </div>}
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="cat-tier">Phân hạng phòng</label>

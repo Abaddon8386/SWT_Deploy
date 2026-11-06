@@ -29,6 +29,9 @@ interface SelectProps {
   onChange: (e: { target: { value: string } }) => void;
   disabled?: boolean;
   required?: boolean;
+  name?: string;
+  /** Neo focus khi form báo lỗi (xem `[data-field]` ở checkout/editor). Gắn lên nút kích hoạt. */
+  'data-field'?: string;
   'aria-label'?: string;
   'aria-invalid'?: boolean | 'true' | 'false';
   /** Dùng các thẻ <option> như <select> gốc (hỗ trợ cả Fragment/map). */
@@ -71,6 +74,7 @@ export function Select({
   onChange,
   disabled,
   required,
+  name,
   children,
   ...aria
 }: SelectProps) {
@@ -219,6 +223,7 @@ export function Select({
         aria-activedescendant={open && active >= 0 ? `${uid}-opt-${active}` : undefined}
         aria-label={aria['aria-label']}
         aria-invalid={aria['aria-invalid']}
+        data-field={aria['data-field']}
         disabled={disabled}
         onClick={() => (open ? closeMenu(false) : openMenu())}
         onKeyDown={onKeyDown}
@@ -236,6 +241,7 @@ export function Select({
           tabIndex={-1}
           aria-hidden="true"
           aria-label={aria['aria-label']}
+          name={name}
           required={required}
           disabled={disabled}
           value={value}

@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { shopApi } from '../shopApi';
 import type { GeoRegion } from '../shopTypes';
 
+import { Select } from '../../../shared/ui/Select';
 export function RegionSelects({
   provinceCode,
   wardCode,
@@ -70,7 +71,7 @@ export function RegionSelects({
         <label htmlFor={provinceId} className="shop-label portal-label">
           Tỉnh / Thành phố
         </label>
-        <select
+        <Select
           id={provinceId}
           name="provinceCode"
           data-field="provinceCode"
@@ -86,7 +87,7 @@ export function RegionSelects({
               {p.name}
             </option>
           ))}
-        </select>
+        </Select>
         {errors?.provinceCode && (
           <p className="form-error" role="alert">
             {errors.provinceCode}
@@ -98,7 +99,7 @@ export function RegionSelects({
         <label htmlFor={wardId} className="shop-label portal-label">
           Phường / Xã
         </label>
-        <select
+        <Select
           id={wardId}
           name="wardCode"
           data-field="wardCode"
@@ -114,7 +115,7 @@ export function RegionSelects({
               {w.name}
             </option>
           ))}
-        </select>
+        </Select>
         {errors?.wardCode && (
           <p className="form-error" role="alert">
             {errors.wardCode}

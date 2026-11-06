@@ -13,6 +13,7 @@ import { VariantRowsEditor, type VariantRowDraft } from './components/VariantRow
 import './shop-portal.css';
 import { shopApi } from './shopApi';
 import { FORM_LABELS, GOAL_LABELS } from './shopFormat';
+import { Select } from '../../shared/ui/Select';
 import type {
   CategoryAdminDto,
   ProductForm,
@@ -360,11 +361,11 @@ export function ManagerProductEditorPage() {
                 <label className="shop-label" htmlFor="product-category">
                   Loại sản phẩm
                 </label>
-                <select
+                <Select
                   id="product-category"
                   data-field="categoryId"
                   className="shop-select"
-                  value={categoryId}
+                  value={String(categoryId)}
                   disabled={saving}
                   aria-invalid={Boolean(errors.categoryId)}
                   onChange={e => {
@@ -380,7 +381,7 @@ export function ManagerProductEditorPage() {
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {errors.categoryId && (
                   <p className="form-error" role="alert">
                     {errors.categoryId}
@@ -392,7 +393,7 @@ export function ManagerProductEditorPage() {
                 <label className="shop-label" htmlFor="product-form">
                   Dạng bào chế
                 </label>
-                <select
+                <Select
                   id="product-form"
                   className="shop-select"
                   value={formType}
@@ -404,7 +405,7 @@ export function ManagerProductEditorPage() {
                       {FORM_LABELS[f]}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="shop-field">

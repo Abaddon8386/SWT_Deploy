@@ -25,8 +25,8 @@ it('assigns court discipline and operating hours without converting old rooms on
   await act(async () => discipline.click());
   expect([...host.querySelectorAll('[role="option"]')].map(option => option.textContent)).not.toContain('Gym');
   await act(async () => ([...host.querySelectorAll<HTMLElement>('[role="option"]')].find(option => option.textContent?.includes('Tennis'))!).click());
-  expect(host.querySelector<HTMLInputElement>('#cat-open')?.value).toBe('06:00');
-  expect(host.querySelector<HTMLInputElement>('#cat-close')?.value).toBe('22:00');
+  expect(host.querySelector<HTMLButtonElement>('#cat-open')?.textContent).toBe('06:00');
+  expect(host.querySelector<HTMLButtonElement>('#cat-close')?.textContent).toBe('22:00');
   await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
   expect(catalogApi.saveRoom).toHaveBeenCalledWith(5, expect.objectContaining({ disciplineId: 2, openTime: '06:00', closeTime: '22:00' }));
 });

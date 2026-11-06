@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useI18n } from '../i18n/language';
+import { popoverPlacement, type PopoverPlacement } from './popoverPlacement';
 import './datepicker.css';
 
 export interface DatePickerProps {
@@ -14,7 +16,10 @@ export interface DatePickerProps {
   style?: React.CSSProperties;
 }
 
-const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const WEEKDAYS_VI = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const WEEKDAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const POPOVER_WIDTH = 296;
+const POPOVER_HEIGHT = 412;
 
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
@@ -26,12 +31,15 @@ export function DatePicker({
   max,
   disabled = false,
   required = false,
-  placeholder = 'Chọn ngày...',
+  placeholder,
   className = '',
   style,
 }: DatePickerProps) {
+  const { lang, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
+  const [placement, setPlacement] = useState<PopoverPlacement>({ v: 'down', h: 'left' });
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerPlaceholder = placeholder ?? t('Chọn ngày...', 'Select date...');
 
   // Parse initial year & month from value or today
   const initialDate = useMemo(() => {
@@ -45,6 +53,9 @@ export function DatePicker({
 
   const [viewYear, setViewYear] = useState(initialDate.year);
   const [viewMonth, setViewMonth] = useState(initialDate.month);
+  // Chế độ chọn năm: bấm vào tiêu đề tháng để nhảy nhanh (ví dụ ngày sinh)
+  const [yearMode, setYearMode] = useState(false);
+  const [yearPageStart, setYearPageStart] = useState(initialDate.year - 4);
 
   // Sync view when value changes from outside
   useEffect(() => {
@@ -79,6 +90,16 @@ export function DatePicker({
     };
   }, [isOpen]);
 
+  // Lật lên / căn phải khi thiếu chỗ
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setYearMode(false);
+      return;
+    }
+    const trigger = containerRef.current?.querySelector<HTMLElement>('.luxury-datepicker-trigger');
+    if (trigger) setPlacement(popoverPlacement(trigger, POPOVER_WIDTH, POPOVER_HEIGHT));
+  }, [isOpen]);
+
   // Format display text (DD/MM/YYYY)
   const displayLabel = useMemo(() => {
     if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
@@ -89,6 +110,10 @@ export function DatePicker({
   // Navigation handlers
   const handlePrevMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (yearMode) {
+      setYearPageStart((y) => y - 12);
+      return;
+    }
     if (viewMonth === 0) {
       setViewYear((y) => y - 1);
       setViewMonth(11);
@@ -99,6 +124,10 @@ export function DatePicker({
 
   const handleNextMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (yearMode) {
+      setYearPageStart((y) => y + 12);
+      return;
+    }
     if (viewMonth === 11) {
       setViewYear((y) => y + 1);
       setViewMonth(0);
@@ -225,7 +254,7 @@ export function DatePicker({
         aria-expanded={isOpen}
       >
         <span className={`luxury-datepicker-value ${!displayLabel ? 'luxury-datepicker-placeholder' : ''}`}>
-          {displayLabel || placeholder}
+          {displayLabel || triggerPlaceholder}
         </span>
         <span className="luxury-datepicker-icon" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -254,17 +283,36 @@ export function DatePicker({
       )}
 
       {isOpen && (
-        <div className="luxury-datepicker-popover" role="dialog" aria-label="Chọn ngày">
+        <div
+          className={`luxury-datepicker-popover luxury-datepicker-popover--${placement.v} luxury-datepicker-popover--${placement.h}`}
+          role="dialog"
+          aria-label={t('Chọn ngày', 'Select date')}
+        >
           <div className="ldp-header">
-            <span className="ldp-title">
-              Tháng {viewMonth + 1}, {viewYear}
-            </span>
+            <button
+              type="button"
+              className="ldp-title ldp-title-btn"
+              aria-live="polite"
+              aria-expanded={yearMode}
+              aria-label={t('Chọn năm', 'Choose year')}
+              onClick={() => {
+                setYearPageStart(viewYear - 4);
+                setYearMode((v) => !v);
+              }}
+            >
+              {lang === 'en'
+                ? new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                : `Tháng ${viewMonth + 1}, ${viewYear}`}
+              <svg className="ldp-title-chevron" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M2 4.25 6 8l4-3.75" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
             <div className="ldp-nav-btns">
               <button
                 type="button"
                 className="ldp-nav-btn"
                 onClick={handlePrevMonth}
-                aria-label="Tháng trước"
+                aria-label={yearMode ? t('Các năm trước', 'Earlier years') : t('Tháng trước', 'Previous month')}
               >
                 ‹
               </button>
@@ -272,15 +320,38 @@ export function DatePicker({
                 type="button"
                 className="ldp-nav-btn"
                 onClick={handleNextMonth}
-                aria-label="Tháng sau"
+                aria-label={yearMode ? t('Các năm sau', 'Later years') : t('Tháng sau', 'Next month')}
               >
                 ›
               </button>
             </div>
           </div>
 
+          {yearMode ? (
+            <div className="ldp-years-grid" role="group" aria-label={t('Chọn năm', 'Choose year')}>
+              {Array.from({ length: 12 }, (_, i) => yearPageStart + i).map((y) => {
+                const outOfRange = (min && y < Number(min.slice(0, 4))) || (max && y > Number(max.slice(0, 4)));
+                return (
+                  <button
+                    key={y}
+                    type="button"
+                    className={`ldp-year-cell${y === viewYear ? ' is-selected' : ''}${outOfRange ? ' is-disabled' : ''}`}
+                    disabled={!!outOfRange}
+                    aria-pressed={y === viewYear}
+                    onClick={() => {
+                      setViewYear(y);
+                      setYearMode(false);
+                    }}
+                  >
+                    {y}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <>
           <div className="ldp-weekdays">
-            {WEEKDAYS.map((wd) => (
+            {(lang === 'en' ? WEEKDAYS_EN : WEEKDAYS_VI).map((wd) => (
               <span key={wd} className="ldp-weekday">
                 {wd}
               </span>
@@ -316,12 +387,15 @@ export function DatePicker({
             })}
           </div>
 
+            </>
+          )}
+
           <div className="ldp-footer">
             <button type="button" className="ldp-action-btn btn-clear" onClick={handleClear}>
-              Xóa ngày
+              {t('Xóa ngày', 'Clear')}
             </button>
             <button type="button" className="ldp-action-btn" onClick={handleToday}>
-              Hôm nay
+              {t('Hôm nay', 'Today')}
             </button>
           </div>
         </div>

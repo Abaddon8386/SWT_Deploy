@@ -13,6 +13,7 @@ import { CourtBookingList, CourtLoadError } from './CourtBookingList';
 import { courtsApi, type RecurringCourtResult, type CourtQuota, formatVnd, COURT_DISCIPLINES, centerDate, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
 import './courts.css';
 
+import { DatePicker } from '../../shared/ui/DatePicker';
 const SLOT_LABELS = { free: 'Trống', booked: 'Đã đặt', class: 'Đang có lớp', past: 'Đã qua' };
 export function CourtBookingFeature() {
   const [params, setParams] = useSearchParams();
@@ -80,7 +81,7 @@ export function CourtBookingFeature() {
     <div className="portal-tabs" aria-label="Bộ môn có sân">
       {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`portal-tab ${item.name === discipline ? 'active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
     </div>
-    <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">Ngày đặt</span><input id="court-date" type="date" className="portal-input" min={today} value={date} onChange={event => setDate(event.target.value)} /></label></div>
+    <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">Ngày đặt</span><DatePicker id="court-date" min={today} value={date} onChange={event => setDate(event.target.value)} /></label></div>
     <section aria-labelledby="court-grid-title">
       <div className="court-section-header">
         <h2 id="court-grid-title" className="portal-card-title" tabIndex={-1} ref={gridHeading}>Khung giờ theo sân</h2>

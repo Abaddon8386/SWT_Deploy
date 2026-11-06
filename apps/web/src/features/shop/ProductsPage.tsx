@@ -9,6 +9,7 @@ import { shopApi } from './shopApi';
 import type { CategoryDto, ProductGoal, ProductSort, ProductSummaryDto } from './shopTypes';
 import './shop-public.css';
 
+import { Select } from '../../shared/ui/Select';
 const VALID_GOALS = new Set<ProductGoal>(['muscle_gain', 'recovery', 'energy', 'weight_management', 'wellness']);
 const VALID_SORTS = new Set<ProductSort>(['newest', 'price_asc', 'price_desc', 'price_per_serving']);
 const PAGE_SIZE = 12;
@@ -213,7 +214,7 @@ export function ProductsPage() {
           <div className="shop-catalog__toolbar" data-reveal="soft">
             <label className="shop-catalog__filter">
               <span>Loại:</span>
-              <select
+              <Select
                 aria-label="Loại sản phẩm"
                 value={category}
                 onChange={e => writeFilters({ category: e.target.value })}
@@ -224,12 +225,12 @@ export function ProductsPage() {
                     {cat.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="shop-catalog__filter">
               <span>Sắp xếp:</span>
-              <select
+              <Select
                 aria-label="Sắp xếp"
                 value={sort}
                 onChange={e => writeFilters({ sort: parseSort(e.target.value) })}
@@ -238,7 +239,7 @@ export function ProductsPage() {
                 <option value="price_asc">Giá tăng dần</option>
                 <option value="price_desc">Giá giảm dần</option>
                 <option value="price_per_serving">Giá mỗi lần dùng thấp nhất</option>
-              </select>
+              </Select>
             </label>
 
             <label className="shop-catalog__checkbox">

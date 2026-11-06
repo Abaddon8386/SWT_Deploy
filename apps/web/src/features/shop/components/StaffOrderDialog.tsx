@@ -9,6 +9,7 @@ import { formatVnd } from '../shopFormat';
 import type { CounterPaymentMethod, OrderDto } from '../shopTypes';
 import { OrderStatusPill } from './OrderStatusPill';
 
+import { Select } from '../../../shared/ui/Select';
 export interface StaffOrderDialogProps {
   order: OrderDto;
   onClose: () => void;
@@ -363,7 +364,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
               <label className="shop-label" htmlFor="staff-counter-method">
                 Phương thức thu tiền
               </label>
-              <select
+              <Select
                 id="staff-counter-method"
                 className="shop-select"
                 value={counterMethod}
@@ -373,7 +374,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                 <option value="cash">Tiền mặt</option>
                 <option value="pos">Quẹt thẻ</option>
                 <option value="bank_transfer">Chuyển khoản</option>
-              </select>
+              </Select>
             </div>
             <div className="form-actions">
               <button

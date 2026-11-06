@@ -8,6 +8,7 @@ import { errorMessage } from '../../shared/lib/errorMessage';
 import { catalogApi, type Room } from './catalogApi';
 import { equipmentApi, type Equipment, type EquipmentInput } from './equipmentApi';
 
+import { DatePicker } from '../../shared/ui/DatePicker';
 const STATUS_LABEL: Record<string, { label: string; badgeClass: string }> = {
   active: { label: 'Đang hoạt động', badgeClass: 'badge-success' },
   maintenance: { label: 'Đang bảo trì', badgeClass: 'badge-warning' },
@@ -689,10 +690,8 @@ export function ManagerEquipmentPage() {
 
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="eq-maint-date">Ngày bảo trì tiếp theo</label>
-                <input
+                <DatePicker
                   id="eq-maint-date"
-                  className="portal-input"
-                  type="date"
                   value={editing.form.maintenanceDate}
                   onChange={(e) => setFormField('maintenanceDate', e.target.value)}
                 />
