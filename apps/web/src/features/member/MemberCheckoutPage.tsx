@@ -1,4 +1,4 @@
-import { useI18n } from '../../shared/i18n';
+import { sourceMessage, useI18n } from '../../shared/i18n';
 import { VnpayPayButton } from '../payments/VnpayPayButton';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
@@ -186,7 +186,9 @@ export function MemberCheckoutPage() {
     if (preparedSubscriptionId.current) {
       const subscription = history.find(item => item.id === preparedSubscriptionId.current);
       if (!subscription || subscription.status !== 'pending_payment' || subscription.packageId !== selectedPackage.id) {
-        throw new Error(t('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.', 'This membership request is no longer available for payment. Please return to the catalog.'));
+        throw Object.assign(new Error('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.'), {
+          translation: sourceMessage('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.', 'This membership request is no longer available for payment. Please return to the catalog.'),
+        });
       }
     }
     if (!preparedSubscriptionId.current) {

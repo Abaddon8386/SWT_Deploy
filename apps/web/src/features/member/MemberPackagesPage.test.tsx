@@ -1,4 +1,4 @@
-import { setLanguage } from '../../shared/i18n';
+import { sourceMessage, setLanguage } from '../../shared/i18n';
 import { MemoryRouter } from 'react-router-dom';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -876,4 +876,38 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày miễn phí');
     expect(button('Nhận 3 ngày tập miễn phí')).toBeUndefined();
   });
+  it('keeps cancellation error provenance when the visible language changes', async () => {
+    api.history.mockResolvedValue([pending]);
+    api.cancelPending.mockRejectedValue(Object.assign(new Error('Mất kết nối kiểm thử.'), {
+      translation: sourceMessage('Mất kết nối kiểm thử.', 'Test connection lost.'),
+    }));
+    await render();
+    await act(async () => button('Hủy yêu cầu đăng ký')?.click());
+    await act(async () => button('Xác nhận hủy')?.click());
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+  });
+
+  it('keeps hold error provenance when the visible language changes', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active]);
+    api.requestHold.mockRejectedValue(Object.assign(new Error('Mất kết nối kiểm thử.'), {
+      translation: sourceMessage('Mất kết nối kiểm thử.', 'Test connection lost.'),
+    }));
+    await render();
+    await act(async () => button('Bảo lưu gói tập')?.click());
+    const textarea = host.querySelector<HTMLTextAreaElement>('#hold-reason-input')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, 'Đi công tác');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => button('Gửi yêu cầu bảo lưu')?.click());
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
+  });
+
 });

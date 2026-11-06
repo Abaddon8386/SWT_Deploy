@@ -30,7 +30,6 @@ import {
 import { localizableError } from '../../shared/lib/errorMessage';
 import { trialApi, type TrialStatus } from './trialApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
-import { useI18n } from '../../shared/i18n';
 
 type LoadState<T> =
   | { status: 'loading' }
@@ -587,11 +586,7 @@ export function MemberPackagesPage() {
       await loadHistory();
     } catch (error) {
       await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
-      setHoldError(
-        error instanceof Error
-          ? error.message
-          : 'Không thể gửi yêu cầu bảo lưu. Vui lòng thử lại.',
-      );
+      setHoldError(localizableError(error, 'Không thể gửi yêu cầu bảo lưu. Vui lòng thử lại.'));
     } finally {
       setIsSubmittingHold(false);
       requestBusy.current = false;
@@ -624,11 +619,7 @@ export function MemberPackagesPage() {
       setPendingToCancel(null);
       notify(t(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, `Membership request #${cancelled.id} cancelled.`), 'success', { translation: sourceMessage(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, `Membership request #${cancelled.id} cancelled.`),  record: true });
     } catch (error) {
-      setActionError(
-        error instanceof Error
-          ? error.message
-          : 'Không thể hủy yêu cầu gói tập. Vui lòng thử lại.',
-      );
+      setActionError(localizableError(error, 'Không thể hủy yêu cầu gói tập. Vui lòng thử lại.'));
     } finally {
       await Promise.all([loadCurrent(), loadHistory(), loadPayments()]);
       setIsCancellingPending(false);

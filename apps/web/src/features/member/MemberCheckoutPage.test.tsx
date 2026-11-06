@@ -278,4 +278,15 @@ describe('MemberCheckoutPage Component', () => {
     expect(walletApi.payWithWallet).not.toHaveBeenCalled();
     expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
   });
+  it('retranslates a stale prepared payment error after changing language', async () => {
+    await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, status: 'active' }]);
+    await act(async () => setLanguage('en'));
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')!.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('This membership request is no longer available');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Yêu cầu gói tập không còn hợp lệ');
+    expect(walletApi.payWithWallet).not.toHaveBeenCalled();
+  });
+
 });
