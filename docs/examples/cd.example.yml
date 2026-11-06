@@ -63,7 +63,7 @@ jobs:
             file: apps/api/Dockerfile # Dockerfile multi-stage tu build source.
           - service: web
             context: apps/web # Build context frontend; doi dong bo voi CI.
-            file: apps/web/Dockerfile # Can bo sung cho SCMS; static server can SPA fallback.
+            file: apps/web/Dockerfile # Node build + Nginx, co SPA fallback va /api proxy.
     steps:
       - uses: actions/checkout@v4
         with:

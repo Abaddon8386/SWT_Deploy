@@ -3,7 +3,7 @@ name: CI # Copy file thanh .github/workflows/ci.yml; ten phai khop workflows tro
 # Can chinh: branch, Node/Java version, working-directory, cache paths,
 # cac lenh npm/Maven, Docker build context va Dockerfile.
 # Mac dinh: apps/web va apps/api; ca hai phai co Dockerfile multi-stage.
-# Repo SCMS hien CHUA co apps/web/Dockerfile: bo sung truoc khi dung mau.
+# Repo SCMS co Dockerfile cho ca api/web; xem docs/DOCKER_COMPOSE.md.
 # Dockerfile frontend can ARG VITE_API_BASE_URL truoc lenh npm run build.
 # Neu khong dung Vite, thay build-args o CA CI va CD theo framework.
 # Chi dua cau hinh PUBLIC vao frontend build args, khong dua secrets.
@@ -88,7 +88,7 @@ jobs:
             file: apps/api/Dockerfile # Multi-stage, tu build source; khong COPY output tu may local.
           - service: web
             context: apps/web # Doi dong bo voi CD neu doi cau truc repo.
-            file: apps/web/Dockerfile # SCMS chua co file nay: can bo sung truoc khi dung mau.
+            file: apps/web/Dockerfile # Node build + Nginx, co SPA fallback va /api proxy.
     steps:
       - uses: actions/checkout@v4
         with:
