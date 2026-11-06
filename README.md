@@ -198,6 +198,8 @@ SWP391/
 
 ## 🤝 Quy ước làm việc (Contribution Guidelines)
 
+Xem [CONTRIBUTING.md](CONTRIBUTING.md) để cài đặt/chạy checks và [bản đồ cấu trúc repo](docs/architecture/REPOSITORY_STRUCTURE.md) để đặt code đúng module. Graphify là output local, không được commit.
+
 - Đọc kỹ [AGENTS.md](AGENTS.md), [docs/rules/backend-architecture.md](docs/rules/backend-architecture.md) và [docs/plans/AGILE_SCRUM_JIRA_PLAN.md](docs/plans/AGILE_SCRUM_JIRA_PLAN.md) trước khi nhận ticket.
 - Mỗi Pull Request xử lý một Jira ticket với nhánh đặt tên theo mẫu `SCMS-123/short-description`.
 - Định nghĩa mọi thay đổi schema qua **JPA Entity** và cập nhật trigger PostgreSQL qua `PostgreSqlTriggerProvider`.

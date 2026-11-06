@@ -5,3 +5,10 @@ coverage/
 **/.env
 **/.env.*
 *.log
+
+# Local analysis and verification output
+graphify-out/
+.graphify/
+.graphify_*
+playwright-report/
+test-results/
