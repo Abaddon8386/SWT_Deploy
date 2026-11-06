@@ -21,7 +21,8 @@ export function VnpayPayButton({
   const sending = useRef(false);
 
   // Leaving VNPay with the browser's Back button restores this page from the back/forward cache exactly as it was,
-  // i.e. still "redirecting". Nothing was paid, so make the button usable again.
+  // i.e. still "redirecting". Reset only local UI; Back is not proof of payment failure.
+  // The parent prepare callback and backend revalidate the order before any retry.
   useEffect(() => {
     const restore = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
