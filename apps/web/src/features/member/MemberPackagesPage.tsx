@@ -61,6 +61,13 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   return false;
 }
 
+export function isTrialPackage(pkg: { price?: number; durationDays?: number; name?: string }): boolean {
+  if (pkg.price === 0) return true;
+  if (pkg.durationDays !== undefined && pkg.durationDays <= 3) return true;
+  const name = (pkg.name || '').toLowerCase();
+  return name.includes('trải nghiệm') || name.includes('trial');
+}
+
 export function MemberPackagesPage() {
   const [searchParams] = useSearchParams();
   const selectedId = selectedPackageId(searchParams.toString());
@@ -618,7 +625,12 @@ export function MemberPackagesPage() {
   }
 
 
-  const activePackages = packages.filter((item) => item.status === 'active');
+  const purchasablePackages = packages.filter((item) => item.status === 'active' && !isTrialPackage(item));
+  const hasRegisteredAnyPackage = Boolean(
+    current ||
+    (historyState.status === 'success' && historyState.data.length > 0) ||
+    trialStatus?.alreadyClaimed
+  );
 
   return (
     <div className="portal-container member-packages">
@@ -745,8 +757,8 @@ export function MemberPackagesPage() {
         </section>
       )}
 
-      {/* Banner mời nhận gói trải nghiệm */}
-      {!current && trialStatus?.eligible && trialStatus?.status !== 'PENDING_APPROVAL' && trialStatus?.status !== 'REJECTED' && (
+      {/* Banner mời nhận gói trải nghiệm (chỉ hiển thị cho hội viên mới chưa từng đăng ký bất kỳ gói tập nào) */}
+      {!hasRegisteredAnyPackage && trialStatus?.eligible && trialStatus?.status !== 'PENDING_APPROVAL' && trialStatus?.status !== 'REJECTED' && (
         <section
           className="portal-card"
           style={{
@@ -979,7 +991,7 @@ export function MemberPackagesPage() {
         </div>
       )}
 
-      {packagesState.status === 'success' && (activePackages.length === 0 ? (
+      {packagesState.status === 'success' && (purchasablePackages.length === 0 ? (
         <div className="portal-card portal-empty">
           <h2 className="portal-card-title">
             Chưa có gói tập khả dụng
@@ -989,15 +1001,15 @@ export function MemberPackagesPage() {
         </div>
       ) : (
         <>
-          {activePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) && activePackages.some((p) => p.durationDays < LONG_TERM_DAYS) && (
+          {purchasablePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) && purchasablePackages.some((p) => p.durationDays < LONG_TERM_DAYS) && (
             <div className="package-term-tabs" role="group" aria-label="Thời hạn gói tập">
               <button type="button" className={durationTab === 'short' ? 'is-active' : ''} aria-pressed={durationTab === 'short'} onClick={() => setDurationTab('short')}>Gói 1 tháng</button>
               <button type="button" className={durationTab === 'long' ? 'is-active' : ''} aria-pressed={durationTab === 'long'} onClick={() => setDurationTab('long')}>Đồng hành dài hạn</button>
             </div>
           )}
           <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label="Danh mục gói tập">
-            {activePackages.filter((pkg) => {
-              if (!activePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) || !activePackages.some((p) => p.durationDays < LONG_TERM_DAYS)) return true;
+            {purchasablePackages.filter((pkg) => {
+              if (!purchasablePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) || !purchasablePackages.some((p) => p.durationDays < LONG_TERM_DAYS)) return true;
               return durationTab === 'long' ? pkg.durationDays >= LONG_TERM_DAYS : pkg.durationDays < LONG_TERM_DAYS;
             }).map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage);
