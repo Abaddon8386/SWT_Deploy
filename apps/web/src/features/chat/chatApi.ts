@@ -38,4 +38,4 @@ export const markConversationRead = (id: number, lastMessageId: number) => apiFe
 export const CHAT_UNREAD_EVENT = 'sol-chat-unread';
 export const announceChatUnread = (count: number) => window.dispatchEvent(new CustomEvent<number>(CHAT_UNREAD_EVENT, { detail: count }));
 
-export const chatRoleLabel = (role: string) => ({ MEMBER: 'Hội viên', RECEPTIONIST: 'Lễ tân', COACH: 'Huấn luyện viên', AI: 'Trợ lý AI' })[role] ?? 'Tài khoản';
+export const chatRoleLabel = (role: string, t: (vi: string, en: string) => string = vi => vi) => ({ MEMBER: t('Hội viên', 'Member'), RECEPTIONIST: t('Lễ tân', 'Receptionist'), COACH: t('Huấn luyện viên', 'Coach'), AI: t('Trợ lý AI', 'AI assistant') })[role] ?? t('Tài khoản', 'Account');
