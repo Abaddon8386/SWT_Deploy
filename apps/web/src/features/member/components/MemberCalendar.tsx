@@ -481,8 +481,10 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                       aria-label={eventLabel(event)}
                       onClick={() => openEvent(event)}
                     >
-                      <span className={`mcal__type mcal__type--${event.kind}`}>{labels[event.kind]}</span>
-                      <span className="mcal__event-time">{hhmm(event.startTime)} - {hhmm(event.endTime)}</span>
+                      <span className="mcal__event-top">
+                        <span className={`mcal__type mcal__type--${event.kind}`}>{labels[event.kind]}</span>
+                        <span className="mcal__event-time">{hhmm(event.startTime)} - {hhmm(event.endTime)}</span>
+                      </span>
                       <strong className="mcal__event-title">{title(event)}</strong>
                       {event.place && <span className="mcal__event-place">{event.place}</span>}
                     </button>

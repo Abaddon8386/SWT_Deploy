@@ -7,3 +7,13 @@
 .mcal--member .mcal__type--court { background: var(--mcal-court); }
 .mcal--member .mcal__type--class { background: var(--mcal-class); }
 .mcal--member .mcal__chip .mcal__type { display: block; opacity: 1; }
+
+/* Keep the name readable inside the actual time height, including overlapping 30-minute bookings. */
+.mcal--member .mcal__event-top { flex: none; width: 100%; }
+.mcal--member .mcal__event-title { flex: none; }
+.mcal--member .mcal__event-top .mcal__type { min-width: 0; max-width: 50%; flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal--member .mcal__event.is-short { padding: 2px 6px; }
+.mcal--member .mcal__event.is-short .mcal__event-top { gap: 4px; }
+.mcal--member .mcal__event.is-short .mcal__type { padding: 0 3px; line-height: 12px; }
+.mcal--member .mcal__event.is-short .mcal__event-time { font-size: 10px; line-height: 12px; }
+.mcal--member .mcal__event.is-short .mcal__event-title { line-height: 1.1; }
