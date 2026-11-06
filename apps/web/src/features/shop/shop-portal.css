@@ -412,8 +412,9 @@
 
 .portal-v2 .portal-shop-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  /* Reserve unused columns so a short catalog never stretches a card across the page. */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 /* Keep shop actions comfortable on touch screens without changing other portals. */
@@ -476,9 +477,9 @@
 .portal-v2 .shop-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-  border-radius: 18px;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
   border: 1px solid var(--portal-border);
   background: var(--portal-surface);
   color: var(--portal-paper);
@@ -488,16 +489,23 @@
 .portal-v2 .shop-card__media {
   position: relative;
   display: block;
-  border-radius: 14px;
+  border-radius: 8px;
   overflow: hidden;
   background: var(--portal-raised);
   text-decoration: none;
 }
 
+/* Card thumbnails use a square canvas; quick-buy detail images retain their own proportions. */
+.portal-v2 .shop-card .shop-packshot {
+  aspect-ratio: 1;
+  border-radius: inherit;
+}
+
 .portal-v2 .shop-card__badges {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 6px;
+  left: 6px;
+  right: 6px;
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
@@ -507,7 +515,7 @@
 .portal-v2 .shop-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 4px 6px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
@@ -535,21 +543,29 @@
 .portal-v2 .shop-card__kicker {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
   color: var(--portal-salmon);
 }
 
 .portal-v2 .shop-card__title {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.4;
+  min-height: 2.8em;
 }
 
 .portal-v2 .shop-card__title a {
   color: var(--portal-paper);
   text-decoration: none;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .portal-v2 .shop-card__highlight {
@@ -560,7 +576,7 @@
 
 .portal-v2 .shop-card__pricing {
   margin-top: auto;
-  padding-top: 6px;
+  padding-top: 2px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -568,7 +584,8 @@
 }
 
 .portal-v2 .shop-card__price {
-  font-size: 18px;
+  font-size: 17px;
+  line-height: 1.35;
   font-weight: 800;
   color: var(--portal-paper);
 }
@@ -581,7 +598,8 @@
 
 .portal-v2 .shop-card__cta {
   min-height: 44px;
-  padding: 10px 16px;
+  padding: 8px;
+  line-height: 1.25;
   border-radius: 999px;
   border: 0;
   background: var(--portal-salmon);
@@ -733,7 +751,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .portal-v2 .portal-shop-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
 }
 
@@ -751,8 +769,11 @@
     grid-template-columns: 1fr;
   }
   .portal-v2 .portal-shop-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
+  .portal-v2 .shop-card { padding: 8px; }
+  .portal-v2 .shop-card__price { font-size: 16px; }
   .portal-v2 .portal-shop-detail-grid {
     grid-template-columns: 1fr;
   }
