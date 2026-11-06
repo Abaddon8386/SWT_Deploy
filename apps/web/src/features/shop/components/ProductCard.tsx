@@ -17,10 +17,7 @@ export function ProductCard({
   onSelect?: (product: ProductSummaryDto) => void;
 }) {
   const detailPath = `/products/${product.slug}`;
-  const priceText =
-    product.variantCount && product.variantCount > 1
-      ? `Từ ${formatVnd(product.minPrice)}`
-      : formatVnd(product.minPrice);
+  const priceText = formatVnd(product.minPrice);
   const ppsText = pricePerServingLabel(product.pricePerServing);
   const needsVariantChoice =
     !product.defaultVariantId && !onAdd;

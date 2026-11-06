@@ -28,7 +28,6 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   const [qrError, setQrError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [dynamicQr, setDynamicQr] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number>(30);
   const paidThroughDate = subscription.paidThroughDate ?? subscription.endDate;
   const status = cardStatus(subscription.status, paidThroughDate);
   const periodStatus = cardStatus(subscription.status, subscription.endDate);
@@ -48,14 +47,12 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     if (!canShowQr || typeof getDynamicQr !== 'function') return;
 
     let mounted = true;
-    let timerId: ReturnType<typeof setInterval> | null = null;
 
     async function fetchDynamic() {
       try {
         const res = await getDynamicQr();
         if (mounted && res?.qrCode) {
           setDynamicQr(res.qrCode);
-          setCountdown(Math.min(res.expiresInSeconds || 30, 30));
         }
       } catch {
         // Fallback to static QR
@@ -67,14 +64,9 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
       void fetchDynamic();
     }, 30000);
 
-    timerId = setInterval(() => {
-      setCountdown((prev) => (prev > 1 ? prev - 1 : 30));
-    }, 1000);
-
     return () => {
       mounted = false;
       clearInterval(intervalId);
-      if (timerId) clearInterval(timerId);
     };
   }, [canShowQr]);
 
@@ -147,7 +139,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
               {dynamicQr ? (
                 <span>
                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#48BB78', marginRight: 6 }} />
-                  Dynamic QR (Bảo mật) - Đổi mới sau <strong>{countdown}s</strong>
+                  Dynamic QR (Bảo mật)
                 </span>
               ) : (
                 <span>Mã QR định danh: <strong>{subscription.qrCode}</strong></span>

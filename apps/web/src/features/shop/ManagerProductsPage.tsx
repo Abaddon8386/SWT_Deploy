@@ -394,11 +394,7 @@ export function ManagerProductsPage() {
                         </td>
                         <td>{p.categoryName}</td>
                         <td style={{ fontVariantNumeric: 'tabular-nums' }}>
-                          {p.minPrice != null
-                            ? p.variantCount > 1
-                              ? `Từ ${formatVnd(p.minPrice)}`
-                              : formatVnd(p.minPrice)
-                            : '—'}
+                          {p.minPrice != null ? formatVnd(p.minPrice) : '—'}
                         </td>
                         <td style={{ fontVariantNumeric: 'tabular-nums' }}>{p.variantCount}</td>
                         <td style={{ fontVariantNumeric: 'tabular-nums' }}>
