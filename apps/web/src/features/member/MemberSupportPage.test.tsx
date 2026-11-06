@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -14,6 +15,7 @@ let host: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  setLanguage('vi');
   clearNotices();
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
@@ -24,7 +26,8 @@ beforeEach(() => {
   vi.mocked(supportApi.getSupportTicket).mockResolvedValue(ticket);
   vi.mocked(subscribeSupport).mockImplementation(() => () => {});
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.resetAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount());
+    setLanguage('vi'); host.remove(); vi.resetAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 async function render() { await act(async () => root.render(<MemberSupportPage />)); }
 async function click(button: HTMLButtonElement) { await act(async () => button.click()); }
 async function type(selector: string, value: string) {
@@ -369,4 +372,24 @@ it('prevents duplicate sends while a message is pending', async () => {
   });
   expect(supportApi.sendSupportMessage).toHaveBeenCalledTimes(1);
   await act(async () => resolve({ id: 2, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: 'Xin chào', createdAt: ticket.createdAt }));
+});
+
+it('switches support dropdown labels, status, modal and placeholders without changing draft/category values', async () => {
+  await render();
+  await type('#support-subject', 'Gói tập');
+  await chooseTicket(7);
+  await type('#support-message', 'Đóng');
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('#support-subject')?.getAttribute('placeholder')).toBe('Summarize the issue');
+  expect(host.querySelector<HTMLTextAreaElement>('#support-message')?.placeholder).toBe('Enter your reply…');
+  expect(host.querySelector<HTMLTextAreaElement>('#support-message')?.value).toBe('Đóng');
+  expect(host.querySelector<HTMLInputElement>('#support-subject')?.value).toBe('Gói tập');
+  expect(host.querySelector('.member-support-status')?.textContent).toBe('Pending');
+  expect(host.querySelector('dialog')?.textContent).toContain('Conversation · Ticket #7');
+  expect(host.textContent).toContain('Máy chạy');
+  expect(host.querySelector<HTMLSelectElement>('select')?.value).toBe('Gói tập');
+  expect(host.querySelector('select option[value="Thiết bị"]')?.textContent).toBe('Equipment');
+  await act(async () => setLanguage('vi'));
+  expect(host.querySelector('.member-support-status')?.textContent).toBe('Đang chờ');
+  expect(host.querySelector<HTMLTextAreaElement>('#support-message')?.value).toBe('Đóng');
 });

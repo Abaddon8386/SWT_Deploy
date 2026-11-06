@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n';
 import { MemoryRouter } from 'react-router-dom';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -77,6 +78,7 @@ describe('SCRUM-86 packages', () => {
   });
 
   beforeEach(() => {
+  setLanguage('vi');
     clearNotices();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
@@ -100,6 +102,7 @@ describe('SCRUM-86 packages', () => {
 
   afterEach(async () => {
     await act(async () => root.unmount());
+    setLanguage('vi');
     host.remove();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -755,5 +758,22 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).toContain(status === 'failed' ? 'giao dịch thất bại' : 'đã hoàn tiền');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
+  });
+
+  it('switches an open trial modal and existing validation error VI → EN → VI without rewriting catalog content', async () => {
+    await render();
+    await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
+    await act(async () => host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(host.querySelector('dialog')?.textContent).toContain('Số CCCD không hợp lệ');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog')?.textContent).toContain('Apply for a 3-day trial');
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Invalid citizen ID number');
+    expect(host.querySelector('dialog button[aria-label="Close dialog"]')).not.toBeNull();
+    expect(host.querySelector('.package-benefit-list')?.getAttribute('aria-label')).toBe('Essential benefits');
+    expect(host.textContent).toContain('Essential');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Số CCCD không hợp lệ');
+    expect(host.querySelector('dialog button[aria-label="Đóng hộp thoại"]')).not.toBeNull();
+    expect(api.create).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
-import { useEffect, useSyncExternalStore, type RefObject } from 'react';
+import { englishLabels } from './translations';
+import { useCallback, useEffect, useSyncExternalStore, type RefObject } from 'react';
 
 export type Language = 'vi' | 'en';
 
@@ -7,7 +8,7 @@ export const LANGUAGE_STORAGE_KEY = 'scms_lang';
 const listeners = new Set<() => void>();
 
 function normalizeLanguage(value: string | null | undefined): Language {
-  if (value && value.toLowerCase().startsWith('en')) {
+  if (value && /^en(?:[-_]|$)/i.test(value)) {
     return 'en';
   }
   return 'vi';
@@ -88,9 +89,18 @@ export function useLanguage() {
 export function useI18n() {
   const { lang, setLanguage: updateLanguage, toggleLanguage } = useLanguage();
 
-  const t = (viText: string, enText: string): string => {
-    return lang === 'en' ? enText : viText;
-  };
+  const t = useCallback((viText: string | Error | { vi: string; en: string }, enText?: string): string => {
+    const english = getLanguage() === 'en';
+    if (viText instanceof Error) {
+      const translation = (viText as Error & { translation?: SourceMessage }).translation;
+      return translation ? (english ? translation.en : translation.vi) : viText.message;
+    }
+    if (typeof viText !== 'string') return english ? viText.en : viText.vi;
+    if (!english) return viText;
+    if (enText !== undefined) return enText;
+    const source = viText.trim();
+    return Object.hasOwn(englishLabels, source) ? viText.replace(source, englishLabels[source]) : viText;
+  }, []);
 
   return {
     lang,
@@ -100,6 +110,7 @@ export function useI18n() {
   };
 }
 
+// Legacy compatibility for unmigrated screens only. New UI translates during React rendering.
 const VI_TO_EN_PHRASES: ReadonlyArray< readonly [string, string] > = [
   ['Trang chủ', 'Home'],
   ['Khám phá', 'Explore'],
@@ -163,9 +174,6 @@ const VI_TO_EN_PHRASES: ReadonlyArray< readonly [string, string] > = [
   ['Chờ thanh toán', 'Pending payment'],
 ];
 
-const EN_TO_VI_MAP = new Map<string, string>(
-  VI_TO_EN_PHRASES.map(([vi, en]) => [en, vi])
-);
 const VI_TO_EN_MAP = new Map<string, string>(VI_TO_EN_PHRASES);
 
 const originalTextMap = new WeakMap<Text, string>();
@@ -178,7 +186,7 @@ function translateDomSubtree(root: ParentNode, lang: Language): void {
   let current = walker.nextNode() as Text | null;
   while (current) {
     const parentTag = current.parentElement?.tagName;
-    if (parentTag !== 'SCRIPT' && parentTag !== 'STYLE' && parentTag !== 'TEXTAREA') {
+    if (!current.parentElement?.closest('[data-i18n-managed]') && parentTag !== 'SCRIPT' && parentTag !== 'STYLE' && parentTag !== 'TEXTAREA') {
       const raw = current.nodeValue ?? '';
       const trimmed = raw.trim();
       if (trimmed.length > 0) {
@@ -195,11 +203,6 @@ function translateDomSubtree(root: ParentNode, lang: Language): void {
           if (original !== undefined) {
             current.nodeValue = original;
             originalTextMap.delete(current);
-          } else {
-            const mappedVi = EN_TO_VI_MAP.get(trimmed);
-            if (mappedVi) {
-              current.nodeValue = raw.replace(trimmed, mappedVi);
-            }
           }
         }
       }
@@ -240,4 +243,10 @@ export function useDomLanguageSync(containerRef?: RefObject<HTMLElement | null>)
     observer.observe(target, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [lang, containerRef]);
+}
+
+export interface SourceMessage { vi: string; en: string }
+/** Explicit provenance for source-owned notices; never infer translations from API content. */
+export function sourceMessage(vi: string, en?: string): SourceMessage {
+  return { vi, en: en ?? (Object.hasOwn(englishLabels, vi) ? englishLabels[vi] : vi) };
 }

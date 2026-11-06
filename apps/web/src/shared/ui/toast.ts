@@ -1,5 +1,7 @@
+import { getLanguage, subscribeLanguage, type SourceMessage } from '../i18n/language';
 // Toast ngắn ở góc màn hình: không phủ nền, không chặn thao tác; dùng chung style .sol-toast trong styles.css.
 let activeToastTimer: number | null = null;
+let unsubscribeLanguage: (() => void) | null = null;
 let removeEscape: (() => void) | null = null;
 
 function clearActive() {
@@ -7,15 +9,18 @@ function clearActive() {
     window.clearTimeout(activeToastTimer);
     activeToastTimer = null;
   }
+  unsubscribeLanguage?.();
+  unsubscribeLanguage = null;
   removeEscape?.();
   removeEscape = null;
   document.querySelectorAll('.sol-toast').forEach((t) => t.remove());
 }
 
-export function toast(message: string, type: 'success' | 'error' = 'success') {
+export function toast(message: string, type: 'success' | 'error' = 'success', translation?: SourceMessage) {
   clearActive();
 
   const el = document.createElement('div');
+  if (translation) el.setAttribute('data-i18n-managed', '');
   el.className = `sol-toast sol-toast--${type}`;
   el.setAttribute('role', type === 'error' ? 'alert' : 'status');
   el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
@@ -38,7 +43,13 @@ export function toast(message: string, type: 'success' | 'error' = 'success') {
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'sol-toast__close';
-  closeBtn.setAttribute('aria-label', 'Đóng thông báo');
+  const renderLanguage = () => {
+    const english = getLanguage() === 'en';
+    if (translation) body.textContent = english ? translation.en : translation.vi;
+    closeBtn.setAttribute('aria-label', english ? 'Close notification' : 'Đóng thông báo');
+  };
+  renderLanguage();
+  unsubscribeLanguage = subscribeLanguage(renderLanguage);
   closeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
   closeBtn.addEventListener('click', clearActive);
 
@@ -63,5 +74,5 @@ export function toast(message: string, type: 'success' | 'error' = 'success') {
   schedule();
 }
 
-toast.success = (message: string) => toast(message, 'success');
-toast.error = (message: string) => toast(message, 'error');
+toast.success = (message: string, translation?: SourceMessage) => toast(message, 'success', translation);
+toast.error = (message: string, translation?: SourceMessage) => toast(message, 'error', translation);

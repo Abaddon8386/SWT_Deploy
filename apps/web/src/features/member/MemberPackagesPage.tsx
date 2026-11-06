@@ -1,3 +1,4 @@
+import { sourceMessage, useI18n } from '../../shared/i18n';
 import { Link, useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
 import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
@@ -26,7 +27,7 @@ import {
   type MembershipCancellationRequest,
   type Payment,
 } from './membershipApi';
-import { errorMessage } from '../../shared/lib/errorMessage';
+import { localizableError } from '../../shared/lib/errorMessage';
 import { trialApi, type TrialStatus } from './trialApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 
@@ -62,6 +63,7 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
 }
 
 export function MemberPackagesPage() {
+  const { lang, t } = useI18n();
   const [searchParams] = useSearchParams();
   const selectedId = selectedPackageId(searchParams.toString());
   useEffect(() => clearPurchaseIntent(), []);
@@ -82,14 +84,14 @@ export function MemberPackagesPage() {
   const readVersions = useRef({ packages: 0, current: 0, history: 0, payments: 0, cancellations: 0 });
   const refreshNow = useRef<() => void>(() => {});
   const refreshQueued = useRef(false);
-  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+  const [blockedMessage, setBlockedMessage] = useState<string | Error | null>(null);
   const watchedPending = useRef(new Set<number>());
   const announcedPayments = useRef(new Set<number>());
   const [syncError, setSyncError] = useState(false);
   const [durationTab, setDurationTab] = useState<'short' | 'long'>('short');
   const [paymentResult, setPaymentResult] = useState<MemberSubscription | null>(null);
 
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | Error | null>(null);
 
   const [requestResult, setRequestResult] =
     useState<RequestResult | null>(null);
@@ -97,7 +99,7 @@ export function MemberPackagesPage() {
   // Bảo lưu gói tập modal state
   const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
   const [holdReason, setHoldReason] = useState('');
-  const [holdError, setHoldError] = useState<string | null>(null);
+  const [holdError, setHoldError] = useState<string | Error | null>(null);
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
   const [trialDocType, setTrialDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
@@ -106,7 +108,7 @@ export function MemberPackagesPage() {
   const [trialFullName, setTrialFullName] = useState('');
   const [trialFrontImage, setTrialFrontImage] = useState('');
   const [trialBackImage, setTrialBackImage] = useState('');
-  const [trialError, setTrialError] = useState('');
+  const [trialError, setTrialError] = useState<string | Error | { vi: string; en: string }>('');
   const [isClaimingTrial, setIsClaimingTrial] = useState(false);
 
   const loadTrialStatus = useCallback(async () => {
@@ -156,7 +158,7 @@ export function MemberPackagesPage() {
       }
     }
     if (!trialFullName.trim()) {
-      setTrialError(`Vui lòng nhập họ và tên theo ${trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'}.`);
+      setTrialError({ vi: `Vui lòng nhập họ và tên theo ${trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'}.`, en: `Please enter your full name as shown on your ${trialDocType === 'PASSPORT' ? 'passport' : 'citizen ID'}.` });
       return;
     }
     if (!trialFrontImage) {
@@ -178,7 +180,7 @@ export function MemberPackagesPage() {
         frontImageUrl: trialFrontImage,
         backImageUrl: trialBackImage || undefined,
       });
-      notify('Đã gửi đơn đăng ký Gói Trải Nghiệm 3 Ngày! Vui lòng mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.', 'success', { record: true });
+      notify(t("Đã gửi đơn đăng ký Gói Trải Nghiệm 3 Ngày! Vui lòng mang giấy tờ gốc đến quầy Lễ tân để kích hoạt."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký Gói Trải Nghiệm 3 Ngày! Vui lòng mang giấy tờ gốc đến quầy Lễ tân để kích hoạt."),  record: true });
       setIsTrialModalOpen(false);
       setTrialDocumentNumber('');
       setTrialNationality('');
@@ -187,7 +189,7 @@ export function MemberPackagesPage() {
       setTrialBackImage('');
       await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
     } catch (err) {
-      setTrialError(errorMessage(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.'));
+      setTrialError(localizableError(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.'));
     } finally {
       setIsClaimingTrial(false);
     }
@@ -280,7 +282,7 @@ export function MemberPackagesPage() {
         Math.abs(new Date(current.endDate).getTime() - new Date(current.startDate).getTime()) <= 3.5 * 24 * 60 * 60 * 1000)
     )
   );
-  const displayedPackageName = isTrial ? 'Gói Trải Nghiệm 3 Ngày' : current?.packageName;
+  const displayedPackageName = isTrial ? t("Gói Trải Nghiệm 3 Ngày") : current?.packageName;
   const currentPackage = current
     ? packages.find((item) => item.id === current.packageId) ?? null
     : null;
@@ -352,8 +354,8 @@ export function MemberPackagesPage() {
   const pendingTransferId = pending?.id;
   useEffect(() => {
     if (pendingTransferId == null || !hasPendingTransfer) return;
-    notify('Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.', 'info', { key: `transfer-pending-${pendingTransferId}`, record: true });
-  }, [pendingTransferId, hasPendingTransfer]);
+    notify(t("Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận."), 'info', { translation: sourceMessage("Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận."),  key: `transfer-pending-${pendingTransferId}`, record: true });
+  }, [pendingTransferId, hasPendingTransfer, t]);
 
   const isStatusSyncing =
     currentState.status === 'loading' ||
@@ -439,12 +441,12 @@ export function MemberPackagesPage() {
 
   useEffect(() => {
     if (syncError) {
-      notify('Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.', 'error', {
-        key: 'packages-sync', silent: true, record: true, action: { label: 'Thử đồng bộ lại', run: () => refreshNow.current() },
+      notify(t("Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục."), 'error', { translation: sourceMessage("Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục."),
+        key: 'packages-sync', silent: true, record: true, action: { label: t('Thử đồng bộ lại'), translation: sourceMessage('Thử đồng bộ lại'), run: () => refreshNow.current() },
       });
     } else resolveNotice('packages-sync');
     return () => resolveNotice('packages-sync');
-  }, [syncError]);
+  }, [syncError, t]);
 
   useEffect(() => subscribeMembershipChanges(
     () => refreshNow.current(),
@@ -510,9 +512,7 @@ export function MemberPackagesPage() {
       });
     } catch (error) {
       setBlockedMessage(
-        error instanceof Error
-          ? error.message
-          : 'Không thể xử lý yêu cầu. Vui lòng thử lại.',
+        localizableError(error, 'Không thể xử lý yêu cầu. Vui lòng thử lại.'),
       );
     } finally {
       await loadHistory();
@@ -534,9 +534,9 @@ export function MemberPackagesPage() {
       setHistoryState((previous) => previous.status === 'success'
         ? { status: 'success', data: previous.data.map((item) => item.id === resumed.id ? resumed : item) }
         : previous);
-      notify('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.', 'success', { record: true });
+      notify(t("Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí."), 'success', { translation: sourceMessage("Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí."),  record: true });
     } catch (error) {
-      setActionError(errorMessage(error, 'Không thể mở lại gói tập. Vui lòng thử lại.'));
+      setActionError(localizableError(error, 'Không thể mở lại gói tập. Vui lòng thử lại.'));
     } finally {
       setIsResuming(false);
       requestBusy.current = false;
@@ -563,7 +563,7 @@ export function MemberPackagesPage() {
       setCurrentState({ status: 'success', data: updated });
       setIsHoldModalOpen(false);
       setHoldReason('');
-      notify('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.', 'success', { record: true });
+      notify(t("Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất."), 'success', { translation: sourceMessage("Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất."),  record: true });
       await loadHistory();
     } catch (error) {
       await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
@@ -602,7 +602,7 @@ export function MemberPackagesPage() {
       );
       setRequestResult(null);
       setPendingToCancel(null);
-      notify(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, 'success', { record: true });
+      notify(t(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, `Membership request #${cancelled.id} cancelled.`), 'success', { translation: sourceMessage(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, `Membership request #${cancelled.id} cancelled.`),  record: true });
     } catch (error) {
       setActionError(
         error instanceof Error
@@ -621,22 +621,22 @@ export function MemberPackagesPage() {
   const activePackages = packages.filter((item) => item.status === 'active');
 
   return (
-    <div className="portal-container member-packages">
-      {blockedMessage && <Modal returnFocusRef={membershipFocus} title="Chưa thể thực hiện" onClose={() => setBlockedMessage(null)}>
+    <div className="portal-container member-packages" data-i18n-managed>
+      {blockedMessage && <Modal returnFocusRef={membershipFocus} title={t("Chưa thể thực hiện")} onClose={() => setBlockedMessage(null)}>
         <div className="package-result package-result--error">
-          <p role="alert">{blockedMessage}</p>
-          <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>Đóng</button>
+          <p role="alert">{t(blockedMessage)}</p>
+          <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>{t("Đóng")}</button>
         </div>
       </Modal>}
       <PageHeader
-        eyebrow="Hội viên"
-        title="Gói tập"
+        eyebrow={t("Hội viên")}
+        title={t("Gói tập")}
       />
 
       {/* Unified Skeleton for Status Area (replaces piecemeal text lines) */}
       {isStatusSyncing && !current && !pending && (
         <div className="package-status-skeleton" role="status" aria-busy="true">
-          <span className="sr-only">Đang đồng bộ thông tin gói tập…</span>
+          <span className="sr-only">{t("Đang đồng bộ thông tin gói tập…")}</span>
           <div className="portal-card">
             <div className="portal-skeleton-line" style={{ width: '22%', height: 12, marginBottom: 14 }} />
             <div className="portal-skeleton-line" style={{ width: '48%', height: 22, marginBottom: 10 }} />
@@ -652,26 +652,26 @@ export function MemberPackagesPage() {
 
       {currentState.status === 'error' && (
         <div className="portal-alert" role="alert">
-          <span>Không thể kiểm tra gói hiện tại.</span>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCurrent()}>Thử lại</button>
+          <span>{t("Không thể kiểm tra gói hiện tại.")}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCurrent()}>{t("Thử lại")}</button>
         </div>
       )}
       {historyState.status === 'error' && (
         <div className="portal-alert" role="alert">
-          <span>Không thể kiểm tra lịch sử gói.</span>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadHistory()}>Thử lại</button>
+          <span>{t("Không thể kiểm tra lịch sử gói.")}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadHistory()}>{t("Thử lại")}</button>
         </div>
       )}
       {paymentsState.status === 'error' && (
         <div className="portal-alert" role="alert">
-          <span>Không thể kiểm tra thanh toán.</span>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadPayments()}>Thử lại</button>
+          <span>{t("Không thể kiểm tra thanh toán.")}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadPayments()}>{t("Thử lại")}</button>
         </div>
       )}
       {cancellationsState.status === 'error' && (
         <div className="portal-alert" role="alert">
-          <span>Không thể kiểm tra trạng thái yêu cầu hủy gói.</span>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCancellations()}>Thử lại</button>
+          <span>{t("Không thể kiểm tra trạng thái yêu cầu hủy gói.")}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCancellations()}>{t("Thử lại")}</button>
         </div>
       )}
 
@@ -696,19 +696,15 @@ export function MemberPackagesPage() {
                 borderRadius: 99,
               }}
             >
-              CHỜ LỄ TÂN PHÊ DUYỆT TẠI QUẦY
-            </span>
+              {t(" CHỜ LỄ TÂN PHÊ DUYỆT TẠI QUẦY ")}</span>
             <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-              Đã nộp: {(trialStatus.requestedAt ?? trialStatus.redeemedAt) ? formatCenterDate((trialStatus.requestedAt ?? trialStatus.redeemedAt)!) : 'Gần đây'}
+              {t(" Đã nộp: ")}{(trialStatus.requestedAt ?? trialStatus.redeemedAt) ? formatCenterDate((trialStatus.requestedAt ?? trialStatus.redeemedAt)!) : t("Gần đây")}
             </span>
           </div>
           <h3 style={{ margin: '10px 0 6px', fontSize: 18, fontWeight: 700 }}>
-            Đơn đăng ký Gói Trải Nghiệm 3 Ngày đang được xử lý
-          </h3>
+            {t(" Đơn đăng ký Gói Trải Nghiệm 3 Ngày đang được xử lý ")}</h3>
           <p className="row-card__meta" style={{ margin: 0, lineHeight: 1.5 }}>
-            Hệ thống đã ghi nhận thông tin ({trialStatus.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'} • {trialStatus.documentNumberMasked ?? trialStatus.cccd ?? '—'}).
-            Vui lòng mang theo <strong>giấy tờ bản gốc ({trialStatus.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'})</strong> đến quầy Lễ tân để nhân viên đối chiếu và kích hoạt 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.
-          </p>
+            {t(" Hệ thống đã ghi nhận thông tin (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu") : 'CCCD'} • {trialStatus.documentNumberMasked ?? trialStatus.cccd ?? '—'}{t("). Vui lòng mang theo ")}<strong>{t("giấy tờ bản gốc (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu") : 'CCCD'})</strong> {t(" đến quầy Lễ tân để nhân viên đối chiếu và kích hoạt 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí. ")}</p>
         </section>
       )}
 
@@ -725,11 +721,9 @@ export function MemberPackagesPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             <div>
               <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--portal-danger)' }}>
-                Đơn đăng ký Gói Trải Nghiệm 3 Ngày bị từ chối
-              </h3>
+                {t(" Đơn đăng ký Gói Trải Nghiệm 3 Ngày bị từ chối ")}</h3>
               <p className="row-card__meta" style={{ margin: 0 }}>
-                Lý do từ Lễ tân: <strong>{trialStatus.rejectionReason || 'Thông tin giấy tờ không khớp bản gốc.'}</strong>. Bạn có thể kiểm tra và nộp lại đơn mới.
-              </p>
+                {t(" Lý do từ Lễ tân: ")}<strong>{trialStatus.rejectionReason || t("Thông tin giấy tờ không khớp bản gốc.")}</strong>{t(". Bạn có thể kiểm tra và nộp lại đơn mới. ")}</p>
             </div>
             <button
               type="button"
@@ -739,8 +733,7 @@ export function MemberPackagesPage() {
                 setIsTrialModalOpen(true);
               }}
             >
-              Nộp lại đơn
-            </button>
+              {t(" Nộp lại đơn ")}</button>
           </div>
         </section>
       )}
@@ -760,11 +753,9 @@ export function MemberPackagesPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <div>
               <div className="meta-label" style={{ color: 'var(--color-primary, #e25b45)' }}>
-                Đặc quyền Hội viên mới
-              </div>
+                {t(" Đặc quyền Hội viên mới ")}</div>
               <h2 className="portal-card-title" style={{ marginTop: 6, fontSize: '1.25rem' }}>
-                Gói Trải Nghiệm 3 Ngày miễn phí (Kèm 01 buổi tập HLV 1:1)
-              </h2>
+                {t(" Gói Trải Nghiệm 3 Ngày miễn phí (Kèm 01 buổi tập HLV 1:1) ")}</h2>
             </div>
             <button
               type="button"
@@ -774,8 +765,7 @@ export function MemberPackagesPage() {
                 setIsTrialModalOpen(true);
               }}
             >
-              Nhận 3 ngày tập miễn phí
-            </button>
+              {t(" Nhận 3 ngày tập miễn phí ")}</button>
           </div>
         </section>
       )}
@@ -788,8 +778,7 @@ export function MemberPackagesPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
             <div>
               <div className="meta-label">
-                Gói hiện tại
-              </div>
+                {t(" Gói hiện tại ")}</div>
               <h2
                 className="portal-card-title"
                 style={{ marginTop: 8 }}
@@ -797,19 +786,17 @@ export function MemberPackagesPage() {
                 {displayedPackageName}
               </h2>
               <p className="row-card__meta" style={{ marginTop: 4 }}>
-                Hiệu lực từ {formatDate(current.startDate)} đến {formatDate(current.paidThroughDate ?? current.endDate)}
+                {t(" Hiệu lực từ ")}{formatDate(current.startDate)} {t("đến ")}{formatDate(current.paidThroughDate ?? current.endDate)}
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <Link to="/member/card" className="btn-primary btn-sm">
-                Xem thẻ QR Check-in
-              </Link>
+                {t(" Xem thẻ QR Check-in ")}</Link>
               <Link to="/member/classes" className="btn-secondary btn-sm">
-                Đặt lịch lớp học
-              </Link>
+                {t(" Đặt lịch lớp học ")}</Link>
               {!isTrial && (
                 <details className="package-manage">
-                  <summary className="btn-secondary btn-sm">Quản lý gói</summary>
+                  <summary className="btn-secondary btn-sm">{t("Quản lý gói")}</summary>
                   <div className="package-manage__menu">
                     <button
                       type="button"
@@ -821,7 +808,7 @@ export function MemberPackagesPage() {
                         setIsHoldModalOpen(true);
                       }}
                     >
-                      {current.holdStatus === 'PENDING' ? 'Đang chờ duyệt bảo lưu' : 'Bảo lưu gói tập'}
+                      {current.holdStatus === 'PENDING' ? t("Đang chờ duyệt bảo lưu") : t("Bảo lưu gói tập")}
                     </button>
                   </div>
                 </details>
@@ -839,35 +826,33 @@ export function MemberPackagesPage() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div className="meta-label">
-              Gói tập đang bảo lưu
-            </div>
-            <span className="badge badge-info">ĐANG BẢO LƯU</span>
+              {t(" Gói tập đang bảo lưu ")}</div>
+            <span className="badge badge-info">{t("ĐANG BẢO LƯU")}</span>
           </div>
           <h2 className="portal-card-title" style={{ marginTop: 10 }}>
             {frozenSubscription.packageName}
           </h2>
           <p className="row-card__meta" style={{ marginTop: 4 }}>
-            Thời hạn gói: {formatDate(frozenSubscription.startDate)} đến {formatDate(frozenSubscription.endDate)}
+            {t(" Thời hạn gói: ")}{formatDate(frozenSubscription.startDate)} {t("đến ")}{formatDate(frozenSubscription.endDate)}
           </p>
           {frozenSubscription.holdReason && (
             <p className="row-card__meta" style={{ marginTop: 4, fontWeight: 600 }}>
-              Lý do bảo lưu: "{frozenSubscription.holdReason}"
+              {t(" Lý do bảo lưu: \"")}{frozenSubscription.holdReason}"
             </p>
           )}
           <p className="row-card__meta" style={{ marginTop: 6 }}>
-            Gói tập của bạn đã được Lễ tân xác nhận bảo lưu. Các lịch lớp học đặt trước trong tương lai đã được hủy tự động.
-          </p>
-          <p className="row-card__meta">Mở lại để tiếp tục sử dụng số ngày còn lại, không cần thanh toán lại. Bạn có thể đặt lại lịch học sau khi mở gói.</p>
+            {t(" Gói tập của bạn đã được Lễ tân xác nhận bảo lưu. Các lịch lớp học đặt trước trong tương lai đã được hủy tự động. ")}</p>
+          <p className="row-card__meta">{t("Mở lại để tiếp tục sử dụng số ngày còn lại, không cần thanh toán lại. Bạn có thể đặt lại lịch học sau khi mở gói.")}</p>
           <button type="button" className="btn-primary" disabled={isResuming || isStatusSyncing || pendingItems.length > 0}
             onClick={() => void handleResume()}>
-            {isResuming ? 'Đang mở lại…' : 'Mở lại gói tập miễn phí'}
+            {isResuming ? t("Đang mở lại…") : t("Mở lại gói tập miễn phí")}
           </button>
         </section>
       )}
 
       {pendingItems.length > 1 && (
         <div className="portal-alert" role="alert">
-          <span>Có nhiều yêu cầu đang chờ. Vui lòng liên hệ nhân viên để kiểm tra.</span>
+          <span>{t("Có nhiều yêu cầu đang chờ. Vui lòng liên hệ nhân viên để kiểm tra.")}</span>
         </div>
       )}
 
@@ -882,35 +867,34 @@ export function MemberPackagesPage() {
             <div>
               <h2 className="portal-card-title">{pending.packageName}</h2>
               <p className="row-card__meta" style={{ margin: '4px 0 0' }}>
-                Yêu cầu #{pending.id}{pendingPackage ? ` · ${formatPrice(pending.upgradeCharge ?? pending.quotedPrice ?? pendingPackage.price)} · ${pendingPackage.durationDays} ngày` : ''}
+                {t(" Yêu cầu #")}{pending.id}{pendingPackage ? t(` · ${formatPrice(pending.upgradeCharge ?? pending.quotedPrice ?? pendingPackage.price)} · ${pendingPackage.durationDays} ngày`, ` · ${formatPrice(pending.upgradeCharge ?? pending.quotedPrice ?? pendingPackage.price)} · ${pendingPackage.durationDays} days`) : ''}
               </p>
             </div>
-            <span className="badge badge-warning">Đang chờ thanh toán</span>
+            <span className="badge badge-warning">{t("Đang chờ thanh toán")}</span>
           </div>
           {paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage && (
-            <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
+            <p className="row-card__meta" role="status">{t(paymentInstructionsNotice)}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'success') && (
-            <p role="alert">Thanh toán đã ghi nhận nhưng gói chưa active. Vui lòng yêu cầu nhân viên kiểm tra.</p>
+            <p role="alert">{t("Thanh toán đã ghi nhận nhưng gói chưa active. Vui lòng yêu cầu nhân viên kiểm tra.")}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'failed') && (
-            <p role="alert">Có giao dịch thất bại. Vui lòng liên hệ nhân viên để được hướng dẫn trước khi gửi yêu cầu mới.</p>
+            <p role="alert">{t("Có giao dịch thất bại. Vui lòng liên hệ nhân viên để được hướng dẫn trước khi gửi yêu cầu mới.")}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'refunded') && (
-            <p role="alert">Giao dịch đã hoàn tiền. Vui lòng liên hệ nhân viên để xác nhận cách thanh toán tiếp theo.</p>
+            <p role="alert">{t("Giao dịch đã hoàn tiền. Vui lòng liên hệ nhân viên để xác nhận cách thanh toán tiếp theo.")}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.length === 0 && !pendingPackage && (
-            <p role="alert">Không tìm thấy giá gói để gửi yêu cầu. Vui lòng thử lại sau.</p>
+            <p role="alert">{t("Không tìm thấy giá gói để gửi yêu cầu. Vui lòng thử lại sau.")}</p>
           )}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
-            <RefreshButton label="Tải lại trạng thái" onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }} />
+            <RefreshButton label={t("Tải lại trạng thái")} onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }} />
             {pendingPackage && (
               <Link
                 to={`/member/packages/checkout?packageId=${pendingPackage.id}&subscriptionId=${pending.id}`}
                 className="btn-primary btn-sm"
               >
-                Chọn phương thức thanh toán
-              </Link>
+                {t(" Chọn phương thức thanh toán ")}</Link>
             )}
             <button
               type="button"
@@ -919,7 +903,7 @@ export function MemberPackagesPage() {
               disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
               onClick={() => { setActionError(null); setPendingToCancel(pending); }}
             >
-              {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
+              {isCancellingPending ? t("Đang hủy…") : t("Hủy yêu cầu đăng ký")}
             </button>
           </div>
         </section>
@@ -932,18 +916,17 @@ export function MemberPackagesPage() {
           style={{ marginBottom: 24 }}
         >
           <h2 className="portal-card-title">
-            Không thể xử lý yêu cầu
-          </h2>
+            {t(" Không thể xử lý yêu cầu ")}</h2>
 
           <p className="row-card__meta">
-            {actionError}
+            {t(actionError)}
           </p>
         </div>
       )}
 
       {packagesState.status === 'loading' && (
         <div className="grid-3" role="status" aria-busy="true">
-          <span className="sr-only">Đang tải danh sách gói tập…</span>
+          <span className="sr-only">{t("Đang tải danh sách gói tập…")}</span>
           {[1, 2, 3].map((idx) => (
             <div key={idx} className="portal-card" style={{ marginBottom: 0 }}>
               <div className="portal-skeleton-line" style={{ width: '42%', height: 12, marginBottom: 16 }} />
@@ -963,10 +946,9 @@ export function MemberPackagesPage() {
       {packagesState.status === 'error' && (
         <div className="portal-card portal-empty" role="alert">
           <h2 className="portal-card-title">
-            Không thể tải gói tập
-          </h2>
+            {t(" Không thể tải gói tập ")}</h2>
 
-          <p>Vui lòng thử lại sau ít phút.</p>
+          <p>{t("Vui lòng thử lại sau ít phút.")}</p>
 
           <button
             type="button"
@@ -974,38 +956,36 @@ export function MemberPackagesPage() {
             style={{ marginTop: 20 }}
             onClick={() => void loadPackages()}
           >
-            Thử lại
-          </button>
+            {t(" Thử lại ")}</button>
         </div>
       )}
 
       {packagesState.status === 'success' && (activePackages.length === 0 ? (
         <div className="portal-card portal-empty">
           <h2 className="portal-card-title">
-            Chưa có gói tập khả dụng
-          </h2>
+            {t(" Chưa có gói tập khả dụng ")}</h2>
 
-          <p>Vui lòng quay lại sau.</p>
+          <p>{t("Vui lòng quay lại sau.")}</p>
         </div>
       ) : (
         <>
           {activePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) && activePackages.some((p) => p.durationDays < LONG_TERM_DAYS) && (
-            <div className="package-term-tabs" role="group" aria-label="Thời hạn gói tập">
-              <button type="button" className={durationTab === 'short' ? 'is-active' : ''} aria-pressed={durationTab === 'short'} onClick={() => setDurationTab('short')}>Gói 1 tháng</button>
-              <button type="button" className={durationTab === 'long' ? 'is-active' : ''} aria-pressed={durationTab === 'long'} onClick={() => setDurationTab('long')}>Đồng hành dài hạn</button>
+            <div className="package-term-tabs" role="group" aria-label={t("Thời hạn gói tập")}>
+              <button type="button" className={durationTab === 'short' ? 'is-active' : ''} aria-pressed={durationTab === 'short'} onClick={() => setDurationTab('short')}>{t("Gói 1 tháng")}</button>
+              <button type="button" className={durationTab === 'long' ? 'is-active' : ''} aria-pressed={durationTab === 'long'} onClick={() => setDurationTab('long')}>{t("Đồng hành dài hạn")}</button>
             </div>
           )}
-          <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label="Danh mục gói tập">
+          <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label={t("Danh mục gói tập")}>
             {activePackages.filter((pkg) => {
               if (!activePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) || !activePackages.some((p) => p.durationDays < LONG_TERM_DAYS)) return true;
               return durationTab === 'long' ? pkg.durationDays >= LONG_TERM_DAYS : pkg.durationDays < LONG_TERM_DAYS;
             }).map((membershipPackage) => {
-            const details = getPackageDetails(membershipPackage);
+            const details = getPackageDetails(membershipPackage, lang);
             // Chỉ điều có giá trị so sánh: lượt đặt lớp + quyền lợi do catalog mô tả (thời hạn đã nằm cạnh giá)
             const highlights = [
               membershipPackage.classCreditLimit != null
-                ? `${membershipPackage.classCreditLimit} lượt đặt lớp mỗi kỳ`
-                : 'Không giới hạn lượt đặt lớp',
+                ? t(`${membershipPackage.classCreditLimit} lượt đặt lớp mỗi kỳ`, `${membershipPackage.classCreditLimit} class bookings per period`)
+                : t("Không giới hạn lượt đặt lớp"),
               ...details.perks,
             ];
             // Chỉ gập khi còn từ 2 ý trở lên; thừa đúng 1 ý thì hiện luôn
@@ -1059,48 +1039,48 @@ export function MemberPackagesPage() {
               hasLowerOrNonUpgradableCurrentPackage ||
               upgradeCovered;
 
-            const blockedReason = syncError ? 'Chờ đồng bộ trạng thái mới nhất.'
-              : hasPendingHold ? 'Yêu cầu bảo lưu đang chờ xử lý. Gói hiện tại vẫn có hiệu lực.'
-              : isStatusSyncing ? 'Đang kiểm tra gói và thanh toán.'
+            const blockedReason = syncError ? "Chờ đồng bộ trạng thái mới nhất."
+              : hasPendingHold ? "Yêu cầu bảo lưu đang chờ xử lý. Gói hiện tại vẫn có hiệu lực."
+              : isStatusSyncing ? "Đang kiểm tra gói và thanh toán."
               : currentState.status === 'error' || historyState.status === 'error' || paymentsState.status === 'error'
-                ? 'Không thể xác minh trạng thái. Vui lòng thử tải lại.'
-              : pendingItems.length > 0 ? current ? 'Yêu cầu đang chờ xử lý. Gói hiện tại vẫn giữ nguyên hiệu lực.' : 'Yêu cầu đang chờ thanh toán.'
-              : hasPaidFutureUpgrade ? 'Kỳ tiếp theo đã thanh toán. Vui lòng liên hệ nhân viên trước khi nâng cấp.'
-              : nextRenewals > 0 ? 'Đã có kỳ tiếp theo; vui lòng liên hệ nhân viên trước khi nâng cấp.'
-              : frozenSubscription ? 'Mở lại gói bảo lưu trước khi tiếp tục.'
-              : hasLowerOrNonUpgradableCurrentPackage ? 'Chỉ có thể gia hạn gói hiện tại hoặc nâng lên gói cao hơn.'
-              : upgradeCovered ? 'Giá trị còn lại của gói hiện tại đã bằng hoặc vượt giá gói này. Hãy chọn gói cao hơn hoặc gia hạn khi gói sắp hết.'
-              : ambiguousRenewal ? 'Có nhiều kỳ cùng ngày kết thúc. Vui lòng liên hệ nhân viên.' : null;
+                ? "Không thể xác minh trạng thái. Vui lòng thử tải lại."
+              : pendingItems.length > 0 ? current ? "Yêu cầu đang chờ xử lý. Gói hiện tại vẫn giữ nguyên hiệu lực." : "Yêu cầu đang chờ thanh toán."
+              : hasPaidFutureUpgrade ? "Kỳ tiếp theo đã thanh toán. Vui lòng liên hệ nhân viên trước khi nâng cấp."
+              : nextRenewals > 0 ? "Đã có kỳ tiếp theo; vui lòng liên hệ nhân viên trước khi nâng cấp."
+              : frozenSubscription ? "Mở lại gói bảo lưu trước khi tiếp tục."
+              : hasLowerOrNonUpgradableCurrentPackage ? "Chỉ có thể gia hạn gói hiện tại hoặc nâng lên gói cao hơn."
+              : upgradeCovered ? "Giá trị còn lại của gói hiện tại đã bằng hoặc vượt giá gói này. Hãy chọn gói cao hơn hoặc gia hạn khi gói sắp hết."
+              : ambiguousRenewal ? "Có nhiều kỳ cùng ngày kết thúc. Vui lòng liên hệ nhân viên." : null;
 
             let buttonText = historyState.status === 'success' && historyState.data.length === 0
-              ? 'Đăng ký lần đầu' : 'Đăng ký gói mới';
+              ? t("Đăng ký lần đầu") : t("Đăng ký gói mới");
 
             if (isSubmitting) {
-              buttonText = 'Đang xử lý…';
+              buttonText = t("Đang xử lý…");
             } else if (hasPendingHold) {
-              buttonText = 'Đang chờ bảo lưu';
+              buttonText = t("Đang chờ bảo lưu");
             } else if (frozenSubscription) {
-              buttonText = 'Đang có gói bảo lưu';
+              buttonText = t("Đang có gói bảo lưu");
             } else if (renewalConflict || nextRenewals > 1) {
-              buttonText = 'Cần kiểm tra gia hạn';
+              buttonText = t("Cần kiểm tra gia hạn");
             } else if (hasPaidFutureUpgrade) {
-              buttonText = 'Có kỳ đã thanh toán';
+              buttonText = t("Có kỳ đã thanh toán");
             } else if (nextRenewals === 1) {
-              buttonText = renewFrom ? 'Đã gia hạn' : 'Có yêu cầu đang chờ';
+              buttonText = renewFrom ? t("Đã gia hạn") : t("Có yêu cầu đang chờ");
             } else if (pendingItems.length > 0) {
               buttonText = isPending
-                ? 'Đang chờ xác nhận'
-                : 'Có yêu cầu đang chờ';
+                ? t("Đang chờ xác nhận")
+                : t("Có yêu cầu đang chờ");
             } else if (ambiguousRenewal) {
-              buttonText = 'Cần kiểm tra lịch sử';
+              buttonText = t("Cần kiểm tra lịch sử");
             } else if (current) {
               buttonText = isCurrent
-                ? 'Gia hạn'
+                ? t("Gia hạn")
                 : upgradeFrom
-                  ? 'Nâng cấp gói'
-                  : 'Đang có gói hoạt động';
+                  ? t("Nâng cấp gói")
+                  : t("Đang có gói hoạt động");
             } else if (renewFrom) {
-              buttonText = 'Gia hạn';
+              buttonText = t("Gia hạn");
             }
 
             return (
@@ -1119,9 +1099,9 @@ export function MemberPackagesPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <div className="meta-label">
-                      {selectedId === membershipPackage.id ? 'Gói bạn đã chọn · ' : ''}{details.tierBadge}
+                      {selectedId === membershipPackage.id ? t("Gói bạn đã chọn · ") : ''}{details.tierBadge}
                     </div>
-                    {isCurrent && <span className="badge badge-success">Gói hiện tại</span>}
+                    {isCurrent && <span className="badge badge-success">{t("Gói hiện tại")}</span>}
                   </div>
 
                   <h2
@@ -1135,7 +1115,7 @@ export function MemberPackagesPage() {
                     {details.summary}
                   </p>
 
-                  <ul className="package-benefit-list" aria-label={`Quyền lợi gói ${membershipPackage.name}`}>
+                  <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
                     {highlights.slice(0, visibleCount).map((benefit, index) => (
                       <li key={index} className="package-benefit-item">
                         <span>{benefit}</span>
@@ -1144,7 +1124,7 @@ export function MemberPackagesPage() {
                   </ul>
                   {highlights.length > visibleCount && (
                     <details className="package-benefit-more">
-                      <summary>Xem thêm {highlights.length - visibleCount} quyền lợi</summary>
+                      <summary>{t("Xem thêm ")}{highlights.length - visibleCount} {t("quyền lợi")}</summary>
                       <ul className="package-benefit-list">
                         {highlights.slice(visibleCount).map((benefit, index) => (
                           <li key={index} className="package-benefit-item">
@@ -1166,18 +1146,17 @@ export function MemberPackagesPage() {
                     }}
                   >
                     {formatPrice(membershipPackage.price)}
-                    <span className="package-price-term"> / {membershipPackage.durationDays} ngày</span>
+                    <span className="package-price-term"> / {membershipPackage.durationDays} {t("ngày")}</span>
                   </div>
                   {quote && (
                     <p className="row-card__meta" data-testid="upgrade-quote" style={{ margin: '8px 0 0' }}>
                       {quote.allowed ? (
                         <>
-                          <strong>Nâng cấp: thanh toán {formatPrice(quote.amount)}</strong>
-                          {` — đã trừ ${formatPrice(quote.credit)} giá trị còn lại của gói hiện tại (${quote.remainingDays}/${quote.totalDays} ngày chưa dùng).`}
-                          {' '}Gói mới tính từ hôm nay; gói hiện tại kết thúc khi thanh toán được xác nhận.
-                        </>
+                          <strong>{t("Nâng cấp: thanh toán ")}{formatPrice(quote.amount)}</strong>
+                          {t(` — đã trừ ${formatPrice(quote.credit)} giá trị còn lại của gói hiện tại (${quote.remainingDays}/${quote.totalDays} ngày chưa dùng).`, ` — includes ${formatPrice(quote.credit)} credit from your current membership (${quote.remainingDays}/${quote.totalDays} unused days).`)}
+                          {' '}{t("Gói mới tính từ hôm nay; gói hiện tại kết thúc khi thanh toán được xác nhận. ")}</>
                       ) : (
-                        <>Giá trị còn lại của gói hiện tại ({formatPrice(quote.credit)}) đã bằng hoặc vượt giá gói này nên không nâng cấp được.</>
+                        <>{t("Giá trị còn lại của gói hiện tại (")}{formatPrice(quote.credit)}{t(") đã bằng hoặc vượt giá gói này nên không nâng cấp được.")}</>
                       )}
                     </p>
                   )}
@@ -1212,63 +1191,60 @@ export function MemberPackagesPage() {
       ))}
 
       {paymentResult && !blockedMessage && !pendingToCancel && !isHoldModalOpen && (
-        <Modal returnFocusRef={membershipFocus} title="Thanh toán thành công" onClose={() => setPaymentResult(null)}>
+        <Modal returnFocusRef={membershipFocus} title={t("Thanh toán thành công")} onClose={() => setPaymentResult(null)}>
           <div className="package-result">
             <h3>{paymentResult.packageName}</h3>
-            <p>Gói tập của bạn đã được xác nhận.</p>
+            <p>{t("Gói tập của bạn đã được xác nhận.")}</p>
             <p className="row-card__meta">{paymentResult.status === 'active'
-              ? paymentResult.startDate > todayKey() ? 'Kỳ tiếp theo đã thanh toán, chờ ngày bắt đầu.' : 'Gói tập đã được kích hoạt.'
-              : 'Đã thanh toán, đang chờ kích hoạt.'}</p>
-            <button type="button" className="btn-primary" onClick={() => setPaymentResult(null)}>Đóng</button>
+              ? paymentResult.startDate > todayKey() ? t("Kỳ tiếp theo đã thanh toán, chờ ngày bắt đầu.") : t("Gói tập đã được kích hoạt.")
+              : t("Đã thanh toán, đang chờ kích hoạt.")}</p>
+            <button type="button" className="btn-primary" onClick={() => setPaymentResult(null)}>{t("Đóng")}</button>
           </div>
         </Modal>
       )}
 
       {requestResult && !blockedMessage && !pendingToCancel && !paymentResult && (
-        <Modal returnFocusRef={membershipFocus} title="Đã gửi yêu cầu thành công" onClose={() => setRequestResult(null)}>
+        <Modal returnFocusRef={membershipFocus} title={t("Đã gửi yêu cầu thành công")} onClose={() => setRequestResult(null)}>
           <div className="package-result">
             <h3>{requestResult.membershipPackage.name}</h3>
-            <p>{requestResult.action === 'upgrade' ? 'Nâng cấp gói tập' : requestResult.action === 'renew' ? 'Gia hạn gói tập' : 'Đăng ký gói tập'} · #{requestResult.subscription.id}</p>
-            <p>Yêu cầu của bạn đang chờ xử lý.</p>
+            <p>{requestResult.action === 'upgrade' ? t("Nâng cấp gói tập") : requestResult.action === 'renew' ? t("Gia hạn gói tập") : t("Đăng ký gói tập")} · #{requestResult.subscription.id}</p>
+            <p>{t("Yêu cầu của bạn đang chờ xử lý.")}</p>
             {requestResult.action === 'upgrade' && requestResult.subscription.upgradeCharge != null
-              ? <p className="row-card__meta">Số tiền cần thanh toán để nâng cấp: <strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> (giá gói mới {formatPrice(requestResult.membershipPackage.price)}{requestResult.subscription.creditApplied ? `, đã trừ ${formatPrice(requestResult.subscription.creditApplied)} giá trị còn lại của gói hiện tại` : ''}). Số tiền này đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán. Gói hiện tại kết thúc khi thanh toán được xác nhận.</p>
+              ? <p className="row-card__meta">{t("Số tiền cần thanh toán để nâng cấp: ")}<strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> {t(" (giá gói mới ")}{formatPrice(requestResult.membershipPackage.price)}{requestResult.subscription.creditApplied ? t(`, đã trừ ${formatPrice(requestResult.subscription.creditApplied)} giá trị còn lại của gói hiện tại`, `, less ${formatPrice(requestResult.subscription.creditApplied)} remaining value from your current membership`) : ''}{t("). Số tiền này đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán. Gói hiện tại kết thúc khi thanh toán được xác nhận.")}</p>
               : requestResult.subscription.quotedPrice != null
-                ? <p className="row-card__meta">Số tiền cần thanh toán: <strong>{formatPrice(requestResult.subscription.quotedPrice)}</strong>. Giá đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán.</p>
-                : <p className="row-card__meta">Giá catalog tham khảo: {formatPrice(requestResult.membershipPackage.price)}. Số tiền thanh toán được hệ thống xác nhận khi mở VNPay hoặc tại quầy.</p>}
-            <p className="row-card__meta">{paymentInstructionsNotice}</p>
+                ? <p className="row-card__meta">{t("Số tiền cần thanh toán: ")}<strong>{formatPrice(requestResult.subscription.quotedPrice)}</strong>{t(". Giá đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán.")}</p>
+                : <p className="row-card__meta">{t("Giá catalog tham khảo: ")}{formatPrice(requestResult.membershipPackage.price)}{t(". Số tiền thanh toán được hệ thống xác nhận khi mở VNPay hoặc tại quầy.")}</p>}
+            <p className="row-card__meta">{t(paymentInstructionsNotice)}</p>
             <div className="package-result__actions">
               <Link
                 to={`/member/packages/checkout?packageId=${requestResult.membershipPackage.id}&subscriptionId=${requestResult.subscription.id}`}
                 className="btn-primary"
                 onClick={() => setRequestResult(null)}
               >
-                Chọn phương thức thanh toán
-              </Link>
+                {t(" Chọn phương thức thanh toán ")}</Link>
               <button type="button" className="btn-secondary"
                 onClick={() => { setActionError(null); setPendingToCancel(requestResult.subscription); }}
                 disabled={isCancellingPending || paymentsState.status !== 'success' ||
                   paymentsState.data.some(payment => payment.subscriptionId === requestResult.subscription.id && payment.status !== 'failed')}>
-                Hủy yêu cầu đăng ký
-              </button>
-              <button type="button" className="btn-primary" onClick={() => setRequestResult(null)}>Đóng</button>
+                {t(" Hủy yêu cầu đăng ký ")}</button>
+              <button type="button" className="btn-primary" onClick={() => setRequestResult(null)}>{t("Đóng")}</button>
             </div>
           </div>
         </Modal>
       )}
 
       {pendingToCancel && (
-        <Modal returnFocusRef={membershipFocus} title={'Hủy yêu cầu đăng ký?'} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
-            <div className="meta-label">Xác nhận yêu cầu</div>
+        <Modal returnFocusRef={membershipFocus} title={t("Hủy yêu cầu đăng ký?")} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
+            <div className="meta-label">{t("Xác nhận yêu cầu")}</div>
 <p className="row-card__meta" style={{ marginTop: 12 }}>
-              Yêu cầu {pendingToCancel.packageName} sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận.
-            </p>
-            {actionError && <p role="alert" className="portal-alert">{actionError}</p>}
+              {t(" Yêu cầu ")}{pendingToCancel.packageName} {t("sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận. ")}</p>
+            {actionError && <p role="alert" className="portal-alert">{t(actionError)}</p>}
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
               <button type="button" className="btn-secondary" autoFocus disabled={isCancellingPending}
-                onClick={() => { setActionError(null); setPendingToCancel(null); }}>Giữ yêu cầu</button>
+                onClick={() => { setActionError(null); setPendingToCancel(null); }}>{t("Giữ yêu cầu")}</button>
               <button type="button" className="btn-primary" disabled={isCancellingPending}
                 onClick={() => void handleCancelPending(pendingToCancel.id)}>
-                {isCancellingPending ? 'Đang hủy…' : 'Xác nhận hủy'}
+                {isCancellingPending ? t("Đang hủy…") : t("Xác nhận hủy")}
               </button>
             </div>
         </Modal>
@@ -1277,20 +1253,18 @@ export function MemberPackagesPage() {
 
       {isTrialModalOpen && (
         <Modal
-          title="Đăng ký Gói Trải Nghiệm 3 Ngày"
+          title={t("Đăng ký Gói Trải Nghiệm 3 Ngày")}
           onClose={() => setIsTrialModalOpen(false)}
           busy={isClaimingTrial}
         >
-          <div className="meta-label">Xác minh Căn cước công dân (CCCD) / Hộ chiếu</div>
+          <div className="meta-label">{t("Xác minh Căn cước công dân (CCCD) / Hộ chiếu")}</div>
           <p className="row-card__meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
-            Mỗi hội viên chỉ được nhận Gói Trải Nghiệm 3 Ngày một lần duy nhất. Gói bao gồm 01 buổi tập 1:1 cùng HLV cá nhân và không hỗ trợ bảo lưu.
-            Họ tên tài khoản sẽ được tự động đồng bộ theo giấy tờ sau khi Lễ tân đối chiếu bản gốc tại quầy.
-          </p>
+            {t(" Mỗi hội viên chỉ được nhận Gói Trải Nghiệm 3 Ngày một lần duy nhất. Gói bao gồm 01 buổi tập 1:1 cùng HLV cá nhân và không hỗ trợ bảo lưu. Họ tên tài khoản sẽ được tự động đồng bộ theo giấy tờ sau khi Lễ tân đối chiếu bản gốc tại quầy. ")}</p>
 
           <form onSubmit={(e) => void handleClaimTrial(e)} style={{ marginTop: 16 }}>
             {/* Chọn loại giấy tờ */}
             <div className="portal-form-group">
-              <label className="portal-label">Loại giấy tờ tùy thân *</label>
+              <label className="portal-label">{t("Loại giấy tờ tùy thân *")}</label>
               <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
                 <button
                   type="button"
@@ -1298,29 +1272,27 @@ export function MemberPackagesPage() {
                   onClick={() => { setTrialDocType('CCCD'); setTrialError(''); }}
                   style={{ flex: 1 }}
                 >
-                  Căn cước công dân (Việt Nam)
-                </button>
+                  {t(" Căn cước công dân (Việt Nam) ")}</button>
                 <button
                   type="button"
                   className={`btn-secondary btn-sm ${trialDocType === 'PASSPORT' ? 'btn-primary' : ''}`}
                   onClick={() => { setTrialDocType('PASSPORT'); setTrialError(''); }}
                   style={{ flex: 1 }}
                 >
-                  Hộ chiếu (Người nước ngoài)
-                </button>
+                  {t(" Hộ chiếu (Người nước ngoài) ")}</button>
               </div>
             </div>
 
             {/* Nếu là Passport: yêu cầu nhập quốc tịch */}
             {trialDocType === 'PASSPORT' && (
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="trial-nationality">Quốc tịch *</label>
+                <label className="portal-label" htmlFor="trial-nationality">{t("Quốc tịch *")}</label>
                 <input
                   id="trial-nationality"
                   className="portal-input"
                   type="text"
                   required
-                  placeholder="Vd: Korea, Japan, France, USA..."
+                  placeholder={t("Vd: Korea, Japan, France, USA...", "e.g. Korea, Japan, France, USA…")}
                   value={trialNationality}
                   onChange={(e) => setTrialNationality(e.target.value)}
                   disabled={isClaimingTrial}
@@ -1330,7 +1302,7 @@ export function MemberPackagesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="trial-full-name">
-                Họ và tên trên {trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'} *
+                {t(" Họ và tên trên ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu") : 'CCCD'} *
               </label>
               <input
                 id="trial-full-name"
@@ -1338,19 +1310,18 @@ export function MemberPackagesPage() {
                 type="text"
                 required
                 maxLength={150}
-                placeholder="Vd: NGUYEN VAN A"
+                placeholder={t("Vd: NGUYEN VAN A", "e.g. NGUYEN VAN A")}
                 value={trialFullName}
                 onChange={(e) => setTrialFullName(e.target.value)}
                 disabled={isClaimingTrial}
               />
               <span style={{ fontSize: '0.78rem', color: 'var(--portal-muted)', display: 'block', marginTop: 4 }}>
-                Họ tên tài khoản sẽ được đồng bộ theo tên này sau khi Lễ tân duyệt.
-              </span>
+                {t(" Họ tên tài khoản sẽ được đồng bộ theo tên này sau khi Lễ tân duyệt. ")}</span>
             </div>
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="trial-cccd">
-                Số {trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD (12 chữ số)'} *
+                {t(" Số ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu") : t("CCCD (12 chữ số)")} *
               </label>
               <input
                 id="trial-cccd"
@@ -1358,7 +1329,7 @@ export function MemberPackagesPage() {
                 type="text"
                 required
                 maxLength={trialDocType === 'CCCD' ? 12 : 20}
-                placeholder={trialDocType === 'CCCD' ? 'Vd: 001200001234' : 'Vd: M12345678'}
+                placeholder={trialDocType === 'CCCD' ? t('Vd: 001200001234', 'e.g. 001200001234') : t('Vd: M12345678', 'e.g. M12345678')}
                 value={trialDocumentNumber}
                 onChange={(e) => setTrialDocumentNumber(
                   trialDocType === 'CCCD' ? e.target.value.replace(/\D/g, '') : e.target.value.trim().toUpperCase()
@@ -1371,16 +1342,16 @@ export function MemberPackagesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
               <div>
                 <label className="portal-label" style={{ fontSize: '0.82rem' }}>
-                  Ảnh mặt trước {trialDocType} *
+                  {t(" Ảnh mặt trước ")}{trialDocType} *
                 </label>
                 {trialFrontImage ? (
                   <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img src={trialFrontImage} alt="Mặt trước" style={{ maxHeight: 110, maxWidth: '100%', objectFit: 'contain' }} />
+                    <img src={trialFrontImage} alt={t("Mặt trước")} style={{ maxHeight: 110, maxWidth: '100%', objectFit: 'contain' }} />
                     <button
                       type="button"
                       onClick={() => setTrialFrontImage('')}
                       style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12 }}
-                      title="Xóa ảnh"
+                      title={t("Xóa ảnh")}
                     >
                       ✕
                     </button>
@@ -1404,7 +1375,7 @@ export function MemberPackagesPage() {
                       padding: 8,
                     }}
                   >
-                    <span>📷 Chọn ảnh mặt trước</span>
+                    <span>{t("📷 Chọn ảnh mặt trước")}</span>
                     <span style={{ fontSize: '0.72rem', marginTop: 4 }}>JPG, PNG (Max 5MB)</span>
                     <input
                       type="file"
@@ -1422,16 +1393,16 @@ export function MemberPackagesPage() {
 
               <div>
                 <label className="portal-label" style={{ fontSize: '0.82rem' }}>
-                  Ảnh mặt sau {trialDocType === 'PASSPORT' ? '(Tùy chọn)' : '*'}
+                  {t(" Ảnh mặt sau ")}{trialDocType === 'PASSPORT' ? t("(Tùy chọn)") : '*'}
                 </label>
                 {trialBackImage ? (
                   <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img src={trialBackImage} alt="Mặt sau" style={{ maxHeight: 110, maxWidth: '100%', objectFit: 'contain' }} />
+                    <img src={trialBackImage} alt={t("Mặt sau")} style={{ maxHeight: 110, maxWidth: '100%', objectFit: 'contain' }} />
                     <button
                       type="button"
                       onClick={() => setTrialBackImage('')}
                       style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12 }}
-                      title="Xóa ảnh"
+                      title={t("Xóa ảnh")}
                     >
                       ✕
                     </button>
@@ -1455,7 +1426,7 @@ export function MemberPackagesPage() {
                       padding: 8,
                     }}
                   >
-                    <span>📷 Chọn ảnh mặt sau</span>
+                    <span>{t("📷 Chọn ảnh mặt sau")}</span>
                     <span style={{ fontSize: '0.72rem', marginTop: 4 }}>JPG, PNG (Max 5MB)</span>
                     <input
                       type="file"
@@ -1474,7 +1445,7 @@ export function MemberPackagesPage() {
 
             {trialError && (
               <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', marginTop: 12, fontSize: '0.88rem' }}>
-                {trialError}
+                {t(trialError)}
               </p>
             )}
 
@@ -1485,14 +1456,13 @@ export function MemberPackagesPage() {
                 disabled={isClaimingTrial}
                 onClick={() => setIsTrialModalOpen(false)}
               >
-                Hủy
-              </button>
+                {t(" Hủy ")}</button>
               <button
                 type="submit"
                 className="btn-primary"
                 disabled={isClaimingTrial || !trialDocumentNumber.trim() || !trialFullName.trim()}
               >
-                {isClaimingTrial ? 'Đang gửi đơn…' : 'Xác minh & Kích hoạt'}
+                {isClaimingTrial ? t("Đang gửi đơn…") : t("Xác minh & Kích hoạt")}
               </button>
             </div>
           </form>
@@ -1500,26 +1470,23 @@ export function MemberPackagesPage() {
       )}
 
       {isHoldModalOpen && current && (
-        <Modal returnFocusRef={membershipFocus} title={`Bảo lưu ${current.packageName}`} onClose={() => setIsHoldModalOpen(false)} busy={isSubmittingHold}>
+        <Modal returnFocusRef={membershipFocus} title={t(`Bảo lưu ${current.packageName}`, `Pause ${current.packageName}`)} onClose={() => setIsHoldModalOpen(false)} busy={isSubmittingHold}>
             <div className="meta-label">
-              Yêu cầu bảo lưu gói tập
-            </div>
+              {t(" Yêu cầu bảo lưu gói tập ")}</div>
 
 <p className="row-card__meta" style={{ marginTop: 8 }}>
-              Khi Lễ tân xác nhận bảo lưu, gói tập hiện tại của bạn sẽ tạm dừng hoạt động và toàn bộ các lịch học bạn đã đặt trong tương lai sẽ được hủy tự động.
-            </p>
+              {t(" Khi Lễ tân xác nhận bảo lưu, gói tập hiện tại của bạn sẽ tạm dừng hoạt động và toàn bộ các lịch học bạn đã đặt trong tương lai sẽ được hủy tự động. ")}</p>
 
             <form onSubmit={(e) => void handleSubmitHold(e)} style={{ marginTop: 18 }}>
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="hold-reason-input">
-                  Lý do bảo lưu gói tập *
-                </label>
+                  {t(" Lý do bảo lưu gói tập * ")}</label>
                 <textarea
                   id="hold-reason-input"
                   className="portal-input"
                   rows={4}
                   maxLength={500}
-                  placeholder="Nhập lý do bảo lưu (ví dụ: Đi công tác dài ngày, chấn thương cần nghỉ ngơi...)"
+                  placeholder={t("Nhập lý do bảo lưu (ví dụ: Đi công tác dài ngày, chấn thương cần nghỉ ngơi...)")}
                   value={holdReason}
                   onChange={(e) => setHoldReason(e.target.value)}
                   disabled={isSubmittingHold}
@@ -1529,7 +1496,7 @@ export function MemberPackagesPage() {
 
               {holdError && (
                 <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.86rem', marginTop: 8 }}>
-                  {holdError}
+                  {t(holdError)}
                 </p>
               )}
 
@@ -1540,14 +1507,13 @@ export function MemberPackagesPage() {
                   disabled={isSubmittingHold}
                   onClick={() => setIsHoldModalOpen(false)}
                 >
-                  Hủy
-                </button>
+                  {t(" Hủy ")}</button>
                 <button
                   type="submit"
                   className="btn-primary"
                   disabled={isSubmittingHold}
                 >
-                  {isSubmittingHold ? 'Đang gửi yêu cầu…' : 'Gửi yêu cầu bảo lưu'}
+                  {isSubmittingHold ? t("Đang gửi yêu cầu…") : t("Gửi yêu cầu bảo lưu")}
                 </button>
               </div>
             </form>
