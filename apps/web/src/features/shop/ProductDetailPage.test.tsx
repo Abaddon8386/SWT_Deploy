@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { clearCart, getCart } from './cart';
+import { ApiError } from '../../shared/api/client';
 import { ProductDetailPage } from './ProductDetailPage';
 import { shopApi } from './shopApi';
 import type { ProductDetailDto } from './shopTypes';
@@ -170,12 +171,22 @@ it('detail Mua ngay adds to cart and goes to /checkout', async () => {
 });
 
 it('unknown slug shows Sản phẩm này không còn bán with a link back', async () => {
-  vi.mocked(shopApi.getProduct).mockRejectedValue(new Error('Not found'));
+  vi.mocked(shopApi.getProduct).mockRejectedValue(new ApiError('Not found', 404));
 
   await renderAt('/products/missing-slug');
 
   expect(host.textContent).toContain('Sản phẩm này không còn bán.');
   expect(host.querySelector('a[href="/products"]')).not.toBeNull();
+});
+
+it('shows a retryable error for a network failure instead of a missing product', async () => {
+  vi.mocked(shopApi.getProduct).mockRejectedValueOnce(new Error('Network error'));
+  await renderAt('/products/sol-whey-isolate');
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không tải được');
+  expect(host.textContent).not.toContain('Sản phẩm này không còn bán.');
+  vi.mocked(shopApi.getProduct).mockResolvedValue(sampleDetail);
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Thử lại')!.click());
+  expect(host.querySelector('#product-detail-title')?.textContent).toBe(sampleDetail.name);
 });
 
 it('detail always renders the legal disclaimer', async () => {

@@ -46,6 +46,12 @@ export function CartDrawer({
   const totalCount = lines.reduce((sum, l) => sum + l.quantity, 0);
 
   useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, []);
+
+  useEffect(() => {
     if (lines.length === 0) {
       setQuote(null);
       setLoading(false);
@@ -109,7 +115,7 @@ export function CartDrawer({
       className="shop-drawer"
       returnFocusRef={returnFocusRef}
     >
-      <div className="shop-drawer__content">
+      <div className="shop-drawer__content" aria-busy={loading}>
         {lines.length === 0 ? (
           <div className="shop-drawer__empty" role="status">
             <p>Giỏ hàng đang trống.</p>
@@ -123,6 +129,7 @@ export function CartDrawer({
             {loading && !quote && (
               <LoadingSkeleton label="Đang tính giỏ hàng…" variant="rows" count={Math.min(lines.length, 3)} />
             )}
+            {loading && quote && <p className="shop-drawer__updating" role="status">Đang cập nhật giỏ hàng…</p>}
             {error && (
               <div className="shop-drawer__error" role="alert">
                 <p>{error}</p>
@@ -140,7 +147,7 @@ export function CartDrawer({
             )}
             {quote && (
               <ul className="shop-drawer__list" aria-label="Sản phẩm trong giỏ">
-                {quote.lines.map(line => {
+                {quote.lines.filter(line => lines.some(item => item.variantId === line.variantId)).map(line => {
                   const cartLine = lines.find(l => l.variantId === line.variantId);
                   const currentQty = cartLine?.quantity ?? line.requestedQuantity;
                   const problem = lineProblemText(line);
@@ -182,7 +189,8 @@ export function CartDrawer({
                             className="shop-drawer__remove"
                             onClick={() => removeFromCart(line.variantId)}
                           >
-                            Xóa
+                            <span aria-hidden="true">Xóa</span>
+                            <span className="shop-sr-only">Xóa {line.productName} · {line.variantLabel}</span>
                           </button>
                         </div>
                         {problem && (
@@ -200,7 +208,7 @@ export function CartDrawer({
             <div className="shop-drawer__footer">
               <div className="shop-drawer__subtotal">
                 <span>Tạm tính</span>
-                <strong>{formatVnd(quote?.subtotal ?? 0)}</strong>
+                <strong aria-live="polite">{loading ? (quote ? 'Đang cập nhật…' : 'Đang tính…') : error || !quote ? '—' : formatVnd(quote.subtotal)}</strong>
               </div>
               <p className="shop-drawer__shipping-note">Phí giao hàng được tính ở bước thanh toán.</p>
               <div className="shop-drawer__actions">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { ApiError } from '../../shared/api/client';
 import { toast } from '../../shared/ui/toast';
 import { PublicLayout, RoundArrow } from '../landing/components/PublicLayout';
 import { addToCart } from './cart';
@@ -21,6 +22,8 @@ export function ProductDetailPage() {
   const [product, setProduct] = useState<ProductDetailDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
   const [selectedVariantId, setSelectedVariantId] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [activeImageIdx, setActiveImageIdx] = useState<number>(0);
@@ -34,6 +37,7 @@ export function ProductDetailPage() {
     let active = true;
     setLoading(true);
     setNotFound(false);
+    setError(false);
     setProduct(null);
     setActiveImageIdx(0);
     setQuantity(1);
@@ -53,16 +57,17 @@ export function ProductDetailPage() {
         document.title = `${detail.name} · SÖL Fitness`;
         setLoading(false);
       })
-      .catch(() => {
+      .catch(err => {
         if (!active) return;
-        setNotFound(true);
+        if (err instanceof ApiError && err.status === 404) setNotFound(true);
+        else setError(true);
         setLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [slug, retryTick]);
 
   const selectedVariant =
     product?.variants.find(v => v.id === selectedVariantId) ?? product?.variants[0] ?? null;
@@ -101,6 +106,12 @@ export function ProductDetailPage() {
         <section className="fit-section shop-detail" aria-labelledby="product-detail-title">
           {loading ? (
             <LoadingSkeleton label="Đang tải chi tiết sản phẩm…" variant="cards" count={2} />
+          ) : error ? (
+            <div className="fit-catalog-state" role="alert">
+              <h1 id="product-detail-title">Không tải được chi tiết sản phẩm.</h1>
+              <button type="button" className="fit-pill" onClick={() => setRetryTick(t => t + 1)}>Thử lại</button>
+              <Link to="/products" className="fit-text-link">Xem tất cả sản phẩm</Link>
+            </div>
           ) : notFound || !product ? (
             <div className="fit-catalog-state shop-detail__empty" role="status">
               <h1 id="product-detail-title">Sản phẩm này không còn bán.</h1>

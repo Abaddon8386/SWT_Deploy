@@ -186,3 +186,28 @@ it('loads more pages and keeps earlier cards', async () => {
   expect(host.textContent).toContain('SÖL Whey Isolate');
   expect(host.textContent).toContain('SÖL Creatine Monohydrate');
 });
+
+it('keeps existing products visible when loading more fails and retries the same page', async () => {
+  vi.mocked(shopApi.listProducts).mockResolvedValueOnce({ content: [makeProduct(1, 'Whey đang xem')], number: 0, size: 12, totalElements: 2, totalPages: 2 })
+    .mockRejectedValueOnce(new Error('Offline'));
+  await renderAt('/products');
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xem thêm'))!.click());
+  expect(host.querySelector('.shop-card')?.textContent).toContain('Whey đang xem');
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không tải thêm');
+  vi.mocked(shopApi.listProducts).mockResolvedValueOnce({ content: [makeProduct(2, 'Creatine mới')], number: 1, size: 12, totalElements: 2, totalPages: 2 });
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Thử tải thêm'))!.click());
+  expect(host.querySelectorAll('.shop-card')).toHaveLength(2);
+});
+
+it('ignores a late load-more response after the user changes filters', async () => {
+  let resolveMore!: (value: Awaited<ReturnType<typeof shopApi.listProducts>>) => void;
+  vi.mocked(shopApi.listProducts).mockResolvedValueOnce({ content: [makeProduct(1, 'Whey cũ')], number: 0, size: 12, totalElements: 2, totalPages: 2 })
+    .mockImplementationOnce(() => new Promise(resolve => { resolveMore = resolve; }))
+    .mockResolvedValueOnce({ content: [makeProduct(3, 'Sản phẩm phục hồi')], number: 0, size: 12, totalElements: 1, totalPages: 1 });
+  await renderAt('/products');
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xem thêm'))!.click());
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Phục hồi')!.click());
+  await act(async () => resolveMore({ content: [makeProduct(2, 'Trang cũ đến muộn')], number: 1, size: 12, totalElements: 2, totalPages: 2 }));
+  expect(host.textContent).toContain('Sản phẩm phục hồi');
+  expect(host.textContent).not.toContain('Trang cũ đến muộn');
+});

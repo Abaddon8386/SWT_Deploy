@@ -250,6 +250,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .portal-v2 .shop-label {
@@ -434,10 +435,6 @@
   overflow: hidden;
   background: var(--portal-raised);
   text-decoration: none;
-}
-
-.portal-v2 .shop-packshot__img {
-  object-fit: cover;
 }
 
 .portal-v2 .shop-card__badges {
@@ -631,12 +628,34 @@
   cursor: not-allowed;
 }
 
+.portal-v2 .shop-variant-pill:focus-within {
+  outline: 2px solid var(--portal-salmon);
+  outline-offset: 3px;
+}
+.portal-v2 .shop-stepper { flex-shrink: 0; }
+.portal-v2 .shop-stepper:focus-within { outline: 2px solid var(--portal-salmon); outline-offset: 3px; }
+.portal-v2 .shop-stepper__btn:disabled { opacity: .4; cursor: not-allowed; }
+.portal-v2 .shop-stepper__input { appearance: textfield; -moz-appearance: textfield; }
+.portal-v2 .shop-stepper__input::-webkit-inner-spin-button,
+.portal-v2 .shop-stepper__input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.portal-v2 .shop-nutrient-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.portal-v2 .shop-nutrient-editor > * { min-width: 0; }
+
 .portal-v2 .portal-shop-detail-grid {
   display: grid;
   grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr);
   gap: 20px;
   align-items: start;
 }
+
+.portal-v2 .portal-dialog.shop-product-dialog { width: min(820px, calc(100vw - 24px)); max-width: 820px; }
+.portal-v2 .portal-shop-buy-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.portal-v2 .shop-product-dialog .portal-dialog__header h2 { overflow-wrap: anywhere; }
 
 .portal-v2 .portal-shop-cart-bar {
   display: flex;
@@ -652,6 +671,7 @@
 }
 
 @media (max-width: 1099px) {
+  .portal-v2 .shop-nutrient-editor { grid-template-columns: 1fr; }
   .portal-v2 .portal-shop-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -679,12 +699,18 @@
   .portal-v2 .portal-shop-detail-grid {
     grid-template-columns: 1fr;
   }
+  .portal-v2 .portal-shop-detail-grid .shop-packshot { aspect-ratio: 4 / 3; max-height: 240px; }
+  .portal-v2 .portal-shop-buy-actions > .btn-primary { width: 100%; }
   .portal-v2 .shop-goal-chips {
     flex-wrap: wrap;
   }
   .portal-v2 .shop-goal-chips button {
     padding: 8px 12px;
     font-size: 12px;
-    min-height: 40px;
+    min-height: 44px;
   }
+}
+
+@media (max-width: 767px) {
+  .portal-v2 .shop-stepper__input { font-size: 16px; }
 }

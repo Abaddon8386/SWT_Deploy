@@ -284,6 +284,33 @@ it('placing an order reuses one clientRequestId across retries', async () => {
   expect(vnpayApi.createVnpayCheckout).toHaveBeenCalledWith({ productOrderId: 9 });
 });
 
+it('ignores an older quote after switching fulfillment twice', async () => {
+  loginAs('MEMBER');
+  addToCart(101, 1);
+  await renderCheckout();
+  let resolveOld!: (quote: QuoteDto) => void;
+  vi.mocked(shopApi.quote).mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve; }))
+    .mockResolvedValueOnce(buildQuote(1400000));
+  const choices = [...host.querySelectorAll<HTMLInputElement>('.shop-fulfillment-options input')];
+  await act(async () => choices[1].click());
+  await act(async () => choices[0].click());
+  await act(async () => resolveOld(buildQuote(900000)));
+  expect(host.querySelector('.shop-checkout-summary')?.textContent).toContain('1.400.000');
+  expect(host.querySelector('.shop-checkout-summary')?.textContent).not.toContain('900.000');
+});
+
+it('shows a quote error with retry and hides stale totals', async () => {
+  loginAs('MEMBER');
+  addToCart(101, 1);
+  vi.mocked(shopApi.quote).mockRejectedValueOnce(new Error('Offline'));
+  await renderCheckout();
+  expect(host.querySelector('.shop-checkout-summary [role="alert"]')).not.toBeNull();
+  expect(host.querySelector('.shop-checkout-totals')?.textContent).not.toContain('0 ₫');
+  vi.mocked(shopApi.quote).mockResolvedValue(buildQuote());
+  await act(async () => [...host.querySelectorAll<HTMLButtonElement>('.shop-checkout-summary button')].find(b => b.textContent?.includes('Thử lại'))!.click());
+  expect(host.querySelector('.shop-checkout-summary')?.textContent).toContain('1.290.000');
+});
+
 it('ORDER_PRICE_CHANGED refreshes the quote, shows the inline message and keeps the chosen address', async () => {
   loginAs('MEMBER');
   addToCart(101, 1);

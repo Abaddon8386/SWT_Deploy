@@ -38,9 +38,11 @@ export function ProductsPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState(false);
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const debounceRef = useRef<number | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     document.title = 'Sản phẩm · SÖL Fitness';
@@ -74,19 +76,15 @@ export function ProductsPage() {
       inStock: boolean;
     }>,
   ) => {
-    const nextGoal = patch.goal !== undefined ? patch.goal : goal;
-    const nextCategory = patch.category !== undefined ? patch.category : category;
-    const nextQ = patch.q !== undefined ? patch.q : urlQ;
-    const nextSort = patch.sort !== undefined ? patch.sort : sort;
-    const nextInStock = patch.inStock !== undefined ? patch.inStock : inStock;
-
-    const next = new URLSearchParams();
-    if (nextGoal) next.set('goal', nextGoal);
-    if (nextCategory) next.set('category', nextCategory);
-    if (nextQ.trim()) next.set('q', nextQ.trim());
-    if (nextSort && nextSort !== 'newest') next.set('sort', nextSort);
-    if (nextInStock) next.set('inStock', '1');
-    setSearchParams(next, { replace: true });
+    setSearchParams(current => {
+      const next = new URLSearchParams(current);
+      for (const [key, value] of Object.entries(patch)) {
+        const text = typeof value === 'boolean' ? (value ? '1' : '') : value.trim();
+        if (!text || (key === 'sort' && text === 'newest')) next.delete(key);
+        else next.set(key, text);
+      }
+      return next;
+    }, { replace: true });
   };
 
   const handleSearchChange = (value: string) => {
@@ -111,7 +109,11 @@ export function ProductsPage() {
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
+    setLoadingMore(false);
+    setMoreError(false);
     setError(false);
     setPage(0);
 
@@ -124,6 +126,7 @@ export function ProductsPage() {
         inStock: inStock || undefined,
         page: 0,
         size: PAGE_SIZE,
+        signal: controller.signal,
       })
       .then(res => {
         if (!active) return;
@@ -140,13 +143,17 @@ export function ProductsPage() {
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [goal, category, urlQ, sort, inStock, retryTick]);
 
   const handleLoadMore = async () => {
     if (loadingMore || page + 1 >= totalPages) return;
+    const controller = requestRef.current;
+    if (!controller || controller.signal.aborted) return;
     const nextPage = page + 1;
     setLoadingMore(true);
+    setMoreError(false);
     try {
       const res = await shopApi.listProducts({
         goal: goal || undefined,
@@ -156,15 +163,17 @@ export function ProductsPage() {
         inStock: inStock || undefined,
         page: nextPage,
         size: PAGE_SIZE,
+        signal: controller.signal,
       });
+      if (controller.signal.aborted) return;
       setItems(prev => [...prev, ...(res?.content ?? [])]);
       setPage(nextPage);
       setTotalElements(res?.totalElements ?? totalElements);
       setTotalPages(res?.totalPages ?? totalPages);
     } catch {
-      setError(true);
+      if (!controller.signal.aborted) setMoreError(true);
     } finally {
-      setLoadingMore(false);
+      if (!controller.signal.aborted) setLoadingMore(false);
     }
   };
 
@@ -273,13 +282,14 @@ export function ProductsPage() {
               </div>
               {page + 1 < totalPages && (
                 <div className="shop-catalog__more">
+                  {moreError && <p role="alert">Không tải thêm được sản phẩm. Danh sách hiện tại vẫn được giữ.</p>}
                   <button
                     type="button"
                     className="fit-pill"
                     disabled={loadingMore}
                     onClick={() => void handleLoadMore()}
                   >
-                    <span>{loadingMore ? 'Đang tải…' : 'Xem thêm'}</span>
+                    <span>{loadingMore ? 'Đang tải…' : moreError ? 'Thử tải thêm' : 'Xem thêm'}</span>
                   </button>
                 </div>
               )}

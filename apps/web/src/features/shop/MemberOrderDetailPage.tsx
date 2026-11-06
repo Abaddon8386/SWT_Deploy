@@ -169,7 +169,7 @@ export function MemberOrderDetailPage() {
 
             <section className="portal-card stack" aria-label="Sản phẩm trong đơn">
               <h2 className="portal-card-title">Sản phẩm</h2>
-              <div className="portal-table-wrap">
+              <div className="portal-table-wrapper" role="region" aria-label="Sản phẩm trong đơn" tabIndex={0}>
                 <table className="portal-table">
                   <thead>
                     <tr>
@@ -209,7 +209,7 @@ export function MemberOrderDetailPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
                 gap: 16,
               }}
             >

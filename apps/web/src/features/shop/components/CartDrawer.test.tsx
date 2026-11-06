@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AUTH_STORAGE_KEY } from '../../../shared/api/client';
 import { PublicLayout } from '../../landing/components/PublicLayout';
-import { addToCart, clearCart } from '../cart';
+import { addToCart, clearCart, removeFromCart } from '../cart';
 import { shopApi } from '../shopApi';
 import type { QuoteDto, QuoteProblem } from '../shopTypes';
 import { CartDrawer } from './CartDrawer';
@@ -169,4 +169,23 @@ it('checkout from the drawer sends signed-in members directly to /checkout', asy
   });
 
   expect(host.querySelector('[data-testid="loc"]')?.textContent).toBe('/checkout');
+});
+
+it('removes a deleted item immediately while the new quote is pending', async () => {
+  addToCart(1, 2);
+  addToCart(2, 1);
+  vi.mocked(shopApi.quote).mockResolvedValue(buildQuote());
+  await act(async () => root.render(<MemoryRouter><CartDrawer onClose={() => {}} /></MemoryRouter>));
+  vi.mocked(shopApi.quote).mockImplementation(() => new Promise(() => {}));
+  await act(async () => removeFromCart(1));
+  expect(host.querySelector('.shop-drawer__item')).toBeNull();
+  expect(host.textContent).toContain('Đang cập nhật');
+  expect(host.querySelector('.shop-drawer__subtotal')?.textContent).not.toContain('2.580.000');
+});
+
+it('does not show a zero subtotal as a quote while the first request is pending', async () => {
+  addToCart(1, 2);
+  vi.mocked(shopApi.quote).mockImplementation(() => new Promise(() => {}));
+  await act(async () => root.render(<MemoryRouter><CartDrawer onClose={() => {}} /></MemoryRouter>));
+  expect(host.querySelector('.shop-drawer__subtotal')?.textContent).toContain('Đang tính');
 });

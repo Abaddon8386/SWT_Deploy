@@ -1,14 +1,4 @@
 import { apiFetch } from '../../shared/api/client';
-import {
-  buildFallbackQuote,
-  FALLBACK_ADMIN_CATEGORIES,
-  FALLBACK_CATEGORIES,
-  FALLBACK_SHOP_CONFIG,
-  filterFallbackAdminProducts,
-  filterFallbackProducts,
-  getFallbackAdminProduct,
-  getFallbackProductDetail,
-} from './shopFallbackCatalog';
 import type {
   AddressDto,
   AddressRequest,
@@ -58,18 +48,8 @@ export interface ListProductsParams {
 }
 
 export const shopApi = {
-  listCategories: async (signal?: AbortSignal) => {
-    try {
-      const list = await apiFetch<CategoryDto[]>('/public/product-categories', publicInit({ signal }));
-      if (import.meta.env.MODE !== 'test' && Array.isArray(list) && list.length === 0) {
-        return FALLBACK_CATEGORIES;
-      }
-      return list;
-    } catch (err) {
-      if (import.meta.env.MODE === 'test' || signal?.aborted) throw err;
-      return FALLBACK_CATEGORIES;
-    }
-  },
+  listCategories: (signal?: AbortSignal) =>
+    apiFetch<CategoryDto[]>('/public/product-categories', publicInit({ signal })),
 
   listProducts: async (params: ListProductsParams = {}) => {
     const query = new URLSearchParams();
@@ -82,61 +62,23 @@ export const shopApi = {
     if (params.page != null) query.set('page', String(params.page));
     if (params.size != null) query.set('size', String(params.size));
     const qs = query.toString();
-    try {
-      const res = await apiFetch<Page<ProductSummaryDto>>(
-        `/public/products${qs ? `?${qs}` : ''}`,
-        publicInit({ signal: params.signal }),
-      );
-      if (
-        import.meta.env.MODE !== 'test' &&
-        res &&
-        Array.isArray(res.content) &&
-        res.content.length === 0 &&
-        !params.q &&
-        !params.goal &&
-        !params.category &&
-        !params.inStock
-      ) {
-        return filterFallbackProducts(params);
-      }
-      return res;
-    } catch (err) {
-      if (import.meta.env.MODE === 'test' || params.signal?.aborted) throw err;
-      return filterFallbackProducts(params);
-    }
+    return apiFetch<Page<ProductSummaryDto>>(
+      `/public/products${qs ? `?${qs}` : ''}`,
+      publicInit({ signal: params.signal }),
+    );
   },
 
-  getProduct: async (slug: string, signal?: AbortSignal) => {
-    try {
-      return await apiFetch<ProductDetailDto>(`/public/products/${encodeURIComponent(slug)}`, publicInit({ signal }));
-    } catch (err) {
-      if (import.meta.env.MODE === 'test' || signal?.aborted) throw err;
-      const fallback = getFallbackProductDetail(slug);
-      if (fallback) return fallback;
-      throw err;
-    }
-  },
+  getProduct: (slug: string, signal?: AbortSignal) =>
+    apiFetch<ProductDetailDto>(`/public/products/${encodeURIComponent(slug)}`, publicInit({ signal })),
 
-  getShopConfig: async (signal?: AbortSignal) => {
-    try {
-      return await apiFetch<ShopConfigDto>('/public/shop/config', publicInit({ signal }));
-    } catch (err) {
-      if (import.meta.env.MODE === 'test' || signal?.aborted) throw err;
-      return FALLBACK_SHOP_CONFIG;
-    }
-  },
+  getShopConfig: (signal?: AbortSignal) =>
+    apiFetch<ShopConfigDto>('/public/shop/config', publicInit({ signal })),
 
-  quote: async (request: QuoteRequest, signal?: AbortSignal) => {
-    try {
-      return await apiFetch<QuoteDto>(
-        '/public/shop/quote',
-        publicInit({ method: 'POST', body: JSON.stringify(request), signal }),
-      );
-    } catch (err) {
-      if (import.meta.env.MODE === 'test' || signal?.aborted) throw err;
-      return buildFallbackQuote(request);
-    }
-  },
+  quote: (request: QuoteRequest, signal?: AbortSignal) =>
+    apiFetch<QuoteDto>(
+      '/public/shop/quote',
+      publicInit({ method: 'POST', body: JSON.stringify(request), signal }),
+    ),
 
   listProvinces: (signal?: AbortSignal) =>
     apiFetch<GeoRegion[]>('/public/geo/provinces', publicInit({ signal })),
@@ -220,18 +162,7 @@ export const shopApi = {
 
   // Manager administration
   manager: {
-    listCategories: async () => {
-      try {
-        const list = await apiFetch<CategoryAdminDto[]>('/manager/product-categories');
-        if (import.meta.env.MODE !== 'test' && Array.isArray(list) && list.length === 0) {
-          return FALLBACK_ADMIN_CATEGORIES;
-        }
-        return list;
-      } catch (err) {
-        if (import.meta.env.MODE === 'test') throw err;
-        return FALLBACK_ADMIN_CATEGORIES;
-      }
-    },
+    listCategories: () => apiFetch<CategoryAdminDto[]>('/manager/product-categories'),
     createCategory: (payload: CategoryUpsertRequest) =>
       apiFetch<CategoryAdminDto>('/manager/product-categories', {
         method: 'POST',
@@ -255,35 +186,9 @@ export const shopApi = {
       if (params.page != null) query.set('page', String(params.page));
       if (params.size != null) query.set('size', String(params.size));
       const qs = query.toString();
-      try {
-        const res = await apiFetch<Page<ProductAdminSummaryDto>>(`/manager/products${qs ? `?${qs}` : ''}`);
-        if (
-          import.meta.env.MODE !== 'test' &&
-          res &&
-          Array.isArray(res.content) &&
-          res.content.length === 0 &&
-          !params.q &&
-          params.active == null &&
-          !params.lowStock
-        ) {
-          return filterFallbackAdminProducts(params);
-        }
-        return res;
-      } catch (err) {
-        if (import.meta.env.MODE === 'test') throw err;
-        return filterFallbackAdminProducts(params);
-      }
+      return apiFetch<Page<ProductAdminSummaryDto>>(`/manager/products${qs ? `?${qs}` : ''}`);
     },
-    getProduct: async (id: number) => {
-      try {
-        return await apiFetch<ProductAdminDto>(`/manager/products/${id}`);
-      } catch (err) {
-        if (import.meta.env.MODE === 'test') throw err;
-        const fallback = getFallbackAdminProduct(id);
-        if (fallback) return fallback;
-        throw err;
-      }
-    },
+    getProduct: (id: number) => apiFetch<ProductAdminDto>(`/manager/products/${id}`),
     createProduct: (payload: ProductUpsertRequest) =>
       apiFetch<ProductAdminDto>('/manager/products', {
         method: 'POST',

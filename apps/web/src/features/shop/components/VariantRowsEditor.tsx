@@ -78,7 +78,7 @@ export function VariantRowsEditor({
         </button>
       </div>
 
-      <div className="portal-table-wrap">
+      <div className="portal-table-wrapper" role="region" aria-label="Biên tập phân loại sản phẩm" tabIndex={0}>
         <table className="portal-table">
           <thead>
             <tr>

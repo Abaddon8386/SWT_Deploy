@@ -125,15 +125,8 @@ export function NutrientRowsEditor({
         )}
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.5fr) minmax(280px, 1fr)',
-          gap: 20,
-          alignItems: 'start',
-        }}
-      >
-        <div className="portal-table-wrap">
+      <div className="shop-nutrient-editor">
+        <div className="portal-table-wrapper" role="region" aria-label="Biên tập thành phần dinh dưỡng" tabIndex={0}>
           <table className="portal-table">
             <thead>
               <tr>
