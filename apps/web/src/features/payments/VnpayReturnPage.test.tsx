@@ -15,7 +15,7 @@ it('never trusts a successful browser return code over server status',async()=>{
  vi.mocked(api.getVnpayStatus).mockResolvedValue({reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'failed',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'});
  await render('?vnp_TxnRef=ABC123&vnp_ResponseCode=00');
  expect(host.textContent).toContain('Thanh toán chưa thành công'); expect(host.textContent).not.toContain('Thanh toán thành công');
- expect(toast.error).toHaveBeenCalledWith('Thanh toán VNPay chưa thành công'); expect(toast.success).not.toHaveBeenCalled();
+ expect(toast.error).toHaveBeenCalledWith('Thanh toán VNPay chưa thành công', { vi: 'Thanh toán VNPay chưa thành công', en: 'VNPay payment unsuccessful' }); expect(toast.success).not.toHaveBeenCalled();
 });
 it('shows confirmed server success even if the return code says failure',async()=>{
  vi.mocked(api.getVnpayStatus).mockResolvedValue({reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'success',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'});

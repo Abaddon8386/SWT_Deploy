@@ -1,3 +1,4 @@
+import { sourceMessage, setLanguage } from '../../shared/i18n';
 import { MemoryRouter } from 'react-router-dom';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -77,6 +78,7 @@ describe('SCRUM-86 packages', () => {
   });
 
   beforeEach(() => {
+  setLanguage('vi');
     clearNotices();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
@@ -100,6 +102,7 @@ describe('SCRUM-86 packages', () => {
 
   afterEach(async () => {
     await act(async () => root.unmount());
+    setLanguage('vi');
     host.remove();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -756,6 +759,24 @@ describe('SCRUM-86 packages', () => {
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
   });
+
+  it('switches an open trial modal and existing validation error VI → EN → VI without rewriting catalog content', async () => {
+    await render();
+    await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
+    await act(async () => host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(host.querySelector('dialog')?.textContent).toContain('Số CCCD không hợp lệ');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog')?.textContent).toContain('Apply for a 3-day trial');
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Invalid citizen ID number');
+    expect(host.querySelector('dialog button[aria-label="Close dialog"]')).not.toBeNull();
+    expect(host.querySelector('.package-benefit-list')?.getAttribute('aria-label')).toBe('Essential benefits');
+    expect(host.textContent).toContain('Essential');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Số CCCD không hợp lệ');
+    expect(host.querySelector('dialog button[aria-label="Đóng hộp thoại"]')).not.toBeNull();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
   it('revalidates persisted browser Back before allowing stale pending actions', async () => {
     api.history.mockResolvedValue([pending]);
     await render();
@@ -855,4 +876,38 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày miễn phí');
     expect(button('Nhận 3 ngày tập miễn phí')).toBeUndefined();
   });
+  it('keeps cancellation error provenance when the visible language changes', async () => {
+    api.history.mockResolvedValue([pending]);
+    api.cancelPending.mockRejectedValue(Object.assign(new Error('Mất kết nối kiểm thử.'), {
+      translation: sourceMessage('Mất kết nối kiểm thử.', 'Test connection lost.'),
+    }));
+    await render();
+    await act(async () => button('Hủy yêu cầu đăng ký')?.click());
+    await act(async () => button('Xác nhận hủy')?.click());
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+  });
+
+  it('keeps hold error provenance when the visible language changes', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active]);
+    api.requestHold.mockRejectedValue(Object.assign(new Error('Mất kết nối kiểm thử.'), {
+      translation: sourceMessage('Mất kết nối kiểm thử.', 'Test connection lost.'),
+    }));
+    await render();
+    await act(async () => button('Bảo lưu gói tập')?.click());
+    const textarea = host.querySelector<HTMLTextAreaElement>('#hold-reason-input')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, 'Đi công tác');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => button('Gửi yêu cầu bảo lưu')?.click());
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
+  });
+
 });

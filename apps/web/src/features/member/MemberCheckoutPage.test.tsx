@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -62,6 +63,7 @@ describe('MemberCheckoutPage Component', () => {
   let root: Root;
 
   beforeEach(() => {
+  setLanguage('vi');
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.append(host);
@@ -120,6 +122,7 @@ describe('MemberCheckoutPage Component', () => {
 
   afterEach(async () => {
     await act(async () => root.unmount());
+    setLanguage('vi');
     host.remove();
     vi.clearAllMocks();
     vi.unstubAllGlobals();
@@ -246,6 +249,18 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.textContent).toContain('Số Căn cước công dân (12 chữ số)');
     expect(host.textContent).toContain('Họ tên tài khoản sẽ được đồng bộ theo tên này');
   });
+
+  it('switches checkout labels and stored fallback errors while preserving server package text', async () => {
+    vi.mocked(membershipApi.getMembershipPackages).mockRejectedValueOnce(new TypeError('network detail'));
+    await renderCheckout();
+    expect(host.textContent).toContain('Không thể tải thông tin gói tập.');
+    await act(async () => setLanguage('en'));
+    expect(host.textContent).toContain('Unable to load membership details.');
+    expect(host.textContent).toContain('Back to membership catalog');
+    await act(async () => setLanguage('vi'));
+    expect(host.textContent).toContain('Không thể tải thông tin gói tập.');
+  });
+
   it('refreshes the existing request on persisted Back and blocks payment after server settlement', async () => {
     await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
     vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, status: 'active' }]);
@@ -263,4 +278,15 @@ describe('MemberCheckoutPage Component', () => {
     expect(walletApi.payWithWallet).not.toHaveBeenCalled();
     expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
   });
+  it('retranslates a stale prepared payment error after changing language', async () => {
+    await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, status: 'active' }]);
+    await act(async () => setLanguage('en'));
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')!.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('This membership request is no longer available');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Yêu cầu gói tập không còn hợp lệ');
+    expect(walletApi.payWithWallet).not.toHaveBeenCalled();
+  });
+
 });
