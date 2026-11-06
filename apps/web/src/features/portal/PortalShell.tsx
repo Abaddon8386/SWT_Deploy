@@ -3,6 +3,7 @@ import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigatio
 import { apiFetch, clearAuthSession, syncSessionWithServer, TOKEN_STORAGE_KEY, type UserSession } from '../../shared/api/client';
 import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
 import { LanguageSetting, useDomLanguageSync, useI18n } from '../../shared/i18n';
+import { localizableError } from '../../shared/lib/errorMessage';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -91,16 +92,13 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const [walletLoading, setWalletLoading] = useState(false);
   const [topupAmount, setTopupAmount] = useState('200000');
   const [topupBusy, setTopupBusy] = useState(false);
-  const [topupError, setTopupError] = useState<string | null>(null);
+  const [topupError, setTopupError] = useState<string | Error | { vi: string; en: string } | null>(null);
 
   const handleWalletTopup = async () => {
     if (topupBusy) return;
     const numeric = Number(topupAmount);
     if (!Number.isFinite(numeric) || numeric < 10000 || numeric > 100000000) {
-      setTopupError(t(
-        'Số tiền nạp vào Ví phải từ 10.000 đ đến 100.000.000 đ.',
-        'Wallet top-up amount must be between 10,000 VND and 100,000,000 VND.',
-      ));
+      setTopupError({ vi: 'Số tiền nạp vào Ví phải từ 10.000 đ đến 100.000.000 đ.', en: 'Wallet top-up amount must be between 10,000 VND and 100,000,000 VND.' });
       return;
     }
     setTopupBusy(true);
@@ -116,7 +114,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         setTopupBusy(false);
       }
     } catch (err) {
-      setTopupError(err instanceof Error ? err.message : t('Không thể tạo giao dịch nạp tiền VNPay.', 'Unable to create VNPay top-up transaction.'));
+      setTopupError(localizableError(err, 'Không thể tạo giao dịch nạp tiền VNPay.'));
     }
   };
 
@@ -601,7 +599,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
               </div>
               {topupError && (
                 <p className="form-error" role="alert" style={{ margin: 0 }}>
-                  {topupError}
+                  {t(topupError)}
                 </p>
               )}
             </div>

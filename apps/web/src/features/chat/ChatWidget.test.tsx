@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
@@ -13,6 +14,7 @@ vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn(), apiFetch: v
 let host: HTMLDivElement, root: Root;
 const conversation: api.ChatConversation = { id: 7, peer: { id: 20, name: 'Coach Linh', role: 'COACH', available: true, avatarUrl: 'https://example.com/linh.jpg' }, createdAt: '2026-10-29T01:00:00Z', lastActivityAt: '2026-10-29T01:00:00Z' };
 beforeEach(() => {
+  setLanguage('vi');
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'member', identifier: 'member', name: 'Member', role: 'MEMBER' });
   vi.mocked(api.getConversations).mockResolvedValue({ content: [conversation], totalPages: 1, number: 0 });
@@ -21,7 +23,7 @@ beforeEach(() => {
   vi.mocked(api.getChatUnreadCount).mockResolvedValue({ count: 0 });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 const button = (label: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
 const render = () => act(async () => root.render(<MemoryRouter><ChatWidget /></MemoryRouter>));
 /** Khung chat tải lazy khi mở widget lần đầu: chờ module xong rồi mới kiểm tra. */
@@ -158,4 +160,19 @@ it('still opens on a plain click without movement', async () => {
   await settle();
   expect(host.querySelector<HTMLElement>('[role="dialog"]')?.hidden).toBe(false);
   expect(host.querySelector<HTMLElement>('.chat-widget')!.style.left).toBe('');
+});
+
+
+it('switches widget status, dialog and action names in both languages', async () => {
+  await render();
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('.chat-widget__trigger-label')!.textContent).toBe('Messages');
+  await act(async () => button('Open messages').click()); await settle();
+  expect(host.querySelector('[role="dialog"]')!.getAttribute('aria-label')).toBe('SÖL messages');
+  expect(host.querySelector('.chat-widget__status')!.textContent).toBe('Connecting…');
+  expect(button('Close messages window')).not.toBeNull();
+  await act(async () => setLanguage('vi'));
+  expect(host.querySelector('[role="dialog"]')!.getAttribute('aria-label')).toBe('Tin nhắn SÖL');
+  expect(host.querySelector('.chat-widget__status')!.textContent).toBe('Đang kết nối…');
+  expect(button('Đóng cửa sổ tin nhắn')).not.toBeNull();
 });

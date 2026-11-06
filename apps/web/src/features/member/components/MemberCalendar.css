@@ -1,0 +1,19 @@
+/* Member-only type colors stay distinct in both themes and for past events. */
+.mcal--member { --mcal-court: #b8dcff; --mcal-class: #f2a38f; }
+.mcal--member :is(.mcal__event--court, .mcal__chip--court) { border-left: 4px solid #24649b; }
+.mcal--member :is(.mcal__event--class, .mcal__chip--class) { border-left: 4px solid #a83e2d; }
+.mcal--member :is(.mcal__event, .mcal__chip):not(.is-past):not(.is-cancelled) { color: #202020; }
+.mcal--member .mcal__type { display: block; flex: none; align-self: flex-start; max-width: 100%; padding: 2px 5px; border-radius: 4px; color: #202020; font-size: 10px; font-weight: 800; line-height: 1.3; white-space: normal; overflow-wrap: anywhere; }
+.mcal--member .mcal__type--court { background: var(--mcal-court); }
+.mcal--member .mcal__type--class { background: var(--mcal-class); }
+.mcal--member .mcal__chip .mcal__type { display: block; opacity: 1; }
+
+/* Keep the name readable inside the actual time height, including overlapping 30-minute bookings. */
+.mcal--member .mcal__event-top { flex: none; width: 100%; }
+.mcal--member .mcal__event-title { flex: none; }
+.mcal--member .mcal__event-top .mcal__type { min-width: 0; max-width: 50%; flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal--member .mcal__event.is-short { padding: 2px 6px; }
+.mcal--member .mcal__event.is-short .mcal__event-top { gap: 4px; }
+.mcal--member .mcal__event.is-short .mcal__type { padding: 0 3px; line-height: 12px; }
+.mcal--member .mcal__event.is-short .mcal__event-time { font-size: 10px; line-height: 12px; }
+.mcal--member .mcal__event.is-short .mcal__event-title { line-height: 1.1; }

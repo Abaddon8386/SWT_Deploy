@@ -11,7 +11,7 @@ paths:
   /coach-bookings:
     post:
       summary: Member books a one-hour PT session
-      description: Requires an active, unexpired membership covering today and the booking date for every payment method. Slots start on the hour between 06:00 and 20:00 and must be at least two hours ahead. Rejects overlapping PT or booked group sessions. Paid methods remain pending until the front desk confirms payment (POST /coach-bookings/{id}/confirm-payment); package quota uses used_quota. A member may hold at most two unpaid hourly sessions, past or upcoming (409 COACH_BOOKING_UNPAID_LIMIT). Concurrent bookings by one member are serialized so the monthly quota cannot be exceeded. Database triggers enforce concurrent schedule and membership checks.
+      description: Requires an active, unexpired membership covering today and the booking date for every payment method. Slots start on the hour between 06:00 and 20:00 and must be at least two hours ahead. Rejects overlapping PT or booked group sessions. At most three consecutive one-hour PT slots per coach are allowed; the next slot must remain free (409 COACH_REST_REQUIRED), including bookings inserted out of order. Confirmed and completed PT sessions count toward this rule. Paid methods remain pending until the front desk confirms payment (POST /coach-bookings/{id}/confirm-payment); package quota uses used_quota. A member may hold at most two unpaid hourly sessions, past or upcoming (409 COACH_BOOKING_UNPAID_LIMIT). Concurrent bookings by one member are serialized so the monthly quota cannot be exceeded. Database triggers enforce concurrent schedule and membership checks.
       requestBody:
         required: true
         content:
@@ -31,14 +31,14 @@ paths:
         '201': {description: ApiResponse containing CoachBookingDto; paymentStatus is pending or used_quota}
         '400': {description: Invalid slot, unavailable membership, exhausted quota or INVALID_PAYMENT_METHOD}
         '403': {description: Role denied or trigger rejects inactive membership}
-        '409': {description: Schedule conflict, COACH_ON_LEAVE, COACH_BOOKING_UNPAID_LIMIT, or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
+        '409': {description: Schedule conflict, COACH_REST_REQUIRED, COACH_ON_LEAVE, COACH_BOOKING_UNPAID_LIMIT, or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
   /coach-bookings/recurring:
     post:
       summary: Standing 1:1 booking for a week or a month (MEMBER)
       description: >
         Books the same one-hour slot with one coach on the chosen ISO weekdays (defaults to the weekday of startDate)
-        for a week (7 days) or a calendar month from startDate. Each date goes through the normal single-booking rules
-        (coach and member conflicts, membership covering the date, monthly package quota, two-unpaid cap); dates that
+        for a week (7 rolling days) or a calendar month from startDate. A weekday already past in the current calendar week is booked in the following week within that rolling window. Each date goes through the normal single-booking rules
+        (coach rest after three consecutive PT slots, coach and member conflicts, membership covering the date, monthly package quota, two-unpaid cap); dates that
         fail are returned in skipped with the error code and a localised reason while the rest are kept.
         Status 201 when at least one booking was created, 200 when none was. Unknown coach fails immediately with 404.
       requestBody:

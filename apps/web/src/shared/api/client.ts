@@ -1,5 +1,5 @@
 import { clearNotices } from '../lib/portalNotices';
-import { getLanguage } from '../i18n';
+import { getLanguage, sourceMessage, type SourceMessage } from '../i18n';
 export interface UserSession {
   id: string;
   name: string;
@@ -95,8 +95,10 @@ function expiredLoginPath(): string {
 export class ApiError extends Error {
   status: number;
   code?: string;
-  constructor(message: string, status: number, code?: string) {
-    super(message);
+  translation?: SourceMessage;
+  constructor(message: string, status: number, code?: string, translation?: SourceMessage) {
+    super(translation ? (getLanguage() === 'en' ? translation.en : translation.vi) : message);
+    this.translation = translation;
     this.status = status;
     this.code = code;
   }
@@ -126,14 +128,14 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       },
     });
   } catch {
-    throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.', 0);
+    throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.', 0, undefined, sourceMessage('Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.', 'Unable to connect to the server. Check your connection and try again.'));
   }
   const body = await res.json().catch(() => null);
   if (res.status === 401 && token && (!path.startsWith('/auth/') || path === '/auth/me')) {
     // Phiên đăng nhập hết hạn: đưa người dùng về trang đăng nhập kèm lời giải thích
-    if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED');
+    if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED', sourceMessage(SESSION_REPLACED_MESSAGE, 'Your login session has changed. Please reload the page.'));
   }
-  if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code);
+  if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code, body?.message ? undefined : sourceMessage(`Yêu cầu thất bại (HTTP ${res.status})`, `Request failed (HTTP ${res.status})`));
   // ApiResponse omits null data (Jackson NON_NULL); never pass its HTTP status to feature DTOs.
   if (body && typeof body === 'object' && ('data' in body || body.success === true)) {
     return (body.data ?? null) as T;
@@ -150,17 +152,17 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
       headers: { 'Accept-Language': getLanguage(), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
   } catch {
-    throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng thử lại.', 0);
+    throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng thử lại.', 0, undefined, sourceMessage('Không thể kết nối tới máy chủ. Vui lòng thử lại.', 'Unable to connect to the server. Please try again.'));
   }
   if (res.status === 401 && token) {
-    if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED');
+    if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED', sourceMessage(SESSION_REPLACED_MESSAGE, 'Your login session has changed. Please reload the page.'));
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code);
+    throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code, body?.message ? undefined : sourceMessage(`Yêu cầu thất bại (HTTP ${res.status})`, `Request failed (HTTP ${res.status})`));
   }
   if (!res.headers.get('Content-Type')?.toLowerCase().startsWith('application/pdf')) {
-    throw new ApiError('Máy chủ không trả về file PDF hợp lệ.', res.status);
+    throw new ApiError('Máy chủ không trả về file PDF hợp lệ.', res.status, undefined, sourceMessage('Máy chủ không trả về file PDF hợp lệ.', 'The server did not return a valid PDF file.'));
   }
   return res.blob();
 }
@@ -176,7 +178,7 @@ export async function loginApi(identifier: string, password: string): Promise<Lo
 
 export function setAuthSession(token: string, username: string, roleCode: string): UserSession {
   const role = SESSION_ROLE[roleCode];
-  if (!role) throw new ApiError('Vai trò tài khoản chưa được hỗ trợ trên portal.', 403);
+  if (!role) throw new ApiError('Vai trò tài khoản chưa được hỗ trợ trên portal.', 403, undefined, sourceMessage('Vai trò tài khoản chưa được hỗ trợ trên portal.', 'This account role is not supported in the portal.'));
   const user: UserSession = { id: username, name: username, identifier: username, role };
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
   setCurrentUser(user);

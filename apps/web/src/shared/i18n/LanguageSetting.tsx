@@ -12,7 +12,9 @@ export const LanguageSetting: FC<LanguageSettingProps> = ({ variant, className =
   if (variant === 'menu') {
     return (
       <div
-        className={`portal-avatar-settings-block ${className}`.trim()}
+        className={`portal-avatar-settings-block notranslate ${className}`.trim()}
+        data-i18n-managed
+        translate="no"
         data-testid="avatar-language-setting"
         role="group"
         aria-label={t('Cài đặt ngôn ngữ', 'Language settings')}
@@ -31,6 +33,7 @@ export const LanguageSetting: FC<LanguageSettingProps> = ({ variant, className =
             className={`portal-avatar-lang-btn ${lang === 'vi' ? 'active' : ''}`.trim()}
             onClick={() => selectLanguage('vi')}
             aria-pressed={lang === 'vi'}
+            lang="vi"
             data-testid="avatar-lang-vi"
           >
             Tiếng Việt
@@ -40,6 +43,7 @@ export const LanguageSetting: FC<LanguageSettingProps> = ({ variant, className =
             className={`portal-avatar-lang-btn ${lang === 'en' ? 'active' : ''}`.trim()}
             onClick={() => selectLanguage('en')}
             aria-pressed={lang === 'en'}
+            lang="en"
             data-testid="avatar-lang-en"
           >
             English
@@ -51,7 +55,9 @@ export const LanguageSetting: FC<LanguageSettingProps> = ({ variant, className =
 
   return (
     <div
-      className={`scms-footer-lang-setting ${className}`.trim()}
+      className={`scms-footer-lang-setting notranslate ${className}`.trim()}
+      data-i18n-managed
+      translate="no"
       data-testid="footer-language-setting"
       role="group"
       aria-label={t('Cài đặt ngôn ngữ', 'Language settings')}
@@ -65,6 +71,7 @@ export const LanguageSetting: FC<LanguageSettingProps> = ({ variant, className =
           className={`scms-footer-lang-btn ${lang === 'vi' ? 'active' : ''}`.trim()}
           onClick={() => selectLanguage('vi')}
           aria-pressed={lang === 'vi'}
+          lang="vi"
           data-testid="footer-lang-vi"
         >
           Tiếng Việt
@@ -75,6 +82,7 @@ export const LanguageSetting: FC<LanguageSettingProps> = ({ variant, className =
           className={`scms-footer-lang-btn ${lang === 'en' ? 'active' : ''}`.trim()}
           onClick={() => selectLanguage('en')}
           aria-pressed={lang === 'en'}
+          lang="en"
           data-testid="footer-lang-en"
         >
           English

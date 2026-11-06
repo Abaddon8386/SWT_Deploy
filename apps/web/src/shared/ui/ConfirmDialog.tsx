@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Modal } from './Modal';
 
@@ -15,6 +16,7 @@ export interface ConfirmOptions {
  * `const [confirm, confirmDialog] = useConfirm();` rồi `if (!(await confirm({...}))) return;` và render `{confirmDialog}`.
  */
 export function useConfirm() {
+  const { t } = useI18n();
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
   const resolver = useRef<((value: boolean) => void) | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -35,8 +37,8 @@ export function useConfirm() {
   const dialog = options && <Modal title={options.title} onClose={() => settle(false)} returnFocusRef={returnFocus}>
     <div className="portal-subtitle confirm-dialog__message">{options.message}</div>
     <div className="form-actions confirm-dialog__actions">
-      <button type="button" className="btn-secondary" onClick={() => settle(false)}>{options.cancelLabel ?? 'Hủy'}</button>
-      <button type="button" className={options.danger ? 'btn-danger' : 'btn-primary'} onClick={() => settle(true)}>{options.confirmLabel ?? 'Xác nhận'}</button>
+      <button type="button" className="btn-secondary" onClick={() => settle(false)}>{options.cancelLabel ?? t('Hủy')}</button>
+      <button type="button" className={options.danger ? 'btn-danger' : 'btn-primary'} onClick={() => settle(true)}>{options.confirmLabel ?? t('Xác nhận')}</button>
     </div>
   </Modal>;
 

@@ -6,3 +6,8 @@ export function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.name === 'Error' && error.message) return error.message;
   return fallback;
 }
+
+/** Keep API/business error content verbatim; only source-owned fallbacks are translatable. */
+export function localizableError(error: unknown, fallback: string): string | Error {
+  return error instanceof Error && error.name === 'Error' && error.message ? error : fallback;
+}

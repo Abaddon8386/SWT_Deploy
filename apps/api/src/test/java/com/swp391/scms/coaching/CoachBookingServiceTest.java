@@ -607,4 +607,41 @@ class CoachBookingServiceTest {
         assertThat(quota.usedThisMonth()).isEqualTo(1);
         assertThat(quota.remainingQuota()).isEqualTo(2);
     }
+    @Test
+    void coachRestsAfterThreeConsecutivePtSlotsAndResumesAfterAnHour() {
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(coachBookingRepository.findActiveByCoachAndDate(20L, LocalDate.of(2026, 11, 2)))
+                .thenReturn(ptSlots(10, 11, 12));
+        var slots = service.getAvailableSlots(20L, LocalDate.of(2026, 11, 2), 10L);
+        var rest = slots.stream().filter(s -> s.startTime().getHour() == 13).findFirst().orElseThrow();
+        assertThat(rest.available()).isFalse();
+        assertThat(rest.reason()).isEqualTo("coach_rest");
+        assertThat(slots.stream().filter(s -> s.startTime().getHour() == 14).findFirst().orElseThrow().available()).isTrue();
+    }
+
+    @Test
+    void rejectsFourthConsecutivePtSlotIncludingInsertionInTheMiddle() {
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        for (int requested : List.of(10, 11, 12, 13)) {
+            when(coachBookingRepository.findActiveByCoachAndDate(20L, LocalDate.of(2026, 11, 2)))
+                    .thenReturn(ptSlots(java.util.stream.IntStream.rangeClosed(10, 13).filter(h -> h != requested).toArray()));
+            var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 11, 2),
+                    LocalTime.of(requested, 0), LocalTime.of(requested + 1, 0), "cash", null);
+            assertThatThrownBy(() -> service.createBooking(principal, request))
+                    .isInstanceOf(ConflictException.class)
+                    .satisfies(e -> assertThat(((ConflictException) e).getErrorCode()).isEqualTo("COACH_REST_REQUIRED"));
+        }
+        verify(coachBookingRepository, never()).save(any());
+    }
+
+    private List<CoachBooking> ptSlots(int... hours) {
+        return java.util.Arrays.stream(hours).mapToObj(hour -> {
+            CoachBooking booking = new CoachBooking();
+            booking.setStartTime(LocalTime.of(hour, 0));
+            booking.setEndTime(LocalTime.of(hour + 1, 0));
+            return booking;
+        }).toList();
+    }
+
 }

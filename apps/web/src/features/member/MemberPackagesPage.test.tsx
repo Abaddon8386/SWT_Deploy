@@ -1,3 +1,4 @@
+import { sourceMessage, setLanguage } from '../../shared/i18n';
 import { MemoryRouter } from 'react-router-dom';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -77,6 +78,7 @@ describe('SCRUM-86 packages', () => {
   });
 
   beforeEach(() => {
+  setLanguage('vi');
     clearNotices();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
@@ -100,6 +102,7 @@ describe('SCRUM-86 packages', () => {
 
   afterEach(async () => {
     await act(async () => root.unmount());
+    setLanguage('vi');
     host.remove();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -757,6 +760,90 @@ describe('SCRUM-86 packages', () => {
     expect(api.createPayment).not.toHaveBeenCalled();
   });
 
+  it('switches an open trial modal and existing validation error VI → EN → VI without rewriting catalog content', async () => {
+    await render();
+    await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
+    await act(async () => host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(host.querySelector('dialog')?.textContent).toContain('Số CCCD không hợp lệ');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog')?.textContent).toContain('Apply for a 3-day trial');
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Invalid citizen ID number');
+    expect(host.querySelector('dialog button[aria-label="Close dialog"]')).not.toBeNull();
+    expect(host.querySelector('.package-benefit-list')?.getAttribute('aria-label')).toBe('Essential benefits');
+    expect(host.textContent).toContain('Essential');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Số CCCD không hợp lệ');
+    expect(host.querySelector('dialog button[aria-label="Đóng hộp thoại"]')).not.toBeNull();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('revalidates persisted browser Back before allowing stale pending actions', async () => {
+    api.history.mockResolvedValue([pending]);
+    await render();
+    let finish!: (value: MemberSubscription[]) => void;
+    api.history.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    api.current.mockResolvedValue(active);
+    api.payments.mockResolvedValue([{ ...payment, method: 'online_wallet', status: 'success' }]);
+    await act(async () => window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true })));
+    expect(api.history).toHaveBeenCalledTimes(2);
+    expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(true);
+    await act(async () => finish([{ ...pending, status: 'active' }]));
+    expect(button('Hủy yêu cầu đăng ký')).toBeUndefined();
+    expect(api.cancelPending).not.toHaveBeenCalled();
+  });
+
+  it('lets the backend guard decide cancellation for pending online checkout, rather than blocking it forever', async () => {
+    api.history.mockResolvedValue([pending]);
+    api.payments.mockResolvedValue([{ ...payment, method: 'online_wallet' }]);
+    api.cancelPending.mockResolvedValue({ ...pending, status: 'cancelled' });
+    await render();
+    expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(false);
+    expect(noticeText()).not.toContain('Đã gửi thông báo chuyển khoản');
+    await act(async () => button('Hủy yêu cầu đăng ký')?.click());
+    await act(async () => button('Xác nhận hủy')?.click());
+    expect(api.cancelPending).toHaveBeenCalledWith(pending.id);
+  });
+
+  it('keeps a live VNPay attempt pending when cancellation is rejected and allows a later retry', async () => {
+    api.history.mockResolvedValue([pending]);
+    api.payments.mockResolvedValue([{ ...payment, method: 'online_wallet' }]);
+    api.cancelPending.mockRejectedValueOnce(new Error('VNPay đang chờ xác nhận.'));
+    await render();
+    await act(async () => button('Hủy yêu cầu đăng ký')?.click());
+    await act(async () => button('Xác nhận hủy')?.click());
+    expect(host.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('VNPay đang chờ xác nhận');
+    expect(api.cancelPending).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('Đang chờ thanh toán');
+    api.cancelPending.mockResolvedValueOnce({ ...pending, status: 'cancelled' });
+    await act(async () => button('Xác nhận hủy')?.click());
+    expect(api.cancelPending).toHaveBeenCalledTimes(2);
+  });
+  it('does not accept a pre-Back background snapshot while a newer return read is pending', async () => {
+    api.history.mockResolvedValue([pending]);
+    await render();
+    let oldRead!: (value: MemberSubscription[]) => void;
+    let newRead!: (value: MemberSubscription[]) => void;
+    api.history.mockImplementationOnce(() => new Promise(resolve => { oldRead = resolve; }))
+      .mockImplementationOnce(() => new Promise(resolve => { newRead = resolve; }));
+    await act(async () => window.dispatchEvent(new Event('online')));
+    await act(async () => window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true })));
+    await act(async () => oldRead([pending]));
+    expect(api.history).toHaveBeenCalledTimes(3);
+    expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(true);
+    await act(async () => newRead([{ ...pending, status: 'cancelled' }]));
+    expect(button('Hủy yêu cầu đăng ký')).toBeUndefined();
+  });
+  it('recovers a failed browser-return sync through the pending status refresh control', async () => {
+    api.history.mockResolvedValue([pending]);
+    await render();
+    api.payments.mockRejectedValueOnce(new Error('offline'));
+    await act(async () => window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true })));
+    expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(true);
+    await act(async () => host.querySelector<HTMLButtonElement>('button[title="Tải lại trạng thái"]')?.click());
+    expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(false);
+  });
+
+
   it('excludes trial packages from the purchasable catalog grid', async () => {
     const trialPkg = {
       id: 999,
@@ -789,4 +876,38 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày miễn phí');
     expect(button('Nhận 3 ngày tập miễn phí')).toBeUndefined();
   });
+  it('keeps cancellation error provenance when the visible language changes', async () => {
+    api.history.mockResolvedValue([pending]);
+    api.cancelPending.mockRejectedValue(Object.assign(new Error('Mất kết nối kiểm thử.'), {
+      translation: sourceMessage('Mất kết nối kiểm thử.', 'Test connection lost.'),
+    }));
+    await render();
+    await act(async () => button('Hủy yêu cầu đăng ký')?.click());
+    await act(async () => button('Xác nhận hủy')?.click());
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+  });
+
+  it('keeps hold error provenance when the visible language changes', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active]);
+    api.requestHold.mockRejectedValue(Object.assign(new Error('Mất kết nối kiểm thử.'), {
+      translation: sourceMessage('Mất kết nối kiểm thử.', 'Test connection lost.'),
+    }));
+    await render();
+    await act(async () => button('Bảo lưu gói tập')?.click());
+    const textarea = host.querySelector<HTMLTextAreaElement>('#hold-reason-input')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, 'Đi công tác');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => button('Gửi yêu cầu bảo lưu')?.click());
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
+  });
+
 });

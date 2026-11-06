@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import { RecurrenceFields, RecurrenceSummary } from '../../../shared/ui/RecurrenceFields';
-import { recurrenceRequest, type RecurrenceChoice } from '../../../shared/lib/recurrence';
+import { expandRecurrence, recurrenceRequest, type RecurrenceChoice } from '../../../shared/lib/recurrence';
 import {
   getCoaches,
   getAvailableSlots,
@@ -136,6 +136,8 @@ export function MemberCoachBookingView({
   const [recurrence, setRecurrence] = useState<RecurrenceChoice>({ period: 'once', days: [] });
   const [recurringOutcome, setRecurringOutcome] = useState<CoachRecurringResult | null>(null);
 
+  const slotDate = expandRecurrence(selectedDate, recurrence)[0] ?? selectedDate;
+
   // Payment Checkout Modal State
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
 
@@ -183,14 +185,14 @@ export function MemberCoachBookingView({
 
   // Load slots when coach or date changes
   useEffect(() => {
-    if (!selectedCoachId || !selectedDate) return;
+    if (!selectedCoachId || !slotDate) return;
     let active = true;
     async function loadSlots() {
       setLoadingSlots(true);
       setSlots([]);
       setSelectedSlot(null);
       try {
-        const availableSlots = await getAvailableSlots(selectedCoachId!, selectedDate);
+        const availableSlots = await getAvailableSlots(selectedCoachId!, slotDate);
         if (active) setSlots(availableSlots);
       } catch (err: unknown) {
         if (active) setError((errorMessage(err, 'Không thể tải khung giờ trống.')));
@@ -200,7 +202,7 @@ export function MemberCoachBookingView({
     }
     void loadSlots();
     return () => { active = false; };
-  }, [selectedCoachId, selectedDate]);
+  }, [selectedCoachId, slotDate]);
 
   const selectedCoach = coaches.find((c) => c.id === selectedCoachId);
   const filteredCoaches = coaches.filter((c) => matchesCoachDiscipline(c, coachDiscipline));
@@ -223,7 +225,6 @@ export function MemberCoachBookingView({
   function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
     setModalSlot(slot);
     setError('');
-    setRecurrence({ period: 'once', days: [] });
     if (hasRemainingQuota) {
       setPaymentMethod('package_quota');
     } else {
@@ -252,7 +253,7 @@ export function MemberCoachBookingView({
         setNotes('');
         setRecurringOutcome(result);
         const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
-          getAvailableSlots(selectedCoach.id, selectedDate),
+          getAvailableSlots(selectedCoach.id, slotDate),
           getMyCoachBookings(),
           getMemberQuotaStatus().catch(() => null),
         ]);
@@ -264,7 +265,7 @@ export function MemberCoachBookingView({
       }
       const created = await createCoachBooking({
         coachId: selectedCoach.id,
-        bookingDate: selectedDate,
+        bookingDate: slotDate,
         startTime: modalSlot.startTime,
         endTime: modalSlot.endTime,
         paymentMethod: paymentMethod === 'package_quota' ? 'package_quota' : 'cash',
@@ -276,7 +277,7 @@ export function MemberCoachBookingView({
       setNotes('');
 
       const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
-        getAvailableSlots(selectedCoach.id, selectedDate),
+        getAvailableSlots(selectedCoach.id, slotDate),
         getMyCoachBookings(),
         getMemberQuotaStatus().catch(() => null),
       ]);
@@ -338,7 +339,7 @@ export function MemberCoachBookingView({
 
       if (selectedCoachId) {
         const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
-          getAvailableSlots(selectedCoachId, selectedDate),
+          getAvailableSlots(selectedCoachId, slotDate),
           getMyCoachBookings(),
           getMemberQuotaStatus().catch(() => null),
         ]);
@@ -678,6 +679,8 @@ export function MemberCoachBookingView({
             badgeText = 'HLV nghỉ phép';
           } else if (slot.reason === 'too_soon') {
             badgeText = 'Cần đặt trước 2 tiếng';
+          } else if (slot.reason === 'coach_rest') {
+            badgeText = 'HLV nghỉ sau 3 slot liên tiếp';
           } else if (slot.reason === 'coach_busy') {
             badgeText = 'HLV đã có lịch';
           } else if (slot.reason === 'member_busy') {
@@ -849,6 +852,18 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
+            <RecurrenceFields
+              startDate={selectedDate}
+              value={recurrence}
+              onChange={setRecurrence}
+              disabled={submitting}
+              allowedPeriods={['once', 'week']}
+              hint="Đặt các thứ đã chọn trong 7 ngày kể từ ngày bắt đầu. Thứ đã qua trong tuần này được tính sang tuần sau; ngày trùng lịch hoặc hết quyền lợi sẽ được báo riêng."
+            />
+            <p className="row-card__meta" style={{ margin: 0 }}>
+              Khung giờ cho ngày {slotDate.split('-').reverse().join('/')} · HLV nghỉ 1 slot sau 3 slot 1:1 liên tiếp.
+            </p>
+
             {/* Time Slots Grouped by Time of Day */}
             {loadingSlots ? (
               <div style={{ padding: '24px 0', textAlign: 'center' }}>
@@ -930,7 +945,7 @@ export function MemberCoachBookingView({
                           {selectedSlot.startTime.slice(0, 5)} – {selectedSlot.endTime.slice(0, 5)}
                         </strong>
                         <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                          {` (${selectedDate} • HLV ${selectedCoach?.fullName})`}
+                          {` (${slotDate} • HLV ${selectedCoach?.fullName})`}
                         </span>
                       </div>
                     </div>
@@ -1350,7 +1365,7 @@ export function MemberCoachBookingView({
                     Thời gian
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)' }}>
-                    {selectedDate}
+                    {slotDate}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>
                     {modalSlot.startTime.slice(0, 5)} – {modalSlot.endTime.slice(0, 5)}
@@ -1558,23 +1573,6 @@ export function MemberCoachBookingView({
                 </div>
               </div>
             </div>
-
-            {/* Recurrence Option (collapsible) */}
-            <details style={{ cursor: 'pointer' }}>
-              <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--portal-muted)' }}>
-                Tùy chọn đặt lịch định kỳ (lặp lại hàng tuần)
-              </summary>
-              <div style={{ marginTop: 10 }}>
-                <RecurrenceFields
-                  startDate={selectedDate}
-                  value={recurrence}
-                  onChange={setRecurrence}
-                  disabled={submitting}
-                  allowedPeriods={['once', 'week']}
-                  hint="Hệ thống sẽ tự động đặt lịch tập vào các ngày đã chọn mỗi tuần. Bạn có thể hủy hoặc thay đổi lịch tập bất cứ lúc nào."
-                />
-              </div>
-            </details>
 
             {/* Notes Section */}
             <div>

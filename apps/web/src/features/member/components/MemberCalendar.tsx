@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import { notify } from '../../../shared/lib/portalNotices';
 import { errorMessage } from '../../../shared/lib/errorMessage';
+import { useLanguage } from '../../../shared/i18n/language';
 import { centerNowParts } from '../../../shared/lib/centerTime';
 import { courtsApi, type CourtBooking } from '../../courts/courtsApi';
 import {
@@ -14,6 +15,7 @@ import {
   type ClassSessionDto,
 } from '../memberClassesApi';
 import '../../schedule/calendar.css';
+import './MemberCalendar.css';
 
 type View = 'week' | 'month';
 type Kind = 'court' | 'class';
@@ -80,10 +82,10 @@ function rangeOf(view: View, anchor: string): { from: string; to: string } {
   return { from, to: addDays(from, 41) };
 }
 
-function rangeLabel(view: View, anchor: string) {
+function rangeLabel(view: View, anchor: string, english = false) {
   if (view === 'month') {
     const [year, month] = anchor.split('-');
-    return `Tháng ${Number(month)}/${year}`;
+    return `${english ? "Month" : "Tháng"} ${Number(month)}/${year}`;
   }
   const from = mondayOf(anchor);
   const to = addDays(from, 6);
@@ -94,13 +96,14 @@ function isEnded(event: Pick<CalendarEvent, 'date' | 'endTime'>, now: { date: st
   return event.date < now.date || (event.date === now.date && toMinutes(event.endTime) <= now.minutes);
 }
 
-function countdown(event: CalendarEvent, now: { date: string; minutes: number }) {
+function countdown(event: CalendarEvent, now: { date: string; minutes: number }, english = false) {
   const days = Math.round((parseISODate(event.date).getTime() - parseISODate(now.date).getTime()) / 86_400_000);
   const total = days * 1440 + toMinutes(event.startTime) - now.minutes;
-  if (total <= 0) return 'đang diễn ra';
+  if (total <= 0) return english ? 'in progress' : 'đang diễn ra';
   const d = Math.floor(total / 1440);
   const h = Math.floor((total % 1440) / 60);
   const m = total % 60;
+  if (english) return d > 0 ? `in ${d}d${h > 0 ? ` ${h}h` : ''}` : h > 0 ? `in ${h}h${m > 0 ? ` ${m}m` : ''}` : `in ${m}m`;
   if (d > 0) return `còn ${d} ngày${h > 0 ? ` ${h} giờ` : ''}`;
   if (h > 0) return `còn ${h} giờ${m > 0 ? ` ${m} phút` : ''}`;
   return `còn ${m} phút`;
@@ -189,6 +192,16 @@ interface MemberCalendarProps {
 }
 
 export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
+  const { lang } = useLanguage();
+  const labels = lang === 'en'
+    ? { thisWeek: 'This week', court: 'Court / room', class: 'Class session', empty: 'No bookings this week.' }
+    : { thisWeek: 'Tuần này', court: 'Đặt sân / phòng', class: 'Buổi học', empty: 'Tuần này bạn chưa có lịch nào.' };
+  const english = lang === 'en';
+  const text = (vi: string, en: string) => english ? en : vi;
+  const dayLabel = (day: string) => english ? new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(parseISODate(day)) : weekdayLabel(day);
+  const title = (event: CalendarEvent) => english && event.kind === 'court' ? event.title.replace('Đặt sân ', 'Court booking ') : event.title;
+  const eventLabel = (event: CalendarEvent) => [labels[event.kind], title(event), dayLabel(event.date), shortDate(event.date), hhmm(event.startTime) + '–' + hhmm(event.endTime), event.place, event.cancelled ? text('đã hủy', 'cancelled') : ''].filter(Boolean).join(', ');
+  const weekdayHead = english ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : WEEKDAY_HEAD;
   const now = useCenterNow();
   const [view, setView] = useState<View>('week');
   const [anchor, setAnchor] = useState(now.date);
@@ -233,10 +246,10 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
     setError('');
     loadClassEvents(from, to)
       .then((events) => { if (active) setClassEvents(events); })
-      .catch((cause) => { if (active) setError(errorMessage(cause, 'Không thể tải lịch của bạn.')); })
+      .catch((cause) => { if (active) setError(errorMessage(cause, lang === 'en' ? 'Unable to load your schedule.' : 'Không thể tải lịch của bạn.')); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [from, to, retry]);
+  }, [from, to, retry, lang]);
 
   // Lượt đặt sân và buổi học sắp tới (cho thanh "Tiếp theo") không phụ thuộc tuần đang xem.
   useEffect(() => {
@@ -252,7 +265,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
 
   const courtEvents = useMemo(() => courts.map(courtEvent), [courts]);
   const events = useMemo(
-    () => sortEvents([...classEvents, ...courtEvents.filter((item) => item.date >= from && item.date <= to)]),
+    () => sortEvents([...classEvents, ...courtEvents].filter((item) => item.date >= from && item.date <= to)),
     [classEvents, courtEvents, from, to],
   );
   const nextUp = useMemo(
@@ -311,12 +324,12 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
     try {
       if (selected.seat.type === 'booking') await cancelBooking(selected.seat.id);
       else await cancelEnrollment(selected.seat.id);
-      notify(`Đã hủy chỗ lớp "${selected.title}".`, 'success', { record: true });
+      notify(english ? `Cancelled your place in "${title(selected)}".` : `Đã hủy chỗ lớp "${selected.title}".`, 'success', { record: true });
       setSelected(null);
       setRetry((value) => value + 1);
       onBookingChange?.();
     } catch (cause) {
-      setDialogError(errorMessage(cause, 'Không thể hủy chỗ.'));
+      setDialogError(errorMessage(cause, text('Không thể hủy chỗ.', 'Unable to cancel your place.')));
     } finally {
       setBusy(false);
     }
@@ -343,40 +356,41 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
   };
 
   const selectedEnded = selected ? isEnded(selected, now) : false;
-  const isEmpty = !loading && !error && events.length === 0;
+  const isEmpty = !loading && !error && !courtError && events.length === 0;
 
   return (
-    <section className="mcal" aria-label="Lịch của tôi">
+    <section className="mcal mcal--member" data-i18n-managed aria-label={text("Lịch của tôi", "My schedule")}>
       <header className="mcal__toolbar">
         <div className="mcal__nav">
-          <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? 'Tuần trước' : 'Tháng trước'} onClick={() => shift(-1)}>
+          <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? text('Tuần trước', 'Previous week') : text('Tháng trước', 'Previous month')} onClick={() => shift(-1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
           </button>
-          <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? 'Tuần sau' : 'Tháng sau'} onClick={() => shift(1)}>
+          <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? text('Tuần sau', 'Next week') : text('Tháng sau', 'Next month')} onClick={() => shift(1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
-          <button type="button" className="mcal__today-btn" onClick={() => { setFocusDay(null); setAnchor(today); }}>Hôm nay</button>
-          <h2 className="mcal__range" aria-live="polite">{rangeLabel(view, anchor)}</h2>
+          <button type="button" className="mcal__today-btn" onClick={() => { setFocusDay(null); setView('week'); setAnchor(today); }}>{labels.thisWeek}</button>
+          <h2 className="mcal__range" aria-live="polite">{rangeLabel(view, anchor, english)}</h2>
         </div>
         <div className="mcal__side">
-          <ul className="mcal__legend" aria-label="Chú thích">
-            <li><i className="mcal__dot mcal__dot--court" aria-hidden="true" />Đặt sân / phòng</li>
-            <li><i className="mcal__dot mcal__dot--class" aria-hidden="true" />Buổi học</li>
+          <ul className="mcal__legend" aria-label={text("Chú thích", "Legend")}>
+            <li><i className="mcal__dot mcal__dot--court" aria-hidden="true" />{labels.court}</li>
+            <li><i className="mcal__dot mcal__dot--class" aria-hidden="true" />{labels.class}</li>
           </ul>
-          <div className="mcal__switch" role="group" aria-label="Chế độ xem">
-            <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>Tuần</button>
-            <button type="button" aria-pressed={view === 'month'} onClick={() => setView('month')}>Tháng</button>
+          <div className="mcal__switch" role="group" aria-label={text("Chế độ xem", "View")}>
+            <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>{text("Tuần", "Week")}</button>
+            <button type="button" aria-pressed={view === 'month'} onClick={() => setView('month')}>{text("Tháng", "Month")}</button>
           </div>
         </div>
       </header>
 
       {nextUp && (
         <button type="button" className="mcal__next" onClick={() => openEvent(nextUp)}>
-          <span className="mcal__next-tag">Tiếp theo</span>
-          <strong className="mcal__next-title">{nextUp.title}</strong>
+          <span className="mcal__next-tag">{text("Tiếp theo", "Next up")}</span>
+          <span className={`mcal__type mcal__type--${nextUp.kind}`}>{labels[nextUp.kind]}</span>
+          <strong className="mcal__next-title">{title(nextUp)}</strong>
           <span className="mcal__next-meta">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-            {weekdayShort(nextUp.date)} {shortDate(nextUp.date)} · {hhmm(nextUp.startTime)}–{hhmm(nextUp.endTime)}
+            {english ? dayLabel(nextUp.date).slice(0, 3) : weekdayShort(nextUp.date)} {shortDate(nextUp.date)} · {hhmm(nextUp.startTime)}–{hhmm(nextUp.endTime)}
           </span>
           {nextUp.place && (
             <span className="mcal__next-meta">
@@ -384,27 +398,27 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
               {nextUp.place}
             </span>
           )}
-          <span className="mcal__next-count">{countdown(nextUp, now)}</span>
+          <span className="mcal__next-count">{countdown(nextUp, now, english)}</span>
         </button>
       )}
 
       {error && (
         <div className="mcal__state" role="alert">
-          <strong>Không tải được lịch</strong>
+          <strong>{text("Không tải được lịch", "Unable to load schedule")}</strong>
           <p>{error}</p>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => setRetry((value) => value + 1)}>Thử lại</button>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setRetry((value) => value + 1)}>{text("Thử lại", "Retry")}</button>
         </div>
       )}
       {courtError && !error && (
         <p className="mcal__note" role="status">
-          Chưa tải được lịch đặt sân.{' '}
-          <button type="button" className="mcal__link-btn" onClick={() => setRetry((value) => value + 1)}>Thử lại</button>
+          {text('Chưa tải được lịch đặt sân.', 'Unable to load court bookings.')} {' '}
+          <button type="button" className="mcal__link-btn" onClick={() => setRetry((value) => value + 1)}>{text("Thử lại", "Retry")}</button>
         </p>
       )}
-      {loading && <span className="sr-only" role="status">Đang tải lịch...</span>}
+      {loading && <span className="sr-only" role="status">{text("Đang tải lịch...", "Loading schedule...")}</span>}
 
       {!error && view === 'week' && narrow && (
-        <div className="mcal__daystrip" role="group" aria-label="Chọn ngày">
+        <div className="mcal__daystrip" role="group" aria-label={text("Chọn ngày", "Choose day")}>
           {days.map((day) => {
             const count = (eventsByDay.get(day) ?? []).length;
             return (
@@ -413,10 +427,10 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                 type="button"
                 className={`mcal__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
                 aria-pressed={day === activeDay}
-                aria-label={`${weekdayLabel(day)} ${shortDate(day)}, ${count} lịch`}
+                aria-label={`${dayLabel(day)} ${shortDate(day)}, ${count} ${text('lịch', 'bookings')}`}
                 onClick={() => setFocusDay(day)}
               >
-                <span>{weekdayShort(day)}</span>
+                <span>{english ? dayLabel(day).slice(0, 3) : weekdayShort(day)}</span>
                 <strong>{day.slice(8)}</strong>
                 {renderDots(day)}
               </button>
@@ -431,7 +445,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
             <div className="mcal__corner" aria-hidden="true" />
             {visibleDays.map((day) => (
               <div key={day} className={`mcal__dayhead${day === today ? ' is-today' : ''}`} aria-current={day === today ? 'date' : undefined}>
-                <span className="mcal__dayname">{WEEKDAY_HEAD[days.indexOf(day)]}</span>
+                <span className="mcal__dayname">{weekdayHead[days.indexOf(day)]}</span>
                 <strong className="mcal__daynum">{day.slice(8)}</strong>
                 {renderDots(day)}
               </div>
@@ -448,7 +462,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                   key={day}
                   className={`mcal__col${day === today ? ' is-today' : ''}${days.indexOf(day) >= 5 ? ' is-weekend' : ''}`}
                   role="group"
-                  aria-label={`${weekdayLabel(day)} ${shortDate(day)}`}
+                  aria-label={`${dayLabel(day)} ${shortDate(day)}`}
                 >
                   {showNow && (
                     <span className="mcal__now" aria-hidden="true" style={{ top: `${((now.minutes - firstHour * 60) / ((endHour - firstHour) * 60)) * 100}%` }} />
@@ -464,11 +478,14 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                         left: `calc(${(lane / lanes) * 100}% + 6px)`,
                         width: `calc(${100 / lanes}% - 12px)`,
                       }}
-                      aria-label={event.ariaLabel}
+                      aria-label={eventLabel(event)}
                       onClick={() => openEvent(event)}
                     >
-                      <span className="mcal__event-time">{hhmm(event.startTime)} - {hhmm(event.endTime)}</span>
-                      <strong className="mcal__event-title">{event.title}</strong>
+                      <span className="mcal__event-top">
+                        <span className={`mcal__type mcal__type--${event.kind}`}>{labels[event.kind]}</span>
+                        <span className="mcal__event-time">{hhmm(event.startTime)} - {hhmm(event.endTime)}</span>
+                      </span>
+                      <strong className="mcal__event-title">{title(event)}</strong>
                       {event.place && <span className="mcal__event-place">{event.place}</span>}
                     </button>
                   ))}
@@ -476,13 +493,13 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
               );
             })}
           </div>
-          {isEmpty && <p className="mcal__empty" role="status">Tuần này bạn chưa có lịch nào.</p>}
+          {isEmpty && <p className="mcal__empty" role="status">{labels.empty}</p>}
         </div>
       )}
 
       {!error && view === 'month' && (
         <div className={`mcal__month${loading ? ' is-loading' : ''}`} aria-busy={loading}>
-          {WEEKDAY_HEAD.map((label) => <span key={label} className="mcal__month-head">{label}</span>)}
+          {weekdayHead.map((label) => <span key={label} className="mcal__month-head">{label}</span>)}
           {Array.from({ length: 42 }, (_, index) => addDays(from, index)).map((day) => {
             const list = eventsByDay.get(day) ?? [];
             const outside = day.slice(0, 7) !== anchor.slice(0, 7);
@@ -491,7 +508,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                 <button
                   type="button"
                   className="mcal__cell-day"
-                  aria-label={`Xem tuần có ${weekdayLabel(day)} ${shortDate(day)}, ${list.length} lịch`}
+                  aria-label={`${text('Xem tuần có', 'View week containing')} ${dayLabel(day)} ${shortDate(day)}, ${list.length} ${text('lịch', 'bookings')}`}
                   onClick={() => { setAnchor(day); setView('week'); }}
                 >
                   {Number(day.slice(8))}
@@ -502,50 +519,50 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                       key={event.id}
                       type="button"
                       className={`mcal__chip mcal__chip--${event.kind}${isEnded(event, now) ? ' is-past' : ''}${event.cancelled ? ' is-cancelled' : ''}`}
-                      aria-label={event.ariaLabel}
+                      aria-label={eventLabel(event)}
                       onClick={() => openEvent(event)}
                     >
-                      <span>{hhmm(event.startTime)}</span> {event.title}
+                      <span className={`mcal__type mcal__type--${event.kind}`}>{labels[event.kind]}</span>
+                      <span>{hhmm(event.startTime)}</span> {title(event)}
                     </button>
                   ))}
                   {list.length > 3 && (
                     <button type="button" className="mcal__more" onClick={() => { setAnchor(day); setView('week'); }}>
-                      +{list.length - 3} lịch khác
+                      +{list.length - 3} {text('lịch khác', 'more bookings')}
                     </button>
                   )}
                 </div>
               </div>
             );
           })}
-          {isEmpty && <p className="mcal__empty" role="status">Tháng này bạn chưa có lịch nào.</p>}
         </div>
       )}
 
       {selected && (
-        <Modal title={selected.title} onClose={closeDialog} busy={busy} returnFocusRef={returnFocusRef}>
+        <Modal title={title(selected)} onClose={closeDialog} busy={busy} returnFocusRef={returnFocusRef}>
           <div className="kv-list">
-            <div className="kv-row"><span>Loại</span><strong>{selected.kind === 'court' ? 'Đặt sân / phòng' : 'Buổi học'}</strong></div>
-            <div className="kv-row"><span>Thời gian</span><strong>{weekdayLabel(selected.date)} {shortDate(selected.date)} · {hhmm(selected.startTime)}–{hhmm(selected.endTime)}</strong></div>
-            {selected.place && <div className="kv-row"><span>Địa điểm</span><strong>{selected.place}</strong></div>}
-            {selected.coach && <div className="kv-row"><span>Huấn luyện viên</span><strong>{selected.coach}</strong></div>}
-            {selected.cancelled && <div className="kv-row"><span>Trạng thái</span><strong>Buổi học đã bị hủy</strong></div>}
+            <div className="kv-row"><span>{text("Loại", "Type")}</span><strong>{labels[selected.kind]}</strong></div>
+            <div className="kv-row"><span>{text("Thời gian", "Time")}</span><strong>{dayLabel(selected.date)} {shortDate(selected.date)} · {hhmm(selected.startTime)}–{hhmm(selected.endTime)}</strong></div>
+            {selected.place && <div className="kv-row"><span>{text("Địa điểm", "Location")}</span><strong>{selected.place}</strong></div>}
+            {selected.coach && <div className="kv-row"><span>{text("Huấn luyện viên", "Coach")}</span><strong>{selected.coach}</strong></div>}
+            {selected.cancelled && <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{text("Buổi học đã bị hủy", "Class session cancelled")}</strong></div>}
           </div>
           {dialogError && <div className="form-error" role="alert">{dialogError}</div>}
           <div className="mcal__dialog-actions">
-            <button type="button" className="btn-secondary" onClick={closeDialog} disabled={busy}>Đóng</button>
+            <button type="button" className="btn-secondary" onClick={closeDialog} disabled={busy}>{text("Đóng", "Close")}</button>
             {selected.kind === 'court' ? (
-              <Link to="/member/courts" className="btn-primary">Quản lý đặt sân</Link>
+              <Link to="/member/courts" className="btn-primary">{text("Quản lý đặt sân", "Manage court bookings")}</Link>
             ) : !selectedEnded && !selected.cancelled && (
               confirmCancel ? (
                 <>
-                  <button type="button" className="btn-secondary" onClick={() => setConfirmCancel(false)} disabled={busy}>Giữ chỗ</button>
+                  <button type="button" className="btn-secondary" onClick={() => setConfirmCancel(false)} disabled={busy}>{text("Giữ chỗ", "Keep booking")}</button>
                   <button type="button" className="btn-danger" onClick={() => void handleCancel()} disabled={busy}>
-                    {busy ? 'Đang hủy...' : 'Xác nhận hủy'}
+                    {busy ? text('Đang hủy...', 'Cancelling...') : text('Xác nhận hủy', 'Confirm cancellation')}
                   </button>
                 </>
               ) : (
                 <button type="button" className="btn-secondary" onClick={() => setConfirmCancel(true)}>
-                  {selected.seat.type === 'booking' ? 'Hủy buổi này' : 'Hủy đặt chỗ'}
+                  {selected.seat.type === 'booking' ? text('Hủy buổi này', 'Cancel this session') : text('Hủy đặt chỗ', 'Cancel booking')}
                 </button>
               )
             )}

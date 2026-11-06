@@ -1,7 +1,9 @@
+import { useI18n } from '../../shared/i18n';
 import { useEffect, useRef, type RefObject } from 'react';
 import { MemberNotificationsPanel } from './MemberNotificationsPage';
 
 export function NotificationsPopover({ onClose, triggerRef }: { onClose: () => void; triggerRef: RefObject<HTMLElement | null> }) {
+  const { t } = useI18n();
   const panel = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
 
@@ -21,8 +23,8 @@ export function NotificationsPopover({ onClose, triggerRef }: { onClose: () => v
     };
   }, [onClose, triggerRef]);
 
-  return <section ref={panel} id="portal-notifications" className="notification-popover" role="dialog" aria-label="Thông báo">
-    <header className="notification-popover__header"><h2>Thông báo</h2><button ref={closeButton} type="button" className="portal-icon-button" aria-label="Đóng thông báo" onClick={onClose}><span aria-hidden="true">×</span></button></header>
+  return <section ref={panel} id="portal-notifications" className="notification-popover" role="dialog" aria-label={t('Thông báo')}>
+    <header className="notification-popover__header"><h2>{t('Thông báo')}</h2><button ref={closeButton} type="button" className="portal-icon-button" aria-label={t('Đóng thông báo')} onClick={onClose}><span aria-hidden="true">×</span></button></header>
     <MemberNotificationsPanel onNavigate={onClose} />
   </section>;
 }

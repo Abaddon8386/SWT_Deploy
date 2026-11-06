@@ -15,7 +15,7 @@ it('never trusts a successful browser return code over server status',async()=>{
  vi.mocked(api.getVnpayStatus).mockResolvedValue({reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'failed',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'});
  await render('?vnp_TxnRef=ABC123&vnp_ResponseCode=00');
  expect(host.textContent).toContain('Thanh toán chưa thành công'); expect(host.textContent).not.toContain('Thanh toán thành công');
- expect(toast.error).toHaveBeenCalledWith('Thanh toán VNPay chưa thành công'); expect(toast.success).not.toHaveBeenCalled();
+ expect(toast.error).toHaveBeenCalledWith('Thanh toán VNPay chưa thành công', { vi: 'Thanh toán VNPay chưa thành công', en: 'VNPay payment unsuccessful' }); expect(toast.success).not.toHaveBeenCalled();
 });
 it('shows confirmed server success even if the return code says failure',async()=>{
  vi.mocked(api.getVnpayStatus).mockResolvedValue({reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'success',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'});
@@ -37,4 +37,15 @@ it('vnpay return accepts /member/orders/42 and still rejects other paths',async(
  vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({reference:'DEF456',paymentId:2,subscriptionId:null,amount:500000,status:'success',expiresAt:'2026-11-03T12:15:00',destination:'/admin/users'});
  await render('?vnp_TxnRef=DEF456');
  expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe('/member/invoices');
+});
+
+it('keeps pending uncertain and only announces a delayed success after a backend recheck', async () => {
+ const status: api.VnpayStatus = {reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'pending',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'};
+ vi.mocked(api.getVnpayStatus).mockResolvedValueOnce(status).mockResolvedValueOnce({...status,status:'success'});
+ await render('?vnp_TxnRef=ABC123&vnp_ResponseCode=00');
+ expect(host.textContent).toContain('Hệ thống chưa nhận xác nhận từ VNPay');
+ expect(toast.success).not.toHaveBeenCalled(); expect(toast.error).not.toHaveBeenCalled();
+ await act(async()=> ([...host.querySelectorAll('button')].find(button=>button.textContent==='Kiểm tra lại') as HTMLButtonElement).click());
+ expect(host.textContent).toContain('Thanh toán thành công');
+ expect(toast.success).toHaveBeenCalledTimes(1);
 });

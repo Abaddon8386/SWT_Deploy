@@ -1,5 +1,6 @@
+import { sourceMessage, useI18n } from '../../shared/i18n';
 import { useEffect, useRef, useState } from 'react';
-import { errorMessage } from '../../shared/lib/errorMessage';
+import { localizableError } from '../../shared/lib/errorMessage';
 import { notify } from '../../shared/lib/portalNotices';
 import { payWithWallet } from '../wallet/walletApi';
 import { createVnpayCheckout, navigateToVnpay, type VnpayTarget } from './vnpayApi';
@@ -15,13 +16,15 @@ export function VnpayPayButton({
   disabled?: boolean;
   onPaid?: () => void;
 }) {
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [walletBusy, setWalletBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
   const sending = useRef(false);
 
   // Leaving VNPay with the browser's Back button restores this page from the back/forward cache exactly as it was,
-  // i.e. still "redirecting". Nothing was paid, so make the button usable again.
+  // i.e. still "redirecting". Reset only local UI; Back is not proof of payment failure.
+  // The parent prepare callback and backend revalidate the order before any retry.
   useEffect(() => {
     const restore = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
@@ -40,11 +43,11 @@ export function VnpayPayButton({
     setError('');
     try {
       const order = prepare ? await prepare() : target;
-      if (!order) throw new Error('Không tìm thấy khoản cần thanh toán.');
+      if (!order) throw Object.assign(new Error('Không tìm thấy khoản cần thanh toán.'), { translation: sourceMessage('Không tìm thấy khoản cần thanh toán.') });
       const checkout = await createVnpayCheckout(order);
       navigateToVnpay(checkout.paymentUrl);
     } catch (reason) {
-      setError(errorMessage(reason, 'Không thể mở thanh toán VNPay Sandbox. Vui lòng thử lại.'));
+      setError(localizableError(reason, 'Không thể mở thanh toán VNPay Sandbox. Vui lòng thử lại.'));
       setBusy(false);
       sending.current = false;
     }
@@ -57,14 +60,14 @@ export function VnpayPayButton({
     setError('');
     try {
       const order = prepare ? await prepare() : target;
-      if (!order) throw new Error('Không tìm thấy khoản cần thanh toán.');
+      if (!order) throw Object.assign(new Error('Không tìm thấy khoản cần thanh toán.'), { translation: sourceMessage('Không tìm thấy khoản cần thanh toán.') });
       await payWithWallet(order);
       window.dispatchEvent(new CustomEvent('wallet-updated'));
       window.dispatchEvent(new CustomEvent('member-notifications-changed'));
-      notify('Thanh toán bằng Ví SÖL thành công.', 'success', { record: true });
+      notify(t("Thanh toán bằng Ví SÖL thành công."), 'success', { translation: sourceMessage("Thanh toán bằng Ví SÖL thành công."),  record: true });
       onPaid?.();
     } catch (reason) {
-      setError(errorMessage(reason, 'Không thể thanh toán bằng Ví SÖL. Vui lòng kiểm tra số dư hoặc nạp thêm tiền vào Ví.'));
+      setError(localizableError(reason, 'Không thể thanh toán bằng Ví SÖL. Vui lòng kiểm tra số dư hoặc nạp thêm tiền vào Ví.'));
     } finally {
       setWalletBusy(false);
       sending.current = false;
@@ -72,10 +75,10 @@ export function VnpayPayButton({
   }
 
   return (
-    <div className="stack">
+    <div className="stack" data-i18n-managed>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className="btn-primary" disabled={busy || walletBusy || disabled} onClick={() => void pay()}>
-          {busy ? 'Đang chuyển tới VNPay…' : 'Thanh toán VNPay Sandbox'}
+          {busy ? t("Đang chuyển tới VNPay…") : t("Thanh toán VNPay Sandbox")}
         </button>
         <button
           type="button"
@@ -84,12 +87,12 @@ export function VnpayPayButton({
           disabled={busy || walletBusy || disabled}
           onClick={() => void handlePayWithWallet()}
         >
-          {walletBusy ? 'Đang trừ Ví…' : 'Thanh toán bằng Ví SÖL'}
+          {walletBusy ? t("Đang trừ Ví…") : t("Thanh toán bằng Ví SÖL")}
         </button>
       </div>
       {error && (
         <p className="form-error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
     </div>
