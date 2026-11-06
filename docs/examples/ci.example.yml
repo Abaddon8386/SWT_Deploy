@@ -1,4 +1,4 @@
-name: CI # Copy file thanh .github/workflows/ci.yml; ten phai khop workflows trong CD. dong bo voi workflow_run.workflows trong CD.
+# Copy to .github/workflows/ci.yml only in a separate repository; keep Render/Vercel CI here.
 #
 # Can chinh: branch, Node/Java version, working-directory, cache paths,
 # cac lenh npm/Maven, Docker build context va Dockerfile.

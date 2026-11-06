@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-node_modules
-dist
-.env
-.env.*
-.git
-=======
 node_modules/
 dist/
 coverage/
@@ -12,4 +5,10 @@ coverage/
 **/.env
 **/.env.*
 *.log
->>>>>>> 90924c4493b0794be86f1fe632036d20f7df4de1
+
+# Local analysis and verification output
+graphify-out/
+.graphify/
+.graphify_*
+playwright-report/
+test-results/

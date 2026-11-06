@@ -11,6 +11,7 @@ docs/
 ├── PROJECT_MASTER_GUIDE.md # Cẩm nang kiến trúc và nghiệp vụ toàn diện (57KB)
 ├── LOCAL_DEV_GUIDE.md      # Cẩm nang cài đặt và chạy môi trường local
 │
+├── architecture/      # Bản đồ cấu trúc repo và audit kỹ thuật
 ├── plans/             # Kế hoạch phát triển, Jira Backlog & lộ trình Sprint
 │   ├── README.md
 │   ├── AGILE_SCRUM_JIRA_PLAN.md
@@ -47,8 +48,9 @@ docs/
 
 | Mục | Đường dẫn | Nội dung tóm tắt |
 |---|---|---|
+| 🧭 **Cấu trúc repository** | [`architecture/REPOSITORY_STRUCTURE.md`](architecture/REPOSITORY_STRUCTURE.md) | Ranh giới frontend/backend, vị trí module và quy tắc version control. |
 | 📖 **Cẩm nang Master Guide** | [`PROJECT_MASTER_GUIDE.md`](PROJECT_MASTER_GUIDE.md) | Toàn bộ 10 Modules, 33 Bảng, 6 Luồng nghiệp vụ cốt lõi, 12 Trạng thái UML. |
-| 💻 **Hướng dẫn Local Dev** | [`LOCAL_DEV_GUIDE.md`](LOCAL_DEV_GUIDE.md) | Cài đặt Docker, Node, Maven, SQL Server và chạy local. |
+| 💻 **Hướng dẫn Local Dev** | [`LOCAL_DEV_GUIDE.md`](LOCAL_DEV_GUIDE.md) | Cài đặt Node.js, Java 21, cấu hình Supabase PostgreSQL và chạy local. |
 | 📋 **Kế hoạch & Backlog Jira** | [`plans/`](plans/README.md) | Epics, User Stories, Sprint Backlog 1-4, AC và phân công Jira keys. |
 | 📊 **Sơ đồ hệ thống** | [`diagrams/`](diagrams/README.md) | ERD 33 bảng, sơ đồ phân làn Swimlane 6 luồng và 12 biểu đồ trạng thái UML kèm ảnh minh chứng. |
 | ⚖️ **Quy tắc Backend** | [`rules/backend-architecture.md`](rules/backend-architecture.md) | Chuẩn 3 lớp, ORM Code-First, Trigger Strategy và xử lý đa ngôn ngữ i18n. |
@@ -61,5 +63,5 @@ docs/
 ## 3. Tài Liệu Quan Trọng & Tài Nguyên Liên Quan
 
 - **Quy ước cho Contributor & AI Agent:** [`../AGENTS.md`](../AGENTS.md) — Bất biến dữ liệu, trigger và phạm vi MVP.
-- **CSDL nguồn & Schema DDL:** [`../db/databaseschema.sql`](../db/databaseschema.sql) — Toàn bộ bảng, triggers, constraints.
+- **Schema triển khai:** JPA Entity trong `apps/api/src/main/java/com/swp391/scms/`; [`../db/databaseschema.sql`](../db/databaseschema.sql) chỉ là tham chiếu lịch sử, không dùng triển khai.
 - **Bộ công cụ khởi chạy hệ thống:** [`../scripts/`](../scripts/README.md) — Scripts run-local, stop-local, init-db.

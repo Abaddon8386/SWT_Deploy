@@ -20,9 +20,7 @@ const mocks = vi.hoisted(() => ({
   cancelBooking: vi.fn(),
   cancelBookings: vi.fn(),
   cancelEnrollment: vi.fn(),
-  favoriteDisciplines: vi.fn(),
   mySubscription: vi.fn(),
-  toggleFavoriteDiscipline: vi.fn(),
   coaches: vi.fn(),
   coachSlots: vi.fn(),
   myCoachBookings: vi.fn(),
@@ -43,11 +41,6 @@ vi.mock('./memberClassesApi', async (importOriginal) => {
     cancelEnrollment: mocks.cancelEnrollment,
   };
 });
-
-vi.mock('./favoriteDisciplinesApi', () => ({
-  getFavoriteDisciplines: mocks.favoriteDisciplines,
-  toggleFavoriteDiscipline: mocks.toggleFavoriteDiscipline,
-}));
 
 vi.mock('./memberCardApi', () => ({
   getMySubscription: mocks.mySubscription,
@@ -94,14 +87,10 @@ describe('MemberClassesPage', () => {
     mocks.cancelBooking.mockReset();
     mocks.cancelBookings.mockReset();
     mocks.cancelEnrollment.mockReset();
-    mocks.favoriteDisciplines.mockReset();
-    mocks.toggleFavoriteDiscipline.mockReset();
     mocks.coaches.mockReset();
     mocks.coachSlots.mockReset();
     mocks.myCoachBookings.mockReset();
     mocks.enrollments.mockResolvedValue([]);
-    mocks.favoriteDisciplines.mockResolvedValue([]);
-    mocks.toggleFavoriteDiscipline.mockResolvedValue([]);
     mocks.coaches.mockResolvedValue([]);
     mocks.coachSlots.mockResolvedValue([]);
     mocks.myCoachBookings.mockResolvedValue([]);
@@ -443,12 +432,11 @@ describe('MemberClassesPage', () => {
     expect(bookBtn.disabled).toBe(false);
   });
 
-  it('removes favorites without losing the selected discipline or calling favorites APIs', async () => {
+  it('keeps the selected discipline without showing retired favorites controls', async () => {
     mocks.sessions.mockResolvedValue([session, { ...session, id: 9, className: 'Gym sáng', disciplineName: 'Gym' }]);
     await render('/member/classes?tab=list&discipline=Gym');
     expect(host.querySelector('.btn-favorite-star')).toBeNull();
     expect(host.textContent).not.toContain('yêu thích');
-    expect(mocks.favoriteDisciplines).not.toHaveBeenCalled();
     expect(host.textContent).toContain('Gym sáng');
     expect(host.textContent).not.toContain('Yoga Flow');
     await clickText('Tất cả bộ môn');

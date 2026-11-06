@@ -171,7 +171,8 @@ public class CoachBookingService {
                     || memberBookings.stream().anyMatch(mb ->
                     start.isBefore(mb.getEndTime()) && end.isAfter(mb.getStartTime()));
 
-            boolean available = !coachOnLeave && !isTooSoon && !coachBusy && !memberBusy;
+            boolean coachRest = requiresCoachRest(coachBookings, start);
+            boolean available = !coachOnLeave && !isTooSoon && !coachBusy && !memberBusy && !coachRest;
             String reason = null;
             if (!available) {
                 if (coachOnLeave) {
@@ -180,6 +181,8 @@ public class CoachBookingService {
                     reason = "too_soon";
                 } else if (coachBusy) {
                     reason = "coach_busy";
+                } else if (coachRest) {
+                    reason = "coach_rest";
                 } else {
                     reason = "member_busy";
                 }
@@ -189,6 +192,20 @@ public class CoachBookingService {
         }
 
         return slots;
+    }
+
+    /** Check both sides so booking out of order cannot create four consecutive PT slots. */
+    private static boolean requiresCoachRest(List<CoachBooking> bookings, LocalTime start) {
+        java.util.Set<Integer> hours = new java.util.HashSet<>();
+        for (CoachBooking booking : bookings) {
+            if (booking.getEndTime().equals(booking.getStartTime().plusHours(1))) {
+                hours.add(booking.getStartTime().getHour());
+            }
+        }
+        int consecutive = 1;
+        for (int hour = start.getHour() - 1; hour >= 6 && hours.contains(hour); hour--) consecutive++;
+        for (int hour = start.getHour() + 1; hour <= 20 && hours.contains(hour); hour++) consecutive++;
+        return consecutive > 3;
     }
 
     private boolean isTrialSubscription(MembershipSubscription sub) {
@@ -318,6 +335,10 @@ public class CoachBookingService {
                         "Huấn luyện viên đã có lịch hẹn 1:1 khác trong khung giờ này."
                 );
             }
+        }
+
+        if (requiresCoachRest(coachBookings, request.startTime())) {
+            throw new ConflictException("COACH_REST_REQUIRED", "error.coach_booking.rest_required", null, null);
         }
 
         // Rule 3: Member conflict check

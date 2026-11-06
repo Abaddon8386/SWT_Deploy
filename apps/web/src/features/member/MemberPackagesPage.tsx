@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
-import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
+import { formatPrice, getPackageDetails, isTrialPackage } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -29,6 +29,7 @@ import {
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { trialApi, type TrialStatus } from './trialApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
+import { useI18n } from '../../shared/i18n';
 
 type LoadState<T> =
   | { status: 'loading' }
@@ -44,6 +45,12 @@ interface RequestResult {
 // Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
 const LONG_TERM_DAYS = 60;
 const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay Sandbox hoặc tới quầy lễ tân.';
+
+// The backend VNPay guard decides whether a pending online attempt can still settle.
+// Cash receipts under review, settled payments and unknown states must remain blocked here.
+function blocksMemberCancellation(payment: Payment): boolean {
+  return payment.status !== 'failed' && !(payment.status === 'pending' && payment.method === 'online_wallet');
+}
 
 function formatDate(value: string): string {
   return formatCenterDate(value.slice(0, 10));
@@ -62,6 +69,7 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
 }
 
 export function MemberPackagesPage() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const selectedId = selectedPackageId(searchParams.toString());
   useEffect(() => clearPurchaseIntent(), []);
@@ -86,6 +94,7 @@ export function MemberPackagesPage() {
   const watchedPending = useRef(new Set<number>());
   const announcedPayments = useRef(new Set<number>());
   const [syncError, setSyncError] = useState(false);
+  const [returnSyncing, setReturnSyncing] = useState(false);
   const [durationTab, setDurationTab] = useState<'short' | 'long'>('short');
   const [paymentResult, setPaymentResult] = useState<MemberSubscription | null>(null);
 
@@ -348,7 +357,7 @@ export function MemberPackagesPage() {
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
     : [];
 
-  const hasPendingTransfer = paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending');
+  const hasPendingTransfer = paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending' && payment.method !== 'online_wallet');
   const pendingTransferId = pending?.id;
   useEffect(() => {
     if (pendingTransferId == null || !hasPendingTransfer) return;
@@ -397,6 +406,7 @@ export function MemberPackagesPage() {
         setCancellationsState({ status: 'success', data: cancellations });
         createdSubscriptions.current = [];
         setSyncError(false);
+        setReturnSyncing(false);
         setRequestResult(previous => previous && history.some(item => item.id === previous.subscription.id && item.status === 'pending_payment') ? previous : null);
         setPaymentResult(previous => previous ? history.find(item => item.id === previous.id) ?? null : null);
         setPendingToCancel(previous => previous && history.some(item => item.id === previous.id && item.status === 'pending_payment') ? previous : null);
@@ -410,7 +420,10 @@ export function MemberPackagesPage() {
           setPaymentResult(confirmed);
         }
       } catch {
-        if (!disposed && version === syncVersion.current && !requestBusy.current) setSyncError(true);
+        if (!disposed && version === syncVersion.current && !requestBusy.current) {
+          setSyncError(true);
+          setReturnSyncing(false);
+        }
       } finally {
         inFlight = false;
         if (!disposed && refreshQueued.current && !requestBusy.current && !isStatusSyncing) {
@@ -421,10 +434,17 @@ export function MemberPackagesPage() {
     }
 
     const onRefresh = () => void refresh();
+    const onRestore = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      syncVersion.current += 1;
+      setReturnSyncing(true);
+      void refresh();
+    };
     refreshNow.current = onRefresh;
     if (refreshQueued.current) onRefresh();
     window.addEventListener('focus', onRefresh);
     window.addEventListener('online', onRefresh);
+    window.addEventListener('pageshow', onRestore);
     document.addEventListener('visibilitychange', onRefresh);
     return () => {
       disposed = true;
@@ -433,6 +453,7 @@ export function MemberPackagesPage() {
 
       window.removeEventListener('focus', onRefresh);
       window.removeEventListener('online', onRefresh);
+      window.removeEventListener('pageshow', onRestore);
       document.removeEventListener('visibilitychange', onRefresh);
     };
   }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId]);
@@ -466,7 +487,7 @@ export function MemberPackagesPage() {
     if (
       packagesState.status !== 'success' || currentState.status !== 'success' ||
       historyState.status !== 'success' || paymentsState.status !== 'success' ||
-      syncError || hasPendingHold || frozenSubscription || pendingItems.length > 0 || submittingPackageId !== null || requestBusy.current
+      syncError || returnSyncing || hasPendingHold || frozenSubscription || pendingItems.length > 0 || submittingPackageId !== null || requestBusy.current
     ) {
       return;
     }
@@ -580,7 +601,7 @@ export function MemberPackagesPage() {
   }
 
   async function handleCancelPending(subscriptionId: number) {
-    if (isCancellingPending || requestBusy.current) return;
+    if (returnSyncing || syncError || isStatusSyncing || isCancellingPending || requestBusy.current) return;
     requestBusy.current = true;
     syncVersion.current += 1;
     setIsCancellingPending(true);
@@ -618,7 +639,12 @@ export function MemberPackagesPage() {
   }
 
 
-  const activePackages = packages.filter((item) => item.status === 'active');
+  const purchasablePackages = packages.filter((item) => item.status === 'active' && !isTrialPackage(item));
+  const hasRegisteredAnyPackage = Boolean(
+    current ||
+    (historyState.status === 'success' && historyState.data.length > 0) ||
+    trialStatus?.alreadyClaimed
+  );
 
   return (
     <div className="portal-container member-packages">
@@ -632,6 +658,7 @@ export function MemberPackagesPage() {
         eyebrow="Hội viên"
         title="Gói tập"
       />
+      {returnSyncing && <p role="status">{t('Đang đồng bộ thông tin gói tập…', 'Synchronizing membership information…')}</p>}
 
       {/* Unified Skeleton for Status Area (replaces piecemeal text lines) */}
       {isStatusSyncing && !current && !pending && (
@@ -745,8 +772,8 @@ export function MemberPackagesPage() {
         </section>
       )}
 
-      {/* Banner mời nhận gói trải nghiệm */}
-      {!current && trialStatus?.eligible && trialStatus?.status !== 'PENDING_APPROVAL' && trialStatus?.status !== 'REJECTED' && (
+      {/* Banner mời nhận gói trải nghiệm (chỉ hiển thị cho hội viên mới chưa từng đăng ký bất kỳ gói tập nào) */}
+      {!hasRegisteredAnyPackage && trialStatus?.eligible && trialStatus?.status !== 'PENDING_APPROVAL' && trialStatus?.status !== 'REJECTED' && (
         <section
           className="portal-card"
           style={{
@@ -893,8 +920,11 @@ export function MemberPackagesPage() {
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'success') && (
             <p role="alert">Thanh toán đã ghi nhận nhưng gói chưa active. Vui lòng yêu cầu nhân viên kiểm tra.</p>
           )}
+          {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending' && payment.method === 'online_wallet') && (
+            <p role="status">{t('VNPay đang chờ xác nhận. Quay lại website không đồng nghĩa thanh toán thất bại. Hệ thống sẽ kiểm tra giao dịch trước khi cho phép hủy yêu cầu.', 'VNPay is awaiting confirmation. Returning to the website does not mean payment failed. The system checks the transaction before allowing cancellation.')}</p>
+          )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'failed') && (
-            <p role="alert">Có giao dịch thất bại. Vui lòng liên hệ nhân viên để được hướng dẫn trước khi gửi yêu cầu mới.</p>
+            <p role="alert">{t('Có giao dịch thất bại. Bạn có thể chọn lại phương thức thanh toán hoặc hủy yêu cầu nếu chưa có khoản thanh toán thành công.', 'A transaction failed. You may choose a payment method again or cancel the request if no payment has succeeded.')}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'refunded') && (
             <p role="alert">Giao dịch đã hoàn tiền. Vui lòng liên hệ nhân viên để xác nhận cách thanh toán tiếp theo.</p>
@@ -903,8 +933,11 @@ export function MemberPackagesPage() {
             <p role="alert">Không tìm thấy giá gói để gửi yêu cầu. Vui lòng thử lại sau.</p>
           )}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
-            <RefreshButton label="Tải lại trạng thái" onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }} />
-            {pendingPackage && (
+            <RefreshButton label="Tải lại trạng thái" onClick={() => {
+              if (syncError || returnSyncing) refreshNow.current();
+              else { void loadCurrent(); void loadHistory(); void loadPayments(); }
+            }} />
+            {pendingPackage && !returnSyncing && !syncError && (
               <Link
                 to={`/member/packages/checkout?packageId=${pendingPackage.id}&subscriptionId=${pending.id}`}
                 className="btn-primary btn-sm"
@@ -916,7 +949,7 @@ export function MemberPackagesPage() {
               type="button"
               className="btn-secondary btn-sm"
               style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger)' }}
-              disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
+              disabled={returnSyncing || syncError || isStatusSyncing || isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some(blocksMemberCancellation)}
               onClick={() => { setActionError(null); setPendingToCancel(pending); }}
             >
               {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
@@ -979,7 +1012,7 @@ export function MemberPackagesPage() {
         </div>
       )}
 
-      {packagesState.status === 'success' && (activePackages.length === 0 ? (
+      {packagesState.status === 'success' && (purchasablePackages.length === 0 ? (
         <div className="portal-card portal-empty">
           <h2 className="portal-card-title">
             Chưa có gói tập khả dụng
@@ -989,15 +1022,15 @@ export function MemberPackagesPage() {
         </div>
       ) : (
         <>
-          {activePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) && activePackages.some((p) => p.durationDays < LONG_TERM_DAYS) && (
+          {purchasablePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) && purchasablePackages.some((p) => p.durationDays < LONG_TERM_DAYS) && (
             <div className="package-term-tabs" role="group" aria-label="Thời hạn gói tập">
               <button type="button" className={durationTab === 'short' ? 'is-active' : ''} aria-pressed={durationTab === 'short'} onClick={() => setDurationTab('short')}>Gói 1 tháng</button>
               <button type="button" className={durationTab === 'long' ? 'is-active' : ''} aria-pressed={durationTab === 'long'} onClick={() => setDurationTab('long')}>Đồng hành dài hạn</button>
             </div>
           )}
           <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label="Danh mục gói tập">
-            {activePackages.filter((pkg) => {
-              if (!activePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) || !activePackages.some((p) => p.durationDays < LONG_TERM_DAYS)) return true;
+            {purchasablePackages.filter((pkg) => {
+              if (!purchasablePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) || !purchasablePackages.some((p) => p.durationDays < LONG_TERM_DAYS)) return true;
               return durationTab === 'long' ? pkg.durationDays >= LONG_TERM_DAYS : pkg.durationDays < LONG_TERM_DAYS;
             }).map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage);
@@ -1047,7 +1080,7 @@ export function MemberPackagesPage() {
               current !== null && !isCurrent && !upgradeFrom;
 
             const disabled =
-              syncError || hasPendingHold || frozenSubscription !== null ||
+              syncError || returnSyncing || hasPendingHold || frozenSubscription !== null ||
               submittingPackageId !== null ||
               packagesState.status !== 'success' || currentState.status !== 'success' ||
               historyState.status !== 'success' || paymentsState.status !== 'success' ||
@@ -1246,8 +1279,8 @@ export function MemberPackagesPage() {
               </Link>
               <button type="button" className="btn-secondary"
                 onClick={() => { setActionError(null); setPendingToCancel(requestResult.subscription); }}
-                disabled={isCancellingPending || paymentsState.status !== 'success' ||
-                  paymentsState.data.some(payment => payment.subscriptionId === requestResult.subscription.id && payment.status !== 'failed')}>
+                disabled={returnSyncing || syncError || isStatusSyncing || isCancellingPending || paymentsState.status !== 'success' ||
+                  paymentsState.data.some(payment => payment.subscriptionId === requestResult.subscription.id && blocksMemberCancellation(payment))}>
                 Hủy yêu cầu đăng ký
               </button>
               <button type="button" className="btn-primary" onClick={() => setRequestResult(null)}>Đóng</button>
@@ -1266,7 +1299,7 @@ export function MemberPackagesPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
               <button type="button" className="btn-secondary" autoFocus disabled={isCancellingPending}
                 onClick={() => { setActionError(null); setPendingToCancel(null); }}>Giữ yêu cầu</button>
-              <button type="button" className="btn-primary" disabled={isCancellingPending}
+              <button type="button" className="btn-primary" disabled={returnSyncing || syncError || isStatusSyncing || isCancellingPending}
                 onClick={() => void handleCancelPending(pendingToCancel.id)}>
                 {isCancellingPending ? 'Đang hủy…' : 'Xác nhận hủy'}
               </button>

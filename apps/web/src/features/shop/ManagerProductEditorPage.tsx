@@ -315,7 +315,7 @@ export function ManagerProductEditorPage() {
       ) : (
         <form
           ref={formRef}
-          className="stack"
+          className="stack shop-product-editor"
           onSubmit={e => void handleSubmit(e)}
           noValidate
         >
@@ -583,7 +583,7 @@ export function ManagerProductEditorPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label className="shop-checkbox">
                 <input
                   type="checkbox"
                   checked={active}
@@ -592,7 +592,7 @@ export function ManagerProductEditorPage() {
                 />
                 <span>Đang bán</span>
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label className="shop-checkbox">
                 <input
                   type="checkbox"
                   checked={featured}

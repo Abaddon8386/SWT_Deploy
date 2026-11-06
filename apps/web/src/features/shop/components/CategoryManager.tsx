@@ -256,7 +256,7 @@ export function CategoryManager() {
               />
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label className="shop-checkbox">
               <input
                 type="checkbox"
                 checked={editing.active}

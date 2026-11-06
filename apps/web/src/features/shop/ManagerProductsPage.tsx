@@ -185,7 +185,7 @@ export function ManagerProductsPage() {
         }
       />
 
-      <div className="portal-tabs" role="tablist" aria-label="Quản trị cửa hàng">
+      <div className="portal-tabs shop-tabs" role="tablist" aria-label="Quản trị cửa hàng">
         <button
           type="button"
           role="tab"
@@ -311,7 +311,7 @@ export function ManagerProductsPage() {
               />
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label className="shop-checkbox">
               <input
                 type="checkbox"
                 checked={onlyLowStock}
