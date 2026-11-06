@@ -203,6 +203,24 @@ class PostgreSqlDatabaseIntegrationTest {
     }
 
     @Test
+    void ptTriggerRequiresRestEvenForOutOfOrderBookings() {
+        for (int missing : new int[]{10, 11, 12, 13}) {
+            long coach = coach();
+            for (int hour = 10; hour <= 13; hour++) {
+                if (hour != missing) ptBooking(activeMember(), coach, hour + ":00", (hour + 1) + ":00");
+            }
+            var failure = assertThrows(DataIntegrityViolationException.class,
+                    () -> ptBooking(activeMember(), coach, missing + ":00", (missing + 1) + ":00"));
+            assertTrue(failure.getMostSpecificCause().getMessage().contains("trg_coach_bookings_rest_required"));
+        }
+        long coach = coach();
+        ptBooking(activeMember(), coach, "10:00", "11:00");
+        ptBooking(activeMember(), coach, "11:00", "12:00");
+        ptBooking(activeMember(), coach, "12:00", "13:00");
+        ptBooking(activeMember(), coach, "14:00", "15:00");
+    }
+
+    @Test
     void ptTriggerRejectsConflictsInBothBookingDirectionsAndRequiresMembership() {
         long coach = coach(), member = activeMember();
         ptBooking(member, coach, "14:00", "15:00");

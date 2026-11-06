@@ -109,4 +109,23 @@ class ProductOrderPaymentsTest {
         verify(orders, never()).save(any());
         verify(notifications).send(eq(1L), any(), any(), eq("order"), eq("product_order"), eq(9L), eq("/member/orders/9"));
     }
+
+    @Test
+    void counterPaymentNotifiesMemberButNotEveryStaffMember() {
+        ProductOrder order = new ProductOrder();
+        order.setId(9L);
+        order.setCode("SOL-261105-ABCD");
+        order.setMember(member);
+        order.setStatus(OrderStatus.pending_payment.name());
+        order.setPaymentMethod("counter");
+        order.setTotal(new BigDecimal("1290000"));
+        when(orders.findByIdForUpdate(9L)).thenReturn(Optional.of(order));
+
+        service.markPaid(9L, "cash");
+
+        assertThat(order.getStatus()).isEqualTo("paid");
+        verify(notifications).send(eq(1L), any(), any(), eq("order"), eq("product_order"), eq(9L), eq("/member/orders/9"));
+        verify(notifications, never()).send(any(), any(), any(), any(), any(), any(), eq("/staff/orders"));
+        verify(users, never()).findActiveStaffUsers();
+    }
 }

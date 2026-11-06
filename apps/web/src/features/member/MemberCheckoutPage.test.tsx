@@ -246,4 +246,21 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.textContent).toContain('Số Căn cước công dân (12 chữ số)');
     expect(host.textContent).toContain('Họ tên tài khoản sẽ được đồng bộ theo tên này');
   });
+  it('refreshes the existing request on persisted Back and blocks payment after server settlement', async () => {
+    await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, status: 'active' }]);
+    await act(async () => window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true })));
+    expect(membershipApi.getMembershipHistory).toHaveBeenCalledTimes(2);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('không còn hợp lệ');
+    expect(host.querySelector('[data-testid="pay-with-wallet-btn"]')).toBeNull();
+    expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
+  });
+  it('does not submit wallet settlement when a delayed callback already activated the prepared request', async () => {
+    await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, status: 'active' }]);
+    await act(async () => (host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement).click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('không còn hợp lệ');
+    expect(walletApi.payWithWallet).not.toHaveBeenCalled();
+    expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
+  });
 });

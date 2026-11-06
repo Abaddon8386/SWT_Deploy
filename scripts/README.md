@@ -32,3 +32,18 @@ npm start          # Khởi động hệ thống (Web + API)
 npm run stop       # Dừng hệ thống
 npm run db:init    # Khởi tạo CSDL
 ```
+
+
+## Maven Wrapper trên Windows, macOS và Linux
+
+`run-maven.mjs` dùng Node.js để chọn `mvnw.cmd` trên Windows hoặc `./mvnw` trên macOS/Linux, chạy trong `apps/api` và giữ exit code của Maven. Các lệnh ở root:
+
+```sh
+npm run dev:api
+npm run build:api
+npm run test:api
+```
+
+Các lệnh này yêu cầu Java 21 và biến môi trường ứng dụng được cấu hình khi chạy API. Chúng không tự nạp `.env`; bộ runner PowerShell ở trên mới thực hiện việc nạp file. `npm start`, `stop`, `db:init` vẫn dành cho Windows/PowerShell.
+
+Các script `audit-*.cjs`, `verify-*.cjs` là công cụ QA chủ động, không phải mã runtime hoặc gate CI mặc định. Chỉ chạy đúng script cho phạm vi cần kiểm chứng; không commit toàn bộ output sinh tự động.

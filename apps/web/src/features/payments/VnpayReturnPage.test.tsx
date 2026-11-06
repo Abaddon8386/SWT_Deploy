@@ -38,3 +38,14 @@ it('vnpay return accepts /member/orders/42 and still rejects other paths',async(
  await render('?vnp_TxnRef=DEF456');
  expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe('/member/invoices');
 });
+
+it('keeps pending uncertain and only announces a delayed success after a backend recheck', async () => {
+ const status: api.VnpayStatus = {reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'pending',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'};
+ vi.mocked(api.getVnpayStatus).mockResolvedValueOnce(status).mockResolvedValueOnce({...status,status:'success'});
+ await render('?vnp_TxnRef=ABC123&vnp_ResponseCode=00');
+ expect(host.textContent).toContain('Hệ thống chưa nhận xác nhận từ VNPay');
+ expect(toast.success).not.toHaveBeenCalled(); expect(toast.error).not.toHaveBeenCalled();
+ await act(async()=> ([...host.querySelectorAll('button')].find(button=>button.textContent==='Kiểm tra lại') as HTMLButtonElement).click());
+ expect(host.textContent).toContain('Thanh toán thành công');
+ expect(toast.success).toHaveBeenCalledTimes(1);
+});
