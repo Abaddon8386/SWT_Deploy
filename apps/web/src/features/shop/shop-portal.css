@@ -388,7 +388,7 @@
 }
 
 .portal-v2 .shop-goal-chips button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 8px 16px;
   border-radius: 999px;
   border: 1px solid var(--portal-border-strong);
@@ -415,6 +415,63 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
+
+/* Keep shop actions comfortable on touch screens without changing other portals. */
+.portal-v2 .shop-tabs { gap: 8px; }
+.portal-v2 .shop-tabs .portal-tab { min-height: 44px; }
+
+.portal-v2 .shop-checkbox,
+.portal-v2 .shop-checkbox-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.portal-v2 :is(.shop-checkbox, .shop-checkbox-target) input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--portal-salmon);
+}
+
+.portal-v2 .shop-checkbox-target { justify-content: center; }
+.portal-v2 .shop-product-editor .portal-tab { min-height: 44px; }
+
+.portal-v2 .shop-image-description {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.portal-v2 .shop-image-description img { flex-shrink: 0; }
+.portal-v2 .shop-image-description > div { min-width: 0; }
+.portal-v2 .shop-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.portal-v2 :is(.shop-image-actions, .shop-editor-table) .btn-sm {
+  min-width: 44px;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+/* Scroll the editor tables, rather than squeezing SKU/price into unreadable fields. */
+.portal-v2 .shop-editor-table { min-width: 880px; }
+.portal-v2 .shop-editor-table--variants { min-width: 1120px; }
+.portal-v2 .shop-editor-table .shop-input { min-width: 100px; }
+.portal-v2 .shop-editor-table input[type='text'] { min-width: 140px; }
+.portal-v2 .shop-editor-table--variants input[type='text'] { min-width: 180px; }
 
 .portal-v2 .shop-card {
   display: flex;

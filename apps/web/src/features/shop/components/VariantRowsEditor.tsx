@@ -79,7 +79,7 @@ export function VariantRowsEditor({
       </div>
 
       <div className="portal-table-wrapper" role="region" aria-label="Biên tập phân loại sản phẩm" tabIndex={0}>
-        <table className="portal-table">
+        <table className="portal-table shop-editor-table shop-editor-table--variants">
           <thead>
             <tr>
               <th scope="col">SKU</th>
@@ -185,13 +185,15 @@ export function VariantRowsEditor({
                   )}
                 </td>
                 <td>
-                  <input
-                    type="checkbox"
-                    aria-label={`Đang bán biến thể ${idx + 1}`}
-                    checked={row.active}
-                    disabled={disabled}
-                    onChange={e => updateRow(idx, { active: e.target.checked })}
-                  />
+                  <label className="shop-checkbox-target">
+                    <input
+                      type="checkbox"
+                      aria-label={`Đang bán biến thể ${idx + 1}`}
+                      checked={row.active}
+                      disabled={disabled}
+                      onChange={e => updateRow(idx, { active: e.target.checked })}
+                    />
+                  </label>
                 </td>
                 <td>
                   <button

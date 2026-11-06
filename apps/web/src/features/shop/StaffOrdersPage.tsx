@@ -62,7 +62,7 @@ export function StaffOrdersSection({
           flexWrap: 'wrap',
         }}
       >
-        <div className="portal-tabs" role="tablist" aria-label="Trạng thái đơn hàng">
+        <div className="portal-tabs shop-tabs" role="tablist" aria-label="Trạng thái đơn hàng">
           {STAFF_TABS.map(tab => {
             const count = tab.countKey && counts ? counts[tab.countKey] : null;
             const active = status === tab.id;

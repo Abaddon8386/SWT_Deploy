@@ -434,7 +434,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                 </p>
               )}
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label className="shop-checkbox">
               <input
                 type="checkbox"
                 checked={restock}
