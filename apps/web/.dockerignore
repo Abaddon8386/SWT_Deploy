@@ -1,5 +1,15 @@
+<<<<<<< HEAD
 node_modules
 dist
 .env
 .env.*
 .git
+=======
+node_modules/
+dist/
+coverage/
+.git/
+**/.env
+**/.env.*
+*.log
+>>>>>>> 90924c4493b0794be86f1fe632036d20f7df4de1
