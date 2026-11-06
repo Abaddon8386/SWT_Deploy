@@ -7,6 +7,7 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và Su
 - Nguồn nghiệp vụ: `docs/PROJECT_MASTER_GUIDE.md`; schema triển khai được định nghĩa bằng JPA Entity, `db/databaseschema.sql` chỉ là tham chiếu cấu trúc lịch sử; backlog: `docs/plans/AGILE_SCRUM_JIRA_PLAN.md`.
 - Stack cố định: React + TypeScript ở `apps/web`, Java 21 + Spring Boot 3 ở `apps/api`, database Supabase PostgreSQL.
 - Mọi môi trường chạy API dùng profile `supabase`, JDBC PostgreSQL qua TLS và thông tin kết nối từ biến môi trường. Không thêm lại database/profile/driver SQL Server, H2 hoặc MySQL. Test DB thật dùng project Supabase dành cho dev/test và schema biệt lập.
+- Ngoại lệ vận hành: VPS tự host chạy `docker compose` với PostgreSQL cục bộ (container 1Panel) chỉ qua `.env` (không commit); code và profile vẫn là `supabase`. Không đổi code/compose/profile để "đưa về Supabase" hay thêm profile `local`; xem `docs/DOCKER_COMPOSE.md`. CI/CD (Render, Vercel) dùng Supabase qua secret của chúng.
 
 ## Cách làm một ticket
 

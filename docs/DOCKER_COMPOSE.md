@@ -67,6 +67,15 @@ Database nằm ngoài Compose nên lệnh này không xóa dữ liệu Supabase.
 - `API_IMAGE` và `WEB_IMAGE` cho phép dùng image đã build từ CI/CD. Khi dùng image từ registry, đặt hai biến này rồi chạy `docker compose pull` và `docker compose up -d --no-build --wait --wait-timeout 300`. Các thiết lập Vite phải được nhúng từ lần build image đó.
 - Muốn dùng file môi trường riêng, dùng cả `SCMS_ENV_FILE` (biến runtime API) và `--env-file` (biến nội suy Compose): `SCMS_ENV_FILE=.env.server docker compose --env-file .env.server up -d --build --wait --wait-timeout 300`.
 
+## Ghi chú VPS: dùng PostgreSQL cục bộ (1Panel) thay cho Supabase
+
+Chỉ áp dụng cho VPS tự chạy `docker compose`; push lên GitHub vẫn dùng cấu hình Supabase qua CI/CD (Render, Vercel) và không đọc `.env` của VPS.
+
+- Code không đổi: profile vẫn là `supabase` (chỉ là tên profile, driver là PostgreSQL chuẩn). Chỉ `.env` quyết định database.
+- `.env` trên VPS trỏ `SPRING_DATASOURCE_URL=jdbc:postgresql://1Panel-postgresql-SFES:5432/agile4life`, `SPRING_DATASOURCE_USERNAME=agile4life`, `DB_SSL_MODE=require`. `.env.db.supabase` giữ cấu hình Supabase để chuyển lại bằng cách chép các dòng `SPRING_DATASOURCE_*` và `DB_SSL_MODE` sang `.env`. Cả hai file đều bị `.gitignore`.
+- Container `1Panel-postgresql-SFES` không do `compose.yml` quản lý. Hiện nó được nối vào mạng `scms_default` của stack để API phân giải được tên. Không chạy `docker compose down` (xóa mạng) rồi `up` mà không kiểm tra lại; nếu container Postgres bị tạo lại hoặc mạng bị tạo lại thì nối lại bằng `docker network connect scms_default 1Panel-postgresql-SFES`, rồi `docker compose restart api`.
+- Hibernate `ddl-auto: update` sẽ tạo/cập nhật bảng và nạp trigger trên Postgres cục bộ giống Supabase.
+
 ## Kiểm chứng cấu hình (06/11/2026)
 
 - Compose parse bằng biến giả: pass; đã kiểm tra port override, client ID công khai, profile/TLS, API không mở cổng host và bốn biến bắt buộc.
