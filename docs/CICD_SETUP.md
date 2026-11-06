@@ -1,5 +1,35 @@
 # CI/CD: GitHub Actions → Vercel + Render
 
+## Bộ env tối thiểu cho repo này
+
+| Đặt ở đâu | File example | Nội dung |
+| --- | --- | --- |
+| Vercel → Environment Variables → Production | [`apps/web/.env.production.example`](../apps/web/.env.production.example) | `VITE_API_BASE_URL=/api/v1` (có thể bỏ vì code đã mặc định). |
+| Render → Environment | [`apps/api/.env.render.example`](../apps/api/.env.render.example) | Kết nối Supabase, JWT secret, profile và origin frontend. |
+| GitHub → Secrets and variables → Actions | [`.github/.env.actions.example`](../.github/.env.actions.example) | 5 Repository Secrets mà `cd.yml` đang đọc. |
+
+Các file chỉ là mẫu tham khảo để nhập giá trị vào dashboard; hosting/Actions không tự đọc
+file có đuôi `.example`. Không ghi credential thật vào các file này.
+
+Thiết lập Vercel: **Root Directory `apps/web`**, preset **Vite**, build **`npm run build`**,
+output **`dist`**. Render: **Docker**, Root Directory **`apps/api`**, Dockerfile **`./Dockerfile`**;
+giữ Docker Command mặc định để image dùng `PORT` của Render.
+
+Luồng API dùng cùng origin: trình duyệt gọi `/api/v1` trên Vercel, rewrite trong
+`apps/web/vercel.json` chuyển tới `https://swp391-u1fs.onrender.com/api/v1`.
+Nếu dùng service Render khác, phải sửa `destination` của rewrite rồi deploy lại.
+Đặt `APP_CORS_ALLOWED_ORIGINS` và `APP_WEB_ORIGIN` bằng domain HTTPS Vercel thực tế,
+không có path hoặc dấu `/` cuối. Không cần đưa thông tin database/JWT lên Vercel.
+
+Bộ tối thiểu chỉ phục vụ khởi chạy ứng dụng và CI/CD. Để đăng ký/quên mật khẩu gửi được
+OTP, bật thêm block SMTP trong mẫu Render; nếu chưa cấu hình, gửi OTP trả HTTP 503.
+Database mới có thể tạo admin đầu tiên bằng hai biến bootstrap được chú thích trong mẫu.
+Google login, realtime, AI và VNPay chỉ cấu hình khi cần tính năng tương ứng.
+
+Sau khi nhập env, tắt auto-deploy production trên Render/Vercel theo mục 2–3 để Actions
+điều phối; push `main` chạy **CI → CD Render → CD Vercel**. Thiếu Secrets của nền tảng nào
+thì CD bỏ qua nền tảng đó. Nên đặt thêm Variable `FRONTEND_URL` để bật kiểm tra web sau deploy.
+
 Repo có hai workflow trong tab **Actions**:
 
 - **CI** (`ci.yml`): tự kiểm tra code mỗi khi push hoặc mở PR — test/lint/build frontend, kiểm tra cấu hình database và test backend.
