@@ -271,6 +271,9 @@ Tinh chỉnh Lịch sử tập luyện Member (05/11/2026, cập nhật mới nh
 
 Demo 2 — Accordion lịch sử tập luyện (05/11/2026, ghi đè cách trình bày danh sách/phân trang trước): mỗi ngày GRANTED có một hàng thu gọn mặc định, badge ngày/tháng bên trái, DD/MM/YYYY, số lượt check-in thành công và chevron. Nút native có aria-expanded/aria-controls và focus rõ; mở ra toàn bộ lượt hợp lệ của ngày theo giờ giảm dần, không gọi mỗi lượt là một phiên tập. Nhóm theo ngày Việt Nam sau khi lọc GRANTED; checkout không tạo lượt mới. Phân trang client **5 ngày**, ngày mới nhất trước, lọc ngày/đổi tháng reset trang đầu. Giữ nguyên thống kê, lịch, focus refresh, API thật và Progress cũ. Desktop đặt ngày/số lượt cùng hàng; mobile xếp nhãn trong cùng hàng Accordion gọn, chi tiết co giãn theo chiều rộng.
 
+
+Lịch học của tôi — Member (06/11/2026): nút “Tuần này” trở về chế độ tuần hiện tại, từ Thứ Hai đến Chủ nhật theo Asia/Ho_Chi_Minh, kể cả khi đang xem tháng hoặc tuần khác. Giữ lịch tháng và điều hướng trước/sau; chỉ bỏ dòng “Tháng này bạn chưa có lịch nào.” trong lịch Member. Lịch tuần giữ thông báo trống gọn, lỗi và thử lại. Đặt sân/phòng dùng xanh nhạt, buổi học dùng salmon; mỗi sự kiện có nhãn loại bằng chữ và viền loại giữ lại khi đã qua/hủy, trên desktop/mobile và cả theme sáng/tối. Không đổi popup chi tiết, xác nhận hủy hoặc API đặt chỗ. Nội dung calendar dùng hook ngôn ngữ hiện có cho Tiếng Việt/English.
+
 VNPay Back/Forward (06/11/2026): khôi phục từ bfcache phải đồng bộ trạng thái gói/yêu cầu/thanh toán từ backend trước thao tác tiếp; không suy trạng thái giao dịch từ nút Back. Checkout kiểm tra lại yêu cầu đã chuẩn bị trước retry. Thông báo pending phân biệt VNPay chưa quyết toán với biên lai chờ lễ tân; hủy checkout online gọi guard backend hiện có, giữ bảo vệ payment thành công/hoàn tiền/biên lai đang duyệt và grace hiện hành. Không đổi Finance policy/schema; không tự đánh dấu thất bại hoặc hủy do điều hướng.
 
 
