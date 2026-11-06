@@ -1,0 +1,68 @@
+name: CI VPS
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-vps-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    name: Build and check ${{ matrix.service }} image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, web]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate Compose with dummy settings
+        if: matrix.service == 'api'
+        run: |
+          set -euo pipefail
+          compose_dir=$(mktemp -d)
+          trap 'rm -rf -- "$compose_dir"' EXIT
+          printf 'SPRING_DATASOURCE_URL=jdbc:postgresql://example.invalid:5432/postgres\nSPRING_DATASOURCE_USERNAME=test\nSPRING_DATASOURCE_PASSWORD=test-only\nAPP_JWT_SECRET=test-only\n' > "$compose_dir/.env"
+          docker compose --project-directory "$compose_dir" \
+            -f "$GITHUB_WORKSPACE/compose.yml" config --quiet
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v7
+        with:
+          context: apps/${{ matrix.service }}
+          file: apps/${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: scms-${{ matrix.service }}:ci
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+            VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
+      - name: Check Java runtime and healthcheck tool
+        if: matrix.service == 'api'
+        run: docker run --rm --entrypoint sh scms-api:ci -c 'java -version && command -v wget'
+      - name: Check Nginx config and React routes
+        if: matrix.service == 'web'
+        run: |
+          set -euo pipefail
+          docker run --rm scms-web:ci nginx -t
+          docker run -d --name scms-web-check scms-web:ci
+          trap 'docker rm -f scms-web-check >/dev/null' EXIT
+          for attempt in $(seq 1 15); do
+            if docker exec scms-web-check wget -q -O /dev/null http://127.0.0.1/index.html; then
+              docker exec scms-web-check wget -qO- http://127.0.0.1/login | grep -q 'id="root"'
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs scms-web-check
+          exit 1

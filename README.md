@@ -29,6 +29,7 @@
 - **CI/CD Tự động hóa:** Xem [Hướng dẫn GitHub Actions → Vercel + Render](docs/CICD_SETUP.md) để cấu hình Secrets và theo dõi toàn bộ luồng kiểm thử (CI) lẫn triển khai Production (CD) trong tab **Actions**.
 - **Cơ sở dữ liệu đám mây:** Sử dụng duy nhất profile `supabase` (**Supabase PostgreSQL** qua TLS), tự động ánh xạ schema từ JPA Entity và nạp trigger nghiệp vụ khi khởi chạy. Xem chi tiết tại [Hướng dẫn Supabase](docs/SUPABASE_SETUP.md).
 - **Docker Compose trên server:** [Hướng dẫn chạy web + API](docs/DOCKER_COMPOSE.md), dùng [compose.yml](compose.yml) và [compose.env.example](compose.env.example); database tiếp tục nằm trên Supabase.
+- **VPS song song Render/Vercel:** [Quy trình cập nhật code, GitHub checks và build/deploy trong 1Panel](docs/VPS_CICD_SETUP.md). `CI VPS` tự chạy khi push/PR; triển khai VPS bằng tay, không thay thế CD Render/Vercel.
 
 ---
 
