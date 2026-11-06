@@ -9,14 +9,15 @@ import { subscribeChat, type ChatConnection } from './chatRealtime';
 import { LiquidGlassContainer } from '../../shared/liquid-glass/LiquidGlassContainer';
 import { glassEngine } from '../../shared/liquid-glass/LiquidGlassEngine';
 import { useDraggableWidget } from './useDraggableWidget';
+import { useI18n } from '../../shared/i18n';
 import './chat-widget.css';
 
 // Khung hội thoại (danh sách, hội thoại, SÖL AI) chỉ tải khi mở widget lần đầu.
 const ChatPage = lazy(() => import('./ChatPage').then(module => ({ default: module.ChatPage })));
 
-const connectionLabel: Record<ChatConnection, string> = {
-  connecting: 'Đang kết nối…', connected: 'Cập nhật trực tiếp',
-  reconnecting: 'Mất kết nối · đang thử lại', disabled: 'Bấm làm mới để xem tin mới',
+const connectionLabel: Record<ChatConnection, [string, string]> = {
+  connecting: ['Đang kết nối…', 'Connecting…'], connected: ['Cập nhật trực tiếp', 'Live updates'],
+  reconnecting: ['Mất kết nối · đang thử lại', 'Connection lost · reconnecting'], disabled: ['Bấm làm mới để xem tin mới', 'Refresh to see new messages'],
 };
 
 export function ChatWidget() {
@@ -47,6 +48,7 @@ function SignedInChatWidget() {
 }
 
 function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -78,14 +80,15 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
     };
   }, [open, panel]);
 
-  const label = unread > 0 ? `Tin nhắn · ${unread} chưa đọc` : 'Tin nhắn';
-  return <div ref={widgetRef} className={`chat-widget${dragging ? ' is-dragging' : ''}`} style={widgetStyle} data-liquid-glass-ignore="">
+  const label = unread > 0 ? t(`Tin nhắn · ${unread} chưa đọc`, `Messages · ${unread} unread`) : t('Tin nhắn', 'Messages');
+  return <div data-i18n-managed ref={widgetRef} className={`chat-widget${dragging ? ' is-dragging' : ''}`} style={widgetStyle} data-liquid-glass-ignore="">
     <button
       ref={trigger}
       type="button"
+      data-i18n-managed
       className={`chat-widget__trigger${open ? ' is-open' : ''}`}
       title={label}
-      aria-label={open ? 'Đóng tin nhắn' : `Mở ${label.toLowerCase()}`}
+      aria-label={open ? t('Đóng tin nhắn', 'Close messages') : t(`Mở ${label.toLowerCase()}`, `Open ${label.toLowerCase()}`)}
       aria-haspopup="dialog"
       aria-expanded={open}
       aria-controls="sol-direct-chat"
@@ -106,7 +109,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
           </svg>
           {unread > 0 && <span className="chat-widget__badge">{unread > 99 ? '99+' : unread}</span>}
         </span>
-        <span className="chat-widget__trigger-label">Tin nhắn</span>
+        <span className="chat-widget__trigger-label">{t('Tin nhắn', 'Messages')}</span>
       </span>
       <span className="chat-widget__trigger-avatars" aria-hidden="true">
         {[0, 1, 2].map(index => {
@@ -126,20 +129,21 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
         })}
       </span>
     </button>
-    {visited && <section ref={panel} id="sol-direct-chat" className={`chat-widget__panel${expanded ? ' is-expanded' : ''}`} role="dialog" aria-label="Tin nhắn SÖL" hidden={!open} style={panelStyle} onPointerDown={onPanelPointerDown}>
+    {visited && <section ref={panel} id="sol-direct-chat" className={`chat-widget__panel${expanded ? ' is-expanded' : ''}`} role="dialog" aria-label={t("Tin nhắn SÖL", "SÖL messages")} hidden={!open} style={panelStyle} onPointerDown={onPanelPointerDown}>
       <LiquidGlassContainer shape="rounded" borderRadius={16} tintOpacity={0.04} blurRadius={8} active={open} className="chat-widget__glass" />
       <header className="chat-widget__header">
         <div className="chat-widget__header-title">
-          <strong>Tin nhắn</strong>
-          {feed && <p className={`chat-widget__status is-${feed.connection}`} role="status">{connectionLabel[feed.connection]}
-            {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>Thử lại</button>}</p>}
+          <strong>{t("Tin nhắn", "Messages")}</strong>
+          {feed && <p className={`chat-widget__status is-${feed.connection}`} role="status">{t(...connectionLabel[feed.connection])}
+            {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>{t("Thử lại", "Retry")}</button>}</p>}
         </div>
         <div className="chat-widget__header-actions">
           <button
             type="button"
-            className="chat-widget__icon-btn"
-            aria-label={expanded ? 'Thu nhỏ cửa sổ tin nhắn' : 'Mở rộng cửa sổ tin nhắn'}
-            title={expanded ? 'Thu nhỏ' : 'Mở rộng'}
+            data-i18n-managed className="chat-widget__icon-btn"
+            aria-label={expanded ? t('Thu nhỏ cửa sổ tin nhắn', 'Collapse messages window') : t('Mở rộng cửa sổ tin nhắn', 'Expand messages window')}
+            aria-pressed={expanded}
+            title={expanded ? t('Thu nhỏ', 'Collapse') : t('Mở rộng', 'Expand')}
             onClick={() => { setExpanded(v => !v); onRefresh?.(); }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -149,7 +153,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
               <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
           </button>
-          <button ref={closeButton} type="button" className="chat-widget__close" aria-label="Đóng cửa sổ tin nhắn" onClick={() => { setOpen(false); trigger.current?.focus(); }}>
+          <button ref={closeButton} type="button" data-i18n-managed className="chat-widget__close" aria-label={t('Đóng cửa sổ tin nhắn', 'Close messages window')} title={t('Đóng cửa sổ tin nhắn', 'Close messages window')} onClick={() => { setOpen(false); trigger.current?.focus(); }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -157,9 +161,9 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
           </button>
         </div>
       </header>
-      {feed ? <Suspense fallback={<div className="chat-widget__loading"><LoadingSkeleton label="Đang mở tin nhắn…" count={4} /></div>}>
+      {feed ? <Suspense fallback={<div className="chat-widget__loading"><LoadingSkeleton label={t("Đang mở tin nhắn…", "Opening messages…")} count={4} /></div>}>
         <ChatPage embedded visible={open} realtime={feed} onPeersChange={setPeers} />
-      </Suspense> : <div className="chat-widget__login"><p>Đăng nhập để trao đổi với lễ tân, huấn luyện viên và trợ lý SÖL AI.</p><Link to="/login" className="btn-primary">Đăng nhập để nhắn tin</Link></div>}
+      </Suspense> : <div className="chat-widget__login"><p>{t("Đăng nhập để trao đổi với lễ tân, huấn luyện viên và trợ lý SÖL AI.", "Sign in to chat with receptionists, coaches and SÖL AI.")}</p><Link to="/login" className="btn-primary">{t("Đăng nhập để nhắn tin", "Sign in to send messages")}</Link></div>}
     </section>}
   </div>;
 }

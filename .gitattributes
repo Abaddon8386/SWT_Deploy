@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Keep executable scripts portable across Windows, Linux and macOS.
+*.sh text eol=lf
+**/mvnw text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

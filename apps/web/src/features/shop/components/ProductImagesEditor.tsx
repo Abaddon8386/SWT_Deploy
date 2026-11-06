@@ -202,7 +202,7 @@ export function ProductImagesEditor({
                 flexWrap: 'wrap',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div className="shop-image-description">
                 <img
                   src={img.url}
                   alt={img.alt}
@@ -219,7 +219,7 @@ export function ProductImagesEditor({
                   <div className="muted">Ảnh #{idx + 1}</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="shop-image-actions">
                 <button
                   type="button"
                   className="btn-secondary btn-sm"

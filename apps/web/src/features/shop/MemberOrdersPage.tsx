@@ -114,7 +114,7 @@ export function MemberOrdersPage({
         }
       />
 
-      <div className="portal-tabs" role="tablist" aria-label="Quản lý sản phẩm, đơn hàng và địa chỉ">
+      <div className="portal-tabs shop-tabs" role="tablist" aria-label="Quản lý sản phẩm, đơn hàng và địa chỉ">
         <button
           type="button"
           role="tab"
@@ -150,7 +150,7 @@ export function MemberOrdersPage({
         <MemberShopCatalog onOpenCart={openCart} />
       ) : (
         <section className="stack" aria-label="Danh sách đơn hàng">
-          <div className="portal-tabs" aria-label="Lọc trạng thái đơn hàng">
+          <div className="portal-tabs shop-tabs" aria-label="Lọc trạng thái đơn hàng">
             {STATUS_FILTERS.map(filter => {
               const active = statusGroup === filter.id;
               return (

@@ -4,6 +4,12 @@ export const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN', {
   style: 'currency', currency: 'VND',
 }).format(price);
 
+export function isTrialPackage(pkg: { price?: number; durationDays?: number; name?: string }): boolean {
+  if (pkg.price === 0 && pkg.durationDays === 3) return true;
+  const name = (pkg.name || '').toLowerCase();
+  return name.includes('trải nghiệm') || name.includes('trial');
+}
+
 export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = 'vi') {
   const t = (vi: string, en: string) => lang === 'en' ? en : vi;
   const desc = pkg.description?.trim() || '';

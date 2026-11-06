@@ -3,6 +3,8 @@
 # Luồng chạy:
 #   push vào main -> CI xanh -> CD: [1] deploy backend (Render) -> [2] deploy frontend (Vercel)
 # Backend lỗi thì frontend không được deploy, tránh giao diện mới gọi API chưa sẵn sàng.
+# Rollback tự động: bản mới đã "live" nhưng health check lỗi thì quay về bản chạy tốt trước đó
+# (Render: API rollback; Vercel: `vercel rollback`). Job vẫn báo đỏ để nhóm biết có sự cố.
 #
 # MẪU DÙNG CHO DỰ ÁN React + Spring Boot, backend ở Render, frontend ở Vercel.
 #   - Chưa có secret của Render  -> bước backend tự bỏ qua.
@@ -58,7 +60,7 @@ jobs:
     needs: config
     if: needs.config.outputs.render == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     env:
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
@@ -78,6 +80,11 @@ jobs:
             cat "$out"
           }
           service="https://api.render.com/v1/services/$RENDER_SERVICE_ID"
+
+          # Ghi lại deploy đang chạy tốt (mới nhất có trạng thái live) để quay về nếu bản mới lỗi.
+          prev=$(api "$service/deploys?limit=20" | jq -r '[.[] | (.deploy // .) | select(.status == "live")][0].id // empty')
+          echo "PREV_DEPLOY=$prev" >> "$GITHUB_ENV"
+          echo "Deploy đang chạy tốt: ${prev:-không có (sẽ không rollback được)}"
 
           # Yêu cầu Render deploy đúng commit mà CI vừa kiểm tra.
           # Render trả 201 kèm deploy, hoặc 202 "xếp hàng" KHÔNG có nội dung (khi đang có deploy khác chạy).
@@ -108,6 +115,8 @@ jobs:
             sleep 15
           done
           [ "$status" = "live" ] || { echo "::error::Quá 30 phút mà Render chưa live"; exit 1; }
+          # Từ đây bản mới đang phục vụ người dùng; nếu health check lỗi thì bước rollback bên dưới sẽ chạy.
+          echo "NEW_LIVE=true" >> "$GITHUB_ENV"
 
       # "live" chỉ là Render báo xong; gọi thử health check để chắc API thật sự trả lời.
       - name: Check backend health
@@ -123,6 +132,56 @@ jobs:
             echo "Lần $i/12 chưa ổn, thử lại sau 5 giây"; sleep 5
           done
           echo "::error::Backend không phản hồi $HEALTH_PATH"; exit 1
+
+      # Bản mới đã live nhưng health check lỗi: quay về deploy chạy tốt trước đó.
+      # Build/deploy lỗi thì Render tự giữ bản cũ nên không vào bước này.
+      # Job vẫn báo đỏ (bước trước đã lỗi) nên frontend không được deploy.
+      - name: Roll back backend to the previous live deploy
+        if: failure() && env.NEW_LIVE == 'true' && env.PREV_DEPLOY != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          api() {
+            local out code; out=$(mktemp)
+            code=$(curl -sS -o "$out" -w '%{http_code}' -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" "$@") || code=000
+            if [[ ! "$code" =~ ^2 ]]; then
+              echo "::error::Render API trả HTTP $code: $(jq -r '.message // empty' "$out" 2>/dev/null | head -c 300)" >&2
+              return 1
+            fi
+            cat "$out"
+          }
+          service="https://api.render.com/v1/services/$RENDER_SERVICE_ID"
+          echo "::warning::Bản mới không khỏe, rollback backend về deploy $PREV_DEPLOY"
+
+          resp=$(api -X POST "$service/rollback" -d "{\"deployId\":\"$PREV_DEPLOY\"}")
+          deploy_id=$(jq -r '(.deploy // .) | .id // empty' <<<"$resp")
+          [ -n "$deploy_id" ] || { echo "::error::Render không trả ID deploy của rollback"; exit 1; }
+
+          # Hỏi mỗi 15 giây, tối đa 10 phút.
+          status=""
+          for _ in $(seq 1 40); do
+            status=$(api "$service/deploys/$deploy_id" | jq -r '(.deploy // .).status // empty')
+            echo "Rollback ${deploy_id} trạng thái: $status"
+            case "$status" in
+              live) break ;;
+              build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
+                echo "::error::Rollback kết thúc với trạng thái $status"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          [ "$status" = "live" ] || { echo "::error::Quá 10 phút mà rollback chưa live"; exit 1; }
+
+          # Chắc chắn bản cũ trả lời được sau khi quay về.
+          url=$(api "$service" | jq -er '(.service // .).serviceDetails.url')
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 15 "${url%/}$HEALTH_PATH" | jq -e '.status == "UP"' >/dev/null; then
+              echo "Đã rollback backend về $PREV_DEPLOY và health check UP: $url"
+              echo "Backend đã rollback về deploy \`$PREV_DEPLOY\` vì bản mới (commit \`${COMMIT:0:7}\`) không qua health check." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Lần $i/12 chưa ổn, thử lại sau 5 giây"; sleep 5
+          done
+          echo "::error::Đã rollback nhưng backend vẫn không phản hồi $HEALTH_PATH"; exit 1
 
   # ---------- Bước 2: frontend lên Vercel ----------
   frontend:
@@ -161,6 +220,7 @@ jobs:
           vercel deploy --prebuilt --prod              # đưa bản build lên production
       # Tùy chọn: đặt Variable FRONTEND_URL (vd https://ten-mien.vercel.app) để kiểm tra trang chủ sau deploy.
       - name: Check frontend responds
+        id: check
         if: vars.FRONTEND_URL != ''
         env:
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
@@ -172,3 +232,12 @@ jobs:
             echo "Lần $i/12 chưa ổn, thử lại sau 5 giây"; sleep 5
           done
           echo "::error::Frontend không phản hồi"; exit 1
+      # Trang lỗi sau khi deploy: quay về bản production trước đó của Vercel (gói Hobby chỉ lùi được 1 bản).
+      # Cần đặt Variable FRONTEND_URL; nếu không có thì không có tín hiệu lỗi để kích hoạt bước này.
+      # Job vẫn báo đỏ vì bước kiểm tra phía trên đã lỗi.
+      - name: Roll back frontend to the previous production deployment
+        if: failure() && steps.check.conclusion == 'failure'
+        run: |
+          echo "::warning::Trang chủ không phản hồi, rollback frontend về bản production trước"
+          vercel rollback --timeout 5m
+          echo "Frontend đã rollback về bản production trước vì bản mới (commit \`${COMMIT:0:7}\`) không phản hồi." >> "$GITHUB_STEP_SUMMARY"

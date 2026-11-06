@@ -46,8 +46,10 @@ export function MemberCheckoutPage() {
 
   useEffect(() => {
     let active = true;
+    let request = 0;
     preparedSubscriptionId.current = existingSubscriptionId;
     async function initCheckout() {
+      const version = ++request;
       setLoading(true);
       setError(null);
       try {
@@ -56,7 +58,7 @@ export function MemberCheckoutPage() {
           getMembershipHistory(),
           getProfile().catch(() => null),
         ]);
-        if (!active) return;
+        if (!active || version !== request) return;
 
         setProfile(userProfile);
         setHasPriorSubscriptions(history.length > 0);
@@ -64,8 +66,9 @@ export function MemberCheckoutPage() {
           setKycFullName(userProfile.fullName);
         }
 
-        if (existingSubscriptionId) {
-          const subscription = history.find((item) => item.id === existingSubscriptionId);
+        const subscriptionId = preparedSubscriptionId.current;
+        if (subscriptionId) {
+          const subscription = history.find((item) => item.id === subscriptionId);
           if (!subscription || subscription.status !== 'pending_payment' || (parsedPackageId && subscription.packageId !== parsedPackageId)) {
             setError('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.');
             return;
@@ -87,15 +90,18 @@ export function MemberCheckoutPage() {
           setError('Hiện tại chưa có gói tập nào trong hệ thống.');
         }
       } catch (err) {
-        if (active) setError(localizableError(err, 'Không thể tải thông tin gói tập.'));
+        if (active && version === request) setError(localizableError(err, 'Không thể tải thông tin gói tập.'));
       } finally {
-        if (active) setLoading(false);
+        if (active && version === request) setLoading(false);
       }
     }
 
     void initCheckout();
+    const restore = (event: PageTransitionEvent) => { if (event.persisted) void initCheckout(); };
+    window.addEventListener('pageshow', restore);
     return () => {
       active = false;
+      window.removeEventListener('pageshow', restore);
     };
   }, [parsedPackageId, existingSubscriptionId]);
 
@@ -175,9 +181,15 @@ export function MemberCheckoutPage() {
   }
 
   async function preparePaymentTarget() {
-    if (!selectedPackage) throw new Error(t("Không tìm thấy gói tập."));
+    if (!selectedPackage) throw new Error('Không tìm thấy gói tập.');
+    const history = await getMembershipHistory();
+    if (preparedSubscriptionId.current) {
+      const subscription = history.find(item => item.id === preparedSubscriptionId.current);
+      if (!subscription || subscription.status !== 'pending_payment' || subscription.packageId !== selectedPackage.id) {
+        throw new Error(t('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.', 'This membership request is no longer available for payment. Please return to the catalog.'));
+      }
+    }
     if (!preparedSubscriptionId.current) {
-      const history = await getMembershipHistory();
       const pending = history.find((item) => item.packageId === selectedPackage.id && item.status === 'pending_payment');
       preparedSubscriptionId.current = pending?.id ?? (await createMembershipSubscription(selectedPackage.id)).id;
     }

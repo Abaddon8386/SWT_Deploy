@@ -628,6 +628,21 @@ BEGIN
                   SELECT 1 FROM session_bookings sb WHERE sb.session_id = s.id
                     AND sb.member_id = NEW.member_id AND sb.status = 'booked'))
         ) INTO schedule_conflict;
+        -- Reject any four-hour PT run containing the candidate, including out-of-order inserts.
+        -- The schedule advisory lock above also serializes concurrent bookings and coach reassignments.
+        IF EXISTS (
+            SELECT 1 FROM generate_series(0, 3) AS offsets(hours_before)
+            WHERE (SELECT count(DISTINCT b.start_time) FROM coach_bookings b
+                WHERE b.coach_id = NEW.coach_id AND b.booking_date = NEW.booking_date
+                  AND b.status IN ('confirmed', 'completed') AND b.id <> COALESCE(NEW.id, -1)
+                  AND b.end_time = b.start_time + interval '1 hour'
+                  AND b.booking_date + b.start_time >= NEW.booking_date + NEW.start_time - offsets.hours_before * interval '1 hour'
+                  AND b.booking_date + b.end_time <= NEW.booking_date + NEW.start_time + (4 - offsets.hours_before) * interval '1 hour'
+            ) >= 3
+        ) THEN
+            RAISE EXCEPTION 'trg_coach_bookings_rest_required'
+                USING ERRCODE = '23514', CONSTRAINT = 'trg_coach_bookings_rest_required';
+        END IF;
     ELSIF TG_TABLE_NAME = 'class_enrollments' THEN
         IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
         SELECT EXISTS (

@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -11,6 +12,7 @@ vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn(), apiFetch: v
 let host: HTMLDivElement, root: Root;
 const conversation: api.ChatConversation = { id: 7, peer: { id: 20, name: 'Coach Linh', role: 'COACH', available: true }, createdAt: '2026-10-29T01:00:00Z', lastActivityAt: '2026-10-29T01:00:00Z' };
 beforeEach(() => {
+  setLanguage('vi');
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'member', identifier: 'member', name: 'Member', role: 'MEMBER' });
   vi.mocked(api.getConversations).mockResolvedValue({ content: [conversation], totalPages: 1, number: 0 });
@@ -19,7 +21,7 @@ beforeEach(() => {
   vi.mocked(api.getContacts).mockResolvedValue({ content: [conversation.peer], totalPages: 1, number: 0 });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.resetAllMocks(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.resetAllMocks(); vi.unstubAllGlobals(); });
 const button = (text: string) => [...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))!;
 const render = () => act(async () => root.render(<ChatPage />));
 
@@ -108,4 +110,49 @@ it('toggles mobile thread state and restores focus to inbox heading on back', as
   expect(document.activeElement?.id).toBe('chat-inbox-title');
   await act(async () => button('Coach Linh').click());
   expect(document.activeElement?.id).toBe('chat-thread-title');
+});
+
+
+it('uses the stable shared composer with keyboard-accessible emoji controls and no inactive tools', async () => {
+  await render();
+  await act(async () => button('Coach Linh').click());
+  const input = host.querySelector('textarea')!;
+  const send = host.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+  expect(input.classList.contains('direct-chat__input')).toBe(true);
+  expect(input.classList.contains('portal-textarea')).toBe(false);
+  expect(send.disabled).toBe(true);
+  expect(send.classList.contains('btn-primary')).toBe(false);
+  expect(host.querySelector('[title="Ghi âm"]')).toBeNull();
+  expect(host.querySelector('[title="Đính kèm hình ảnh"]')).toBeNull();
+  const emoji = host.querySelector<HTMLButtonElement>('button[aria-label="Chọn biểu tượng cảm xúc"]')!;
+  expect(emoji).not.toBeNull();
+  await act(async () => emoji.click());
+  expect(emoji.getAttribute('aria-expanded')).toBe('true');
+  await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Chèn 💪"]')!.click());
+  expect(input.value).toBe('💪');
+  expect(document.activeElement).toBe(input);
+  expect(send.disabled).toBe(false);
+  expect(host.querySelector('button[type="submit"]')).toBe(send);
+});
+
+
+it('owns inbox, unread, role, contact and empty labels in both languages without changing peer content', async () => {
+  vi.mocked(api.getConversations).mockResolvedValue({ content: [{ ...conversation, peer: { ...conversation.peer, name: 'Tin nhắn' }, unreadCount: 2, lastMessage: 'Tìm', lastMessageMine: true }], totalPages: 2, number: 0 });
+  await render();
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('#chat-inbox-title')!.textContent).toBe('Your conversations');
+  expect(host.querySelector('[aria-label="2 unread messages"]')).not.toBeNull();
+  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai) strong')!.textContent).toBe('Tin nhắn');
+  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai) .direct-chat__preview')!.textContent).toBe('You: Tìm');
+  expect(host.querySelector('[aria-label="Conversation pages"]')).not.toBeNull();
+  expect(host.querySelector('[title="Refresh messages"]')).not.toBeNull();
+  await act(async () => button('New conversation').click());
+  expect(host.querySelector('[aria-label="Choose a chat recipient"]')).not.toBeNull();
+  expect(host.querySelector('input[type="search"]')!.getAttribute('placeholder')).toBe('Search recipients...');
+  expect(host.querySelector('[data-contact-id="20"]')!.textContent).toContain('Coach');
+  await act(async () => setLanguage('vi'));
+  expect(host.querySelector('#chat-inbox-title')!.textContent).toBe('Hội thoại của bạn');
+  expect(host.querySelector('[aria-label="2 tin chưa đọc"]')).not.toBeNull();
+  expect(host.querySelector('input[type="search"]')!.getAttribute('placeholder')).toBe('Tìm kiếm người nhận...');
+  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai) .direct-chat__preview')!.textContent).toBe('Bạn: Tìm');
 });

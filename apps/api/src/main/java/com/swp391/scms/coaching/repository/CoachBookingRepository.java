@@ -49,7 +49,7 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             select cb from CoachBooking cb
             where cb.coach.userId = :coachId
               and cb.bookingDate = :date
-              and cb.status = 'confirmed'
+              and cb.status in ('confirmed', 'completed')
             """)
     List<CoachBooking> findActiveByCoachAndDate(@Param("coachId") Long coachId, @Param("date") LocalDate date);
 

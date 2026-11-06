@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useLanguage } from '../../shared/i18n/language';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
@@ -129,6 +130,8 @@ function disciplineFromQuery(value: string | null): string {
 }
 
 export function MemberClassesPage() {
+  const { lang } = useLanguage();
+  const text = (vi: string, en: string) => lang === 'en' ? en : vi;
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
   const [tab, setTab] = useState<'timetable' | 'schedule' | 'coach_booking'>(
@@ -358,12 +361,12 @@ export function MemberClassesPage() {
 
   return (
     <div className="portal-container member-classes">
-      <PageHeader
-        eyebrow="Hội viên"
-        title="Lịch học & đặt chỗ"
-      />
+      <div data-i18n-managed><PageHeader
+        eyebrow={text('Hội viên', 'Member')}
+        title={text('Lịch học & đặt chỗ', 'Classes & bookings')}
+      /></div>
 
-      <div className="portal-tabs" role="tablist" aria-label="Lịch học" style={{ marginBottom: 18 }}>
+      <div className="portal-tabs" data-i18n-managed role="tablist" aria-label={text("Lịch học", "Class schedule")} style={{ marginBottom: 18 }}>
         <button
           type="button"
           role="tab"
@@ -371,7 +374,7 @@ export function MemberClassesPage() {
           className={`portal-tab ${tab === 'timetable' ? 'active' : ''}`}
           onClick={() => handleSelectTab('timetable')}
         >
-          Lịch của tôi
+          {text("Lịch của tôi", "My schedule")}
         </button>
         <button
           type="button"
@@ -382,7 +385,7 @@ export function MemberClassesPage() {
             handleSelectTab('schedule');
           }}
         >
-          Lịch lớp học
+          {text("Lịch lớp học", "Class schedule")}
         </button>
         <button
           type="button"
@@ -391,7 +394,7 @@ export function MemberClassesPage() {
           className={`portal-tab ${tab === 'coach_booking' ? 'active' : ''}`}
           onClick={() => handleSelectTab('coach_booking')}
         >
-          Đặt lịch HLV 1:1 (PT)
+          {text("Đặt lịch HLV 1:1 (PT)", "Book a personal trainer (PT)")}
         </button>
       </div>
 
@@ -400,7 +403,7 @@ export function MemberClassesPage() {
           <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{actionError}</strong>
           <div style={{ marginTop: 8 }}>
             <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
-              Kiểm tra gói tập của tôi
+              {text("Kiểm tra gói tập của tôi", "Check my membership")}
             </Link>
           </div>
         </div>
@@ -413,11 +416,11 @@ export function MemberClassesPage() {
       ) : (
         <div>
           {myScheduleError && (
-            <div className="portal-card portal-empty" role="alert" style={{ marginBottom: 16 }}>
-              <h3>Không tải được lịch học của tôi</h3>
-              <p>{myScheduleError} Chưa thể xác nhận trạng thái đặt chỗ của bạn.</p>
+            <div data-i18n-managed className="portal-card portal-empty" role="alert" style={{ marginBottom: 16 }}>
+              <h3>{text("Không tải được lịch học của tôi", "Unable to load my schedule")}</h3>
+              <p>{myScheduleError} {text("Chưa thể xác nhận trạng thái đặt chỗ của bạn.", "Your booking status could not be confirmed.")}</p>
               <button type="button" className="btn-secondary btn-sm" onClick={() => setMyScheduleRetry(value => value + 1)}>
-                Thử lại lịch học của tôi
+                {text("Thử lại lịch học của tôi", "Retry my schedule")}
               </button>
             </div>
           )}
@@ -479,7 +482,7 @@ export function MemberClassesPage() {
 
           {loading ? (
           <div className="stack" role="status" aria-busy="true">
-            <span className="sr-only">Đang tải lịch học...</span>
+            <span className="sr-only">{text("Đang tải lịch học...", "Loading classes...")}</span>
             {[1, 2, 3].map((idx) => (
               <div key={idx} className="portal-card portal-card--list" aria-hidden="true">
                 <div style={{ flex: 1 }}>
@@ -495,19 +498,19 @@ export function MemberClassesPage() {
             ))}
           </div>
         ) : error ? (
-          <div className="portal-card portal-empty" role="alert">
-            <h3>Không tải được lịch học</h3>
+          <div data-i18n-managed className="portal-card portal-empty" role="alert">
+            <h3>{text("Không tải được lịch học", "Unable to load class schedule")}</h3>
             <p>{error}</p>
             <button type="button" className="btn-secondary btn-sm" onClick={() => setRetry((value) => value + 1)}>
-              Thử lại
+              {text("Thử lại", "Retry")}
             </button>
           </div>
         ) : (
           <div className="stack" id="member-class-results">
             {sessions.length === 0 ? (
-              <div className="portal-card portal-empty">
-                <h3>Chưa có lịch học</h3>
-                <p>Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần sau.</p>
+              <div data-i18n-managed className="portal-card portal-empty">
+                <h3>{text("Chưa có lịch học", "No classes scheduled")}</h3>
+                <p>{text("Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần sau.", "There are no classes this week. You can view next week instead.")}</p>
                 {weekOffset === 0 && (
                   <button
                     type="button"
@@ -516,14 +519,14 @@ export function MemberClassesPage() {
                       changeWeek(1);
                     }}
                   >
-                    Xem lịch tuần sau
+                    {text("Xem lịch tuần sau", "View next week")}
                   </button>
                 )}
               </div>
             ) : visible.length === 0 ? (
-              <div className="portal-card portal-empty">
-                <h3>Không có buổi học phù hợp</h3>
-                <p>Hãy thử bộ lọc khác.</p>
+              <div data-i18n-managed className="portal-card portal-empty">
+                <h3>{text("Không có buổi học phù hợp", "No matching classes")}</h3>
+                <p>{text("Hãy thử bộ lọc khác.", "Try another filter.")}</p>
               </div>
             ) : (
               <>{visible.slice(0, visibleCount).map((item, index) => {

@@ -374,3 +374,43 @@ describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
     });
   });
 });
+
+
+describe('weekly PT booking after Monday has passed', () => {
+  it('chooses next Monday before selecting a slot on a fully booked anchor date', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-06T01:00:00Z'));
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    mocks.getCoaches.mockResolvedValue([{ id: 1, fullName: 'HLV A', specialization: 'Gym' }]);
+    mocks.getMyCoachBookings.mockResolvedValue([]);
+    mocks.getMyCoachReviews.mockResolvedValue([]);
+    mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'GOLD', remainingQuota: 3 });
+    mocks.getAvailableSlots.mockImplementation(async (_id, date) => date === '2026-11-09'
+      ? [{ startTime: '14:00:00', endTime: '15:00:00', available: true, reason: null }] : []);
+    mocks.createRecurringCoachBooking.mockResolvedValue({ booked: [], skipped: [] });
+    try {
+      await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+      const weekly = host.querySelector<HTMLButtonElement>('button[aria-label="Cả tuần (Hàng tuần)"]');
+      expect(weekly).not.toBeNull();
+      await act(async () => weekly!.click());
+      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="T2"]')!.click());
+      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="T6, đã chọn"]')!.click());
+      const slot = [...host.querySelectorAll('button')].find(b => b.title.includes('14:00') && b.title.includes('Còn trống'));
+      expect(slot).toBeDefined();
+      await act(async () => slot!.click());
+      const confirm = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xác nhận đặt'));
+      expect(confirm).toBeDefined();
+      await act(async () => confirm!.click());
+      expect(mocks.createRecurringCoachBooking).toHaveBeenCalledWith(expect.objectContaining({
+        startDate: '2026-11-06', period: 'week', daysOfWeek: [1], startTime: '14:00:00',
+      }));
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks();
+    }
+  });
+});

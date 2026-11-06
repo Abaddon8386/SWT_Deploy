@@ -53,6 +53,13 @@ public class VnpayPaymentService {
         this.coaches=coaches; this.courts=courts; this.notifications=notifications; this.messages=messages;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.shop.service.ProductOrderRefunds orderRefunds;
+
+    public void setOrderRefunds(com.swp391.scms.shop.service.ProductOrderRefunds orderRefunds) {
+        this.orderRefunds = orderRefunds;
+    }
+
     public void setOrderPayments(com.swp391.scms.shop.service.ProductOrderPayments orderPayments) {
         this.orderPayments = orderPayments;
     }
@@ -197,8 +204,14 @@ public class VnpayPaymentService {
             payment=findOrCreate(payments.findAllByCoachBookingId(booking.getId()),principal.id(),booking.getHourlyRate());
             payment.setCoachBookingId(booking.getId());
         } else if(request.productOrderId()!=null) {
-            lockMember(principal.id());
             if (orderPayments == null) throw unavailable();
+            // Verify ownership before taking any row lock so a member can neither lock nor probe another member's order.
+            if (orders != null) {
+                var owned = orders.findById(request.productOrderId()).orElseThrow(this::unavailable);
+                // Same response as a missing order: another member's order must not be distinguishable.
+                if (owned.getMember() == null || !principal.id().equals(owned.getMember().getUserId())) throw unavailable();
+            }
+            lockMember(principal.id());
             var order = orderPayments.requirePayable(request.productOrderId());
             requireOwner(principal, order.getMember().getUserId());
             payment = findOrCreate(payments.findAllByProductOrderId(order.getId()), principal.id(), order.getTotal());
@@ -263,6 +276,8 @@ public class VnpayPaymentService {
         // payment is unsettled so the customer's money is never taken without the order being paid.
         boolean lateAfterLocalExpiry="failed".equals(t.getStatus()) && t.getGatewayTransactionNo()==null
                 && "pending".equals(p.getStatus()) && !t.getExpiresAt().isAfter(now());
+        String lateOrderCode=refundLateOrderPayment(fields,t,p,reference);
+        if(lateOrderCode!=null) return lateOrderCode;
         if((!"pending".equals(t.getStatus()) && !lateAfterLocalExpiry) || !"pending".equals(p.getStatus())) return "02";
         String response=fields.get("vnp_ResponseCode"),status=fields.get("vnp_TransactionStatus");
         if(response==null || status==null || !response.matches("[0-9]{2}") || !status.matches("[0-9]{2}")) return "97";
@@ -302,6 +317,31 @@ public class VnpayPaymentService {
             if (!Set.of("02", "04", "07").contains(status)) return "99";
             t.setStatus("failed");
         }
+        return "00";
+    }
+    /**
+     * A product order cancelled while its VNPay attempt was unsettled closes the payment as {@code failed}. If the
+     * gateway still reports a success for that attempt, the member was charged: credit the money to their wallet and
+     * record the payment as refunded. Returns the IPN code to answer with, or {@code null} when this is not that case.
+     */
+    private String refundLateOrderPayment(Map<String,String> fields, VnpayTransaction t, Payment p, String reference) {
+        if(p.getProductOrderId()==null || orders==null || orderRefunds==null) return null;
+        if(!"failed".equals(p.getStatus()) || t.getGatewayTransactionNo()!=null
+                || !Set.of("pending","failed").contains(t.getStatus())) return null;
+        var order=orders.findById(p.getProductOrderId()).orElse(null);
+        if(order==null || !"cancelled".equals(order.getStatus())) return null;
+        String response=fields.get("vnp_ResponseCode"),status=fields.get("vnp_TransactionStatus");
+        if(response==null || status==null || !response.matches("[0-9]{2}") || !status.matches("[0-9]{2}")) return "97";
+        if(!"00".equals(response) || !"00".equals(status)) return "02"; // nothing was charged, the attempt stays closed
+        String gatewayId=fields.get("vnp_TransactionNo");
+        if(gatewayId==null || !gatewayId.matches("[0-9]{1,15}") || gatewayId.matches("0+")) return "97";
+        t.setGatewayTransactionNo(gatewayId);t.setStatus("success");
+        transactions.saveAndFlush(t);
+        orderRefunds.refundLatePayment(order,p,t.getAmount(),reference);
+        notifications.send(p.getMember().getUserId(),
+                messages.getMessage("notifications.shop.cancelled.title", order.getCode()),
+                messages.getMessage("notifications.shop.refunded.body", order.getCode(), t.getAmount().toPlainString()),
+                "order","product_order",order.getId(),"/member/orders/"+order.getId());
         return "00";
     }
     private String orderWalletDescription(Payment p) {
