@@ -5,8 +5,7 @@ export const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN', {
 }).format(price);
 
 export function isTrialPackage(pkg: { price?: number; durationDays?: number; name?: string }): boolean {
-  if (pkg.price === 0) return true;
-  if (pkg.durationDays !== undefined && pkg.durationDays <= 3) return true;
+  if (pkg.price === 0 && pkg.durationDays === 3) return true;
   const name = (pkg.name || '').toLowerCase();
   return name.includes('trải nghiệm') || name.includes('trial');
 }
