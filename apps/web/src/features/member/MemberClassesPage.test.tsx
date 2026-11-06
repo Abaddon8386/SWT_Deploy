@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassesPage } from './MemberClassesPage';
+import { setLanguage } from '../../shared/i18n/language';
 import { centerNowParts } from '../../shared/lib/centerTime';
 import { ApiError } from '../../shared/api/client';
 import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
@@ -78,6 +79,7 @@ describe('MemberClassesPage', () => {
   let host: HTMLDivElement;
   let root: Root;
   beforeEach(() => {
+    setLanguage('vi');
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div'); document.body.append(host);
     root = createRoot(host);
@@ -111,6 +113,17 @@ describe('MemberClassesPage', () => {
   async function clickText(text: string) {
     await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.includes(text))!.click());
   }
+
+  it('switches schedule header, tabs and empty state between VI and EN', async () => {
+    mocks.sessions.mockResolvedValue([]);
+    await render();
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('h1')!.textContent).toBe('Classes & bookings');
+    expect([...host.querySelectorAll('[role="tab"]')].map(node => node.textContent?.trim())).toEqual(['My schedule', 'Class schedule', 'Book a personal trainer (PT)']);
+    expect(host.textContent).toContain('No classes scheduled');
+    await act(async () => setLanguage('vi'));
+    expect(host.querySelector('h1')!.textContent).toBe('Lịch học & đặt chỗ');
+  });
 
   it('opens on the discipline from the sport page link and ignores unknown values', async () => {
     mocks.sessions.mockResolvedValue([
