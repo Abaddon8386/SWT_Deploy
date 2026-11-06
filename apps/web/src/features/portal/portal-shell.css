@@ -680,6 +680,9 @@ body:has(.portal-backdrop) .sol-toast__icon {
 }
 
 .portal-icon-bare {
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;

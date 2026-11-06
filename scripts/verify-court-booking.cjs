@@ -21,7 +21,8 @@ const booking = { id: 1, roomId: 1, roomName: court.name, disciplineName: 'Tenni
   const errors = [];
   try {
     for (const width of [390, 1440]) {
-      for (const role of ['MEMBER', 'STAFF', 'MANAGER']) {
+      // The current router assigns these pages to members and receptionists.
+      for (const role of ['MEMBER', 'STAFF']) {
         const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
         page.on('pageerror', error => errors.push(error.message));
         await page.addInitScript(role => {
@@ -36,8 +37,9 @@ const booking = { id: 1, roomId: 1, roomName: court.name, disciplineName: 'Tenni
           const url = new URL(req.url());
           const path = url.pathname.replace(/^\/api\/v1/, '');
           let data = [];
-          if (path === '/auth/me') data = { username: 'review', role: role === 'MANAGER' ? 'CENTER_MANAGER' : role === 'STAFF' ? 'RECEPTIONIST' : role };
+          if (path === '/auth/me') data = { username: 'review', role: role === 'STAFF' ? 'RECEPTIONIST' : role };
           else if (path === '/courts') data = url.searchParams.get('discipline') === 'Tennis' ? [court] : [];
+          else if (path === '/court-bookings/quota') data = { packageName: 'GOLD', monthlyQuota: 3, used: booked ? 1 : 0, remaining: booked ? 2 : 3 };
           else if (path === '/rooms') data = [{ ...court, capacity: 2, status: 'available' }];
           else if (path === '/courts/1/availability') data = slots.map(slot => ({ ...slot, status: booked && slot.startTime === '10:00:00' ? 'booked' : slot.status }));
           else if (path === '/court-bookings' && req.method() === 'POST') {
@@ -58,6 +60,10 @@ const booking = { id: 1, roomId: 1, roomName: court.name, disciplineName: 'Tenni
         await page.getByRole('heading', { name: court.name, exact: true }).first().waitFor();
         await page.waitForLoadState('networkidle');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false, `Horizontal overflow: ${role} ${width}`);
+        if (role === 'MEMBER') {
+          const refresh = await page.getByRole('button', { name: 'Làm mới lịch sân', exact: true }).boundingBox();
+          assert.ok(refresh && refresh.width >= 44 && refresh.height >= 44, `Refresh target below 44px at ${width}px`);
+        }
         await page.screenshot({ path: `${output}/${role.toLowerCase()}-${width}.png`, fullPage: true });
         if (role === 'MEMBER') {
           await page.getByLabel('Ngày đặt', { exact: true }).fill(date);
