@@ -296,6 +296,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
       {activeSlug && (
         <Modal
           title={detail ? detail.name : 'Chi tiết sản phẩm'}
+          className="shop-product-dialog"
           onClose={() => setActiveSlug(null)}
         >
           {detailLoading ? (
@@ -341,9 +342,6 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                     )}
 
                     <div>
-                      <span className="shop-label" style={{ display: 'block', marginBottom: 6 }}>
-                        Phân loại / Hương vị
-                      </span>
                       <VariantPicker
                         variants={detail.variants}
                         value={selectedVariant?.id ?? 0}
@@ -366,7 +364,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                         </p>
                       )}
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <div className="portal-shop-buy-actions">
                       <QuantityStepper
                         value={qty}
                         max={maxQty}

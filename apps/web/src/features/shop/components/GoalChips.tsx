@@ -18,7 +18,7 @@ export function GoalChips({
   onChange: (goal: ProductGoal | '') => void;
 }) {
   return (
-    <div className="fit-pricing-switch shop-goal-chips" role="group" aria-label="Lọc theo mục tiêu tập luyện">
+    <div className="shop-goal-chips" role="group" aria-label="Lọc theo mục tiêu tập luyện">
       {GOALS.map((item) => (
         <button
           key={item.key || 'all'}

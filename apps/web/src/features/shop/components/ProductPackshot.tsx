@@ -13,28 +13,6 @@ function getMonogram(name: string): string {
   return (words[0] ?? 'SL').slice(0, 2).toUpperCase();
 }
 
-function resolveDefaultProductImage(name: string, form: ProductForm): string {
-  const lower = name.toLowerCase();
-  if (lower.includes('whey')) return '/images/shop/whey-isolate.jpg';
-  if (lower.includes('creatine')) return '/images/shop/creatine-monohydrate.jpg';
-  if (lower.includes('pre-workout') || lower.includes('ignition') || lower.includes('trước tập')) {
-    return '/images/shop/pre-workout.jpg';
-  }
-  if (lower.includes('electrolyte') || lower.includes('hydra') || lower.includes('hydro') || lower.includes('điện giải')) {
-    return '/images/shop/electrolyte.jpg';
-  }
-  if (lower.includes('omega') || lower.includes('vitamin') || lower.includes('d3')) {
-    return '/images/shop/omega-3.jpg';
-  }
-  if (lower.includes('bar') || lower.includes('crunch') || lower.includes('thanh')) {
-    return '/images/shop/protein-bar.jpg';
-  }
-  if (form === 'capsule' || form === 'tablet') return '/images/shop/omega-3.jpg';
-  if (form === 'bar') return '/images/shop/protein-bar.jpg';
-  if (form === 'liquid') return '/images/shop/electrolyte.jpg';
-  return '/images/shop/whey-isolate.jpg';
-}
-
 export function ProductPackshot({
   form,
   name,
@@ -51,7 +29,7 @@ export function ProductPackshot({
   const label = alt || name;
   const monogram = getMonogram(name);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const resolvedUrl = imageUrl || resolveDefaultProductImage(name, form);
+  const resolvedUrl = imageUrl;
 
   if (resolvedUrl && failedSrc !== resolvedUrl) {
     return (

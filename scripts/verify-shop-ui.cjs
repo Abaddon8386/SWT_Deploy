@@ -379,6 +379,151 @@ function contrastRatio(fg, bg) {
       });
     };
 
+    if (process.env.SHOP_AUDIT_MATRIX) {
+      const findings = [];
+      const record = (ok, message) => { if (!ok) findings.push(message); };
+      const scenarios = [
+        { name: 'products', url: '/products', ready: '.shop-card' },
+        { name: 'detail', url: '/products/sol-whey-isolate', ready: '.shop-detail__summary' },
+        { name: 'checkout', url: '/checkout', ready: '.shop-checkout-summary', role: 'MEMBER' },
+        { name: 'member-shop', url: '/member/orders?tab=shop', ready: '.portal-shop-grid', role: 'MEMBER' },
+        { name: 'staff-orders', url: '/staff/orders', ready: '.portal-table', role: 'STAFF' },
+        { name: 'manager-products', url: '/manager/products', ready: '.portal-table', role: 'MANAGER' },
+        { name: 'manager-editor', url: '/manager/products/new', ready: '#product-name', role: 'MANAGER' },
+      ];
+      if (process.env.SHOP_AUDIT_STATES) scenarios.splice(1, scenarios.length - 1,
+        { name: 'member-orders', url: '/member/orders', ready: '.shop-status-pill', role: 'MEMBER' },
+        { name: 'member-order-detail', url: '/member/orders/42', ready: '.shop-timeline', role: 'MEMBER' },
+        { name: 'member-addresses', url: '/member/orders?tab=addresses', ready: '[aria-label="Sổ địa chỉ giao hàng"]', role: 'MEMBER' },
+        { name: 'manager-categories', url: '/manager/products?tab=categories', ready: '.portal-table', role: 'MANAGER' },
+        { name: 'staff-orders', url: '/staff/orders', ready: '.portal-table', role: 'STAFF' },
+      );
+      for (const theme of ['dark', 'light']) {
+        for (const width of (process.env.SHOP_AUDIT_WIDTHS || '320,390,768,1024,1440,1920,2560').split(',').map(Number)) {
+          const context = await browser.newContext({ viewport: { width, height: Number(process.env.SHOP_AUDIT_HEIGHT) || (width <= 390 ? 844 : 1000) }, reducedMotion: 'reduce' });
+          for (const scenario of scenarios) {
+            const page = await context.newPage();
+            page.on('pageerror', err => errors.push(err.message));
+            await attachRoutes(page, scenario.role);
+            await page.addInitScript(({ theme, role }) => {
+              localStorage.setItem('scms_theme', theme);
+              localStorage.setItem('scms_cart_v1', JSON.stringify([{ variantId: 101, quantity: 2 }, { variantId: 102, quantity: 1 }]));
+              if (role) {
+                localStorage.setItem('fitcenter_auth_session', JSON.stringify({ id: '1', identifier: 'review', name: 'Nguyễn Minh Quân', role: role === 'MANAGER' ? 'CENTER_MANAGER' : role }));
+                localStorage.setItem('fitcenter_token', 'fixture-token');
+              } else {
+                localStorage.removeItem('fitcenter_auth_session');
+                localStorage.removeItem('fitcenter_token');
+              }
+            }, { theme, role: scenario.role });
+            await page.goto(base + scenario.url);
+            await page.locator(scenario.ready).first().waitFor();
+            const label = `${scenario.name} ${theme} ${width}`;
+            const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+            record(overflow <= 1, `${label}: document overflow ${overflow}px`);
+            if ([390, 1440].includes(width)) await page.screenshot({ path: path.join(output, `${scenario.name}-${theme}-${width}.png`), fullPage: true });
+            if (process.env.SHOP_AUDIT_STATES && scenario.name === 'staff-orders') {
+              await page.getByRole('button', { name: /Mở đơn/ }).first().click();
+              const dialog = page.locator('.shop-staff-dialog');
+              await dialog.waitFor();
+              record(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1), `${label}: staff detail dialog overflows`);
+              await page.screenshot({ path: path.join(output, `staff-dialog-${theme}-${width}.png`) });
+            }
+            if (process.env.SHOP_AUDIT_STATES && scenario.name === 'member-addresses') {
+              await page.getByRole('button', { name: /Thêm địa chỉ/ }).click();
+              const dialog = page.locator('dialog');
+              await dialog.waitFor();
+              record(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1), `${label}: address dialog overflows`);
+              await page.getByLabel(/Họ tên người nhận/).fill('Nguyễn Minh Quân');
+              await page.getByLabel('Tỉnh / Thành phố').selectOption('79');
+              await page.getByLabel('Phường / Xã').selectOption('26734');
+              await page.screenshot({ path: path.join(output, `address-dialog-${theme}-${width}.png`) });
+            }
+            if (scenario.name === 'member-shop') {
+              await page.locator('.shop-card__media').first().click();
+              await page.locator('dialog .portal-shop-detail-grid').waitFor();
+              const modalOverflow = await page.locator('dialog').evaluate(el => el.scrollWidth - el.clientWidth);
+              record(modalOverflow <= 1, `${label}: product dialog overflow ${modalOverflow}px`);
+              if (width === 390) await page.screenshot({ path: path.join(output, `quick-buy-${theme}-${width}.png`) });
+              await page.keyboard.press('Escape');
+            }
+            if (scenario.name === 'products' || scenario.name === 'member-shop') {
+              const cart = page.getByRole('button', { name: /Giỏ hàng|Xem giỏ hàng/i }).first();
+              if (!await cart.count()) { record(false, `${label}: no button to edit cart`); await page.close(); continue; }
+              await cart.click();
+              await page.locator('.shop-drawer__item').first().waitFor();
+              const state = await page.locator('.shop-drawer').evaluate(el => {
+                const bounds = el.getBoundingClientRect();
+                const footer = el.querySelector('.shop-drawer__footer').getBoundingClientRect();
+                const price = el.querySelector('.shop-drawer__item-price');
+                const checkout = el.querySelector('.shop-drawer__checkout');
+                const plus = el.querySelector('.shop-stepper__input');
+                return { width: bounds.width, height: bounds.height, overflow: el.scrollWidth - el.clientWidth, footerBottom: footer.bottom,
+                  priceFits: price.getBoundingClientRect().right <= bounds.right - 12,
+                  buttonHeight: checkout.getBoundingClientRect().height,
+                  font: parseFloat(getComputedStyle(plus).fontSize),
+                  bg: getComputedStyle(checkout).backgroundColor };
+              });
+              record(state.overflow <= 1 && state.priceFits, `${label}: cart content overflows ${JSON.stringify(state)}`);
+              record(Math.abs(state.height - page.viewportSize().height) <= 1, `${label}: drawer does not fill viewport ${state.height}`);
+              record(state.buttonHeight >= 44, `${label}: checkout target ${state.buttonHeight}px`);
+              record(state.bg === 'rgb(206, 145, 128)', `${label}: checkout CTA inconsistent ${state.bg}`);
+              if (width <= 390) record(state.font >= 16, `${label}: cart input ${state.font}px`);
+              if ([390, 1440].includes(width)) await page.screenshot({ path: path.join(output, `cart-${scenario.name}-${theme}-${width}.png`) });
+              await page.keyboard.press('Escape');
+              record(await cart.evaluate(el => el === document.activeElement), `${label}: cart focus was not restored`);
+              if (process.env.SHOP_AUDIT_STATES) {
+                let quoteFails = true;
+                await page.route('**/api/v1/public/shop/quote', route => {
+                  if (quoteFails) return route.fulfill({ status: 503, json: { success: false, message: 'Không tải được báo giá đơn hàng.' } });
+                  const { items } = route.request().postDataJSON();
+                  const lines = items.map(item => ({ ...item, requestedQuantity: item.quantity, productName: 'Sản phẩm có tên rất dài để kiểm tra xuống dòng trên màn hình nhỏ', variantLabel: 'Hương vị và quy cách đóng gói có nội dung dài', slug: productDetail.slug, imageUrl: null, unitPrice: 1290000, stock: 20, lineTotal: 1290000 * item.quantity, problem: null }));
+                  return route.fulfill({ json: { success: true, data: { lines, subtotal: lines.reduce((sum, line) => sum + line.lineTotal, 0), shippingFee: 0, total: lines.reduce((sum, line) => sum + line.lineTotal, 0), valid: true } } });
+                });
+                await cart.click();
+                await page.locator('.shop-drawer__error').waitFor();
+                record(await page.locator('.shop-drawer__checkout').isDisabled(), `${label}: checkout enabled after quote failure`);
+                await page.screenshot({ path: path.join(output, `cart-error-${theme}-${width}.png`) });
+                quoteFails = false;
+                await page.locator('.shop-drawer').getByRole('button', { name: 'Thử lại' }).click();
+                await page.locator('.shop-drawer__item').first().waitFor();
+                await page.evaluate(() => {
+                  const lines = Array.from({ length: 30 }, (_, i) => ({ variantId: i + 1, quantity: 20 }));
+                  localStorage.setItem('scms_cart_v1', JSON.stringify(lines));
+                  dispatchEvent(new StorageEvent('storage', { key: 'scms_cart_v1' }));
+                });
+                await page.waitForFunction(() => document.querySelectorAll('.shop-drawer__item').length === 30);
+                record(await page.locator('.shop-drawer').evaluate(el => el.scrollWidth <= el.clientWidth + 1), `${label}: long cart content overflows`);
+                await page.locator('.shop-drawer__item').last().scrollIntoViewIfNeeded();
+                if (page.viewportSize().height <= 520) {
+                  const quantity = page.locator('.shop-drawer__item').last().locator('.shop-stepper');
+                  await quantity.scrollIntoViewIfNeeded();
+                  record(await quantity.evaluate(el => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), `${label}: short viewport clips quantity controls`);
+                  await page.locator('.shop-drawer__checkout').scrollIntoViewIfNeeded();
+                }
+                record(await page.locator('.shop-drawer__checkout').evaluate(el => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), `${label}: checkout is hidden with a long cart`);
+                await page.screenshot({ path: path.join(output, `cart-many-${theme}-${width}.png`) });
+                await page.evaluate(() => {
+                  localStorage.setItem('scms_cart_v1', '[]');
+                  dispatchEvent(new StorageEvent('storage', { key: 'scms_cart_v1' }));
+                });
+                await page.locator('.shop-drawer__empty').waitFor();
+                record(await page.locator('.shop-drawer__footer').count() === 0, `${label}: empty cart has a checkout footer`);
+                await page.screenshot({ path: path.join(output, `cart-empty-${theme}-${width}.png`) });
+              }
+            }
+            await page.close();
+          }
+          await context.close();
+          console.log(`AUDIT ${theme} ${width}px complete`);
+        }
+      }
+      fs.writeFileSync(path.join(output, 'findings.json'), JSON.stringify({ findings, errors }, null, 2));
+      console.log(JSON.stringify({ findings, errors }, null, 2));
+      assert.equal(findings.length + errors.length, 0, 'Shop audit findings must be resolved');
+      return;
+    }
+
     // (1) Responsive matrix & themes: 390x844, 768, 1440, 1920 + dark/light
     for (const theme of ['dark', 'light']) {
       for (const width of [390, 768, 1440, 1920]) {

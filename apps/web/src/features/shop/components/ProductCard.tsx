@@ -23,13 +23,14 @@ export function ProductCard({
       : formatVnd(product.minPrice);
   const ppsText = pricePerServingLabel(product.pricePerServing);
   const needsVariantChoice =
-    Boolean(product.variantCount && product.variantCount > 1 && !product.defaultVariantId && !onAdd);
+    !product.defaultVariantId && !onAdd;
 
   const handleAdd = () => {
     if (onAdd) {
       onAdd(product);
     } else {
-      addToCart(product.defaultVariantId ?? product.id, 1);
+      if (!product.defaultVariantId) return;
+      addToCart(product.defaultVariantId, 1);
     }
     toast.success('Đã thêm vào giỏ');
   };

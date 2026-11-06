@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -8,6 +8,7 @@ import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { useCart } from './cart';
 import { MemberAddressBook } from './components/MemberAddressBook';
 import { MemberShopCatalog } from './components/MemberShopCatalog';
+import { CartDrawer } from './components/CartDrawer';
 import { OrderStatusPill } from './components/OrderStatusPill';
 import './shop-portal.css';
 import { shopApi } from './shopApi';
@@ -27,7 +28,12 @@ export function MemberOrdersPage({
 }: {
   defaultTab?: 'orders' | 'shop' | 'addresses';
 } = {}) {
-  const navigate = useNavigate();
+  const [cartOpen, setCartOpen] = useState(false);
+  const cartFocusRef = useRef<HTMLElement | null>(null);
+  const openCart = () => {
+    cartFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setCartOpen(true);
+  };
   const cartLines = useCart();
   const cartCount = cartLines.reduce((sum, l) => sum + l.quantity, 0);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -86,15 +92,17 @@ export function MemberOrdersPage({
         title={activeTab === 'shop' ? 'Sản phẩm' : 'Đơn hàng'}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Link
-              to="/checkout"
+            <button
+              type="button"
+              onClick={openCart}
               className="shop-cart-btn"
+              aria-expanded={cartOpen}
               aria-label={`Giỏ hàng · ${cartCount} sản phẩm`}
               style={{ textDecoration: 'none', fontSize: 13, fontWeight: 600 }}
             >
               <span>Giỏ hàng</span>
               {cartCount > 0 && <span className="shop-cart-badge">{cartCount}</span>}
-            </Link>
+            </button>
             {activeTab === 'orders' && (
               <RefreshButton
                 label="Làm mới đơn hàng"
@@ -139,7 +147,7 @@ export function MemberOrdersPage({
       {activeTab === 'addresses' ? (
         <MemberAddressBook />
       ) : activeTab === 'shop' ? (
-        <MemberShopCatalog onOpenCart={() => navigate('/checkout')} />
+        <MemberShopCatalog onOpenCart={openCart} />
       ) : (
         <section className="stack" aria-label="Danh sách đơn hàng">
           <div className="portal-tabs" aria-label="Lọc trạng thái đơn hàng">
@@ -264,6 +272,7 @@ export function MemberOrdersPage({
           )}
         </section>
       )}
+      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} returnFocusRef={cartFocusRef} />}
     </div>
   );
 }

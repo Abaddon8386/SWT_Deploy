@@ -150,7 +150,7 @@ export function CategoryManager() {
           <p style={{ margin: 0 }}>Chưa có loại sản phẩm nào.</p>
         </div>
       ) : (
-        <div className="portal-table-wrap">
+        <div className="portal-table-wrapper" role="region" aria-label="Danh mục sản phẩm" tabIndex={0}>
           <table className="portal-table">
             <thead>
               <tr>

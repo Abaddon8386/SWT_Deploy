@@ -23,6 +23,7 @@ const fixtures = {
   '/chat/realtime-session': { enabled: false, userId: 1 }, '/chat/unread-count': { count: 0 },
   '/wallet/my': { balance: 0, updatedAt: now, transactions: [] },
   '/memberships/trial/status': { eligible: false, alreadyClaimed: true, cccd: null, fullName: null, redeemedAt: null, subscriptionId: 1 },
+  '/reception/trials': [],
   '/court-bookings/my': { content: [], number: 0, totalPages: 0, totalElements: 0 },
   '/coach-bookings/unpaid': [],
   '/staff-accounts': [{ id: 2, fullName: 'Trần Minh', email: 'coach@example.test', roleCode: 'COACH', status: 'active' }],

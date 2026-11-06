@@ -46,6 +46,12 @@ afterEach(async () => {
 });
 
 describe('ProductCard', () => {
+  it('uses a packshot when no real photo exists and requires a real variant ID to add', async () => {
+    await act(async () => root.render(<MemoryRouter><ProductCard product={{ ...baseProduct, defaultVariantId: null }} /></MemoryRouter>));
+    expect(host.querySelector('.shop-packshot__svg')).not.toBeNull();
+    expect(host.querySelector('a.shop-card__cta')?.textContent).toBe('Chọn loại');
+    expect(getCart()).toEqual([]);
+  });
   it('shows price per serving, real badges, adds to cart and triggers toast', async () => {
     await act(async () =>
       root.render(

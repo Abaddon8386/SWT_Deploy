@@ -9,6 +9,7 @@ import { VnpayPayButton } from '../payments/VnpayPayButton';
 import type { VnpayTarget } from '../payments/vnpayApi';
 import { clearCart, useCart, type CartLine } from './cart';
 import { AddressPicker } from './components/AddressPicker';
+import { CartDrawer } from './components/CartDrawer';
 import { ShopDisclaimer } from './components/ShopDisclaimer';
 import { shopApi } from './shopApi';
 import { formatVnd } from './shopFormat';
@@ -87,6 +88,10 @@ export function CheckoutPage() {
   const [quote, setQuote] = useState<QuoteDto | null>(null);
   const [loadingInit, setLoadingInit] = useState(true);
   const [quoting, setQuoting] = useState(false);
+  const [quoteError, setQuoteError] = useState('');
+  const [cartOpen, setCartOpen] = useState(false);
+  const cartFocusRef = useRef<HTMLButtonElement | null>(null);
+  const quoteRequestRef = useRef(0);
   const [orderError, setOrderError] = useState('');
   const [counterBusy, setCounterBusy] = useState(false);
 
@@ -100,19 +105,25 @@ export function CheckoutPage() {
 
   async function refreshQuote(itemsToQuote: CartLine[], currentFulfillment: FulfillmentMethod) {
     if (itemsToQuote.length === 0) return null;
+    const request = ++quoteRequestRef.current;
     setQuoting(true);
+    setQuoteError('');
     try {
       const q = await shopApi.quote({
         items: itemsToQuote.map(l => ({ variantId: l.variantId, quantity: l.quantity })),
         fulfillment: currentFulfillment,
       });
+      if (request !== quoteRequestRef.current) return null;
       setQuote(q);
       return q;
     } catch (err) {
-      setOrderError(errorMessage(err, 'Không tải được báo giá đơn hàng.'));
+      if (request === quoteRequestRef.current) {
+        setQuote(null);
+        setQuoteError(errorMessage(err, 'Không tải được báo giá đơn hàng.'));
+      }
       return null;
     } finally {
-      setQuoting(false);
+      if (request === quoteRequestRef.current) setQuoting(false);
     }
   }
 
@@ -157,6 +168,7 @@ export function CheckoutPage() {
   useEffect(() => {
     if (!user || user.role !== 'MEMBER' || cartLines.length === 0) return;
     void refreshQuote(cartLines, fulfillment);
+    return () => { quoteRequestRef.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.role, cartLines, fulfillment]);
 
@@ -447,9 +459,11 @@ export function CheckoutPage() {
                 </div>
               </div>
 
-              <aside className="shop-checkout-summary shop-checkout-card" aria-label="Tóm tắt đơn hàng">
+              <aside className="shop-checkout-summary shop-checkout-card" aria-label="Tóm tắt đơn hàng" aria-busy={quoting}>
                 <h2>Đơn hàng</h2>
-                {quote && (
+                {quoting && <p role="status">Đang cập nhật báo giá…</p>}
+                {quoteError && <div role="alert"><p>{quoteError}</p><button type="button" className="btn-secondary" onClick={() => void refreshQuote(cartLines, fulfillment)}>Thử lại</button></div>}
+                {quote && !quoting && (
                   <ul className="shop-checkout-items">
                     {quote.lines.map(line => (
                       <li key={line.variantId} className="shop-checkout-item">
@@ -464,19 +478,21 @@ export function CheckoutPage() {
                     ))}
                   </ul>
                 )}
+                {quote && !quote.valid && <p className="form-error" role="alert">Giỏ hàng có sản phẩm không còn bán hoặc không đủ tồn kho. Vui lòng sửa giỏ hàng để tiếp tục.</p>}
+                <button ref={cartFocusRef} type="button" className="btn-secondary" onClick={() => setCartOpen(true)}>Sửa giỏ hàng</button>
 
                 <div className="shop-checkout-totals">
                   <div className="shop-checkout-row">
                     <span>Tạm tính</span>
-                    <span>{formatVnd(quote?.subtotal ?? 0)}</span>
+                    <span>{quote && !quoting ? formatVnd(quote.subtotal) : '—'}</span>
                   </div>
                   <div className="shop-checkout-row">
                     <span>Phí giao</span>
-                    <span>{formatVnd(quote?.shippingFee ?? 0)}</span>
+                    <span>{quote && !quoting ? formatVnd(quote.shippingFee) : '—'}</span>
                   </div>
                   <div className="shop-checkout-row shop-checkout-row--total">
                     <strong>Tổng cộng</strong>
-                    <strong>{formatVnd(quote?.total ?? 0)}</strong>
+                    <strong aria-live="polite">{quote && !quoting ? formatVnd(quote.total) : '—'}</strong>
                   </div>
                 </div>
 
@@ -486,6 +502,7 @@ export function CheckoutPage() {
           )}
         </section>
       </main>
+      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} returnFocusRef={cartFocusRef} />}
     </PublicLayout>
   );
 }

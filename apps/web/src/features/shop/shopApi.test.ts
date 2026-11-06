@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as client from '../../shared/api/client';
 import { shopApi } from './shopApi';
 
@@ -7,6 +7,20 @@ vi.mock('../../shared/api/client', () => ({
 }));
 
 describe('shopApi', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('keeps empty catalogs and propagates failures in production instead of inventing products or quotes', async () => {
+    vi.stubEnv('MODE', 'production');
+    const empty = { content: [], number: 0, size: 12, totalElements: 0, totalPages: 0 };
+    vi.mocked(client.apiFetch).mockResolvedValue(empty);
+    expect(await shopApi.listProducts()).toEqual(empty);
+    expect(await shopApi.manager.listProducts()).toEqual(empty);
+    vi.mocked(client.apiFetch).mockRejectedValue(new Error('Offline'));
+    await expect(shopApi.listProducts()).rejects.toThrow('Offline');
+    await expect(shopApi.getProduct('sol-whey-isolate')).rejects.toThrow('Offline');
+    await expect(shopApi.quote({ items: [{ variantId: 101, quantity: 1 }], fulfillment: 'pickup' })).rejects.toThrow('Offline');
+    await expect(shopApi.manager.getProduct(1)).rejects.toThrow('Offline');
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(client.apiFetch).mockResolvedValue(null);
