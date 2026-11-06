@@ -61,8 +61,6 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   return false;
 }
 
-export { isTrialPackage };
-
 export function MemberPackagesPage() {
   const [searchParams] = useSearchParams();
   const selectedId = selectedPackageId(searchParams.toString());
