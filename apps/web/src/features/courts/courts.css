@@ -1,6 +1,8 @@
 .court-page { min-width: 0; }
 .court-filters { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
 .court-filters .portal-form-group { width: min(100%, 260px); margin: 0; }
+.court-section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.court-section-header .portal-card-title { margin: 0; }
 .court-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 20px; margin-top: 16px; }
 .court-card { min-width: 0; }
 .court-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin-top: 16px; }

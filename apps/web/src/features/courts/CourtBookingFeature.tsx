@@ -76,13 +76,16 @@ export function CourtBookingFeature() {
   };
 
   return <div className="portal-container court-page">
-    <PageHeader eyebrow="Hội viên" title="Đặt sân" actions={<RefreshButton label="Làm mới lịch sân" disabled={loading || busy} onClick={reload} />} />
+    <PageHeader eyebrow="Hội viên" title="Đặt sân" />
     <div className="portal-tabs" aria-label="Bộ môn có sân">
       {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`portal-tab ${item.name === discipline ? 'active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
     </div>
     <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">Ngày đặt</span><input id="court-date" type="date" className="portal-input" min={today} value={date} onChange={event => setDate(event.target.value)} /></label></div>
     <section aria-labelledby="court-grid-title">
-      <h2 id="court-grid-title" className="portal-card-title" tabIndex={-1} ref={gridHeading}>Khung giờ theo sân</h2>
+      <div className="court-section-header">
+        <h2 id="court-grid-title" className="portal-card-title" tabIndex={-1} ref={gridHeading}>Khung giờ theo sân</h2>
+        <RefreshButton variant="bare" label="Làm mới lịch sân" disabled={loading || busy} onClick={reload} className={loading ? 'is-loading' : ''} />
+      </div>
       {!validDate ? <p role="alert">Chọn ngày từ hôm nay trở đi.</p> : loading ? <LoadingSkeleton label="Đang tải sân" variant="cards" count={2} /> : error ? <CourtLoadError message={error} retry={reload} /> : !rows.length ? <div className="portal-card portal-state">Chưa có sân cho bộ môn này</div> : <div className="court-grid">
         {rows.map(({ court, slots }) => <article className="portal-card court-card" key={court.id}>
           <h3 className="portal-card-title">{court.name}</h3>

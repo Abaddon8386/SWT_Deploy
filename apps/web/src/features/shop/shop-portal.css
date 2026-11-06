@@ -418,6 +418,10 @@
 
 /* Keep shop actions comfortable on touch screens without changing other portals. */
 .portal-v2 .shop-tabs { gap: 8px; }
+/* Hàng tab + nút làm mới đơn hàng (chỉ icon) sát mép phải của thanh tab; viền dưới chuyển ra hàng bọc ngoài. */
+.portal-v2 .shop-tabs-row { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--portal-border); }
+.portal-v2 .shop-tabs-row > .shop-tabs { margin-bottom: 0; border-bottom: 0; }
+.portal-v2 .shop-tabs-row > .refresh-button { margin-left: auto; }
 .portal-v2 .shop-tabs .portal-tab { min-height: 44px; }
 
 .portal-v2 .shop-checkbox,
@@ -600,20 +604,36 @@
   cursor: not-allowed;
 }
 
+/* Giỏ hàng nằm cùng hàng với cụm thao tác nổi của topbar: cùng mép trên, cùng chiều cao 44px và kiểu viền. */
+.portal-v2 .portal-header__actions:has(> .shop-cart-btn) {
+  align-self: flex-start;
+  align-items: center;
+}
+
 .portal-v2 .shop-cart-btn {
   position: relative;
+  box-sizing: border-box;
+  height: 44px;
   min-width: 44px;
-  min-height: 44px;
-  padding: 0 14px;
+  padding: 0 18px;
   border-radius: 999px;
-  border: 1px solid var(--portal-border-strong);
-  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
+  background: var(--portal-surface);
   color: var(--portal-paper);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  font: 600 13px/1 var(--font-sans);
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.portal-v2 .shop-cart-btn:hover {
+  border-color: var(--portal-salmon);
+  background: var(--portal-tint);
 }
 
 .portal-v2 .shop-cart-badge {

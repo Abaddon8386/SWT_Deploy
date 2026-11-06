@@ -91,29 +91,20 @@ export function MemberOrdersPage({
         eyebrow="Hội viên"
         title={activeTab === 'shop' ? 'Sản phẩm' : 'Đơn hàng'}
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              type="button"
-              onClick={openCart}
-              className="shop-cart-btn"
-              aria-expanded={cartOpen}
-              aria-label={`Giỏ hàng · ${cartCount} sản phẩm`}
-              style={{ textDecoration: 'none', fontSize: 13, fontWeight: 600 }}
-            >
-              <span>Giỏ hàng</span>
-              {cartCount > 0 && <span className="shop-cart-badge">{cartCount}</span>}
-            </button>
-            {activeTab === 'orders' && (
-              <RefreshButton
-                label="Làm mới đơn hàng"
-                disabled={loading}
-                onClick={() => void loadOrders()}
-              />
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={openCart}
+            className="shop-cart-btn"
+            aria-expanded={cartOpen}
+            aria-label={`Giỏ hàng · ${cartCount} sản phẩm`}
+          >
+            <span>Giỏ hàng</span>
+            {cartCount > 0 && <span className="shop-cart-badge">{cartCount}</span>}
+          </button>
         }
       />
 
+      <div className="shop-tabs-row">
       <div className="portal-tabs shop-tabs" role="tablist" aria-label="Quản lý sản phẩm, đơn hàng và địa chỉ">
         <button
           type="button"
@@ -142,6 +133,16 @@ export function MemberOrdersPage({
         >
           Địa chỉ giao hàng
         </button>
+      </div>
+        {activeTab === 'orders' && (
+          <RefreshButton
+            variant="bare"
+            label="Làm mới đơn hàng"
+            disabled={loading}
+            className={loading ? 'is-loading' : ''}
+            onClick={() => void loadOrders()}
+          />
+        )}
       </div>
 
       {activeTab === 'addresses' ? (

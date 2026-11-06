@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearCart, getCart } from '../cart';
+import { formatVnd } from '../shopFormat';
 import type { ProductSummaryDto } from '../shopTypes';
 import { ProductCard } from './ProductCard';
 
@@ -103,7 +104,8 @@ describe('ProductCard', () => {
       ),
     );
 
-    expect(host.textContent).toContain('Từ ');
+    expect(host.textContent).toContain(formatVnd(baseProduct.minPrice));
+    expect(host.textContent).not.toContain('Từ ');
     const ctaLink = host.querySelector('a.shop-card__cta')!;
     expect(ctaLink.textContent).toBe('Chọn loại');
     expect(ctaLink.getAttribute('href')).toBe('/products/sol-whey-isolate');
