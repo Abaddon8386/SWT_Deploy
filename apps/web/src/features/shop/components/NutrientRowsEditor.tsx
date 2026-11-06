@@ -127,7 +127,7 @@ export function NutrientRowsEditor({
 
       <div className="shop-nutrient-editor">
         <div className="portal-table-wrapper" role="region" aria-label="Biên tập thành phần dinh dưỡng" tabIndex={0}>
-          <table className="portal-table">
+          <table className="portal-table shop-editor-table">
             <thead>
               <tr>
                 <th scope="col">Tên chất</th>
@@ -200,22 +200,26 @@ export function NutrientRowsEditor({
                       />
                     </td>
                     <td>
-                      <input
-                        type="checkbox"
-                        aria-label={`Hàng con chất ${idx + 1}`}
-                        checked={row.subRow}
-                        disabled={disabled}
-                        onChange={e => updateRow(idx, { subRow: e.target.checked })}
-                      />
+                      <label className="shop-checkbox-target">
+                        <input
+                          type="checkbox"
+                          aria-label={`Hàng con chất ${idx + 1}`}
+                          checked={row.subRow}
+                          disabled={disabled}
+                          onChange={e => updateRow(idx, { subRow: e.target.checked })}
+                        />
+                      </label>
                     </td>
                     <td>
-                      <input
-                        type="checkbox"
-                        aria-label={`Nổi bật chất ${idx + 1}`}
-                        checked={row.highlight}
-                        disabled={disabled}
-                        onChange={e => toggleHighlight(idx, e.target.checked)}
-                      />
+                      <label className="shop-checkbox-target">
+                        <input
+                          type="checkbox"
+                          aria-label={`Nổi bật chất ${idx + 1}`}
+                          checked={row.highlight}
+                          disabled={disabled}
+                          onChange={e => toggleHighlight(idx, e.target.checked)}
+                        />
+                      </label>
                     </td>
                     <td>
                       <button

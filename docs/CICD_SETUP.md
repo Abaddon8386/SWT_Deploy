@@ -1,5 +1,35 @@
 # CI/CD: GitHub Actions → Vercel + Render
 
+## Bộ env tối thiểu cho repo này
+
+| Đặt ở đâu | File example | Nội dung |
+| --- | --- | --- |
+| Vercel → Environment Variables → Production | [`apps/web/.env.production.example`](../apps/web/.env.production.example) | `VITE_API_BASE_URL=/api/v1` (có thể bỏ vì code đã mặc định). |
+| Render → Environment | [`apps/api/.env.render.example`](../apps/api/.env.render.example) | Kết nối Supabase, JWT secret, profile và origin frontend. |
+| GitHub → Secrets and variables → Actions | [`.github/.env.actions.example`](../.github/.env.actions.example) | 5 Repository Secrets mà `cd.yml` đang đọc. |
+
+Các file chỉ là mẫu tham khảo để nhập giá trị vào dashboard; hosting/Actions không tự đọc
+file có đuôi `.example`. Không ghi credential thật vào các file này.
+
+Thiết lập Vercel: **Root Directory `apps/web`**, preset **Vite**, build **`npm run build`**,
+output **`dist`**. Render: **Docker**, Root Directory **`apps/api`**, Dockerfile **`./Dockerfile`**;
+giữ Docker Command mặc định để image dùng `PORT` của Render.
+
+Luồng API dùng cùng origin: trình duyệt gọi `/api/v1` trên Vercel, rewrite trong
+`apps/web/vercel.json` chuyển tới `https://swp391-u1fs.onrender.com/api/v1`.
+Nếu dùng service Render khác, phải sửa `destination` của rewrite rồi deploy lại.
+Đặt `APP_CORS_ALLOWED_ORIGINS` và `APP_WEB_ORIGIN` bằng domain HTTPS Vercel thực tế,
+không có path hoặc dấu `/` cuối. Không cần đưa thông tin database/JWT lên Vercel.
+
+Bộ tối thiểu chỉ phục vụ khởi chạy ứng dụng và CI/CD. Để đăng ký/quên mật khẩu gửi được
+OTP, bật thêm block SMTP trong mẫu Render; nếu chưa cấu hình, gửi OTP trả HTTP 503.
+Database mới có thể tạo admin đầu tiên bằng hai biến bootstrap được chú thích trong mẫu.
+Google login, realtime, AI và VNPay chỉ cấu hình khi cần tính năng tương ứng.
+
+Sau khi nhập env, tắt auto-deploy production trên Render/Vercel theo mục 2–3 để Actions
+điều phối; push `main` chạy **CI → CD Render → CD Vercel**. Thiếu Secrets của nền tảng nào
+thì CD bỏ qua nền tảng đó. Nên đặt thêm Variable `FRONTEND_URL` để bật kiểm tra web sau deploy.
+
 Repo có hai workflow trong tab **Actions**:
 
 - **CI** (`ci.yml`): tự kiểm tra code mỗi khi push hoặc mở PR — test/lint/build frontend, kiểm tra cấu hình database và test backend.
@@ -16,7 +46,8 @@ Quy tắc an toàn:
 - CD deploy đúng commit (SHA) mà CI vừa kiểm tra.
 - Backend deploy hoặc health check lỗi thì frontend **không** được deploy.
 - Có commit mới trên `main` thì CI cũ bị hủy nên không kích hoạt CD; các lần CD xếp hàng chạy lần lượt, không chạy song song.
-- Workflow không tự rollback; lỗi thì job đỏ, xem dashboard Render/Vercel để xử lý.
+- Có rollback tự động khi bản mới đã chạy nhưng không khỏe (xem mục **Rollback tự động**). Build/deploy lỗi thì
+  Render giữ bản cũ; mọi trường hợp lỗi job đều đỏ để nhóm vào dashboard Render/Vercel kiểm tra.
 
 ## Dùng lại cho dự án React + Spring Boot khác
 
@@ -130,6 +161,27 @@ biến này ở GitHub hiện chưa làm CI chạy test trên database thật.
 - Cả hai HTTP check thử tối đa 12 lần, nghỉ 5 giây giữa các lần. Đây chỉ là kiểm tra khả năng
   phản hồi; endpoint health chưa công bố SHA hay kiểm tra database.
 - Backend mới vẫn cần tương thích với frontend cũ trong thời gian chuyển phiên bản.
+
+## Rollback tự động
+
+Không cần thêm secret hay variable mới: dùng lại `RENDER_API_KEY`, `RENDER_SERVICE_ID`, `VERCEL_TOKEN`,
+`VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` đã có.
+
+| Phần | Khi nào chạy | Làm gì |
+| --- | --- | --- |
+| Backend (Render) | Bản mới đã `live` nhưng health check `/api/v1/health` không trả `UP` sau 12 lần thử | Trước khi deploy, CD ghi lại deploy đang `live`; khi lỗi, gọi `POST /v1/services/{id}/rollback` với `deployId` đó, chờ tối đa 10 phút tới khi `live`, rồi health check lại. |
+| Frontend (Vercel) | Trang chủ ở `FRONTEND_URL` không phản hồi sau khi deploy | Chạy `vercel rollback` về bản production ngay trước đó (gói Hobby chỉ lùi được 1 bản). |
+
+Lưu ý:
+
+- Job luôn báo **đỏ** sau khi rollback để nhóm biết có sự cố. Backend lỗi thì frontend không được deploy.
+- Build lỗi hoặc deploy thất bại: Render giữ bản cũ đang chạy, không cần rollback.
+- Frontend chỉ tự rollback khi đã đặt Variable `FRONTEND_URL`; nếu không có thì không có tín hiệu lỗi.
+- Rollback chỉ đưa code về bản cũ, không đưa database về cũ (`ddl-auto: update` chỉ thêm). Thay đổi entity phải tương thích ngược.
+- Commit lỗi vẫn nằm trên `main`: `git revert` rồi push, nếu không lần push sau sẽ deploy lại bản lỗi.
+- Nếu không có deploy `live` trước đó (service mới), CD chỉ ghi cảnh báo và không rollback được.
+- Phần Render đã được kiểm tra với API giả (3 tình huống: health lỗi, bình thường, build lỗi), chưa chạy trên service thật.
+  Phần Vercel chưa chạy thật; nên thử một lần bằng commit cố ý làm health check hoặc trang chủ lỗi.
 
 ## 4. Đưa workflow lên GitHub
 

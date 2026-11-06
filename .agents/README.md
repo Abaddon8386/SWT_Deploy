@@ -2,7 +2,7 @@
 
 Bất kỳ AI Agent nào khi tham gia phát triển dự án này PHẢI đọc và tuân thủ:
 1. `../AGENTS.md` (root) và `rules/mandatory-rules.md`: Bất biến kiến trúc, phân vai squad, và cấm hard-code.
-2. `../rules/backend-architecture.md`: Chuẩn mực 3 lớp, SOLID, IoC, Code-First & ORM Polymorphism, và i18n.
+2. `../docs/rules/backend-architecture.md`: Chuẩn mực 3 lớp, SOLID, IoC, Code-First & ORM Polymorphism, và i18n.
 3. `workflows/scms-development.md`: Quy trình 6 bước chuẩn mực để triển khai ticket.
 
 Do not treat files in this directory as product runtime code.

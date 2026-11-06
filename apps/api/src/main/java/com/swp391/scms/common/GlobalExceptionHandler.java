@@ -228,6 +228,11 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(courtStatus).body(
                         ApiResponse.error(courtStatus.value(), courtCode, resolveMessage(key, key)));
             }
+            if (normalizedRootMsg.contains("trg_coach_bookings_rest_required")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "COACH_REST_REQUIRED",
+                                resolveMessage("error.coach_booking.rest_required", "error.coach_booking.rest_required")));
+            }
             if (normalizedRootMsg.contains("trg_pt_schedule_busy")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULE_UPDATE_IN_PROGRESS",

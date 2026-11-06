@@ -219,4 +219,58 @@ class VnpayPaymentServiceTest {
         var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> guard.productOrder(9L));
         assertEquals("VNPAY_AWAITING_CONFIRMATION", ex.getErrorCode());
     }
+
+    @Test void anotherMembersProductOrderIsUnavailableAndNeverLocked() {
+        var ordersRepo = mock(com.swp391.scms.shop.repository.ProductOrderRepository.class);
+        var orderPayments = mock(com.swp391.scms.shop.service.ProductOrderPayments.class);
+        var order = new com.swp391.scms.shop.entity.ProductOrder();
+        order.setId(9L); order.setMember(payment.getMember()); order.setStatus("pending_payment"); order.setPaymentMethod("online");
+        when(ordersRepo.findById(9L)).thenReturn(Optional.of(order));
+        service.setOrders(ordersRepo); service.setOrderPayments(orderPayments);
+        var other = new AuthenticatedPrincipal(8L, "other", "MEMBER");
+        var request = new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 9L);
+        var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.checkout(other, request, "127.0.0.1"));
+        assertEquals("VNPAY_TARGET_UNAVAILABLE", ex.getErrorCode());
+        when(ordersRepo.findById(10L)).thenReturn(Optional.empty());
+        var missing = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.checkout(other, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 10L), "127.0.0.1"));
+        assertEquals(ex.getErrorCode(), missing.getErrorCode());
+        verify(orderPayments, never()).requirePayable(any());
+        verify(members, never()).findByUserIdForUpdate(8L);
+    }
+    @Test void lateSuccessForACancelledOrderIsRefundedToTheWallet() {
+        var ordersRepo = mock(com.swp391.scms.shop.repository.ProductOrderRepository.class);
+        var refunds = mock(com.swp391.scms.shop.service.ProductOrderRefunds.class);
+        var order = new com.swp391.scms.shop.entity.ProductOrder();
+        order.setId(9L); order.setCode("SOL-261103-ABCD"); order.setMember(payment.getMember()); order.setStatus("cancelled");
+        when(ordersRepo.findByIdForUpdate(9L)).thenReturn(Optional.of(order));
+        when(ordersRepo.findById(9L)).thenReturn(Optional.of(order));
+        payment.setSubscriptionId(null); payment.setProductOrderId(9L); payment.setStatus("failed");
+        var closed=new VnpayTransaction("ABC123",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,0),LocalDateTime.of(2026,11,3,11,15),"127.0.0.1");
+        closed.setStatus("failed"); when(transactions.findById("ABC123")).thenReturn(Optional.of(closed));
+        service.setOrders(ordersRepo); service.setOrderRefunds(refunds);
+
+        assertEquals("00", service.ipn(callback("00","00","65000000")));
+        assertEquals("success", closed.getStatus()); assertEquals("12345", closed.getGatewayTransactionNo());
+        verify(refunds).refundLatePayment(order, payment, new BigDecimal("650000"), "ABC123");
+        verify(notifications).send(eq(7L), any(), any(), eq("order"), eq("product_order"), eq(9L), eq("/member/orders/9"));
+        verifyNoInteractions(settlement, invoices);
+
+        // A repeated callback finds the attempt already settled and refunds nothing more.
+        assertEquals("02", service.ipn(callback("00","00","65000000")));
+        verify(refunds, times(1)).refundLatePayment(any(), any(), any(), any());
+    }
+    @Test void lateFailureForACancelledOrderChangesNothing() {
+        var ordersRepo = mock(com.swp391.scms.shop.repository.ProductOrderRepository.class);
+        var refunds = mock(com.swp391.scms.shop.service.ProductOrderRefunds.class);
+        var order = new com.swp391.scms.shop.entity.ProductOrder();
+        order.setId(9L); order.setMember(payment.getMember()); order.setStatus("cancelled");
+        when(ordersRepo.findByIdForUpdate(9L)).thenReturn(Optional.of(order));
+        when(ordersRepo.findById(9L)).thenReturn(Optional.of(order));
+        payment.setSubscriptionId(null); payment.setProductOrderId(9L); payment.setStatus("failed");
+        service.setOrders(ordersRepo); service.setOrderRefunds(refunds);
+        assertEquals("02", service.ipn(callback("24","02","65000000")));
+        verifyNoInteractions(refunds, settlement, invoices);
+        assertNull(transaction.getGatewayTransactionNo());
+    }
 }

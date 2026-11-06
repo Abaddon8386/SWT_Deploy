@@ -40,6 +40,14 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
 
     @Test
+    void coachRestTriggerReturnsConflict() {
+        var response = new GlobalExceptionHandler().handleDataIntegrity(
+                new DataIntegrityViolationException("ERROR: trg_coach_bookings_rest_required"));
+        org.junit.jupiter.api.Assertions.assertEquals(409, response.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("COACH_REST_REQUIRED", response.getBody().getCode());
+    }
+
+    @Test
     void scheduleContentionReturnsRetryableConflict() {
         var response = new GlobalExceptionHandler().handleDataIntegrity(
                 new DataIntegrityViolationException("trg_pt_schedule_busy"));

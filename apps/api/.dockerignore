@@ -24,3 +24,8 @@ target/
 # File hệ điều hành.
 **/.DS_Store
 **/Thumbs.db
+
+# Local analysis output
+graphify-out/
+.graphify/
+.graphify_*

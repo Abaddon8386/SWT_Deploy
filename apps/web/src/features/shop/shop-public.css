@@ -174,7 +174,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 4px;
+  gap: 8px;
   width: max-content;
   max-width: 100%;
   padding: 4px;
@@ -189,7 +189,7 @@
   color: var(--fit-muted);
   border-radius: 24px;
   padding: 10px 20px;
-  min-height: 40px;
+  min-height: 44px;
   font-size: 12px;
   font-weight: 700;
   transition: background-color 180ms var(--fit-ease-out), color 180ms var(--fit-ease-out);
@@ -1331,6 +1331,22 @@
 .fit-site .shop-address-picker {
   display: grid;
   gap: 12px;
+}
+
+.fit-site .shop-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.fit-site .shop-checkbox input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--fit-salmon);
 }
 
 .fit-site .shop-address-option {

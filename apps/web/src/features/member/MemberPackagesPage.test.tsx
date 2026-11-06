@@ -821,4 +821,38 @@ describe('SCRUM-86 packages', () => {
     await act(async () => host.querySelector<HTMLButtonElement>('button[title="Tải lại trạng thái"]')?.click());
     expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(false);
   });
+
+
+  it('excludes trial packages from the purchasable catalog grid', async () => {
+    const trialPkg = {
+      id: 999,
+      name: 'Gói Trải Nghiệm 3 Ngày',
+      description: 'GÓI TRẢI NGHIỆM',
+      price: 0,
+      durationDays: 3,
+      classCreditLimit: 3,
+      status: 'active',
+    };
+    api.packages.mockResolvedValue([membershipPackage, higherPackage, trialPkg]);
+    await render();
+
+    const grid = host.querySelector('.grid-3');
+    expect(grid).not.toBeNull();
+    // Grid must contain regular packages but must NOT render trial package as a purchasable card
+    expect(grid?.textContent).toContain('Essential');
+    expect(grid?.textContent).toContain('VIP Sanctuary');
+    expect(grid?.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày');
+    expect(grid?.textContent).not.toContain('0 đ / 3 ngày');
+  });
+
+  it('hides trial horizontal banner if member has existing subscriptions in history', async () => {
+    trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
+    api.current.mockResolvedValue(null);
+    api.history.mockResolvedValue([{ ...pending, id: 88, status: 'expired' }]);
+    await render();
+
+    // Banner should NOT be visible because user has membership history
+    expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày miễn phí');
+    expect(button('Nhận 3 ngày tập miễn phí')).toBeUndefined();
+  });
 });

@@ -93,7 +93,8 @@ public class ProductOrderPayments {
                     "/member/orders/" + order.getId()
             );
         }
-        if (notifications != null && users != null) {
+        // Counter payments are taken by staff at the desk, so the "new order" broadcast is only for online payments.
+        if (notifications != null && users != null && !"counter".equalsIgnoreCase(order.getPaymentMethod())) {
             List<User> staffList = users.findActiveStaffUsers();
             if (staffList != null) {
                 for (User staff : staffList) {

@@ -39,10 +39,10 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json   # <-- thư mục frontend
       - run: npm ci                                       # cài thư viện đúng theo package-lock
-      - run: npm test --if-present                        # bỏ qua nếu dự án chưa có script "test"
+      - run: npm test                                     # test là bắt buộc trong repo này
         env:
           CI: true                                        # để Jest/Vitest không chạy chế độ watch
-      - run: npm run lint --if-present                    # bỏ qua nếu chưa có script "lint"
+      - run: npm run lint
       - run: npm run build                                # build lỗi nghĩa là không deploy được
 
   # Job 2: API Spring Boot
@@ -61,15 +61,11 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: apps/api/pom.xml         # <-- thư mục backend
-      # Riêng dự án SWP391: kiểm tra chính sách database. Dự án khác không có file này thì bước tự bỏ qua.
+      # Chính sách database là kiểm tra bắt buộc của dự án.
       - name: Verify Supabase runner configuration
-        if: hashFiles('scripts/test-database-config.ps1') != ''
         shell: pwsh
         working-directory: .
         run: ./scripts/test-database-config.ps1
-      # Biên dịch và chạy toàn bộ test. Dùng mvnw của dự án nếu có, không thì dùng mvn có sẵn trên máy chạy.
-      # (Dự án Gradle: thay bằng `./gradlew build` và đổi `cache: gradle`.)
+      # Dùng Maven Wrapper đã được version control để build nhất quán.
       - name: Compile and run backend tests
-        run: |
-          if [ -f mvnw ]; then chmod +x mvnw; ./mvnw --batch-mode --no-transfer-progress test
-          else mvn --batch-mode --no-transfer-progress test; fi
+        run: ./mvnw --batch-mode --no-transfer-progress test

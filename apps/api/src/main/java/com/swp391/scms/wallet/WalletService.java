@@ -272,6 +272,21 @@ public class WalletService {
 
     @Transactional
     public void creditRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
+        String description = (reason != null && !reason.isBlank())
+                ? ("Hoàn tiền hủy gói tập: " + reason)
+                : "Hoàn tiền hủy gói tập về Ví";
+        credit(userId, amount, referenceId, "CANCELLATION_REFUND", description, "/member/packages");
+    }
+
+    /** Credits a product-order refund to the member's wallet; idempotent per {@code referenceId}. */
+    @Transactional
+    public void creditOrderRefund(Long userId, BigDecimal amount, String referenceId, String description, Long orderId) {
+        credit(userId, amount, referenceId, "ORDER_REFUND", description,
+                orderId != null ? "/member/orders/" + orderId : "/member/orders");
+    }
+
+    private void credit(Long userId, BigDecimal amount, String referenceId, String referenceType,
+                        String description, String actionPath) {
         if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
@@ -290,11 +305,9 @@ public class WalletService {
         refund.setType("REFUND_CREDIT");
         refund.setAmount(amount);
         refund.setBalanceAfter(newBalance);
-        refund.setReferenceType("CANCELLATION_REFUND");
+        refund.setReferenceType(referenceType);
         refund.setReferenceId(referenceId);
-        refund.setDescription((reason != null && !reason.isBlank())
-                ? ("Hoàn tiền hủy gói tập: " + reason)
-                : "Hoàn tiền hủy gói tập về Ví");
+        refund.setDescription(description != null && description.length() > 500 ? description.substring(0, 500) : description);
         refund.setCreatedAt(now);
         walletTransactionRepository.save(refund);
 
@@ -317,7 +330,7 @@ public class WalletService {
                         "payment",
                         "wallet",
                         wallet.getId(),
-                        "/member/packages"
+                        actionPath
                 );
             } catch (RuntimeException ignored) {
             }
