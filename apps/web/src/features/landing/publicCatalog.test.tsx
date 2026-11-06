@@ -84,3 +84,20 @@ it('ignores older responses and hides stale prices on a failed refresh, then ret
   await act(async () => responses[3](reply(1100000)));
   expect(host.textContent).toContain('1100000');
 });
+
+it('excludes trial packages from the public catalog pricing grid', async () => {
+  root = createRoot(host);
+  const catalogWithTrial: PublicCatalog = {
+    ...catalog,
+    packages: [
+      ...catalog.packages,
+      { id: 99, name: 'Gói Trải Nghiệm 3 Ngày', price: 0, durationDays: 3, classCreditLimit: 3, description: 'Gói trải nghiệm', status: 'active' },
+    ],
+  };
+  await act(async () => root.render(<MemoryRouter>
+    <CatalogPackages catalog={catalogWithTrial} joinPath="/register" />
+  </MemoryRouter>));
+  expect(host.textContent).toContain('Gói mới');
+  expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày');
+  expect(host.textContent).not.toContain('0 đ');
+});

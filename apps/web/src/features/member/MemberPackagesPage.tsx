@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
-import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
+import { formatPrice, getPackageDetails, isTrialPackage } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -61,12 +61,7 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   return false;
 }
 
-export function isTrialPackage(pkg: { price?: number; durationDays?: number; name?: string }): boolean {
-  if (pkg.price === 0) return true;
-  if (pkg.durationDays !== undefined && pkg.durationDays <= 3) return true;
-  const name = (pkg.name || '').toLowerCase();
-  return name.includes('trải nghiệm') || name.includes('trial');
-}
+export { isTrialPackage };
 
 export function MemberPackagesPage() {
   const [searchParams] = useSearchParams();

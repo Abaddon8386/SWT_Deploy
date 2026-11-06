@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';
 import { sessionDate } from '../publicCatalog';
-import { formatPrice, getPackageDetails } from '../../../shared/lib/membershipPresentation';
+import { formatPrice, getPackageDetails, isTrialPackage } from '../../../shared/lib/membershipPresentation';
 import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
@@ -25,6 +25,7 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
 
   const packages = catalog.packages.filter(pkg => {
     if (pkg.status !== 'active') return false;
+    if (isTrialPackage(pkg)) return false;
     // Trang đầu: chỉ hiển thị 3 gói 1 tháng (Bạc, Vàng, Platinum)
     if (!longTerm) return pkg.durationDays < 90;
     // Đồng hành dài hạn: các gói từ 90 ngày trở lên (hiện là 3 gói 12 tháng)
