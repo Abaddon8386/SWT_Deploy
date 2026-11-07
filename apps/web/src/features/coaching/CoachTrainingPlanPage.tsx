@@ -538,7 +538,7 @@ export function CoachTrainingPlanPage() {
             <span>{t("Mục tiêu thể lực: ")}</span>
             <strong style={{ color: 'var(--fit-salmon, #ce9180)' }}>{planGoal}</strong>
           </div>
-          <div style={{ color: selectedMember.healthNotes?.includes(t('Tránh')) ? 'var(--portal-danger, #fca5a5)' : 'var(--color-text-muted)' }}>
+          <div style={{ color: selectedMember.healthNotes?.includes('Tránh') ? 'var(--portal-danger, #fca5a5)' : 'var(--color-text-muted)' }}>
             {t("Lưu ý sức khỏe: ")}<strong>{selectedMember.healthNotes || t('Bình thường')}</strong>
           </div>
         </div>
