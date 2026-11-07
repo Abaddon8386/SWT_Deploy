@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
-import { errorMessage } from '../../shared/lib/errorMessage';
+import { chatError, type ChatError } from './chatMessages';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
@@ -52,10 +52,10 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selected, setSelected] = useState<ChatConversation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const [listError, setListError] = useState<ChatError | null>(null);
   const [showContacts, setShowContacts] = useState(false);
   const [pending, setPending] = useState<number | null>(null);
-  const [openError, setOpenError] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<ChatError | null>(null);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [ownConnection, setConnection] = useState<ChatConnection>('connecting');
@@ -77,7 +77,7 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
       setConversations(data.content); setPage(nextPage); pageRef.current = nextPage; setTotalPages(data.totalPages); setListError(null);
       if (nextPage === 0) onPeersRef.current?.(data.content.slice(0, 3).map(c => c.peer));
       setSelected(old => data.content.find(c => c.id === old?.id) ?? old);
-    } catch (e) { if (mounted.current && request === listSequence.current) setListError(errorMessage(e, 'Không thể tải hội thoại.')); }
+    } catch (e) { if (mounted.current && request === listSequence.current) setListError(chatError(e, 'Không thể tải hội thoại.', 'Unable to load conversations.')); }
     finally { if (mounted.current && request === listSequence.current) setLoading(false); }
   }, []);
   const onSent = useCallback(() => { void loadInbox(0, true); }, [loadInbox]);
@@ -115,7 +115,7 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
       const conversation = await openConversation(contact.id);
       if (!mounted.current) return;
       select(conversation); setShowContacts(false); void loadInbox(0, true);
-    } catch (e) { if (mounted.current) setOpenError(errorMessage(e, 'Không thể mở hội thoại.')); }
+    } catch (e) { if (mounted.current) setOpenError(chatError(e, 'Không thể mở hội thoại.', 'Unable to open the conversation.')); }
     finally { opening.current = false; if (mounted.current) setPending(null); }
   }
 
@@ -149,8 +149,8 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
             </button>
           )}
         </div>
-        {showContacts && <div id="chat-directory">{openError && <p role="alert" className="direct-chat__error">{openError}</p>}<ChatContacts onChoose={contact => void choose(contact)} pending={pending} /></div>}
-        {listError && <div role="alert" className="direct-chat__error"><p>{listError}</p><button type="button" className="direct-chat__link" onClick={() => void loadInbox(page)}>{t("Thử lại", "Retry")}</button></div>}
+        {showContacts && <div id="chat-directory">{openError && <p role="alert" className="direct-chat__error">{t(openError)}</p>}<ChatContacts onChoose={contact => void choose(contact)} pending={pending} /></div>}
+        {listError && <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadInbox(page)}>{t("Thử lại", "Retry")}</button></div>}
         {loading && <LoadingSkeleton label={t("Đang tải hội thoại…", "Loading conversations…")} count={4} />}
         {/* SÖL AI luôn ghim đầu danh sách như một người để trò chuyện, không còn nút AI riêng. */}
         {!loading && <ul className="direct-chat__list">

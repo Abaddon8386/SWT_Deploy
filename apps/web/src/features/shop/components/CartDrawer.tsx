@@ -1,7 +1,7 @@
+import { useSourceLanguage, sourceFormat, sourceText, sourceError } from '../shopI18n';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../../../shared/api/client';
-import { errorMessage } from '../../../shared/lib/errorMessage';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../../shared/ui/Modal';
 import { RoundArrow } from '../../landing/components/PublicLayout';
@@ -17,7 +17,7 @@ import '../shop-public.css';
 function lineProblemText(line: QuoteLineDto): string | null {
   switch (line.problem) {
     case 'INSUFFICIENT_STOCK':
-      return `Chỉ còn ${line.stock} sản phẩm — vui lòng giảm số lượng`;
+      return sourceFormat("Chỉ còn {0} sản phẩm — vui lòng giảm số lượng", line.stock);
     case 'OUT_OF_STOCK':
       return 'Sản phẩm đã hết hàng';
     case 'INACTIVE':
@@ -35,11 +35,12 @@ export function CartDrawer({
   onClose: () => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
+  useSourceLanguage();
   const lines = useCart();
   const navigate = useNavigate();
   const [quote, setQuote] = useState<QuoteDto | null>(null);
   const [loading, setLoading] = useState(lines.length > 0);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
   const [retryTick, setRetryTick] = useState(0);
   const firstQuote = useRef(true);
 
@@ -78,7 +79,7 @@ export function CartDrawer({
         }
       } catch (err) {
         if (!controller.signal.aborted) {
-          setError(errorMessage(err, 'Không tải được báo giá giỏ hàng.'));
+          setError(sourceError(err, 'Không tải được báo giá giỏ hàng.'));
           setLoading(false);
         }
       }
@@ -110,7 +111,7 @@ export function CartDrawer({
 
   return (
     <Modal
-      title={totalCount > 0 ? `Giỏ hàng (${totalCount})` : 'Giỏ hàng'}
+      title={totalCount > 0 ? sourceFormat("Giỏ hàng ({0})", totalCount) : sourceText('Giỏ hàng')}
       onClose={onClose}
       className="shop-drawer"
       returnFocusRef={returnFocusRef}
@@ -118,21 +119,21 @@ export function CartDrawer({
       <div className="shop-drawer__content" aria-busy={loading}>
         {lines.length === 0 ? (
           <div className="shop-drawer__empty" role="status">
-            <p>Giỏ hàng đang trống.</p>
+            <p>{sourceText("Giỏ hàng đang trống.")}</p>
             <Link to="/products" className="fit-pill" onClick={onClose}>
-              <span>Xem sản phẩm</span>
+              <span>{sourceText("Xem sản phẩm")}</span>
               <RoundArrow />
             </Link>
           </div>
         ) : (
           <>
             {loading && !quote && (
-              <LoadingSkeleton label="Đang tính giỏ hàng…" variant="rows" count={Math.min(lines.length, 3)} />
+              <LoadingSkeleton label={sourceText("Đang tính giỏ hàng…")} variant="rows" count={Math.min(lines.length, 3)} />
             )}
-            {loading && quote && <p className="shop-drawer__updating" role="status">Đang cập nhật giỏ hàng…</p>}
+            {loading && quote && <p className="shop-drawer__updating" role="status">{sourceText("Đang cập nhật giỏ hàng…")}</p>}
             {error && (
               <div className="shop-drawer__error" role="alert">
-                <p>{error}</p>
+                <p>{sourceText(error)}</p>
                 <button
                   type="button"
                   className="fit-pill"
@@ -141,12 +142,11 @@ export function CartDrawer({
                     setRetryTick(t => t + 1);
                   }}
                 >
-                  Thử lại
-                </button>
+                  {sourceText("Thử lại")}</button>
               </div>
             )}
             {quote && (
-              <ul className="shop-drawer__list" aria-label="Sản phẩm trong giỏ">
+              <ul className="shop-drawer__list" aria-label={sourceText("Sản phẩm trong giỏ")}>
                 {quote.lines.filter(line => lines.some(item => item.variantId === line.variantId)).map(line => {
                   const cartLine = lines.find(l => l.variantId === line.variantId);
                   const currentQty = cartLine?.quantity ?? line.requestedQuantity;
@@ -182,20 +182,20 @@ export function CartDrawer({
                             value={currentQty}
                             max={maxQty}
                             onChange={next => setQuantity(line.variantId, next)}
-                            label={`Số lượng ${line.productName}`}
+                            label={sourceFormat("Số lượng {0}", line.productName)}
                           />
                           <button
                             type="button"
                             className="shop-drawer__remove"
                             onClick={() => removeFromCart(line.variantId)}
                           >
-                            <span aria-hidden="true">Xóa</span>
-                            <span className="shop-sr-only">Xóa {line.productName} · {line.variantLabel}</span>
+                            <span aria-hidden="true">{sourceText("Xóa")}</span>
+                            <span className="shop-sr-only">{sourceText("Xóa")}{line.productName} · {line.variantLabel}</span>
                           </button>
                         </div>
                         {problem && (
                           <p className="shop-drawer__problem form-error" role="alert">
-                            {problem}
+                            {sourceText(problem)}
                           </p>
                         )}
                       </div>
@@ -207,10 +207,10 @@ export function CartDrawer({
 
             <div className="shop-drawer__footer">
               <div className="shop-drawer__subtotal">
-                <span>Tạm tính</span>
-                <strong aria-live="polite">{loading ? (quote ? 'Đang cập nhật…' : 'Đang tính…') : error || !quote ? '—' : formatVnd(quote.subtotal)}</strong>
+                <span>{sourceText("Tạm tính")}</span>
+                <strong aria-live="polite">{loading ? (quote ? sourceText('Đang cập nhật…') : sourceText('Đang tính…')) : error || !quote ? '—' : formatVnd(quote.subtotal)}</strong>
               </div>
-              <p className="shop-drawer__shipping-note">Phí giao hàng được tính ở bước thanh toán.</p>
+              <p className="shop-drawer__shipping-note">{sourceText("Phí giao hàng được tính ở bước thanh toán.")}</p>
               <div className="shop-drawer__actions">
                 <button
                   type="button"
@@ -218,12 +218,11 @@ export function CartDrawer({
                   disabled={!quote?.valid || lines.length === 0 || loading || Boolean(error)}
                   onClick={handleCheckout}
                 >
-                  <span>Thanh toán</span>
+                  <span>{sourceText("Thanh toán")}</span>
                   <RoundArrow />
                 </button>
                 <Link to="/products" className="shop-drawer__continue" onClick={onClose}>
-                  Tiếp tục xem sản phẩm
-                </Link>
+                  {sourceText("Tiếp tục xem sản phẩm")}</Link>
               </div>
             </div>
           </>

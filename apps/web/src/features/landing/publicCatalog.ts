@@ -1,3 +1,4 @@
+import { getIntlLocale } from '../../shared/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../../shared/api/client';
 import type { MembershipPackage } from '../member/membershipApi';
@@ -46,5 +47,5 @@ export function usePublicCatalog() {
 
 export function sessionDate(value: string) {
   const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' });
+  return new Date(year, month - 1, day).toLocaleDateString(getIntlLocale(), { weekday: 'short', day: '2-digit', month: '2-digit' });
 }

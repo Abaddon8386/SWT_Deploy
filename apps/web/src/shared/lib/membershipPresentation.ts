@@ -1,6 +1,7 @@
+import { getIntlLocale, getLanguage } from '../i18n/language';
 import type { MembershipPackage } from '../../features/member/membershipApi';
 
-export const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN', {
+export const formatPrice = (price: number) => new Intl.NumberFormat(getIntlLocale(), {
   style: 'currency', currency: 'VND',
 }).format(price);
 
@@ -10,7 +11,7 @@ export function isTrialPackage(pkg: { price?: number; durationDays?: number; nam
   return name.includes('trải nghiệm') || name.includes('trial');
 }
 
-export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = 'vi') {
+export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = getLanguage()) {
   const t = (vi: string, en: string) => lang === 'en' ? en : vi;
   const desc = pkg.description?.trim() || '';
   const lines = desc.split('\n').map((l) => l.trim()).filter(Boolean);

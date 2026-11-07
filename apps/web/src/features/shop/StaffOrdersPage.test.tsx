@@ -251,7 +251,7 @@ it('counter payment asks for the method and refreshes the order', async () => {
   expect(notify).toHaveBeenCalledWith(
     expect.stringContaining('SOL-261105-ABCD'),
     'success',
-    { record: true },
+    { record: true, translation: { vi: 'Đã thu tiền tại quầy cho đơn SOL-261105-ABCD.', en: 'Counter payment collected for order SOL-261105-ABCD.' } },
   );
   expect(host.querySelector('dialog')?.textContent).toContain('Bắt đầu chuẩn bị');
 });
@@ -294,7 +294,7 @@ it('cancel requires a reason, shows the wallet refund amount for paid orders and
   expect(notify).toHaveBeenCalledWith(
     expect.stringContaining('SOL-261105-ABCD'),
     'success',
-    { record: true },
+    { record: true, translation: { vi: 'Đã hủy đơn SOL-261105-ABCD.', en: 'Order SOL-261105-ABCD cancelled.' } },
   );
 });
 

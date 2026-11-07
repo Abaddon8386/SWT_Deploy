@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import { expandRecurrence, isoWeekday, WEEKDAY_LABELS, type RecurrenceChoice, type RecurrencePeriod, type SkippedOccurrence } from '../lib/recurrence';
 
 const PERIODS: { id: RecurrencePeriod; label: string; legacyLabel: string }[] = [
@@ -32,6 +33,7 @@ interface FieldsProps {
 
 /** Lets a member repeat one booking over a week or a month on chosen weekdays instead of booking day by day. */
 export function RecurrenceFields({ startDate, value, onChange, disabled = false, hint, allowedPeriods }: FieldsProps) {
+  const { t, lang } = useI18n();
   const visiblePeriods = allowedPeriods ? PERIODS.filter((p) => allowedPeriods.includes(p.id)) : PERIODS;
   const activeDays = value.period !== 'once' && value.days.length === 0 ? [isoWeekday(startDate)] : value.days;
   const effectiveValue: RecurrenceChoice = { ...value, days: activeDays };
@@ -52,17 +54,16 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
     onChange({ ...value, days: nextDays.length ? nextDays : [isoWeekday(startDate)] });
   };
 
-  const selectedDayNames = activeDays.map((d) => FULL_WEEKDAY_NAMES[d] || `T${d}`).join(', ');
+  const selectedDayNames = activeDays.map((d) => t(FULL_WEEKDAY_NAMES[d] || '') || `T${d}`).join(', ');
   const projectedCount = value.period === 'week' ? dates.length * 4 : dates.length;
 
   return (
     <fieldset disabled={disabled} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <legend style={{ fontSize: 15, fontWeight: 700, color: 'var(--portal-paper)', marginBottom: 10, padding: 0 }}>
-        Tần suất buổi tập
-      </legend>
+        {t("Tần suất buổi tập", "Session frequency")}</legend>
       <div
         role="group"
-        aria-label="Kỳ hạn đặt lịch"
+        aria-label={t("Kỳ hạn đặt lịch", "Booking frequency")}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -82,7 +83,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               type="button"
               className={active ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
               aria-pressed={active}
-              aria-label={`${period.legacyLabel} (${period.label})`}
+              aria-label={`${t(period.legacyLabel)} (${t(period.label)})`}
               onClick={() => choosePeriod(period.id)}
               style={{
                 border: 'none',
@@ -98,7 +99,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
                 boxShadow: active ? '0 2px 6px color-mix(in srgb, var(--portal-salmon) 25%, transparent)' : 'none',
               }}
             >
-              {period.label}
+              {t(period.label)}
               <span
                 style={{
                   position: 'absolute',
@@ -112,7 +113,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
                   border: 0,
                 }}
               >
-                {' '}{period.legacyLabel}
+                {' '}{t(period.legacyLabel)}
               </span>
             </button>
           );
@@ -120,8 +121,8 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
       </div>
       {value.period !== 'once' && (
         <>
-          <div role="group" aria-label="Thứ trong tuần" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-            {WEEKDAY_LABELS.map((label, index) => {
+          <div role="group" aria-label={t("Thứ trong tuần", "Weekdays")} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+            {(lang === 'en' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : WEEKDAY_LABELS).map((label, index) => {
               const day = index + 1;
               const active = activeDays.includes(day);
               return (
@@ -130,7 +131,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
                   type="button"
                   className={active ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
                   aria-pressed={active}
-                  aria-label={`${label}${active ? ', đã chọn' : ''}`}
+                  aria-label={`${label}${active ? t(", đã chọn", ", selected") : ''}`}
                   onClick={() => toggleDay(day)}
                   style={{
                     width: 38,
@@ -161,10 +162,9 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
           <div role="status" style={{ marginTop: 14, fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)', lineHeight: 1.4 }}>
             {dates.length ? (
               <>
-                Lặp lại vào {selectedDayNames} {value.period === 'week' ? 'hàng tuần' : 'hàng tháng'} (Dự kiến: {projectedCount} buổi/tháng)
-              </>
+                {t(`Lặp lại vào ${selectedDayNames} ${value.period === 'week' ? 'hàng tuần' : 'hàng tháng'} (Dự kiến: ${projectedCount} buổi/tháng)`, `Repeats on ${selectedDayNames} ${value.period === 'week' ? 'weekly' : 'monthly'} (Estimated: ${projectedCount} sessions/month)`)}</>
             ) : (
-              'Không có ngày nào trong khoảng đã chọn.'
+              t("Không có ngày nào trong khoảng đã chọn.", "No dates in the selected range.")
             )}
             <span
               style={{
@@ -180,8 +180,8 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               }}
             >
               {dates.length
-                ? ` Sẽ đặt ${dates.length} buổi: ${dates.map(shortDate).join(', ')}.`
-                : ' Không có ngày nào trong khoảng đã chọn.'}
+                ? t(` Sẽ đặt ${dates.length} buổi: ${dates.map(shortDate).join(', ')}.`, ` ${dates.length} sessions will be booked: ${dates.map(shortDate).join(', ')}.`)
+                : t(' Không có ngày nào trong khoảng đã chọn.', ' No dates in the selected range.')}
             </span>
           </div>
           <div
@@ -213,7 +213,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--portal-paper)' }}>
-              <strong>Lưu ý:</strong> {hint || 'Các buổi tập được đặt cùng lúc cho những ngày đã chọn. Bạn có thể hủy từng buổi trước giờ tập theo quy định của trung tâm.'}
+              <strong>{t("Lưu ý:", "Note:")}</strong> {hint || t("Các buổi tập được đặt cùng lúc cho những ngày đã chọn. Bạn có thể hủy từng buổi trước giờ tập theo quy định của trung tâm.", "Sessions are booked together for the selected dates. You can cancel individual sessions before they start, according to center policy.")}
             </div>
           </div>
         </>
@@ -231,12 +231,13 @@ interface SummaryProps<T> {
 
 /** Outcome of a standing booking: what was created and why other dates were skipped. */
 export function RecurrenceSummary<T>({ booked, skipped, describe }: SummaryProps<T>) {
+  const { t } = useI18n();
   return (
     <div role="status" style={{ display: 'grid', gap: 10 }}>
       <p style={{ margin: 0 }}>
         {booked.length > 0
-          ? <>Đã đặt <strong>{booked.length}</strong> buổi{skipped.length > 0 ? `, bỏ qua ${skipped.length} buổi.` : '.'}</>
-          : <strong>Không đặt được buổi nào.</strong>}
+          ? <>{t("Đã đặt", "Booked")} <strong>{booked.length}</strong> {t("buổi", "sessions")}{skipped.length > 0 ? t(`, bỏ qua ${skipped.length} buổi.`, `, ${skipped.length} sessions skipped.`) : '.'}</>
+          : <strong>{t("Không đặt được buổi nào.", "No sessions could be booked.")}</strong>}
       </p>
       {booked.length > 0 && (
         <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -245,7 +246,7 @@ export function RecurrenceSummary<T>({ booked, skipped, describe }: SummaryProps
       )}
       {skipped.length > 0 && (
         <div className="portal-alert">
-          <strong>Các buổi chưa đặt được:</strong>
+          <strong>{t("Các buổi chưa đặt được:", "Sessions not booked:")}</strong>
           <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
             {skipped.map((item) => <li key={item.date}>{shortDate(item.date)}: {item.message || item.code}</li>)}
           </ul>

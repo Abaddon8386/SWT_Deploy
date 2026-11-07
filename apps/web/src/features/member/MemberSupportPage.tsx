@@ -1,3 +1,6 @@
+import { memberMessage } from './memberI18n';
+import type { SourceMessage } from '../../shared/i18n/language';
+import { useLanguage } from '../../shared/i18n/language';
 import { sourceMessage, useI18n } from '../../shared/i18n';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -33,18 +36,19 @@ function failure(error: unknown): string | Error {
 }
 
 export function MemberSupportPage() {
+  useLanguage();
   const { t } = useI18n();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState<string | Error>('');
+  const [listError, setListError] = useState<string | Error | SourceMessage>('');
   const [category, setCategory] = useState<Category>('Gói tập');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const creatingRef = useRef(false);
-  const [formError, setFormError] = useState<string | Error>('');
+  const [formError, setFormError] = useState<string | Error | SourceMessage>('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [openedTicket, setOpenedTicket] = useState<SupportTicket | null>(null);
   const selected = tickets.find((ticket) => ticket.id === selectedId) ?? openedTicket;
@@ -56,7 +60,7 @@ export function MemberSupportPage() {
   const returnFocus = useRef<HTMLElement | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
-  const [messagesError, setMessagesError] = useState<string | Error>('');
+  const [messagesError, setMessagesError] = useState<string | Error | SourceMessage>('');
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [sendingIds, setSendingIds] = useState<number[]>([]);
   const sendingRef = useRef(new Set<number>());
@@ -178,9 +182,9 @@ export function MemberSupportPage() {
     event.preventDefault();
     const title = subject.trim();
     if (creatingRef.current) return;
-    if (!title) { setFormError('Vui lòng nhập tiêu đề yêu cầu.'); return; }
+    if (!title) { setFormError(memberMessage("Vui lòng nhập tiêu đề yêu cầu.")); return; }
     const fullSubject = `[${category}] ${title}`;
-    if (fullSubject.length > 150) { setFormError('Tiêu đề quá dài (tối đa 150 ký tự gồm phân loại).'); return; }
+    if (fullSubject.length > 150) { setFormError(memberMessage("Tiêu đề quá dài (tối đa 150 ký tự gồm phân loại).")); return; }
     creatingRef.current = true; setCreating(true); setFormError(''); 
     try {
       const created = await createSupportTicket(fullSubject, description.trim());
@@ -221,45 +225,45 @@ export function MemberSupportPage() {
     }
   }
 
-  return <div className="portal-container member-support" data-i18n-managed>
-    <PageHeader eyebrow={t("Hội viên")} title={t("Hỗ trợ & khiếu nại")} />
+  return <div data-i18n-managed className="portal-container member-support" >
+    <PageHeader eyebrow={t("Hội viên", "Member")} title={t("Hỗ trợ & khiếu nại", "Support & Tickets")} />
     <div className="member-support-grid">
-      <section className="portal-card" aria-labelledby="support-create-title">
-        <div className="portal-card-header"><h2 id="support-create-title" className="portal-card-title">{t("Gửi yêu cầu")}</h2></div>
+      <section data-i18n-managed className="portal-card" aria-labelledby="support-create-title">
+        <div className="portal-card-header"><h2 id="support-create-title" className="portal-card-title">{t("Gửi yêu cầu", "Submit request")}</h2></div>
         <form onSubmit={(event) => void submitTicket(event)} className="member-support-form">
-          <label className="portal-label" htmlFor="support-category">{t("Loại yêu cầu")}</label>
+          <label className="portal-label" htmlFor="support-category">{t("Loại yêu cầu", "Request category")}</label>
           <Select id="support-category" className="portal-select" value={category} disabled={creating} onChange={(event) => setCategory(event.target.value as Category)}>
             {categories.map((item) => <option key={item} value={item}>{t(item)}</option>)}
           </Select>
-          <label className="portal-label" htmlFor="support-subject">{t("Tiêu đề")}</label>
-          <input id="support-subject" className="portal-input" value={subject} onChange={(event) => setSubject(event.target.value)} disabled={creating} required maxLength={138} placeholder={t("Tóm tắt vấn đề")} />
-          <label className="portal-label" htmlFor="support-description">{t("Nội dung")}</label>
-          <textarea id="support-description" className="portal-textarea" value={description} onChange={(event) => setDescription(event.target.value)} disabled={creating} rows={4} placeholder={t("Mô tả để chúng tôi hỗ trợ nhanh hơn")} />
+          <label className="portal-label" htmlFor="support-subject">{t("Tiêu đề", "Subject")}</label>
+          <input id="support-subject" className="portal-input" value={subject} onChange={(event) => setSubject(event.target.value)} disabled={creating} required maxLength={138} placeholder={t("Tóm tắt vấn đề", "Summarize the issue")} />
+          <label className="portal-label" htmlFor="support-description">{t("Nội dung", "Description")}</label>
+          <textarea id="support-description" className="portal-textarea" value={description} onChange={(event) => setDescription(event.target.value)} disabled={creating} rows={4} placeholder={t("Mô tả để chúng tôi hỗ trợ nhanh hơn", "Describe the issue so we can help sooner")} />
           {formError && <p role="alert" className="member-support-error">{t(formError)}</p>}
-          <button className="btn-primary" type="submit" disabled={creating}>{creating ? t("Đang gửi…") : t("Gửi yêu cầu")}</button>
+          <button className="btn-primary" type="submit" disabled={creating}>{creating ? t("Đang gửi…", "Sending…") : t("Gửi yêu cầu", "Submit request")}</button>
         </form>
       </section>
-      <section className="portal-card" ref={listFocus} tabIndex={-1} aria-labelledby="support-list-title">
-        <div className="portal-card-header member-support-heading"><h2 id="support-list-title" className="portal-card-title">{t("Phiếu của tôi")}</h2><RefreshButton onClick={() => void loadTickets(page)} disabled={loading} /></div>
-        {loading ? <LoadingSkeleton label={t("Đang tải phiếu hỗ trợ…")} count={3} /> : listError ? <div role="alert"><p>{t(listError)}</p><button type="button" className="member-support-link" onClick={() => void loadTickets(page)}>{t("Thử lại")}</button></div> : tickets.length === 0 ? <p className="portal-empty">{t("Bạn chưa có phiếu hỗ trợ nào.")}</p> : <div className="member-support-list">{tickets.map((ticket) => <button type="button" key={ticket.id} data-support-ticket={ticket.id} className={`member-support-ticket${selectedId === ticket.id ? ' is-active' : ''}`} onClick={event => { openChat(ticket, event.currentTarget); void loadTickets(page); }} aria-haspopup="dialog" aria-current={selectedId === ticket.id ? 'true' : undefined}>
-          <span className="member-support-ticket-top"><strong>#{ticket.id} · {displaySubject(ticket.subject)}</strong><span className={`member-support-status member-support-status--${ticket.status}`}>{statusLabel[ticket.status] ? t(statusLabel[ticket.status]) : ticket.status}</span>{ticket.escalatedAt && <span className="member-support-status member-support-status--escalated">{t("Quản lý đang xem xét")}</span>}</span>
+      <section data-i18n-managed className="portal-card" ref={listFocus} tabIndex={-1} aria-labelledby="support-list-title">
+        <div className="portal-card-header member-support-heading"><h2 id="support-list-title" className="portal-card-title">{t("Phiếu của tôi", "My tickets")}</h2><RefreshButton onClick={() => void loadTickets(page)} disabled={loading} /></div>
+        {loading ? <LoadingSkeleton label={t("Đang tải phiếu hỗ trợ…", "Loading support tickets…")} count={3} /> : listError ? <div role="alert"><p>{t(listError)}</p><button type="button" className="member-support-link" onClick={() => void loadTickets(page)}>{t("Thử lại", "Retry")}</button></div> : tickets.length === 0 ? <p className="portal-empty">{t("Bạn chưa có phiếu hỗ trợ nào.", "You have no support tickets yet.")}</p> : <div className="member-support-list">{tickets.map((ticket) => <button type="button" key={ticket.id} data-support-ticket={ticket.id} className={`member-support-ticket${selectedId === ticket.id ? ' is-active' : ''}`} onClick={event => { openChat(ticket, event.currentTarget); void loadTickets(page); }} aria-haspopup="dialog" aria-current={selectedId === ticket.id ? 'true' : undefined}>
+          <span className="member-support-ticket-top"><strong>#{ticket.id} · {displaySubject(ticket.subject)}</strong><span className={`member-support-status member-support-status--${ticket.status}`}>{statusLabel[ticket.status] ? t(statusLabel[ticket.status]) : ticket.status}</span>{ticket.escalatedAt && <span className="member-support-status member-support-status--escalated">{t("Quản lý đang xem xét", "Under manager review")}</span>}</span>
           <span className="member-support-meta">{t(categoryOf(ticket.subject))} · {dateTime(ticket.createdAt)}</span>
           {ticket.description && <span className="member-support-summary">{ticket.description}</span>}
         </button>)}</div>}
-        {!loading && !listError && totalPages > 1 && <div className="member-support-pages"><button type="button" disabled={page === 0} onClick={() => void loadTickets(page - 1)}>{t("Trước")}</button><span>{page + 1}/{totalPages}</span><button type="button" disabled={page + 1 >= totalPages} onClick={() => void loadTickets(page + 1)}>{t("Sau")}</button></div>}
+        {!loading && !listError && totalPages > 1 && <div className="member-support-pages"><button type="button" disabled={page === 0} onClick={() => void loadTickets(page - 1)}>{t("Trước", "Previous")}</button><span>{page + 1}/{totalPages}</span><button type="button" disabled={page + 1 >= totalPages} onClick={() => void loadTickets(page + 1)}>{t("Sau", "Next")}</button></div>}
       </section>
     </div>
     {selected && <Modal title={t(`Trao đổi · Phiếu #${selected.id}`, `Conversation · Ticket #${selected.id}`)} onClose={closeChat} returnFocusRef={returnFocus}>
       <div className="member-support-conversation">
         <p className="member-support-context">{displaySubject(selected.subject)} · {statusLabel[selected.status] ? t(statusLabel[selected.status]) : selected.status}</p>
-        {loading && <LoadingSkeleton label={t("Đang kiểm tra trạng thái phiếu…")} count={1} />}
-        {listError && <p role="alert" className="member-support-error">{t("Không thể kiểm tra trạng thái phiếu. Hãy làm mới hội thoại để thử lại.")}</p>}
+        {loading && <LoadingSkeleton label={t("Đang kiểm tra trạng thái phiếu…", "Checking ticket status…")} count={1} />}
+        {listError && <p role="alert" className="member-support-error">{t("Không thể kiểm tra trạng thái phiếu. Hãy làm mới hội thoại để thử lại.", "Unable to check ticket status. Refresh the conversation to retry.")}</p>}
         {selected.description && <p className="member-support-description">{selected.description}</p>}
-        <p className="member-support-context" role="status">{connection === 'connected' ? t("Đã kết nối trực tiếp") : connection === 'connecting' ? t("Đang kết nối…") : connection === 'reconnecting' ? t("Đang kết nối lại… Hội thoại sẽ được tải bù khi kết nối trở lại.") : t("Kết nối trực tiếp chưa khả dụng. Bạn có thể làm mới hội thoại.")}</p>
-        {sentIds.includes(selected.id) && !sendError && <p role="status" className="member-support-notice">{t("Đã gửi tin nhắn.")}</p>}
-        <button type="button" className="member-support-link" disabled={messagesLoading || loading} onClick={() => { void loadMessages(selected.id); void loadTickets(page); }}>{t("Làm mới hội thoại")}</button>
-        {messagesLoading ? <LoadingSkeleton label={t("Đang tải hội thoại…")} count={3} /> : messagesError ? <div role="alert"><p>{t(messagesError)}</p><button type="button" className="member-support-link" onClick={() => void loadMessages(selected.id)}>{t("Thử lại")}</button></div> : messages.length === 0 ? <p className="portal-empty">{t("Chưa có tin nhắn. Hãy bắt đầu trao đổi.")}</p> : <ol className="member-support-messages" tabIndex={0} aria-label={t(`Tin nhắn phiếu #${selected.id}`, `Messages for ticket #${selected.id}`)}>{messages.map((message) => <li key={message.id} className={message.senderRole === 'MEMBER' ? 'is-member' : 'is-staff'}><strong>{message.senderRole === 'MEMBER' ? t("Bạn") : (message.senderName || t("Nhân viên"))}</strong><p>{message.message}</p><time dateTime={message.createdAt}>{dateTime(message.createdAt)}</time></li>)}</ol>}
-        {selected.status === 'closed' ? <p className="member-support-context">{t("Phiếu đã đóng, không thể gửi thêm tin nhắn.")}</p> : !accessDenied && <form className="member-support-compose" onSubmit={(event) => void submitMessage(event)}><label className="portal-label" htmlFor="support-message">{t("Tin nhắn")}</label><textarea id="support-message" className="portal-textarea" value={draft} disabled={sending} onChange={(event) => { const value = event.target.value; setDrafts(previous => ({ ...previous, [selected.id]: value })); }} maxLength={2000} rows={3} required placeholder={t("Nhập nội dung phản hồi…")} />{sendError && <p role="alert" className="member-support-error">{t(sendError)}</p>}<button className="btn-primary" type="submit" disabled={sending || !historyReady || messagesLoading || loading || !!listError || !draft.trim()}>{sending ? t("Đang gửi…") : t("Gửi tin nhắn")}</button></form>}
+        <p className="member-support-context" role="status">{connection === 'connected' ? t("Đã kết nối trực tiếp", "Live connection established") : connection === 'connecting' ? t("Đang kết nối…", "Connecting…") : connection === 'reconnecting' ? t("Đang kết nối lại… Hội thoại sẽ được tải bù khi kết nối trở lại.", "Reconnecting… Conversation history will refresh when connected.") : t("Kết nối trực tiếp chưa khả dụng. Bạn có thể làm mới hội thoại.", "Live connection unavailable. You can refresh the conversation.")}</p>
+        {sentIds.includes(selected.id) && !sendError && <p role="status" className="member-support-notice">{t("Đã gửi tin nhắn.", "Message sent.")}</p>}
+        <button type="button" className="member-support-link" disabled={messagesLoading || loading} onClick={() => { void loadMessages(selected.id); void loadTickets(page); }}>{t("Làm mới hội thoại", "Refresh conversation")}</button>
+        {messagesLoading ? <LoadingSkeleton label={t("Đang tải hội thoại…", "Loading conversation…")} count={3} /> : messagesError ? <div role="alert"><p>{t(messagesError)}</p><button type="button" className="member-support-link" onClick={() => void loadMessages(selected.id)}>{t("Thử lại", "Retry")}</button></div> : messages.length === 0 ? <p className="portal-empty">{t("Chưa có tin nhắn. Hãy bắt đầu trao đổi.", "No messages yet. Start a conversation.")}</p> : <ol className="member-support-messages" tabIndex={0} aria-label={t(`Tin nhắn phiếu #${selected.id}`, `Messages for ticket #${selected.id}`)}>{messages.map((message) => <li key={message.id} className={message.senderRole === 'MEMBER' ? 'is-member' : 'is-staff'}><strong>{message.senderRole === 'MEMBER' ? t("Bạn", "You") : (message.senderName || t("Nhân viên", "Staff"))}</strong><p>{message.message}</p><time dateTime={message.createdAt}>{dateTime(message.createdAt)}</time></li>)}</ol>}
+        {selected.status === 'closed' ? <p className="member-support-context">{t("Phiếu đã đóng, không thể gửi thêm tin nhắn.", "This ticket is closed. No further messages can be sent.")}</p> : !accessDenied && <form className="member-support-compose" onSubmit={(event) => void submitMessage(event)}><label className="portal-label" htmlFor="support-message">{t("Tin nhắn", "Messages")}</label><textarea id="support-message" className="portal-textarea" value={draft} disabled={sending} onChange={(event) => { const value = event.target.value; setDrafts(previous => ({ ...previous, [selected.id]: value })); }} maxLength={2000} rows={3} required placeholder={t("Nhập nội dung phản hồi…", "Enter your reply…")} />{sendError && <p role="alert" className="member-support-error">{t(sendError)}</p>}<button className="btn-primary" type="submit" disabled={sending || !historyReady || messagesLoading || loading || !!listError || !draft.trim()}>{sending ? t("Đang gửi…", "Sending…") : t("Gửi tin nhắn", "Send message")}</button></form>}
       </div>
     </Modal>}
   </div>;

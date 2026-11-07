@@ -1,9 +1,8 @@
+import { useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch, getCurrentUser } from '../../shared/api/client';
-import { notify } from '../../shared/lib/portalNotices';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { classesApi } from '../classes/classesApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -87,6 +86,7 @@ function formatYmd(d: Date): string {
 }
 
 export function CoachClassesPage() {
+  const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
 
   // Tab chuyển đổi: 'schedule' (Thời khóa biểu) hoặc 'students' (Học viên phụ trách)
@@ -97,7 +97,7 @@ export function CoachClassesPage() {
   const [sessions, setSessions] = useState<CoachSession[]>([]);
   const [coach1on1Bookings, setCoach1on1Bookings] = useState<CoachBookingDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<StaffMessage | null>(null);
 
   // Ranking & Reviews Tab State
   const now = new Date();
@@ -107,11 +107,11 @@ export function CoachClassesPage() {
   const [leaderboard, setLeaderboard] = useState<CoachLeaderboardItemDto[]>([]);
   const [studentReviews, setStudentReviews] = useState<CoachReviewDto[]>([]);
   const [rankingLoading, setRankingLoading] = useState<boolean>(false);
-  const [rankingError, setRankingError] = useState<string | null>(null);
+  const [rankingError, setRankingError] = useState<StaffMessage | null>(null);
 
   // Tab Học viên phụ trách
   const [allStudents, setAllStudents] = useState<EnrolledStudent[]>([]);
-  const [allStudentsError, setAllStudentsError] = useState<string | null>(null);
+  const [allStudentsError, setAllStudentsError] = useState<StaffMessage | null>(null);
   const [allStudentsLoading, setAllStudentsLoading] = useState<boolean>(false);
   const [allStudentsSearch, setAllStudentsSearch] = useState<string>('');
   const [allStudentsLevelFilter, setAllStudentsLevelFilter] = useState<string>('all');
@@ -120,16 +120,16 @@ export function CoachClassesPage() {
   const [activeSession, setActiveSession] = useState<CoachSession | null>(null);
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState<boolean>(false);
-  const [studentsError, setStudentsError] = useState<string | null>(null);
+  const [studentsError, setStudentsError] = useState<StaffMessage | null>(null);
   const [studentSearch, setStudentSearch] = useState<string>('');
   const [selectedFitnessFilter, setSelectedFitnessFilter] = useState<string>('all');
   const [modalViewMode, setModalViewMode] = useState<'students' | 'attendance' | 'evaluation'>('students');
   const [cancellingCoachSession, setCancellingCoachSession] = useState<CoachSession | null>(null);
   const [cancelCoachSessionReason, setCancelCoachSessionReason] = useState<string>('');
-  const [cancelCoachSessionError, setCancelCoachSessionError] = useState<string | null>(null);
+  const [cancelCoachSessionError, setCancelCoachSessionError] = useState<StaffMessage | null>(null);
   const [cancellingPt, setCancellingPt] = useState<CoachBookingDto | null>(null);
   const [cancelPtReason, setCancelPtReason] = useState<string>('');
-  const [cancelPtError, setCancelPtError] = useState<string | null>(null);
+  const [cancelPtError, setCancelPtError] = useState<StaffMessage | null>(null);
   const [cancelBusy, setCancelBusy] = useState<boolean>(false);
 
   // Lấy dữ liệu điểm danh của buổi học (từ localStorage của tài khoản hiện tại)
@@ -395,14 +395,14 @@ export function CoachClassesPage() {
   }, [students, studentSearch, selectedFitnessFilter]);
 
   return (
-    <div className="portal-container coach-page">
+    <div data-i18n-managed className="portal-container coach-page">
       <PageHeader
-        eyebrow="Huấn luyện viên"
-        title="Thời khóa biểu & học viên phụ trách"
+        eyebrow={t("Huấn luyện viên")}
+        title={t("Thời khóa biểu & học viên phụ trách")}
       />
 
       {/* Phân hệ Tab: Thời khóa biểu vs Học viên phụ trách */}
-      <div className="coach-nav-tabs" role="tablist" aria-label="Phân hệ chức năng HLV">
+      <div className="coach-nav-tabs" role="tablist" aria-label={t("Phân hệ chức năng HLV")}>
         <button
           type="button"
           role="tab"
@@ -410,8 +410,7 @@ export function CoachClassesPage() {
           className={`coach-tab-btn ${activeTab === 'schedule' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
-          Thời khóa biểu
-        </button>
+          {t("Thời khóa biểu")}</button>
         <button
           type="button"
           role="tab"
@@ -419,11 +418,10 @@ export function CoachClassesPage() {
           className={`coach-tab-btn ${activeTab === 'students' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('students')}
         >
-          Học viên phụ trách
-        </button>
+          {t("Học viên phụ trách")}</button>
         <button type="button" role="tab" aria-selected={activeTab === 'ranking'}
           className={`coach-tab-btn ${activeTab === 'ranking' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('ranking')}>Đánh giá & bảng xếp hạng tháng</button>
+          onClick={() => setActiveTab('ranking')}>{t("Đánh giá & bảng xếp hạng tháng")}</button>
       </div>
 
       {/* ====================================================================
@@ -431,39 +429,39 @@ export function CoachClassesPage() {
           ==================================================================== */}
       {activeTab === 'schedule' && (
         <WeeklyTimetable
-          label="Thời khóa biểu giảng dạy của tôi"
+          label={t("Thời khóa biểu giảng dạy của tôi")}
           weekStart={formatYmd(currentMonday)}
           events={[...coachSessionEvents(sessions, 'schedule'), ...ptBookingEvents(coach1on1Bookings)]}
           loading={loading}
-          error={error}
+          error={t(error)}
           onRetry={() => void loadWeeklySessions()}
           onWeekChange={(iso) => setCurrentMonday(getWeekMonday(parseISODate(iso)))}
           onEventClick={handleEventClick}
-          emptyLabel="Tuần này bạn chưa có buổi dạy nào."
-          legendNote="Số trên khối: đã đặt / sức chứa"
+          emptyLabel={t("Tuần này bạn chưa có buổi dạy nào.")}
+          legendNote={t("Số trên khối: đã đặt / sức chứa")}
           legend={[
-            { tone: 'open', label: 'Lớp còn chỗ' },
-            { tone: 'full', label: 'Lớp đã đầy' },
-            { tone: 'mine', label: 'Kèm riêng 1:1' },
-            { tone: 'past', label: 'Đã qua' },
-            { tone: 'cancelled', label: 'Đã hủy' },
+            { tone: 'open', label: t('Lớp còn chỗ') },
+            { tone: 'full', label: t('Lớp đã đầy') },
+            { tone: 'mine', label: t('Kèm riêng 1:1') },
+            { tone: 'past', label: t('Đã qua') },
+            { tone: 'cancelled', label: t('Đã hủy') },
           ]}
         />
       )}
 
       {selectedPt && (
-        <Modal title="Buổi kèm riêng 1:1" onClose={() => setSelectedPt(null)}>
+        <Modal title={t("Buổi kèm riêng 1:1")} onClose={() => setSelectedPt(null)}>
           <div className="kv-list">
-            <div className="kv-row"><span>Học viên</span><strong>{selectedPt.memberName}</strong></div>
-            <div className="kv-row"><span>Thời gian</span><strong>{formatCenterDate(selectedPt.bookingDate)} · {selectedPt.startTime.slice(0, 5)}–{selectedPt.endTime.slice(0, 5)}</strong></div>
-            <div className="kv-row"><span>Bộ môn</span><strong>{selectedPt.disciplineName || 'Huấn luyện cá nhân'}</strong></div>
-            <div className="kv-row"><span>Hình thức</span><strong>{selectedPt.paymentMethod === 'package_quota' ? 'Quyền lợi gói tập' : 'Hội viên trả phí'}</strong></div>
-            {selectedPt.notes && <div className="kv-row"><span>Ghi chú của học viên</span><strong>{selectedPt.notes}</strong></div>}
+            <div className="kv-row"><span>{t("Học viên")}</span><strong>{selectedPt.memberName}</strong></div>
+            <div className="kv-row"><span>{t("Thời gian")}</span><strong>{formatCenterDate(selectedPt.bookingDate)} · {selectedPt.startTime.slice(0, 5)}–{selectedPt.endTime.slice(0, 5)}</strong></div>
+            <div className="kv-row"><span>{t("Bộ môn")}</span><strong>{selectedPt.disciplineName || t('Huấn luyện cá nhân')}</strong></div>
+            <div className="kv-row"><span>{t("Hình thức")}</span><strong>{selectedPt.paymentMethod === 'package_quota' ? t('Quyền lợi gói tập') : t('Hội viên trả phí')}</strong></div>
+            {selectedPt.notes && <div className="kv-row"><span>{t("Ghi chú của học viên")}</span><strong>{selectedPt.notes}</strong></div>}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 20 }}>
             <div>
               {(selectedPt.status === 'confirmed' || (selectedPt.status as string) === 'pending') && (
-                <button
+                <button data-i18n-managed
                   type="button"
                   className="btn-secondary"
                   style={{ color: 'var(--portal-danger, #fca5a5)' }}
@@ -474,47 +472,44 @@ export function CoachClassesPage() {
                   }}
                   data-testid="cancel-pt-btn"
                 >
-                  Hủy buổi kèm 1:1
-                </button>
+                  {t("Hủy buổi kèm 1:1")}</button>
               )}
             </div>
-            <button type="button" className="btn-secondary" onClick={() => setSelectedPt(null)}>Đóng</button>
+            <button type="button" className="btn-secondary" onClick={() => setSelectedPt(null)}>{t("Đóng")}</button>
           </div>
         </Modal>
       )}
 
       {cancellingPt && (
         <Modal
-          title={`Hủy buổi kèm 1:1: ${cancellingPt.memberName}`}
+          title={t(`Hủy buổi kèm 1:1: ${cancellingPt.memberName}`, `Cancel one-to-one session: ${cancellingPt.memberName}`)}
           onClose={() => { if (!cancelBusy) setCancellingPt(null); }}
         >
           <form onSubmit={handleConfirmCancelPt} style={{ display: 'grid', gap: 12 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="cancel-pt-reason">
-                Lý do hủy buổi kèm 1:1 *
-              </label>
+                {t("Lý do hủy buổi kèm 1:1 *")}</label>
               <textarea
                 id="cancel-pt-reason"
                 rows={3}
                 required
                 className="portal-textarea"
-                placeholder="Nhập lý do hủy buổi kèm 1:1 để thông báo cho học viên..."
+                placeholder={t("Nhập lý do hủy buổi kèm 1:1 để thông báo cho học viên...")}
                 value={cancelPtReason}
                 onChange={(e) => setCancelPtReason(e.target.value)}
                 disabled={cancelBusy}
               />
             </div>
             {cancelPtError && (
-              <div role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
-                {cancelPtError}
+              <div data-i18n-managed role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+                {t(cancelPtError)}
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button type="button" className="btn-secondary" onClick={() => setCancellingPt(null)} disabled={cancelBusy}>
-                Quay lại
-              </button>
+                {t("Quay lại")}</button>
               <button type="submit" className="btn-danger" disabled={cancelBusy} data-testid="confirm-cancel-pt-btn">
-                {cancelBusy ? 'Đang hủy...' : 'Xác nhận hủy buổi'}
+                {cancelBusy ? t('Đang hủy...') : t('Xác nhận hủy buổi')}
               </button>
             </div>
           </form>
@@ -525,13 +520,13 @@ export function CoachClassesPage() {
           TAB 2: HỌC VIÊN PHỤ TRÁCH (Tách riêng biệt)
           ==================================================================== */}
       {activeTab === 'students' && (
-        <div className="coach-students-section">
+        <div data-i18n-managed className="coach-students-section">
           <div className="coach-students-header">
             <div>
-              <h3 className="coach-students-title">Danh sách học viên phụ trách</h3>
+              <h3 className="coach-students-title">{t("Danh sách học viên phụ trách")}</h3>
             </div>
             <span className="coach-students-count">
-              Tổng số: <strong>{allStudents.length} học viên</strong>
+              {t("Tổng số: ")}<strong>{allStudents.length} {t(" học viên")}</strong>
             </span>
           </div>
 
@@ -540,7 +535,7 @@ export function CoachClassesPage() {
               type="text"
               className="portal-input"
               style={{ flex: '1 1 280px' }}
-              placeholder="Tìm theo tên học viên, mã thẻ, SĐT hoặc email..."
+              placeholder={t("Tìm theo tên học viên, mã thẻ, SĐT hoặc email...")}
               value={allStudentsSearch}
               onChange={(e) => setAllStudentsSearch(e.target.value)}
             />
@@ -550,26 +545,26 @@ export function CoachClassesPage() {
               value={allStudentsLevelFilter}
               onChange={(e) => setAllStudentsLevelFilter(e.target.value)}
             >
-              <option value="all">Tất cả trình độ</option>
-              <option value="beginner">Cơ bản (Beginner)</option>
-              <option value="intermediate">Trung cấp (Intermediate)</option>
-              <option value="advanced">Nâng cao (Advanced)</option>
+              <option value="all">{t("Tất cả trình độ")}</option>
+              <option value="beginner">{t("Cơ bản (Beginner)")}</option>
+              <option value="intermediate">{t("Trung cấp (Intermediate)")}</option>
+              <option value="advanced">{t("Nâng cao (Advanced)")}</option>
             </Select>
           </div>
 
           {allStudentsLoading ? (
-            <LoadingSkeleton label="Đang tải danh sách học viên phụ trách…" variant="cards" count={4} />
+            <LoadingSkeleton label={t("Đang tải danh sách học viên phụ trách…")} variant="cards" count={4} />
           ) : allStudentsError ? (
-            <div className="coach-error-box" role="alert"><p>{allStudentsError}</p></div>
+            <div data-i18n-managed className="coach-error-box" role="alert"><p>{t(allStudentsError)}</p></div>
           ) : filteredAllStudents.length === 0 ? (
-            <div className="coach-empty-box">
-              <p>Không tìm thấy học viên nào phù hợp.</p>
-              <span>Vui lòng kiểm tra lại từ khóa tìm kiếm hoặc bộ lọc trình độ.</span>
+            <div data-i18n-managed className="coach-empty-box">
+              <p>{t("Không tìm thấy học viên nào phù hợp.")}</p>
+              <span>{t("Vui lòng kiểm tra lại từ khóa tìm kiếm hoặc bộ lọc trình độ.")}</span>
             </div>
           ) : (
-            <div className="coach-students-grid">
+            <div data-i18n-managed className="coach-students-grid">
               {filteredAllStudents.map((st) => (
-                <div key={st.id} className="student-card-item">
+                <div data-i18n-managed key={st.id} className="student-card-item">
                   <div className="student-card-header">
                     <div className="student-avatar-col">
                       <div className="student-avatar-fallback">
@@ -582,18 +577,18 @@ export function CoachClassesPage() {
                         <span className="student-code-tag">{st.membershipCode}</span>
                         <span className={`fitness-level-pill level-${st.fitnessLevel}`}>
                           {st.fitnessLevel === 'beginner'
-                            ? 'Cơ bản'
+                            ? t('Cơ bản')
                             : st.fitnessLevel === 'intermediate'
-                            ? 'Trung cấp'
-                            : 'Nâng cao'}
+                            ? t('Trung cấp')
+                            : t('Nâng cao')}
                         </span>
                       </div>
                       <div className="student-contact-row">
                         <span>Email: {st.email}</span>
-                        {st.phone && <span>SĐT: {st.phone}</span>}
+                        {st.phone && <span>{t("SĐT: ")}{st.phone}</span>}
                         {st.emergencyContactName && (
-                          <span className="emergency-tag">
-                            Khẩn cấp: {st.emergencyContactName} ({st.emergencyContactPhone || 'N/A'})
+                          <span data-i18n-managed className="emergency-tag">
+                            {t("Khẩn cấp: ")}{st.emergencyContactName} ({st.emergencyContactPhone || 'N/A'})
                           </span>
                         )}
                       </div>
@@ -602,23 +597,22 @@ export function CoachClassesPage() {
 
                   <div className="student-details-grid">
                     <div className="student-detail-box goal-box">
-                      <span className="box-title">Mục tiêu thể lực (fitness_goal):</span>
-                      <p className="box-content">{st.fitnessGoal || 'Chưa cập nhật'}</p>
+                      <span className="box-title">{t("Mục tiêu thể lực (fitness_goal):")}</span>
+                      <p className="box-content">{st.fitnessGoal || t('Chưa cập nhật')}</p>
                     </div>
 
                     <div className="student-detail-box health-box">
-                      <span className="box-title">Lưu ý sức khỏe & Chấn thương (health_notes):</span>
+                      <span className="box-title">{t("Lưu ý sức khỏe & Chấn thương (health_notes):")}</span>
                       <p className="box-content warning-text">
-                        {st.healthNotes || 'Sức khỏe bình thường, không có ghi chú chấn thương.'}
+                        {st.healthNotes || t('Sức khỏe bình thường, không có ghi chú chấn thương.')}
                       </p>
                     </div>
                   </div>
 
                   <div className="student-card-item-footer">
-                    <span>Học viên chính thức của trung tâm</span>
+                    <span>{t("Học viên chính thức của trung tâm")}</span>
                     <Link to="/coach/training-plans" className="btn-plan-for-student">
-                      Soạn giáo án bài tập →
-                    </Link>
+                      {t("Soạn giáo án bài tập →")}</Link>
                   </div>
                 </div>
               ))}
@@ -632,7 +626,7 @@ export function CoachClassesPage() {
           ==================================================================== */}
       {/* Tab 2: Ranking & Reviews View */}
       {activeTab === 'ranking' && (
-        <div style={{ display: 'grid', gap: 28 }}>
+        <div data-i18n-managed style={{ display: 'grid', gap: 28 }}>
           {/* Period selector */}
           <div
             style={{
@@ -648,15 +642,15 @@ export function CoachClassesPage() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--portal-paper)' }}>Kỳ đánh giá:</span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--portal-paper)' }}>{t("Kỳ đánh giá:")}</span>
               <Select
                 value={String(reviewMonth)}
                 onChange={(e) => setReviewMonth(Number(e.target.value))}
                 style={{ width: 130 }}
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    Tháng {m}
+                  <option data-i18n-managed key={m} value={m}>
+                    {t("Tháng ")}{m}
                   </option>
                 ))}
               </Select>
@@ -672,26 +666,24 @@ export function CoachClassesPage() {
             </div>
 
             <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-              Bảng xếp hạng và mức thưởng được Ban Quản Lý phê duyệt và công bố định kỳ.
-            </span>
+              {t("Bảng xếp hạng và mức thưởng được Ban Quản Lý phê duyệt và công bố định kỳ.")}</span>
           </div>
 
           {rankingLoading && (
-            <div className="coach-loading-box" role="status" aria-busy="true">
+            <div data-i18n-managed className="coach-loading-box" role="status" aria-busy="true">
               <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 520, margin: '0 auto 12px' }}>
                 <div className="portal-skeleton" style={{ height: 48, borderRadius: 12 }} />
                 <div className="portal-skeleton" style={{ height: 48, borderRadius: 12 }} />
               </div>
-              <p>Đang tải dữ liệu xếp hạng và đánh giá...</p>
+              <p>{t("Đang tải dữ liệu xếp hạng và đánh giá...")}</p>
             </div>
           )}
 
           {rankingError && !rankingLoading && (
-            <div className="coach-error-box">
-              <p>{rankingError}</p>
+            <div data-i18n-managed className="coach-error-box">
+              <p>{t(rankingError)}</p>
               <button type="button" className="btn-retry" onClick={loadRankingData}>
-                Thử lại
-              </button>
+                {t("Thử lại")}</button>
             </div>
           )}
 
@@ -699,7 +691,7 @@ export function CoachClassesPage() {
             <>
               {/* Performance Highlights Card */}
               {currentMonthReview ? (
-                <div
+                <div data-i18n-managed
                   style={{
                     background:
                       'linear-gradient(135deg, rgba(206, 145, 128, 0.14) 0%, rgba(206, 145, 128, 0.04) 100%)',
@@ -724,11 +716,11 @@ export function CoachClassesPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div>
                           <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--portal-paper)' }}>
-                            Hạng #{currentMonthReview.rankPosition} •{' '}
-                            {currentMonthReview.badge || 'Huấn luyện viên tiêu biểu'}
+                            {t("Hạng #")}{currentMonthReview.rankPosition} •{' '}
+                            {currentMonthReview.badge || t('Huấn luyện viên tiêu biểu')}
                           </h3>
                           <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                            Kỳ đánh giá tháng {currentMonthReview.month}/{currentMonthReview.year}
+                            {t("Kỳ đánh giá tháng ")}{currentMonthReview.month}/{currentMonthReview.year}
                           </span>
                         </div>
                       </div>
@@ -749,8 +741,8 @@ export function CoachClassesPage() {
                       }}
                     >
                       {currentMonthReview.status === 'published'
-                        ? 'Đã công bố chính thức'
-                        : 'Đang tổng hợp / Dự thảo'}
+                        ? t('Đã công bố chính thức')
+                        : t('Đang tổng hợp / Dự thảo')}
                     </span>
                   </div>
 
@@ -772,8 +764,7 @@ export function CoachClassesPage() {
                       }}
                     >
                       <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 4 }}>
-                        Điểm đánh giá trung bình
-                      </div>
+                        {t("Điểm đánh giá trung bình")}</div>
                       <div
                         style={{
                           fontSize: 22,
@@ -789,8 +780,7 @@ export function CoachClassesPage() {
                         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--portal-muted)' }}>/ 5.0</span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-                        từ {currentMonthReview.totalReviews} lượt đánh giá
-                      </div>
+                        {t("từ ")}{currentMonthReview.totalReviews} {t(" lượt đánh giá")}</div>
                     </div>
 
                     <div
@@ -802,15 +792,13 @@ export function CoachClassesPage() {
                       }}
                     >
                       <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 4 }}>
-                        Tổng số buổi dạy
-                      </div>
+                        {t("Tổng số buổi dạy")}</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--portal-paper)', fontVariantNumeric: 'tabular-nums' }}>
                         {currentMonthReview.totalSessions}
-                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--portal-muted)' }}> buổi</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--portal-muted)' }}> {t(" buổi")}</span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2 }}>
-                        Lớp nhóm & kèm riêng 1:1
-                      </div>
+                        {t("Lớp nhóm & kèm riêng 1:1")}</div>
                     </div>
 
                     <div
@@ -822,8 +810,7 @@ export function CoachClassesPage() {
                       }}
                     >
                       <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 4 }}>
-                        Mức thưởng tháng (Bonus)
-                      </div>
+                        {t("Mức thưởng tháng (Bonus)")}</div>
                       <div
                         style={{
                           fontSize: 22,
@@ -835,14 +822,13 @@ export function CoachClassesPage() {
                         {formatPrice(currentMonthReview.bonusAmount)}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2 }}>
-                        Được duyệt bởi Ban Quản Lý
-                      </div>
+                        {t("Được duyệt bởi Ban Quản Lý")}</div>
                     </div>
                   </div>
 
                   {/* Manager Feedback */}
                   {currentMonthReview.managerFeedback && (
-                    <div
+                    <div data-i18n-managed
                       style={{
                         background: 'var(--portal-surface)',
                         padding: '18px 22px',
@@ -859,8 +845,7 @@ export function CoachClassesPage() {
                           marginBottom: 6,
                         }}
                       >
-                        Lời nhận xét & Đánh giá từ Ban Quản Lý Trung Tâm:
-                      </span>
+                        {t("Lời nhận xét & Đánh giá từ Ban Quản Lý Trung Tâm:")}</span>
                       <p
                         style={{
                           margin: 0,
@@ -876,7 +861,7 @@ export function CoachClassesPage() {
                   )}
                 </div>
               ) : (
-                <div
+                <div data-i18n-managed
                   style={{
                     background: 'var(--portal-surface)',
                     padding: '24px 32px',
@@ -886,14 +871,12 @@ export function CoachClassesPage() {
                   }}
                 >
                   <p style={{ margin: 0, color: 'var(--portal-muted)' }}>
-                    Chưa có bản tổng kết hiệu suất riêng cho tháng {reviewMonth}/{reviewYear}.
-                    Quản lý sẽ tổng hợp và công bố vào cuối kỳ!
-                  </p>
+                    {t("Chưa có bản tổng kết hiệu suất riêng cho tháng ")}{reviewMonth}/{reviewYear}{t(". Quản lý sẽ tổng hợp và công bố vào cuối kỳ!")}</p>
                 </div>
               )}
 
               {/* Leaderboard Section */}
-              <div
+              <div data-i18n-managed
                 style={{
                   background: 'var(--portal-surface)',
                   borderRadius: 20,
@@ -903,23 +886,21 @@ export function CoachClassesPage() {
               >
                 <div style={{ marginBottom: 18 }}>
                   <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--portal-paper)' }}>
-                    Bảng vinh danh top huấn luyện viên tháng {reviewMonth}/{reviewYear}
+                    {t("Bảng vinh danh top huấn luyện viên tháng ")}{reviewMonth}/{reviewYear}
                   </h3>
                   <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                    Danh sách các HLV có điểm đánh giá xuất sắc nhất toàn hệ thống
-                  </span>
+                    {t("Danh sách các HLV có điểm đánh giá xuất sắc nhất toàn hệ thống")}</span>
                 </div>
 
                 {leaderboard.length === 0 ? (
-                  <p style={{ margin: 0, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
-                    Chưa có bảng xếp hạng chính thức cho tháng này.
-                  </p>
+                  <p data-i18n-managed style={{ margin: 0, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
+                    {t("Chưa có bảng xếp hạng chính thức cho tháng này.")}</p>
                 ) : (
-                  <div style={{ display: 'grid', gap: 12 }}>
+                  <div data-i18n-managed style={{ display: 'grid', gap: 12 }}>
                     {leaderboard.map((item) => {
                       const isMe = item.coachName === currentUser?.name || item.coachId === Number(currentUser?.id);
                       return (
-                        <div
+                        <div data-i18n-managed
                           key={item.coachId}
                           style={{
                             display: 'flex',
@@ -967,7 +948,7 @@ export function CoachClassesPage() {
                                   {item.coachName}
                                 </span>
                                 {isMe && (
-                                  <span
+                                  <span data-i18n-managed
                                     style={{
                                       fontSize: 11,
                                       fontWeight: 750,
@@ -977,12 +958,11 @@ export function CoachClassesPage() {
                                       color: 'var(--portal-ink, #202020)',
                                     }}
                                   >
-                                    Bạn
-                                  </span>
+                                    {t("Bạn")}</span>
                                 )}
                               </div>
                               <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
-                                {item.coachSpecialization || 'Huấn luyện viên cá nhân'}
+                                {item.coachSpecialization || t('Huấn luyện viên cá nhân')}
                                 {item.badge && ` • ${item.badge}`}
                               </span>
                             </div>
@@ -1001,8 +981,7 @@ export function CoachClassesPage() {
                                 {item.averageRating.toFixed(1)}
                               </div>
                               <div style={{ fontSize: 11, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                                {item.totalReviews} đánh giá
-                              </div>
+                                {item.totalReviews} {t(" đánh giá")}</div>
                             </div>
                             <div>
                               <div
@@ -1015,7 +994,7 @@ export function CoachClassesPage() {
                               >
                                 {formatPrice(item.bonusAmount)}
                               </div>
-                              <div style={{ fontSize: 11, color: 'var(--portal-muted)' }}>Thưởng tháng</div>
+                              <div style={{ fontSize: 11, color: 'var(--portal-muted)' }}>{t("Thưởng tháng")}</div>
                             </div>
                           </div>
                         </div>
@@ -1026,7 +1005,7 @@ export function CoachClassesPage() {
               </div>
 
               {/* Student Reviews Section */}
-              <div
+              <div data-i18n-managed
                 style={{
                   background: 'var(--portal-surface)',
                   borderRadius: 20,
@@ -1036,21 +1015,19 @@ export function CoachClassesPage() {
               >
                 <div style={{ marginBottom: 18 }}>
                   <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--portal-paper)' }}>
-                    Đánh giá & nhận xét trực tiếp từ học viên
-                  </h3>
+                    {t("Đánh giá & nhận xét trực tiếp từ học viên")}</h3>
                   <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                    Phản hồi thực tế từ hội viên sau các buổi học và buổi kèm riêng PT 1:1
-                  </span>
+                    {t("Phản hồi thực tế từ hội viên sau các buổi học và buổi kèm riêng PT 1:1")}</span>
                 </div>
 
                 {studentReviews.length === 0 ? (
-                  <div className="coach-empty-box" style={{ padding: '24px 32px' }}>
-                    <p style={{ margin: 0 }}>Chưa có nhận xét nào từ học viên cho huấn luyện viên.</p>
+                  <div data-i18n-managed className="coach-empty-box" style={{ padding: '24px 32px' }}>
+                    <p style={{ margin: 0 }}>{t("Chưa có nhận xét nào từ học viên cho huấn luyện viên.")}</p>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gap: 14 }}>
+                  <div data-i18n-managed style={{ display: 'grid', gap: 14 }}>
                     {studentReviews.map((rev) => (
-                      <div
+                      <div data-i18n-managed
                         key={rev.id}
                         style={{
                           padding: '16px 20px',
@@ -1069,7 +1046,7 @@ export function CoachClassesPage() {
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontWeight: 750, fontSize: 14, color: 'var(--portal-paper)' }}>
-                              {rev.isAnonymous ? 'Hội viên ẩn danh' : rev.memberName}
+                              {rev.isAnonymous ? t('Hội viên ẩn danh') : rev.memberName}
                             </span>
                             <span
                               style={{
@@ -1083,7 +1060,7 @@ export function CoachClassesPage() {
                                 fontWeight: 700,
                               }}
                             >
-                              {rev.bookingId ? 'Buổi kèm PT 1:1' : 'Lớp học nhóm'}
+                              {rev.bookingId ? t('Buổi kèm PT 1:1') : t('Lớp học nhóm')}
                             </span>
                           </div>
 
@@ -1099,13 +1076,12 @@ export function CoachClassesPage() {
                         </div>
 
                         {rev.comment ? (
-                          <p style={{ margin: 0, fontSize: 14, color: 'var(--portal-paper)', lineHeight: 1.5 }}>
+                          <p data-i18n-managed style={{ margin: 0, fontSize: 14, color: 'var(--portal-paper)', lineHeight: 1.5 }}>
                             "{rev.comment}"
                           </p>
                         ) : (
-                          <span style={{ fontSize: 13, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
-                            (Học viên không để lại lời bình luận)
-                          </span>
+                          <span data-i18n-managed style={{ fontSize: 13, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
+                            {t("(Học viên không để lại lời bình luận)")}</span>
                         )}
                       </div>
                     ))}
@@ -1120,7 +1096,7 @@ export function CoachClassesPage() {
       {activeSession && (
         <Modal
           className="coach-students-modal-dialog"
-          title={`Học viên lớp ${activeSession.className} (${activeSession.startTime} - ${activeSession.endTime})`}
+          title={t(`Học viên lớp ${activeSession.className} (${activeSession.startTime} - ${activeSession.endTime})`, `Class members ${activeSession.className} (${activeSession.startTime} - ${activeSession.endTime})`)}
           onClose={handleCloseModal}
         >
           <div className="students-modal-body">
@@ -1130,10 +1106,10 @@ export function CoachClassesPage() {
                 className="portal-input student-search-input"
                 placeholder={
                   modalViewMode === 'attendance'
-                    ? 'Tìm theo tên học viên hoặc trạng thái có mặt/vắng...'
+                    ? t('Tìm theo tên học viên hoặc trạng thái có mặt/vắng...')
                     : modalViewMode === 'evaluation'
-                    ? 'Tìm theo tên học viên hoặc nội dung nhận xét...'
-                    : 'Tìm theo tên học viên, mã thẻ hoặc SĐT...'
+                    ? t('Tìm theo tên học viên hoặc nội dung nhận xét...')
+                    : t('Tìm theo tên học viên, mã thẻ hoặc SĐT...')
                 }
                 value={studentSearch}
                 onChange={(e) => setStudentSearch(e.target.value)}
@@ -1142,43 +1118,43 @@ export function CoachClassesPage() {
                 className="portal-select student-level-filter"
                 value={modalViewMode}
                 onChange={(e) => setModalViewMode(e.target.value as 'students' | 'attendance' | 'evaluation')}
-                aria-label="Chọn chế độ xem"
+                aria-label={t("Chọn chế độ xem")}
               >
-                <option value="students">Xem học viên</option>
-                <option value="attendance">Lịch sử điểm danh (trình duyệt này)</option>
-                <option value="evaluation">Đánh giá học viên (trình duyệt này)</option>
+                <option value="students">{t("Xem học viên")}</option>
+                <option value="attendance">{t("Lịch sử điểm danh (trình duyệt này)")}</option>
+                <option value="evaluation">{t("Đánh giá học viên (trình duyệt này)")}</option>
               </Select>
             </div>
 
             {studentsLoading ? (
-              <LoadingSkeleton label="Đang tải dữ liệu của buổi học…" count={4} />
+              <LoadingSkeleton label={t("Đang tải dữ liệu của buổi học…")} count={4} />
             ) : modalViewMode === 'attendance' ? (
               /* CHẾ ĐỘ 2: LỊCH SỬ ĐIỂM DANH */
-              <div className="students-list-wrap">
+              <div data-i18n-managed className="students-list-wrap">
                 {sessionAttendanceData && (
-                  <div className="history-summary-banner">
+                  <div data-i18n-managed className="history-summary-banner">
                     <span className="history-stat-badge is-present">
-                      Có mặt: {sessionAttendanceData.presentCount}
+                      {t("Có mặt: ")}{sessionAttendanceData.presentCount}
                     </span>
                     <span className="history-stat-badge is-absent">
-                      Vắng mặt: {sessionAttendanceData.absentCount}
+                      {t("Vắng mặt: ")}{sessionAttendanceData.absentCount}
                     </span>
                     <span className="history-stat-badge is-rate">
-                      Tỷ lệ chuyên cần: {sessionAttendanceData.rate}%
+                      {t("Tỷ lệ chuyên cần: ")}{sessionAttendanceData.rate}%
                     </span>
                     <span className="history-timestamp">
-                      Đã lưu: {sessionAttendanceData.savedAt}
+                      {t("Đã lưu: ")}{sessionAttendanceData.savedAt}
                     </span>
                   </div>
                 )}
 
                 {filteredAttendanceStudents.length === 0 ? (
-                  <div className="students-empty-state">
-                    <p>Không tìm thấy bản ghi điểm danh nào phù hợp.</p>
+                  <div data-i18n-managed className="students-empty-state">
+                    <p>{t("Không tìm thấy bản ghi điểm danh nào phù hợp.")}</p>
                   </div>
                 ) : (
                   filteredAttendanceStudents.map((st: StoredAttendanceStudent) => (
-                    <div key={st.id} className="history-record-card">
+                    <div data-i18n-managed key={st.id} className="history-record-card">
                       <div className="history-record-header">
                         <div className="student-card-header">
                           <div className="student-avatar-col">
@@ -1194,12 +1170,12 @@ export function CoachClassesPage() {
                           </div>
                         </div>
                         <span className={`status-pill ${st.status === 'present' ? 'is-present' : 'is-absent'}`}>
-                          {st.status === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                          {st.status === 'present' ? t('Có mặt') : t('Vắng mặt')}
                         </span>
                       </div>
                       <div className="history-notes-box">
-                        <span className="history-notes-label">Ghi chú chuyên cần: </span>
-                        <span>{st.notes || 'Không có ghi chú.'}</span>
+                        <span className="history-notes-label">{t("Ghi chú chuyên cần: ")}</span>
+                        <span>{st.notes || t('Không có ghi chú.')}</span>
                       </div>
                     </div>
                   ))
@@ -1207,28 +1183,27 @@ export function CoachClassesPage() {
               </div>
             ) : modalViewMode === 'evaluation' ? (
               /* CHẾ ĐỘ 3: ĐÁNH GIÁ HỌC VIÊN */
-              <div className="students-list-wrap">
+              <div data-i18n-managed className="students-list-wrap">
                 {sessionEvaluationData && (
-                  <div className="history-summary-banner">
+                  <div data-i18n-managed className="history-summary-banner">
                     <span className="history-stat-badge is-score">
-                      Điểm trung bình: {sessionEvaluationData.averageScore}/100
+                      {t("Điểm trung bình: ")}{sessionEvaluationData.averageScore}/100
                     </span>
                     <span className="history-stat-badge is-rate">
-                      Đã đánh giá: {sessionEvaluationData.totalStudents} học viên
-                    </span>
+                      {t("Đã đánh giá: ")}{sessionEvaluationData.totalStudents} {t(" học viên")}</span>
                     <span className="history-timestamp">
-                      Đã lưu: {sessionEvaluationData.savedAt}
+                      {t("Đã lưu: ")}{sessionEvaluationData.savedAt}
                     </span>
                   </div>
                 )}
 
                 {filteredEvalStudents.length === 0 ? (
-                  <div className="students-empty-state">
-                    <p>Không tìm thấy bản ghi đánh giá nào phù hợp.</p>
+                  <div data-i18n-managed className="students-empty-state">
+                    <p>{t("Không tìm thấy bản ghi đánh giá nào phù hợp.")}</p>
                   </div>
                 ) : (
                   filteredEvalStudents.map((st: StoredEvaluationStudent) => (
-                    <div key={st.id} className="history-record-card">
+                    <div data-i18n-managed key={st.id} className="history-record-card">
                       <div className="history-record-header">
                         <div className="student-card-header">
                           <div className="student-avatar-col">
@@ -1244,14 +1219,12 @@ export function CoachClassesPage() {
                           </div>
                         </div>
                         <span className="score-badge">
-                          {st.progressScore}/100 điểm
-                        </span>
+                          {st.progressScore}{t("/100 điểm")}</span>
                       </div>
 
                       <div className="history-score-row">
                         <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--portal-salmon)', minWidth: '85px' }}>
-                          Tiến bộ:
-                        </span>
+                          {t("Tiến bộ:")}</span>
                         <div className="history-score-bar-track">
                           <div
                             className="history-score-bar-fill"
@@ -1264,24 +1237,24 @@ export function CoachClassesPage() {
                       </div>
 
                       <div className="history-notes-box">
-                        <span className="history-notes-label">Nhận xét kỹ thuật: </span>
-                        <span>{st.notes || 'Đạt yêu cầu buổi tập.'}</span>
+                        <span className="history-notes-label">{t("Nhận xét kỹ thuật: ")}</span>
+                        <span>{st.notes || t('Đạt yêu cầu buổi tập.')}</span>
                       </div>
                     </div>
                   ))
                 )}
               </div>
             ) : studentsError ? (
-              <div className="students-empty-state" role="alert"><p>{studentsError}</p></div>
+              <div data-i18n-managed className="students-empty-state" role="alert"><p>{t(studentsError)}</p></div>
             ) : filteredStudents.length === 0 ? (
               /* CHẾ ĐỘ 1: XEM HỌC VIÊN */
-              <div className="students-empty-state">
-                <p>Không tìm thấy học viên nào phù hợp.</p>
+              <div data-i18n-managed className="students-empty-state">
+                <p>{t("Không tìm thấy học viên nào phù hợp.")}</p>
               </div>
             ) : (
-              <div className="students-list-wrap">
+              <div data-i18n-managed className="students-list-wrap">
                 {filteredStudents.map((st) => (
-                  <div key={st.id} className="student-card-item">
+                  <div data-i18n-managed key={st.id} className="student-card-item">
                     <div className="student-card-header">
                       <div className="student-avatar-col">
                         <div className="student-avatar-fallback">
@@ -1294,18 +1267,18 @@ export function CoachClassesPage() {
                           <span className="student-code-tag">{st.membershipCode}</span>
                           <span className={`fitness-level-pill level-${st.fitnessLevel}`}>
                             {st.fitnessLevel === 'beginner'
-                              ? 'Cơ bản'
+                              ? t('Cơ bản')
                               : st.fitnessLevel === 'intermediate'
-                              ? 'Trung cấp'
-                              : st.fitnessLevel === 'advanced' ? 'Nâng cao' : 'Chưa cập nhật'}
+                              ? t('Trung cấp')
+                              : st.fitnessLevel === 'advanced' ? t('Nâng cao') : t('Chưa cập nhật')}
                           </span>
                         </div>
                         <div className="student-contact-row">
                           <span>Email: {st.email}</span>
-                          {st.phone && <span>SĐT: {st.phone}</span>}
+                          {st.phone && <span>{t("SĐT: ")}{st.phone}</span>}
                           {st.emergencyContactName && (
-                            <span className="emergency-tag">
-                              Khẩn cấp: {st.emergencyContactName} ({st.emergencyContactPhone || 'N/A'})
+                            <span data-i18n-managed className="emergency-tag">
+                              {t("Khẩn cấp: ")}{st.emergencyContactName} ({st.emergencyContactPhone || 'N/A'})
                             </span>
                           )}
                         </div>
@@ -1314,14 +1287,14 @@ export function CoachClassesPage() {
 
                     <div className="student-details-grid">
                       <div className="student-detail-box goal-box">
-                        <span className="box-title">Mục tiêu thể lực (fitness_goal):</span>
-                        <p className="box-content">{st.fitnessGoal || 'Chưa cập nhật'}</p>
+                        <span className="box-title">{t("Mục tiêu thể lực (fitness_goal):")}</span>
+                        <p className="box-content">{st.fitnessGoal || t('Chưa cập nhật')}</p>
                       </div>
 
                       <div className="student-detail-box health-box">
-                        <span className="box-title">Lưu ý sức khỏe & Chấn thương (health_notes):</span>
+                        <span className="box-title">{t("Lưu ý sức khỏe & Chấn thương (health_notes):")}</span>
                         <p className="box-content warning-text">
-                          {st.healthNotes || 'Chưa cập nhật'}
+                          {st.healthNotes || t('Chưa cập nhật')}
                         </p>
                       </div>
                     </div>
@@ -1333,14 +1306,14 @@ export function CoachClassesPage() {
             <div className="students-modal-footer">
               <span className="footer-count">
                 {modalViewMode === 'attendance'
-                  ? `Hiển thị ${filteredAttendanceStudents.length} / ${sessionAttendanceData?.students.length || 0} bản ghi điểm danh`
+                  ? t(`Hiển thị ${filteredAttendanceStudents.length} / ${sessionAttendanceData?.students.length || 0} bản ghi điểm danh`, `Showing ${filteredAttendanceStudents.length} / ${sessionAttendanceData?.students.length || 0} attendance records`)
                   : modalViewMode === 'evaluation'
-                  ? `Hiển thị ${filteredEvalStudents.length} / ${sessionEvaluationData?.students.length || 0} bản ghi đánh giá`
-                  : `Hiển thị ${filteredStudents.length} / ${students.length} học viên`}
+                  ? t(`Hiển thị ${filteredEvalStudents.length} / ${sessionEvaluationData?.students.length || 0} bản ghi đánh giá`, `Showing ${filteredEvalStudents.length} / ${sessionEvaluationData?.students.length || 0} evaluation records`)
+                  : t(`Hiển thị ${filteredStudents.length} / ${students.length} học viên`, `Showing ${filteredStudents.length} / ${students.length} members`)}
               </span>
               <div style={{ display: 'flex', gap: 10 }}>
                 {activeSession.status === 'scheduled' && (
-                  <button
+                  <button data-i18n-managed
                     type="button"
                     className="btn-secondary"
                     style={{ color: 'var(--portal-danger, #fca5a5)' }}
@@ -1351,12 +1324,10 @@ export function CoachClassesPage() {
                     }}
                     data-testid="cancel-coach-session-btn"
                   >
-                    Hủy buổi dạy
-                  </button>
+                    {t("Hủy buổi dạy")}</button>
                 )}
                 <button type="button" className="btn-secondary" onClick={handleCloseModal}>
-                  Đóng
-                </button>
+                  {t("Đóng")}</button>
               </div>
             </div>
           </div>
@@ -1365,36 +1336,34 @@ export function CoachClassesPage() {
 
       {cancellingCoachSession && (
         <Modal
-          title={`Hủy buổi dạy: ${cancellingCoachSession.className} (${cancellingCoachSession.sessionDate})`}
+          title={t(`Hủy buổi dạy: ${cancellingCoachSession.className} (${cancellingCoachSession.sessionDate})`, `Cancel teaching session: ${cancellingCoachSession.className} (${cancellingCoachSession.sessionDate})`)}
           onClose={() => { if (!cancelBusy) setCancellingCoachSession(null); }}
         >
           <form onSubmit={handleConfirmCancelCoachSession} style={{ display: 'grid', gap: 12 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="cancel-coach-session-reason">
-                Lý do hủy buổi dạy *
-              </label>
+                {t("Lý do hủy buổi dạy *")}</label>
               <textarea
                 id="cancel-coach-session-reason"
                 rows={3}
                 required
                 className="portal-textarea"
-                placeholder="Nhập lý do hủy buổi dạy để thông báo cho học viên..."
+                placeholder={t("Nhập lý do hủy buổi dạy để thông báo cho học viên...")}
                 value={cancelCoachSessionReason}
                 onChange={(e) => setCancelCoachSessionReason(e.target.value)}
                 disabled={cancelBusy}
               />
             </div>
             {cancelCoachSessionError && (
-              <div role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
-                {cancelCoachSessionError}
+              <div data-i18n-managed role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+                {t(cancelCoachSessionError)}
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button type="button" className="btn-secondary" onClick={() => setCancellingCoachSession(null)} disabled={cancelBusy}>
-                Quay lại
-              </button>
+                {t("Quay lại")}</button>
               <button type="submit" className="btn-danger" disabled={cancelBusy} data-testid="confirm-cancel-coach-session-btn">
-                {cancelBusy ? 'Đang hủy...' : 'Xác nhận hủy buổi'}
+                {cancelBusy ? t('Đang hủy...') : t('Xác nhận hủy buổi')}
               </button>
             </div>
           </form>

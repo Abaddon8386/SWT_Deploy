@@ -1,3 +1,4 @@
+import { useStaffI18n, type StaffMessage, staffMessage, staffNotify as notify } from '../operations/staffI18n';
 import { CoachHealthMetrics } from './CoachHealthMetrics';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise, type ExerciseValues } from './trainingExercise';
@@ -9,7 +10,6 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { StatusMark } from '../../shared/ui/StatusMark';
-import { notify } from '../../shared/lib/portalNotices';
 import { formatCenterTime } from '../../shared/lib/centerTime';
 import {
   aiApi,
@@ -35,6 +35,7 @@ const DAYS_OF_WEEK = [
 ];
 
 export function CoachTrainingPlanPage() {
+  const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
 
   // Role authorization
@@ -48,7 +49,7 @@ export function CoachTrainingPlanPage() {
   // Danh sách học viên thật (không có dữ liệu mẫu) và thông tin tổng quan giáo án
   const [members, setMembers] = useState<MemberOption[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
-  const [membersError, setMembersError] = useState('');
+  const [membersError, setMembersError] = useState<StaffMessage>('');
   const [membersAttempt, setMembersAttempt] = useState(0);
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   // Manager phải chỉ định Coach phụ trách vì Manager không có hồ sơ Coach của riêng mình
@@ -136,10 +137,10 @@ export function CoachTrainingPlanPage() {
   const [newDuration, setNewDuration] = useState(15);
   const [newDescription, setNewDescription] = useState('');
   // Lỗi nhập liệu hiển thị ngay dưới trường tương ứng
-  const [exerciseError, setExerciseError] = useState<string | null>(null);
-  const [dateError, setDateError] = useState<string | null>(null);
-  const [planError, setPlanError] = useState<string | null>(null);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [exerciseError, setExerciseError] = useState<StaffMessage | null>(null);
+  const [dateError, setDateError] = useState<StaffMessage | null>(null);
+  const [planError, setPlanError] = useState<StaffMessage | null>(null);
+  const [aiError, setAiError] = useState<StaffMessage | null>(null);
 
   // AI Modal States
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -215,7 +216,7 @@ export function CoachTrainingPlanPage() {
   };
 
   const [editingExercise, setEditingExercise] = useState<{ id: string; values: ExerciseValues } | null>(null);
-  const [editExerciseError, setEditExerciseError] = useState('');
+  const [editExerciseError, setEditExerciseError] = useState<StaffMessage>('');
 
   // Xóa bài tập
   const handleRemoveExercise = (id?: string) => {
@@ -344,7 +345,7 @@ export function CoachTrainingPlanPage() {
       }
 
       setPlansRefresh((value) => value + 1);
-      notify(`Đã lưu và kích hoạt giáo án "${planTitle}" cho học viên ${selectedMember.fullName}.`, 'success');
+      notify(staffMessage(`Đã lưu và kích hoạt giáo án "${planTitle}" cho học viên ${selectedMember.fullName}.`, `Saved and activated training plan "${planTitle}" for member ${selectedMember.fullName}.`), 'success');
     } catch {
       notify('Đã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại.', 'error');
     } finally {
@@ -354,16 +355,16 @@ export function CoachTrainingPlanPage() {
 
   if (!hasAccess) {
     return (
-      <div className="portal-container">
-        <PageHeader eyebrow="Huấn luyện" title="Soạn giáo án bài tập" />
+      <div data-i18n-managed className="portal-container">
+        <PageHeader eyebrow={t("Huấn luyện")} title={t("Soạn giáo án bài tập")} />
         <div className="portal-card" style={{ padding: '36px', textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
             <StatusMark type="error" size={56} />
           </div>
-          <h2 style={{ color: 'var(--portal-danger)', marginBottom: '8px' }}>Truy cập bị từ chối (403 Forbidden)</h2>
+          <h2 style={{ color: 'var(--portal-danger)', marginBottom: '8px' }}>{t("Truy cập bị từ chối (403 Forbidden)")}</h2>
           <p style={{ color: 'var(--color-text-muted)', maxWidth: '500px', margin: '0 auto' }}>
-            Bàn làm việc thiết kế giáo án chỉ dành cho tài khoản <strong>Huấn luyện viên (COACH)</strong> hoặc{' '}
-            <strong>Quản Lý (MANAGER)</strong>.
+            {t("Bàn làm việc thiết kế giáo án chỉ dành cho tài khoản ")}<strong>{t("Huấn luyện viên (COACH)")}</strong> {t(" hoặc")}{' '}
+            <strong>{t("Quản Lý (MANAGER)")}</strong>.
           </p>
         </div>
       </div>
@@ -371,30 +372,30 @@ export function CoachTrainingPlanPage() {
   }
 
   if (membersLoading || membersError) {
-    return <div className="portal-container plan-editor-page">
-      <PageHeader eyebrow="Huấn luyện &amp; Bài tập" title="Bàn làm việc: Soạn giáo án bài tập" />
-      {membersLoading ? <LoadingSkeleton label="Đang tải học viên và thông tin giáo án…" variant="profile" />
-        : <div className="portal-card" role="alert"><p>{membersError}</p><button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>Thử lại</button></div>}
+    return <div data-i18n-managed className="portal-container plan-editor-page">
+      <PageHeader eyebrow={t("Huấn luyện &amp; Bài tập")} title={t("Bàn làm việc: Soạn giáo án bài tập")} />
+      {membersLoading ? <LoadingSkeleton label={t("Đang tải học viên và thông tin giáo án…")} variant="profile" />
+        : <div className="portal-card" role="alert"><p>{t(membersError)}</p><button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>{t("Thử lại")}</button></div>}
     </div>;
   }
 
   if (!selectedMember || !aiSelectedMember) {
-    return <div className="portal-container plan-editor-page">
-      <PageHeader eyebrow="Huấn luyện &amp; Bài tập" title="Bàn làm việc: Soạn giáo án bài tập" />
+    return <div data-i18n-managed className="portal-container plan-editor-page">
+      <PageHeader eyebrow={t("Huấn luyện &amp; Bài tập")} title={t("Bàn làm việc: Soạn giáo án bài tập")} />
       <div className="portal-card" role="status">
-        <p><strong>Chưa có học viên để soạn giáo án.</strong></p>
-        <p>Danh sách học viên lấy từ các lớp đã có hội viên ghi danh. Khi có hội viên đăng ký lớp, họ sẽ xuất hiện ở đây.</p>
-        <button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>Tải lại danh sách</button>
+        <p><strong>{t("Chưa có học viên để soạn giáo án.")}</strong></p>
+        <p>{t("Danh sách học viên lấy từ các lớp đã có hội viên ghi danh. Khi có hội viên đăng ký lớp, họ sẽ xuất hiện ở đây.")}</p>
+        <button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>{t("Tải lại danh sách")}</button>
       </div>
       <SavedTrainingPlans refreshKey={plansRefresh} />
     </div>;
   }
 
   return (
-    <div className="portal-container plan-editor-page">
+    <div data-i18n-managed className="portal-container plan-editor-page">
       <PageHeader
-        eyebrow="Huấn luyện &amp; Bài tập"
-        title="Bàn làm việc: Soạn giáo án bài tập"
+        eyebrow={t("Huấn luyện &amp; Bài tập")}
+        title={t("Bàn làm việc: Soạn giáo án bài tập")}
         actions={
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {AI_UI_ENABLED && <button
@@ -405,7 +406,7 @@ export function CoachTrainingPlanPage() {
                 setIsAiModalOpen(true);
               }}
             >
-              <span>Gợi ý giáo án bằng AI</span>
+              <span>{t("Gợi ý giáo án bằng AI")}</span>
             </button>}
 
             <button
@@ -413,53 +414,49 @@ export function CoachTrainingPlanPage() {
               className="btn-primary"
               onClick={() => void handleSavePlan()}
               disabled={isSaving || (isManager && selectedCoachId == null)}
-              title={isManager && selectedCoachId == null ? 'Chọn huấn luyện viên phụ trách để lưu' : undefined}
+              title={isManager && selectedCoachId == null ? t('Chọn huấn luyện viên phụ trách để lưu') : undefined}
             >
-              {isSaving ? 'Đang lưu...' : 'Lưu & Kích hoạt giáo án'}
+              {isSaving ? t('Đang lưu...') : t('Lưu & Kích hoạt giáo án')}
             </button>
           </div>
         }
       />
 
-      {planError && <p className="form-error" role="alert">{planError}</p>}
+      {planError && <p className="form-error" role="alert">{t(planError)}</p>}
 
       {/* Plan Meta Information Card */}
       <div className="plan-meta-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h2 className="portal-card-title" style={{ margin: 0, fontSize: '1.2rem' }}>
-              Thông tin kế hoạch huấn luyện
-            </h2>
+              {t("Thông tin kế hoạch huấn luyện")}</h2>
             {lastSavedTime && (
-              <span className="plan-saved-badge">
-                Đã kích hoạt ({lastSavedTime})
+              <span data-i18n-managed className="plan-saved-badge">
+                {t("Đã kích hoạt (")}{lastSavedTime})
               </span>
             )}
           </div>
           <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-            Tổng số: <strong>{exercises.length} động tác</strong> được thiết lập trong tuần
-          </span>
+            {t("Tổng số: ")}<strong>{exercises.length} {t(" động tác")}</strong> {t(" được thiết lập trong tuần")}</span>
         </div>
 
         <div className="plan-meta-grid">
           <div>
             <label className="portal-label" htmlFor="plan-title-input">
-              Tên giáo án
-            </label>
+              {t("Tên giáo án")}</label>
             <input
               id="plan-title-input"
               type="text"
               className="portal-input"
               value={planTitle}
               onChange={(e) => setPlanTitle(e.target.value)}
-              placeholder="Ví dụ: Lộ trình Giảm Mỡ Tăng Cơ 4 Tuần..."
+              placeholder={t("Ví dụ: Lộ trình Giảm Mỡ Tăng Cơ 4 Tuần...")}
             />
           </div>
 
           <div>
             <label className="portal-label" htmlFor="plan-member-select">
-              Học viên thụ hưởng
-            </label>
+              {t("Học viên thụ hưởng")}</label>
             <Select
               id="plan-member-select"
               className="portal-select"
@@ -473,7 +470,7 @@ export function CoachTrainingPlanPage() {
               }}
             >
               {members.map((m) => (
-                <option key={m.id} value={String(m.id)}>
+                <option data-i18n-managed key={m.id} value={String(m.id)}>
                   {m.fullName} ({m.memberCode})
                 </option>
               ))}
@@ -482,25 +479,23 @@ export function CoachTrainingPlanPage() {
 
           {isManager && <div>
             <label className="portal-label" htmlFor="plan-coach-select">
-              Huấn luyện viên phụ trách
-            </label>
+              {t("Huấn luyện viên phụ trách")}</label>
             <Select
               id="plan-coach-select"
               className="portal-select"
               value={selectedCoachId == null ? '' : String(selectedCoachId)}
               onChange={(e) => setSelectedCoachId(e.target.value ? Number(e.target.value) : null)}
             >
-              <option value="">{coaches.length === 0 ? 'Chưa có huấn luyện viên hoạt động' : '— Chọn huấn luyện viên —'}</option>
+              <option value="">{coaches.length === 0 ? t('Chưa có huấn luyện viên hoạt động') : t('— Chọn huấn luyện viên —')}</option>
               {coaches.map((c) => (
-                <option key={c.id} value={String(c.id)}>{c.fullName}</option>
+                <option data-i18n-managed key={c.id} value={String(c.id)}>{c.fullName}</option>
               ))}
             </Select>
           </div>}
 
           <div>
             <label className="portal-label" htmlFor="plan-start-date">
-              Ngày bắt đầu
-            </label>
+              {t("Ngày bắt đầu")}</label>
             <DatePicker
               id="plan-start-date"
               min={todayStr}
@@ -512,15 +507,14 @@ export function CoachTrainingPlanPage() {
 
           <div>
             <label className="portal-label" htmlFor="plan-end-date">
-              Ngày kết thúc
-            </label>
+              {t("Ngày kết thúc")}</label>
             <DatePicker
               id="plan-end-date"
               min={startDate || todayStr}
               value={endDate}
               onChange={handleEndDateChange}
             />
-            {dateError && <p className="form-error" role="alert">{dateError}</p>}
+            {dateError && <p className="form-error" role="alert">{t(dateError)}</p>}
           </div>
         </div>
 
@@ -541,11 +535,11 @@ export function CoachTrainingPlanPage() {
           }}
         >
           <div>
-            <span>Mục tiêu thể lực: </span>
+            <span>{t("Mục tiêu thể lực: ")}</span>
             <strong style={{ color: 'var(--fit-salmon, #ce9180)' }}>{planGoal}</strong>
           </div>
-          <div style={{ color: selectedMember.healthNotes?.includes('Tránh') ? 'var(--portal-danger, #fca5a5)' : 'var(--color-text-muted)' }}>
-            Lưu ý sức khỏe: <strong>{selectedMember.healthNotes || 'Bình thường'}</strong>
+          <div style={{ color: selectedMember.healthNotes?.includes(t('Tránh')) ? 'var(--portal-danger, #fca5a5)' : 'var(--color-text-muted)' }}>
+            {t("Lưu ý sức khỏe: ")}<strong>{selectedMember.healthNotes || t('Bình thường')}</strong>
           </div>
         </div>
       </div>
@@ -555,12 +549,12 @@ export function CoachTrainingPlanPage() {
       {/* Main Workspace: Day Selector & Exercise Form */}
       <div className="portal-card">
         {/* AC: Tab chọn ngày trong tuần */}
-        <div className="plan-day-tabs" role="tablist" aria-label="Các ngày trong tuần">
+        <div className="plan-day-tabs" role="tablist" aria-label={t("Các ngày trong tuần")}>
           {DAYS_OF_WEEK.map((d) => {
             const isActive = activeDay === d.id;
             const count = countByDay[d.id] || 0;
             return (
-              <button
+              <button data-i18n-managed
                 key={d.id}
                 type="button"
                 role="tab"
@@ -568,8 +562,8 @@ export function CoachTrainingPlanPage() {
                 className={`plan-day-tab ${isActive ? 'is-active' : ''}`}
                 onClick={() => setActiveDay(d.id)}
               >
-                <span>{d.name}</span>
-                <span className="plan-day-badge">{count} bài</span>
+                <span>{t(d.name)}</span>
+                <span className="plan-day-badge">{count} {t(" bài")}</span>
               </button>
             );
           })}
@@ -578,31 +572,29 @@ export function CoachTrainingPlanPage() {
         {/* AC: Form soạn giáo án theo ngày trong tuần */}
         <form onSubmit={handleAddExercise} className="exercise-form-card">
           <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--fit-salmon, #ce9180)', marginBottom: '12px' }}>
-            Thêm bài tập mới vào {DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name}
+            {t("Thêm bài tập mới vào ")}{t(DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name)}
           </div>
 
           <div className="exercise-form-grid">
             <div>
               <label className="portal-label" htmlFor="exercise-name-input">
-                Tên động tác / bài tập *
-              </label>
+                {t("Tên động tác / bài tập *")}</label>
               <input
                 id="exercise-name-input"
                 type="text"
                 className="portal-input"
-                placeholder="Ví dụ: Barbell Back Squat, Dumbbell Row..."
+                placeholder={t("Ví dụ: Barbell Back Squat, Dumbbell Row...")}
                 value={newExerciseName}
                 aria-invalid={exerciseError ? true : undefined}
                 aria-describedby={exerciseError ? 'exercise-name-error' : undefined}
                 onChange={(e) => { setNewExerciseName(e.target.value); if (exerciseError) setExerciseError(null); }}
               />
-              {exerciseError && <p id="exercise-name-error" className="form-error" role="alert">{exerciseError}</p>}
+              {exerciseError && <p id="exercise-name-error" className="form-error" role="alert">{t(exerciseError)}</p>}
             </div>
 
             <div>
               <label className="portal-label" htmlFor="exercise-sets-input">
-                Số hiệp (Sets)
-              </label>
+                {t("Số hiệp (Sets)")}</label>
               <input
                 id="exercise-sets-input"
                 type="number"
@@ -616,8 +608,7 @@ export function CoachTrainingPlanPage() {
 
             <div>
               <label className="portal-label" htmlFor="exercise-reps-input">
-                Số lần lặp (Reps)
-              </label>
+                {t("Số lần lặp (Reps)")}</label>
               <input
                 id="exercise-reps-input"
                 type="number"
@@ -631,8 +622,7 @@ export function CoachTrainingPlanPage() {
 
             <div>
               <label className="portal-label" htmlFor="exercise-rest-input">
-                Nghỉ (Giây)
-              </label>
+                {t("Nghỉ (Giây)")}</label>
               <input
                 id="exercise-rest-input"
                 type="number"
@@ -646,8 +636,7 @@ export function CoachTrainingPlanPage() {
 
             <div>
               <label className="portal-label" htmlFor="exercise-duration-input">
-                Thời lượng (Phút)
-              </label>
+                {t("Thời lượng (Phút)")}</label>
               <input
                 id="exercise-duration-input"
                 type="number"
@@ -659,19 +648,17 @@ export function CoachTrainingPlanPage() {
             </div>
 
             <button type="submit" className="btn-secondary" style={{ height: '42px', alignSelf: 'flex-end' }}>
-              Thêm
-            </button>
+              {t("Thêm")}</button>
           </div>
 
           <div style={{ marginTop: '10px' }}>
             <label className="portal-label" htmlFor="exercise-desc-input">
-              Ghi chú kỹ thuật / Vùng cơ tác động
-            </label>
+              {t("Ghi chú kỹ thuật / Vùng cơ tác động")}</label>
             <input
               id="exercise-desc-input"
               type="text"
               className="portal-input"
-              placeholder="Hướng dẫn học viên siết cơ, tư thế lưng, kiểm soát pha hạ tạ..."
+              placeholder={t("Hướng dẫn học viên siết cơ, tư thế lưng, kiểm soát pha hạ tạ...")}
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
             />
@@ -682,15 +669,14 @@ export function CoachTrainingPlanPage() {
         <div style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--portal-paper)' }}>
-              Danh sách bài tập {DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name}
+              {t("Danh sách bài tập ")}{t(DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name)}
             </h3>
             <span style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>
-              {dayExercises.length} động tác đã lập
-            </span>
+              {dayExercises.length} {t(" động tác đã lập")}</span>
           </div>
 
           {dayExercises.length === 0 ? (
-            <div
+            <div data-i18n-managed
               style={{
                 textAlign: 'center',
                 padding: '40px 20px',
@@ -699,16 +685,15 @@ export function CoachTrainingPlanPage() {
                 color: 'var(--portal-muted)',
               }}
             >
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '8px' }}>GIÁO ÁN NGÀY</div>
-              <div style={{ fontWeight: 600 }}>Chưa có bài tập nào cho ngày này</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '8px' }}>{t("GIÁO ÁN NGÀY")}</div>
+              <div style={{ fontWeight: 600 }}>{t("Chưa có bài tập nào cho ngày này")}</div>
               <p style={{ margin: '4px 0 14px 0', fontSize: '0.84rem' }}>
-                Thêm bài tập bằng form ở trên để xây dựng giáo án cho học viên.
-              </p>
+                {t("Thêm bài tập bằng form ở trên để xây dựng giáo án cho học viên.")}</p>
             </div>
           ) : (
-            <div className="exercise-items-list">
+            <div data-i18n-managed className="exercise-items-list">
               {dayExercises.map((item, index) => (
-                <div key={item.id || index} className="exercise-item-card">
+                <div data-i18n-managed key={item.id || index} className="exercise-item-card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
                     <span
                       style={{
@@ -736,29 +721,29 @@ export function CoachTrainingPlanPage() {
 
                   <div className="exercise-item-specs">
                     <div className="exercise-spec-pill">
-                      Hiệp: <strong>{item.sets}</strong>
+                      {t("Hiệp: ")}<strong>{item.sets}</strong>
                     </div>
                     <div className="exercise-spec-pill">
-                      Lần: <strong>{item.reps} reps</strong>
+                      {t("Lần: ")}<strong>{item.reps} reps</strong>
                     </div>
                     {item.restSeconds != null && (
-                      <div className="exercise-spec-pill">
-                        Nghỉ: <strong>{item.restSeconds}s</strong>
+                      <div data-i18n-managed className="exercise-spec-pill">
+                        {t("Nghỉ: ")}<strong>{item.restSeconds}s</strong>
                       </div>
                     )}
                     {item.durationMinutes != null && (
-                      <div className="exercise-spec-pill">
-                        Thời gian: <strong>{item.durationMinutes}p</strong>
+                      <div data-i18n-managed className="exercise-spec-pill">
+                        {t("Thời gian: ")}<strong>{item.durationMinutes}{t("p")}</strong>
                       </div>
                     )}
 
-                    <button type="button" className="btn-secondary btn-sm" aria-label={`Sửa bài tập ${item.exerciseName}`} onClick={() => { if (item.id) { setEditExerciseError(''); setEditingExercise({ id: item.id, values: { ...item } }); } }}>Sửa</button>
+                    <button type="button" className="btn-secondary btn-sm" aria-label={t(`Sửa bài tập ${item.exerciseName}`, `Edit exercise ${item.exerciseName}`)} onClick={() => { if (item.id) { setEditExerciseError(''); setEditingExercise({ id: item.id, values: { ...item } }); } }}>{t("Sửa")}</button>
                     <button
                       type="button"
                       className="btn-remove-exercise"
-                      aria-label={`Xóa bài tập ${item.exerciseName}`}
+                      aria-label={t(`Xóa bài tập ${item.exerciseName}`, `Delete exercise ${item.exerciseName}`)}
                       onClick={() => handleRemoveExercise(item.id)}
-                      title="Xóa bài tập này"
+                      title={t("Xóa bài tập này")}
                     >
                       ✕
                     </button>
@@ -772,12 +757,11 @@ export function CoachTrainingPlanPage() {
 
       {/* AC: Modal Tương Tác AI Gợi Ý Giáo Án */}
       {AI_UI_ENABLED && isAiModalOpen && (
-        <Modal title="Trợ lý AI: gợi ý giáo án huấn luyện cá nhân hóa" onClose={() => setIsAiModalOpen(false)}>
+        <Modal title={t("Trợ lý AI: gợi ý giáo án huấn luyện cá nhân hóa")} onClose={() => setIsAiModalOpen(false)}>
           <div className="ai-modal-container">
             <div>
               <label className="portal-label" htmlFor="ai-member-select">
-                Chọn học viên cần thiết kế giáo án
-              </label>
+                {t("Chọn học viên cần thiết kế giáo án")}</label>
               <Select
                 id="ai-member-select"
                 className="portal-select"
@@ -786,8 +770,8 @@ export function CoachTrainingPlanPage() {
                 disabled={isGeneratingAi}
               >
                 {members.map((m) => (
-                  <option key={m.id} value={String(m.id)}>
-                    {m.fullName} ({m.memberCode}) — Mục tiêu: {m.fitnessGoal?.slice(0, 40)}...
+                  <option data-i18n-managed key={m.id} value={String(m.id)}>
+                    {m.fullName} ({m.memberCode}{t(") — Mục tiêu: ")}{m.fitnessGoal?.slice(0, 40)}...
                   </option>
                 ))}
               </Select>
@@ -796,17 +780,17 @@ export function CoachTrainingPlanPage() {
             {/* Xem nhanh chỉ số thể chất của học viên */}
             <div className="ai-member-preview">
               <div>
-                <div className="ai-member-stat-label">Chiều cao / Cân nặng</div>
+                <div className="ai-member-stat-label">{t("Chiều cao / Cân nặng")}</div>
                 <div className="ai-member-stat-val">
                   {aiSelectedMember.heightCm ?? '—'} cm / {aiSelectedMember.weightKg ?? '—'} kg
                 </div>
               </div>
               <div>
-                <div className="ai-member-stat-label">Chỉ số BMI</div>
+                <div className="ai-member-stat-label">{t("Chỉ số BMI")}</div>
                 <div className="ai-member-stat-val">{aiSelectedMember.bmi ?? '—'}</div>
               </div>
               <div>
-                <div className="ai-member-stat-label">Trình độ luyện tập</div>
+                <div className="ai-member-stat-label">{t("Trình độ luyện tập")}</div>
                 <div className="ai-member-stat-val" style={{ textTransform: 'capitalize' }}>
                   {aiSelectedMember.fitnessLevel}
                 </div>
@@ -815,22 +799,21 @@ export function CoachTrainingPlanPage() {
 
             {/* Lưu ý y tế & Tiền sử chấn thương */}
             {aiSelectedMember.healthNotes && (
-              <div className="ai-caution-box">
-                <strong>Tiền sử sức khỏe &amp; chấn thương: </strong>
+              <div data-i18n-managed className="ai-caution-box">
+                <strong>{t("Tiền sử sức khỏe & chấn thương: ")}</strong>
                 {aiSelectedMember.healthNotes}
               </div>
             )}
 
             <div>
               <label className="portal-label" htmlFor="ai-prompt-input">
-                Yêu cầu bổ sung của HLV gửi tới AI (Số buổi tập, trọng tâm, lưu ý đặc biệt...)
-              </label>
+                {t("Yêu cầu bổ sung của HLV gửi tới AI (Số buổi tập, trọng tâm, lưu ý đặc biệt...)")}</label>
               <textarea
                 id="ai-prompt-input"
                 className="ai-prompt-textarea"
                 value={aiCoachPrompt}
                 onChange={(e) => setAiCoachPrompt(e.target.value)}
-                placeholder="Ví dụ: Hội viên tập 4 buổi/tuần, muốn tăng kích thước cơ ngực và mông, tránh tạ đè nén khớp gối..."
+                placeholder={t("Ví dụ: Hội viên tập 4 buổi/tuần, muốn tăng kích thước cơ ngực và mông, tránh tạ đè nén khớp gối...")}
                 disabled={isGeneratingAi}
               />
             </div>
@@ -844,43 +827,40 @@ export function CoachTrainingPlanPage() {
                 disabled={isGeneratingAi}
               >
                 <span aria-hidden="true">↗</span>
-                <span>{isGeneratingAi ? 'Đang phân tích...' : 'Phân tích & Sinh giáo án bằng AI'}</span>
+                <span>{isGeneratingAi ? t('Đang phân tích...') : t('Phân tích & Sinh giáo án bằng AI')}</span>
               </button>
             </div>
 
-            {aiError && <p className="form-error" role="alert">{aiError}</p>}
+            {aiError && <p className="form-error" role="alert">{t(aiError)}</p>}
 
             {/* Trạng thái Loading AI */}
             {isGeneratingAi && (
-              <LoadingSkeleton label="Đang phân tích và tạo gợi ý giáo án…" count={4} />
+              <LoadingSkeleton label={t("Đang phân tích và tạo gợi ý giáo án…")} count={4} />
             )}
 
             {/* Kết quả AI trả về */}
             {aiResult && !isGeneratingAi && (
-              <div className="ai-result-box">
+              <div data-i18n-managed className="ai-result-box">
                 <div className="ai-result-header">
                   <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--portal-salmon)' }}>
-                    Phân tích chuyên sâu từ AI
-                  </span>
-                  <span className="badge badge-success">Đã hoàn thành đề xuất</span>
+                    {t("Phân tích chuyên sâu từ AI")}</span>
+                  <span className="badge badge-success">{t("Đã hoàn thành đề xuất")}</span>
                 </div>
 
                 <div className="ai-analysis-text">{aiResult.analysis}</div>
 
                 <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '10px', color: 'var(--portal-paper)' }}>
-                  Đề xuất {aiResult.items.length} bài tập theo chu kỳ tuần:
-                </div>
+                  {t("Đề xuất ")}{aiResult.items.length} {t(" bài tập theo chu kỳ tuần:")}</div>
 
                 <div style={{ maxHeight: '220px', overflowY: 'auto', paddingRight: '4px' }}>
                   {aiResult.items.map((item, idx) => (
-                    <div key={idx} className="ai-suggested-item">
+                    <div data-i18n-managed key={idx} className="ai-suggested-item">
                       <div>
-                        <strong>{DAYS_OF_WEEK.find((d) => d.id === item.dayOfWeek)?.name}:</strong> {item.exerciseName}
+                        <strong>{t(DAYS_OF_WEEK.find((d) => d.id === item.dayOfWeek)?.name)}:</strong> {item.exerciseName}
                         <div style={{ fontSize: '0.78rem', color: 'var(--portal-muted)' }}>{item.description}</div>
                       </div>
                       <div style={{ fontWeight: 700, color: 'var(--portal-salmon)', whiteSpace: 'nowrap' }}>
-                        {item.sets} hiệp × {item.reps} lần
-                      </div>
+                        {item.sets} {t(" hiệp × ")}{item.reps} {t(" lần")}</div>
                     </div>
                   ))}
                 </div>
@@ -888,10 +868,9 @@ export function CoachTrainingPlanPage() {
                 {/* AC: Nút "Áp dụng vào giáo án" */}
                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button type="button" className="btn-secondary" onClick={() => setIsAiModalOpen(false)}>
-                    Hủy bỏ
-                  </button>
+                    {t("Hủy bỏ")}</button>
                   <button type="button" className="btn-ai-sparkle" onClick={handleApplyAiPlan}>
-                    <span>Áp dụng vào giáo án</span>
+                    <span>{t("Áp dụng vào giáo án")}</span>
                   </button>
                 </div>
               </div>
@@ -901,7 +880,7 @@ export function CoachTrainingPlanPage() {
       )}
 
       <SavedTrainingPlans refreshKey={plansRefresh} />
-      {editingExercise && <Modal title="Sửa bài tập" onClose={() => setEditingExercise(null)}>
+      {editingExercise && <Modal title={t("Sửa bài tập")} onClose={() => setEditingExercise(null)}>
         <form className="stack" onSubmit={event => {
           event.preventDefault();
           const error = validateExercise(editingExercise.values, true);
@@ -911,8 +890,8 @@ export function CoachTrainingPlanPage() {
           setActiveDay(value.dayOfWeek!);setEditingExercise(null);
         }}>
           <TrainingExerciseFields prefix="draft-exercise" value={editingExercise.values} onChange={values => { setEditExerciseError(''); setEditingExercise({ ...editingExercise, values }); }} />
-          {editExerciseError && <p className="form-error" role="alert">{editExerciseError}</p>}
-          <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setEditingExercise(null)}>Hủy</button><button type="submit" className="btn-primary">Lưu bài tập</button></div>
+          {editExerciseError && <p className="form-error" role="alert">{t(editExerciseError)}</p>}
+          <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setEditingExercise(null)}>{t("Hủy")}</button><button type="submit" className="btn-primary">{t("Lưu bài tập")}</button></div>
         </form>
       </Modal>}
 

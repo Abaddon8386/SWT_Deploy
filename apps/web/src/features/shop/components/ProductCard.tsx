@@ -1,11 +1,12 @@
+import { getIntlLocale } from '../../../shared/i18n';
+import { useSourceLanguage, sourceText, sourceToast as toast } from '../shopI18n';
 import { Link } from 'react-router-dom';
-import { toast } from '../../../shared/ui/toast';
 import { addToCart } from '../cart';
 import { FORM_LABELS, formatVnd, pricePerServingLabel } from '../shopFormat';
 import type { ProductSummaryDto } from '../shopTypes';
 import { ProductPackshot } from './ProductPackshot';
 
-const num = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
+
 
 export function ProductCard({
   product,
@@ -16,6 +17,8 @@ export function ProductCard({
   onAdd?: (product: ProductSummaryDto) => void;
   onSelect?: (product: ProductSummaryDto) => void;
 }) {
+  useSourceLanguage();
+  const num = new Intl.NumberFormat(getIntlLocale(), { maximumFractionDigits: 2 });
   const detailPath = `/products/${product.slug}`;
   const priceText = formatVnd(product.minPrice);
   const ppsText = pricePerServingLabel(product.pricePerServing);
@@ -48,9 +51,9 @@ export function ProductCard({
         }
       >
         <div className="shop-card__badges">
-          {!product.inStock && <span className="shop-badge shop-badge--out">Hết hàng</span>}
-          {product.inStock && product.lowStock && <span className="shop-badge shop-badge--low">Sắp hết</span>}
-          {product.isNew && <span className="shop-badge shop-badge--new">Mới</span>}
+          {!product.inStock && <span className="shop-badge shop-badge--out">{sourceText("Hết hàng")}</span>}
+          {product.inStock && product.lowStock && <span className="shop-badge shop-badge--low">{sourceText("Sắp hết")}</span>}
+          {product.isNew && <span className="shop-badge shop-badge--new">{sourceText("Mới")}</span>}
         </div>
         <ProductPackshot form={product.form} name={product.name} imageUrl={product.imageUrl} alt={product.name} />
       </Link>
@@ -88,8 +91,7 @@ export function ProductCard({
 
       {!product.inStock ? (
         <button type="button" className="shop-card__cta" disabled>
-          Hết hàng
-        </button>
+          {sourceText("Hết hàng")}</button>
       ) : needsVariantChoice ? (
         <Link
           to={detailPath}
@@ -103,12 +105,10 @@ export function ProductCard({
               : undefined
           }
         >
-          Chọn loại
-        </Link>
+          {sourceText("Chọn loại")}</Link>
       ) : (
         <button type="button" className="shop-card__cta" onClick={handleAdd}>
-          Thêm vào giỏ
-        </button>
+          {sourceText("Thêm vào giỏ")}</button>
       )}
     </article>
   );

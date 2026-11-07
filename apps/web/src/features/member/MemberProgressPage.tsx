@@ -1,3 +1,6 @@
+import { memberText, memberMessage, memberRenderMessage } from './memberI18n';
+import type { SourceMessage } from '../../shared/i18n/language';
+import { useLanguage } from '../../shared/i18n/language';
 import { useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -11,9 +14,10 @@ import { WorkoutHistory } from './WorkoutHistory';
 type LoadState<T> = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: T };
 
 function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; metric: 'weight' | 'bmi'; label: string; unit: string }) {
+  useLanguage();
   const values = points.map((point) => point[metric]);
   const available = values.filter((value): value is number => value != null);
-  if (available.length === 0) return <p className="portal-empty">Chưa có số đo {label.toLowerCase()}.</p>;
+  if (available.length === 0) return <p className="portal-empty">{memberText("Chưa có số đo ")}{label.toLowerCase()}.</p>;
   const min = Math.min(...available);
   const max = Math.max(...available);
   const span = Math.max(max - min, 1);
@@ -27,7 +31,7 @@ function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; m
     else current.push(`${x(index)},${y(value)}`);
   });
   if (current.length) segments.push(current);
-  return <div className="member-progress-chart-scroll"><svg className="member-progress-chart" width={width} height="205" viewBox={`0 0 ${width} 205`} role="img" aria-label={`${label} theo tuần, ${unit}`}>
+  return <div className="member-progress-chart-scroll"><svg className="member-progress-chart" width={width} height="205" viewBox={`0 0 ${width} 205`} role="img" aria-label={memberText(`${label} theo tuần, ${unit}`, `${label} by week, ${unit}`)}>
     <line x1="34" y1="160" x2={width - 24} y2="160" stroke="currentColor" opacity=".3" />
     {segments.map((segment, index) => <polyline key={index} points={segment.join(' ')} fill="none" stroke="var(--portal-salmon)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />)}
     {points.map((point, index) => <g key={point.weekStart}>
@@ -38,6 +42,7 @@ function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; m
 }
 
 export function MemberProgressPage() {
+  useLanguage();
  const [tab, setTab] = useState<'progress' | 'history'>('progress');
  const [date, setDate] = useState(() => centerNowParts().date);
  useEffect(() => {
@@ -46,21 +51,22 @@ export function MemberProgressPage() {
   window.addEventListener('focus', update);
   return () => { window.clearInterval(timer); window.removeEventListener('focus', update); };
  }, []);
- return <div className="portal-container member-progress">
-   <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" />
-   <div className="workout-tabs" role="group" aria-label="Nội dung tiến độ">
-     <button type="button" className={tab === 'progress' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'progress'} onClick={() => setTab('progress')}>Tiến độ & Giáo án</button>
-     <button type="button" className={tab === 'history' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'history'} onClick={() => setTab('history')}>Lịch sử tập luyện</button>
+ return <div data-i18n-managed className="portal-container member-progress">
+   <PageHeader eyebrow={memberText("Hội viên")} title={memberText("Tiến độ thể lực")} />
+   <div className="workout-tabs" role="group" aria-label={memberText("Nội dung tiến độ")}>
+     <button type="button" className={tab === 'progress' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'progress'} onClick={() => setTab('progress')}>{memberText("Tiến độ & Giáo án")}</button>
+     <button type="button" className={tab === 'history' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'history'} onClick={() => setTab('history')}>{memberText("Lịch sử tập luyện")}</button>
    </div>
    <div hidden={tab !== 'progress'}><DailyProgress key={date} today={date} /></div>
    {tab === 'history' && <WorkoutHistory />}
  </div>;
 }
 function DailyProgress({ today }: { today: string }) {
+  useLanguage();
   const [metrics, setMetrics] = useState<LoadState<ProgressMetric[]>>({ kind: 'loading' });
   const [plans, setPlans] = useState<LoadState<TrainingPlan[]>>({ kind: 'loading' });
   const [completions, setCompletions] = useState<LoadState<number[]>>({ kind: 'loading' });
-  const [completionError, setCompletionError] = useState('');
+  const [completionError, setCompletionError] = useState<string | SourceMessage>('');
   const [savingItemId, setSavingItemId] = useState<number | null>(null);
   const savingRef = useRef<number | null>(null);
   const [metricRetry, setMetricRetry] = useState(0);
@@ -98,7 +104,7 @@ function DailyProgress({ today }: { today: string }) {
           : previous.data.filter((id) => id !== itemId),
       } : previous);
     } catch {
-      setCompletionError('Không thể lưu trạng thái bài tập. Vui lòng thử lại.');
+      setCompletionError(memberMessage("Không thể lưu trạng thái bài tập. Vui lòng thử lại."));
     } finally {
       savingRef.current = null; setSavingItemId(null);
     }
@@ -108,25 +114,25 @@ function DailyProgress({ today }: { today: string }) {
   const exercises = plans.kind === 'ready' ? dailyExercises(plans.data, today) : [];
   return <div className="member-progress">
     <CoachEvaluations />
-    <section className="portal-card" aria-labelledby="progress-metrics-title">
-      <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">Thay đổi qua các tuần</h2></div>
-      {metrics.kind === 'loading' ? <LoadingSkeleton label="Đang tải số đo…" variant="cards" count={2} /> : metrics.kind === 'error' ? <div role="alert">Không thể tải số đo. <button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>Thử lại</button></div> : points.length === 0 ? <p className="portal-empty">Chưa có số đo cân nặng hoặc BMI.</p> : <div className="member-progress-charts">
-        <div><h3>Cân nặng <small>kg</small></h3><WeeklyChart points={points} metric="weight" label="Cân nặng" unit="kg" /></div>
-        <div><h3>Chỉ số BMI</h3><WeeklyChart points={points} metric="bmi" label="BMI" unit="BMI" /></div>
-        <div className="member-progress-values">{points.map((point) => <p key={point.weekStart}><time dateTime={point.weekStart}>Tuần {`${point.weekStart.slice(8, 10)}/${point.weekStart.slice(5, 7)}`}</time><span>{point.weight == null ? '—' : `${point.weight} kg`}</span><span>{point.bmi == null ? '—' : `BMI ${point.bmi}`}</span></p>)}</div>
+    <section data-i18n-managed className="portal-card" aria-labelledby="progress-metrics-title">
+      <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">{memberText("Thay đổi qua các tuần")}</h2></div>
+      {metrics.kind === 'loading' ? <LoadingSkeleton label={memberText("Đang tải số đo…")} variant="cards" count={2} /> : metrics.kind === 'error' ? <div role="alert">{memberText("Không thể tải số đo. ")}<button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>{memberText("Thử lại")}</button></div> : points.length === 0 ? <p className="portal-empty">{memberText("Chưa có số đo cân nặng hoặc BMI.")}</p> : <div className="member-progress-charts">
+        <div><h3>{memberText("Cân nặng ")}<small>kg</small></h3><WeeklyChart points={points} metric="weight" label={memberText("Cân nặng ")} unit="kg" /></div>
+        <div><h3>{memberText("Chỉ số BMI")}</h3><WeeklyChart points={points} metric="bmi" label="BMI" unit="BMI" /></div>
+        <div className="member-progress-values">{points.map((point) => <p key={point.weekStart}><time dateTime={point.weekStart}>{memberText("Tuần ")}{`${point.weekStart.slice(8, 10)}/${point.weekStart.slice(5, 7)}`}</time><span>{point.weight == null ? '—' : `${point.weight} kg`}</span><span>{point.bmi == null ? '—' : `BMI ${point.bmi}`}</span></p>)}</div>
       </div>}
     </section>
-    <section className="portal-card" aria-labelledby="progress-plan-title">
-      <div className="portal-card-header"><h2 id="progress-plan-title" className="portal-card-title">Bài tập hôm nay</h2></div>
-      {plans.kind === 'loading' ? <LoadingSkeleton label="Đang tải giáo án…" count={3} /> : plans.kind === 'error' ? <div role="alert">Không thể tải giáo án. <button type="button" className="member-progress-link" onClick={() => { setPlans({ kind: 'loading' }); setPlanRetry((value) => value + 1); }}>Thử lại</button></div> : exercises.length === 0 ? <p className="portal-empty">{plans.data.length === 0 ? 'Chưa có giáo án đang hoạt động được giao.' : plans.data.some(plan => plan.status === 'active' && plan.startDate <= today && plan.endDate >= today) ? 'Hôm nay là ngày nghỉ hoặc chưa có bài tập được lên lịch.' : 'Chưa có giáo án có hiệu lực trong hôm nay.'}</p> : <>
-        {completions.kind === 'loading' && <LoadingSkeleton label="Đang tải trạng thái hoàn thành…" count={1} />}
-        {completions.kind === 'error' && <div role="alert">Không thể tải trạng thái hoàn thành. <button type="button" className="member-progress-link" onClick={() => { setCompletions({ kind: 'loading' }); setCompletionRetry((value) => value + 1); }}>Thử lại</button></div>}
-        {completionError && <p role="alert">{completionError}</p>}
-        {completions.kind === 'ready' && <p className="muted">Đã hoàn thành {exercises.filter(({item}) => completions.data.includes(item.id)).length}/{exercises.length} bài tập</p>}
+    <section data-i18n-managed className="portal-card" aria-labelledby="progress-plan-title">
+      <div className="portal-card-header"><h2 id="progress-plan-title" className="portal-card-title">{memberText("Bài tập hôm nay")}</h2></div>
+      {plans.kind === 'loading' ? <LoadingSkeleton label={memberText("Đang tải giáo án…")} count={3} /> : plans.kind === 'error' ? <div role="alert">{memberText("Không thể tải giáo án. ")}<button type="button" className="member-progress-link" onClick={() => { setPlans({ kind: 'loading' }); setPlanRetry((value) => value + 1); }}>{memberText("Thử lại")}</button></div> : exercises.length === 0 ? <p className="portal-empty">{plans.data.length === 0 ? memberText("Chưa có giáo án đang hoạt động được giao.") : plans.data.some(plan => plan.status === 'active' && plan.startDate <= today && plan.endDate >= today) ? memberText("Hôm nay là ngày nghỉ hoặc chưa có bài tập được lên lịch.") : memberText("Chưa có giáo án có hiệu lực trong hôm nay.")}</p> : <>
+        {completions.kind === 'loading' && <LoadingSkeleton label={memberText("Đang tải trạng thái hoàn thành…")} count={1} />}
+        {completions.kind === 'error' && <div role="alert">{memberText("Không thể tải trạng thái hoàn thành. ")}<button type="button" className="member-progress-link" onClick={() => { setCompletions({ kind: 'loading' }); setCompletionRetry((value) => value + 1); }}>{memberText("Thử lại")}</button></div>}
+        {completionError && <p role="alert">{memberRenderMessage(completionError)}</p>}
+        {completions.kind === 'ready' && <p className="muted">{memberText("Đã hoàn thành ")}{exercises.filter(({item}) => completions.data.includes(item.id)).length}/{exercises.length}{memberText(" bài tập")}</p>}
         <ol className="member-progress-exercises">{exercises.map(({ plan, item }) => <li key={`${plan.id}-${item.id}`}>
-        {completions.kind === 'ready' && <label className="member-progress-check"><input type="checkbox" aria-label={`Hoàn thành ${item.exerciseName}`} checked={completions.data.includes(item.id)} disabled={savingItemId != null} onChange={(event) => void updateCompletion(item.id, event.target.checked)} />{savingItemId === item.id && <span>Đang lưu…</span>}</label>}
-        <div><span className="member-progress-day">{plan.coachName || 'Huấn luyện viên'}</span><h3>{item.exerciseName}</h3>{item.description && <p>{item.description}</p>}</div>
-        <div className="member-progress-dose">{item.sets != null && item.reps != null && <span>{item.sets} hiệp × {item.reps} lần</span>}{item.durationMinutes != null && <span>{item.durationMinutes} phút</span>}{item.restSeconds != null && <span>Nghỉ {item.restSeconds} giây</span>}</div>
+        {completions.kind === 'ready' && <label className="member-progress-check"><input type="checkbox" aria-label={memberText(`Hoàn thành ${item.exerciseName}`, `Complete ${item.exerciseName}`)} checked={completions.data.includes(item.id)} disabled={savingItemId != null} onChange={(event) => void updateCompletion(item.id, event.target.checked)} />{savingItemId === item.id && <span>{memberText("Đang lưu…")}</span>}</label>}
+        <div><span className="member-progress-day">{plan.coachName || memberText("Huấn luyện viên")}</span><h3>{item.exerciseName}</h3>{item.description && <p>{item.description}</p>}</div>
+        <div className="member-progress-dose">{item.sets != null && item.reps != null && <span>{item.sets}{memberText(" hiệp × ")}{item.reps}{memberText(" lần")}</span>}{item.durationMinutes != null && <span>{item.durationMinutes}{memberText(" phút")}</span>}{item.restSeconds != null && <span>{memberText("Nghỉ ")}{item.restSeconds}{memberText(" giây")}</span>}</div>
       </li>)}</ol></>}
     </section>
   </div>;

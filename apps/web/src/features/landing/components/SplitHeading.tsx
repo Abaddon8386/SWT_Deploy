@@ -1,11 +1,13 @@
+import { useSourceLanguage, sourceText } from "../../shop/shopI18n";
 import type { CSSProperties } from 'react';
 
 export function SplitHeading({ id, lines }: { id: string; lines: string[] }) {
+  useSourceLanguage();
   let wordIndex = 0;
   return (
     <h2 id={id} className="fit-split-heading">
       {lines.map((line, lineIdx) => {
-        const words = line.split(' ');
+        const words = sourceText(line).split(' ');
         return (
           <span key={lineIdx} className="fit-heading-line">
             {words.map((word, idx) => {

@@ -1,9 +1,11 @@
+import { useSourceLanguage, sourceFormat } from "../shopI18n";
 import { useEffect, useRef, useState } from 'react';
 import { useCart } from '../cart';
 import { CartDrawer } from './CartDrawer';
 import '../shop-public.css';
 
 export function CartButton() {
+  useSourceLanguage();
   const lines = useCart();
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
   const [open, setOpen] = useState(false);
@@ -29,7 +31,7 @@ export function CartButton() {
         ref={btnRef}
         type="button"
         className={`shop-cart-btn fit-cart-btn${bumped ? ' is-bumped' : ''}`}
-        aria-label={`Giỏ hàng · ${count} sản phẩm`}
+        aria-label={sourceFormat("Giỏ hàng · {0} sản phẩm", count)}
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >

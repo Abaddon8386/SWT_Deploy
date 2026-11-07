@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText } from '../shopI18n';
 import { useEffect, useId, useState } from 'react';
 import { shopApi } from '../shopApi';
 import type { GeoRegion } from '../shopTypes';
@@ -16,6 +17,7 @@ export function RegionSelects({
   errors?: { provinceCode?: string; wardCode?: string };
   disabled?: boolean;
 }) {
+  useSourceLanguage();
   const provinceId = useId();
   const wardId = useId();
   const [provinces, setProvinces] = useState<GeoRegion[]>([]);
@@ -69,8 +71,7 @@ export function RegionSelects({
     <div className="shop-region-selects">
       <div className="shop-field">
         <label htmlFor={provinceId} className="shop-label portal-label">
-          Tỉnh / Thành phố
-        </label>
+          {sourceText("Tỉnh / Thành phố")}</label>
         <Select
           id={provinceId}
           name="provinceCode"
@@ -81,7 +82,7 @@ export function RegionSelects({
           aria-invalid={errors?.provinceCode ? 'true' : undefined}
           onChange={(e) => onChange({ provinceCode: e.target.value, wardCode: '' })}
         >
-          <option value="">Chọn Tỉnh / Thành phố</option>
+          <option value="">{sourceText("Chọn Tỉnh / Thành phố")}</option>
           {provinces.map((p) => (
             <option key={p.code} value={p.code}>
               {p.name}
@@ -90,15 +91,14 @@ export function RegionSelects({
         </Select>
         {errors?.provinceCode && (
           <p className="form-error" role="alert">
-            {errors.provinceCode}
+            {sourceText(errors.provinceCode)}
           </p>
         )}
       </div>
 
       <div className="shop-field">
         <label htmlFor={wardId} className="shop-label portal-label">
-          Phường / Xã
-        </label>
+          {sourceText("Phường / Xã")}</label>
         <Select
           id={wardId}
           name="wardCode"
@@ -109,7 +109,7 @@ export function RegionSelects({
           aria-invalid={errors?.wardCode ? 'true' : undefined}
           onChange={(e) => onChange({ provinceCode, wardCode: e.target.value })}
         >
-          <option value="">Chọn Phường / Xã</option>
+          <option value="">{sourceText("Chọn Phường / Xã")}</option>
           {wards.map((w) => (
             <option key={w.code} value={w.code}>
               {w.name}
@@ -118,7 +118,7 @@ export function RegionSelects({
         </Select>
         {errors?.wardCode && (
           <p className="form-error" role="alert">
-            {errors.wardCode}
+            {sourceText(errors.wardCode)}
           </p>
         )}
       </div>

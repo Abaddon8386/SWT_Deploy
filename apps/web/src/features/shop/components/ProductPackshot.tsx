@@ -1,3 +1,4 @@
+import { useSourceLanguage } from "../shopI18n";
 import { useState } from 'react';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import type { ProductForm } from '../shopTypes';
@@ -26,6 +27,7 @@ export function ProductPackshot({
   alt?: string;
   className?: string;
 }) {
+  useSourceLanguage();
   const label = alt || name;
   const monogram = getMonogram(name);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);

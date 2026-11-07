@@ -1,6 +1,5 @@
+import { useSourceLanguage, sourceText, sourceFormat, sourceError, sourceNotify as notify, sourcePair, sourceFormatPair } from '../shopI18n';
 import { useCallback, useEffect, useState } from 'react';
-import { errorMessage } from '../../../shared/lib/errorMessage';
-import { notify } from '../../../shared/lib/portalNotices';
 import { ActionMenu } from '../../../shared/ui/ActionMenu';
 import { useConfirm } from '../../../shared/ui/ConfirmDialog';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
@@ -16,13 +15,14 @@ interface CategoryFormState {
 }
 
 export function CategoryManager() {
+  useSourceLanguage();
   const [confirm, confirmDialog] = useConfirm();
   const [categories, setCategories] = useState<CategoryAdminDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<CategoryFormState | null>(null);
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState<string | Error>('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,7 +31,7 @@ export function CategoryManager() {
       const list = await shopApi.manager.listCategories();
       setCategories(list);
     } catch (err) {
-      setError(errorMessage(err, 'Không thể tải danh sách loại sản phẩm.'));
+      setError(sourceError(err, 'Không thể tải danh sách loại sản phẩm.'));
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ export function CategoryManager() {
       setEditing(null);
       await load();
     } catch (err) {
-      setFormError(errorMessage(err, 'Không thể lưu loại sản phẩm.'));
+      setFormError(sourceError(err, 'Không thể lưu loại sản phẩm.'));
     } finally {
       setBusy(false);
     }
@@ -82,9 +82,9 @@ export function CategoryManager() {
   const handleDelete = async (cat: CategoryAdminDto) => {
     if (busy) return;
     const ok = await confirm({
-      title: 'Xóa loại sản phẩm',
-      message: `Xóa loại sản phẩm “${cat.name}”?`,
-      confirmLabel: 'Xóa loại sản phẩm',
+      title: sourcePair('Xóa loại sản phẩm'),
+      message: sourceFormatPair("Xóa loại sản phẩm “{0}”?", cat.name),
+      confirmLabel: sourcePair('Xóa loại sản phẩm'),
       danger: true,
     });
     if (!ok) return;
@@ -93,10 +93,10 @@ export function CategoryManager() {
     setError('');
     try {
       await shopApi.manager.deleteCategory(cat.id);
-      notify(`Đã xóa loại sản phẩm “${cat.name}”.`, 'success');
+      notify(sourceFormatPair("Đã xóa loại sản phẩm “{0}”.", cat.name), 'success');
       await load();
     } catch (err) {
-      const msg = errorMessage(err, 'Không thể xóa loại sản phẩm.');
+      const msg = sourceError(err, 'Không thể xóa loại sản phẩm.');
       setError(msg);
       notify(msg, 'error');
     } finally {
@@ -105,7 +105,7 @@ export function CategoryManager() {
   };
 
   return (
-    <section className="stack" aria-label="Quản lý loại sản phẩm">
+    <section className="stack" aria-label={sourceText("Quản lý loại sản phẩm")}>
       <div
         style={{
           display: 'flex',
@@ -116,8 +116,7 @@ export function CategoryManager() {
         }}
       >
         <p className="muted" style={{ margin: 0 }}>
-          Phân loại sản phẩm trên kệ cửa hàng SÖL.
-        </p>
+          {sourceText("Phân loại sản phẩm trên kệ cửa hàng SÖL.")}</p>
         <button
           type="button"
           className="btn-primary"
@@ -132,34 +131,32 @@ export function CategoryManager() {
             });
           }}
         >
-          Thêm loại sản phẩm
-        </button>
+          {sourceText("Thêm loại sản phẩm")}</button>
       </div>
 
       {loading ? (
-        <LoadingSkeleton label="Đang tải loại sản phẩm…" variant="table" count={3} />
+        <LoadingSkeleton label={sourceText("Đang tải loại sản phẩm…")} variant="table" count={3} />
       ) : error ? (
         <div className="portal-alert" role="alert">
-          <span>{error}</span>
+          <span>{sourceText(error)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>
-            Thử lại
-          </button>
+            {sourceText("Thử lại")}</button>
         </div>
       ) : !categories.length ? (
         <div className="portal-card portal-state">
-          <p style={{ margin: 0 }}>Chưa có loại sản phẩm nào.</p>
+          <p style={{ margin: 0 }}>{sourceText("Chưa có loại sản phẩm nào.")}</p>
         </div>
       ) : (
-        <div className="portal-table-wrapper" role="region" aria-label="Danh mục sản phẩm" tabIndex={0}>
+        <div className="portal-table-wrapper" role="region" aria-label={sourceText("Danh mục sản phẩm")} tabIndex={0}>
           <table className="portal-table">
             <thead>
               <tr>
-                <th scope="col">Tên loại</th>
+                <th scope="col">{sourceText("Tên loại")}</th>
                 <th scope="col">Slug</th>
-                <th scope="col">Thứ tự</th>
-                <th scope="col">Số sản phẩm</th>
-                <th scope="col">Trạng thái</th>
-                <th scope="col">Thao tác</th>
+                <th scope="col">{sourceText("Thứ tự")}</th>
+                <th scope="col">{sourceText("Số sản phẩm")}</th>
+                <th scope="col">{sourceText("Trạng thái")}</th>
+                <th scope="col">{sourceText("Thao tác")}</th>
               </tr>
             </thead>
             <tbody>
@@ -173,7 +170,7 @@ export function CategoryManager() {
                   <td style={{ fontVariantNumeric: 'tabular-nums' }}>{cat.productCount}</td>
                   <td>
                     <span className="shop-status-pill">
-                      {cat.active ? 'Đang hiển thị' : 'Đã ẩn'}
+                      {cat.active ? sourceText('Đang hiển thị') : sourceText('Đã ẩn')}
                     </span>
                   </td>
                   <td>
@@ -192,17 +189,15 @@ export function CategoryManager() {
                           });
                         }}
                       >
-                        Sửa
-                      </button>
-                      <ActionMenu label={`Thao tác khác cho ${cat.name}`}>
+                        {sourceText("Sửa")}</button>
+                      <ActionMenu label={sourceFormat("Thao tác khác cho {0}", cat.name)}>
                         <button
                           type="button"
                           className="action-menu__item action-menu__item--danger"
                           disabled={busy}
                           onClick={() => void handleDelete(cat)}
                         >
-                          Xóa
-                        </button>
+                          {sourceText("Xóa")}</button>
                       </ActionMenu>
                     </div>
                   </td>
@@ -215,7 +210,7 @@ export function CategoryManager() {
 
       {editing && (
         <Modal
-          title={editing.id == null ? 'Thêm loại sản phẩm' : 'Sửa loại sản phẩm'}
+          title={editing.id == null ? sourceText('Thêm loại sản phẩm') : sourceText('Sửa loại sản phẩm')}
           busy={busy}
           onClose={() => {
             if (!busy) setEditing(null);
@@ -224,8 +219,7 @@ export function CategoryManager() {
           <form className="stack" onSubmit={e => void handleSubmit(e)} noValidate>
             <div className="shop-field">
               <label className="shop-label" htmlFor="cat-name">
-                Tên loại sản phẩm
-              </label>
+                {sourceText("Tên loại sản phẩm")}</label>
               <input
                 id="cat-name"
                 type="text"
@@ -243,8 +237,7 @@ export function CategoryManager() {
 
             <div className="shop-field">
               <label className="shop-label" htmlFor="cat-sort-order">
-                Thứ tự hiển thị
-              </label>
+                {sourceText("Thứ tự hiển thị")}</label>
               <input
                 id="cat-sort-order"
                 type="number"
@@ -263,12 +256,12 @@ export function CategoryManager() {
                 disabled={busy}
                 onChange={e => setEditing({ ...editing, active: e.target.checked })}
               />
-              <span>Hiển thị trên kệ sản phẩm</span>
+              <span>{sourceText("Hiển thị trên kệ sản phẩm")}</span>
             </label>
 
             {formError && (
               <p className="form-error" role="alert">
-                {formError}
+                {sourceText(formError)}
               </p>
             )}
 
@@ -279,10 +272,9 @@ export function CategoryManager() {
                 disabled={busy}
                 onClick={() => setEditing(null)}
               >
-                Hủy
-              </button>
+                {sourceText("Hủy")}</button>
               <button type="submit" className="btn-primary" disabled={busy}>
-                {busy ? 'Đang lưu…' : 'Lưu loại sản phẩm'}
+                {busy ? sourceText('Đang lưu…') : sourceText('Lưu loại sản phẩm')}
               </button>
             </div>
           </form>

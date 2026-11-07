@@ -1,10 +1,11 @@
+import { useSourceLanguage, sourceText } from "../shopI18n";
 import { useId } from 'react';
 
 export function QuantityStepper({
   value,
   max = 20,
   onChange,
-  label = 'Số lượng',
+  label,
   disabled = false,
 }: {
   value: number;
@@ -13,6 +14,7 @@ export function QuantityStepper({
   label?: string;
   disabled?: boolean;
 }) {
+  useSourceLanguage();
   const inputId = useId();
   const upper = Math.min(Math.max(1, max), 20);
   const clamp = (next: number) => Math.min(Math.max(1, Math.trunc(next) || 1), upper);
@@ -22,14 +24,14 @@ export function QuantityStepper({
       <button
         type="button"
         className="shop-stepper__btn"
-        aria-label="Giảm số lượng"
+        aria-label={sourceText("Giảm số lượng")}
         disabled={disabled || value <= 1}
         onClick={() => onChange(clamp(value - 1))}
       >
         −
       </button>
       <label htmlFor={inputId} className="shop-sr-only">
-        {label}
+        {label ?? sourceText('Số lượng')}
       </label>
       <input
         id={inputId}
@@ -48,7 +50,7 @@ export function QuantityStepper({
       <button
         type="button"
         className="shop-stepper__btn"
-        aria-label="Tăng số lượng"
+        aria-label={sourceText("Tăng số lượng")}
         disabled={disabled || value >= upper}
         onClick={() => onChange(clamp(value + 1))}
       >

@@ -1,9 +1,8 @@
+import { sourceText, useSourceLanguage, sourceFormat, sourceError, sourceToast as toast } from '../shopI18n';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { errorMessage } from '../../../shared/lib/errorMessage';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../../shared/ui/Modal';
-import { toast } from '../../../shared/ui/toast';
 import { addToCart, useCart } from '../cart';
 import { shopApi } from '../shopApi';
 import { FORM_LABELS, formatVnd, pricePerServingLabel } from '../shopFormat';
@@ -24,13 +23,14 @@ import { VariantPicker } from './VariantPicker';
 
 import { Select } from '../../../shared/ui/Select';
 const SORT_OPTIONS: Array<{ value: 'newest' | 'price_per_serving' | 'price_asc' | 'price_desc'; label: string }> = [
-  { value: 'newest', label: 'Mới nhất' },
-  { value: 'price_per_serving', label: 'Giá mỗi lần dùng' },
-  { value: 'price_asc', label: 'Giá tăng dần' },
-  { value: 'price_desc', label: 'Giá giảm dần' },
+  { value: 'newest', get label() { return sourceText('Mới nhất'); } },
+  { value: 'price_per_serving', get label() { return sourceText('Giá mỗi lần dùng'); } },
+  { value: 'price_asc', get label() { return sourceText('Giá tăng dần'); } },
+  { value: 'price_desc', get label() { return sourceText('Giá giảm dần'); } },
 ];
 
 export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
+  useSourceLanguage();
   const navigate = useNavigate();
   const cartLines = useCart();
   const cartCount = cartLines.reduce((sum, l) => sum + l.quantity, 0);
@@ -45,13 +45,13 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
 
   const [data, setData] = useState<Page<ProductSummaryDto> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
 
   // Quick-buy product modal state
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [detail, setDetail] = useState<ProductDetailDto | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState('');
+  const [detailError, setDetailError] = useState<string | Error>('');
   const [selectedVariantId, setSelectedVariantId] = useState<number>(0);
   const [qty, setQty] = useState(1);
 
@@ -77,7 +77,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
       });
       setData(res);
     } catch (err) {
-      setError(errorMessage(err, 'Không thể tải danh mục sản phẩm.'));
+      setError(sourceError(err, 'Không thể tải danh mục sản phẩm.'));
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
       const firstAvail = d.variants.find(v => v.available && v.stock > 0) ?? d.variants[0];
       setSelectedVariantId(firstAvail ? firstAvail.id : 0);
     } catch (err) {
-      setDetailError(errorMessage(err, 'Không thể tải chi tiết sản phẩm.'));
+      setDetailError(sourceError(err, 'Không thể tải chi tiết sản phẩm.'));
     } finally {
       setDetailLoading(false);
     }
@@ -124,18 +124,17 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
   };
 
   return (
-    <section className="stack" aria-label="Cửa hàng thực phẩm bổ sung">
+    <section className="stack" aria-label={sourceText("Cửa hàng thực phẩm bổ sung")}>
       <div className="portal-card stack" style={{ gap: 14 }}>
         <div className="portal-shop-toolbar">
           <div className="shop-field">
             <label className="shop-sr-only" htmlFor="portal-shop-search">
-              Tìm sản phẩm
-            </label>
+              {sourceText("Tìm sản phẩm")}</label>
             <input
               id="portal-shop-search"
               type="search"
               className="shop-input"
-              placeholder="Tìm whey, creatine, điện giải…"
+              placeholder={sourceText("Tìm whey, creatine, điện giải…")}
               value={q}
               onChange={e => {
                 setQ(e.target.value);
@@ -146,19 +145,18 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
 
           <div className="shop-field">
             <label className="shop-sr-only" htmlFor="portal-shop-category">
-              Danh mục sản phẩm
-            </label>
+              {sourceText("Danh mục sản phẩm")}</label>
             <Select
               id="portal-shop-category"
               className="shop-select"
-              aria-label="Danh mục sản phẩm"
+              aria-label={sourceText("Danh mục sản phẩm")}
               value={category}
               onChange={e => {
                 setCategory(e.target.value);
                 setPage(0);
               }}
             >
-              <option value="">Tất cả danh mục</option>
+              <option value="">{sourceText("Tất cả danh mục")}</option>
               {categories.map(c => (
                 <option key={c.id} value={c.slug}>
                   {c.name}
@@ -169,12 +167,11 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
 
           <div className="shop-field">
             <label className="shop-sr-only" htmlFor="portal-shop-sort">
-              Sắp xếp
-            </label>
+              {sourceText("Sắp xếp")}</label>
             <Select
               id="portal-shop-sort"
               className="shop-select"
-              aria-label="Sắp xếp sản phẩm"
+              aria-label={sourceText("Sắp xếp sản phẩm")}
               value={sort}
               onChange={e => {
                 setSort(e.target.value as typeof sort);
@@ -198,7 +195,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                 setPage(0);
               }}
             />
-            <span>Còn hàng</span>
+            <span>{sourceText("Còn hàng")}</span>
           </label>
         </div>
 
@@ -212,17 +209,16 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
       </div>
 
       {loading ? (
-        <LoadingSkeleton label="Đang tải kệ sản phẩm…" variant="cards" count={3} />
+        <LoadingSkeleton label={sourceText("Đang tải kệ sản phẩm…")} variant="cards" count={3} />
       ) : error ? (
         <div className="portal-alert" role="alert">
-          <span>{error}</span>
+          <span>{sourceText(error)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void loadProducts()}>
-            Thử lại
-          </button>
+            {sourceText("Thử lại")}</button>
         </div>
       ) : !data?.content.length ? (
         <div className="portal-card portal-state stack" style={{ alignItems: 'flex-start' }}>
-          <p style={{ margin: 0 }}>Không tìm thấy sản phẩm phù hợp với bộ lọc.</p>
+          <p style={{ margin: 0 }}>{sourceText("Không tìm thấy sản phẩm phù hợp với bộ lọc.")}</p>
           <button
             type="button"
             className="btn-secondary btn-sm"
@@ -234,8 +230,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
               setPage(0);
             }}
           >
-            Xóa bộ lọc
-          </button>
+            {sourceText("Xóa bộ lọc")}</button>
         </div>
       ) : (
         <>
@@ -250,17 +245,16 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
           </div>
 
           {data.totalPages > 1 && (
-            <nav className="court-pagination" aria-label="Phân trang sản phẩm">
+            <nav className="court-pagination" aria-label={sourceText("Phân trang sản phẩm")}>
               <button
                 type="button"
                 className="btn-secondary"
                 disabled={page === 0}
                 onClick={() => setPage(p => p - 1)}
               >
-                Trang trước
-              </button>
+                {sourceText("Trang trước")}</button>
               <span>
-                Trang {page + 1} / {data.totalPages}
+                {sourceText("Trang ")}{page + 1} / {data.totalPages}
               </span>
               <button
                 type="button"
@@ -268,50 +262,46 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                 disabled={page + 1 >= data.totalPages}
                 onClick={() => setPage(p => p + 1)}
               >
-                Trang sau
-              </button>
+                {sourceText("Trang sau")}</button>
             </nav>
           )}
         </>
       )}
 
       {cartCount > 0 && (
-        <div className="portal-shop-cart-bar" role="region" aria-label="Tóm tắt giỏ hàng">
+        <div className="portal-shop-cart-bar" role="region" aria-label={sourceText("Tóm tắt giỏ hàng")}>
           <div>
-            <strong>Giỏ hàng có {cartCount} sản phẩm</strong>
+            <strong>{sourceText("Giỏ hàng có ")}{cartCount} {sourceText(" sản phẩm")}</strong>
             <div className="muted" style={{ fontSize: 12 }}>
-              Nhận tại quầy SÖL hoặc giao tận nơi
-            </div>
+              {sourceText("Nhận tại quầy SÖL hoặc giao tận nơi")}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="btn-secondary" onClick={onOpenCart}>
-              Xem giỏ hàng ({cartCount})
+              {sourceText("Xem giỏ hàng (")}{cartCount})
             </button>
             <Link to="/checkout" className="btn-primary">
-              Thanh toán ngay
-            </Link>
+              {sourceText("Thanh toán ngay")}</Link>
           </div>
         </div>
       )}
 
       {activeSlug && (
         <Modal
-          title={detail ? detail.name : 'Chi tiết sản phẩm'}
+          title={detail ? detail.name : sourceText('Chi tiết sản phẩm')}
           className="shop-product-dialog"
           onClose={() => setActiveSlug(null)}
         >
           {detailLoading ? (
-            <LoadingSkeleton label="Đang tải chi tiết sản phẩm…" variant="rows" count={3} />
+            <LoadingSkeleton label={sourceText("Đang tải chi tiết sản phẩm…")} variant="rows" count={3} />
           ) : detailError ? (
             <div className="portal-alert" role="alert">
-              <span>{detailError}</span>
+              <span>{sourceText(detailError)}</span>
               <button
                 type="button"
                 className="btn-secondary btn-sm"
                 onClick={() => void openProductModal(activeSlug)}
               >
-                Thử lại
-              </button>
+                {sourceText("Thử lại")}</button>
             </div>
           ) : (
             detail && (
@@ -361,8 +351,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                       selectedVariant.stock > 0 &&
                       selectedVariant.stock < 10 && (
                         <p className="shop-status-pill shop-status-pill--pending_payment" role="status" style={{ margin: 0, width: 'fit-content' }}>
-                          Sắp hết · Còn {selectedVariant.stock} sản phẩm
-                        </p>
+                          {sourceText("Sắp hết · Còn ")}{selectedVariant.stock}{sourceText(" sản phẩm")}</p>
                       )}
 
                     <div className="portal-shop-buy-actions">
@@ -371,7 +360,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                         max={maxQty}
                         disabled={!canBuy}
                         onChange={setQty}
-                        label={`Số lượng ${detail.name}`}
+                        label={sourceFormat("Số lượng {0}", detail.name)}
                       />
                       <button
                         type="button"
@@ -379,7 +368,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                         disabled={!canBuy}
                         onClick={handleAddFromModal}
                       >
-                        {canBuy ? 'Thêm vào giỏ' : 'Hết hàng'}
+                        {canBuy ? sourceText('Thêm vào giỏ') : sourceText('Hết hàng')}
                       </button>
                       {canBuy && (
                         <button
@@ -387,8 +376,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                           className="btn-primary"
                           onClick={handleBuyNowFromModal}
                         >
-                          Mua ngay
-                        </button>
+                          {sourceText("Mua ngay")}</button>
                       )}
                     </div>
                   </div>

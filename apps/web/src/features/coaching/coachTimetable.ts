@@ -1,3 +1,4 @@
+import { staffText } from '../operations/staffI18n';
 import { hhmm, shortDate, toMinutes, todayISO, type TimetableEvent } from '../schedule/timetable';
 
 interface SessionLike {
@@ -44,17 +45,17 @@ export function coachSessionEvents(
     let badge: string;
     let statusText: string;
     if (session.status === 'cancelled') {
-      tone = 'cancelled'; badge = 'Đã hủy'; statusText = 'đã hủy';
+      tone = 'cancelled'; badge = staffText('Đã hủy', 'Cancelled'); statusText = staffText('đã hủy', 'cancelled');
     } else if (mode === 'attendance') {
-      if (savedSessionIds.has(session.id)) { tone = 'mine'; badge = 'Đã điểm danh'; statusText = 'đã điểm danh'; }
-      else if (ended) { tone = 'full'; badge = 'Chưa điểm danh'; statusText = 'đã diễn ra, chưa điểm danh'; }
-      else { tone = 'open'; badge = seats; statusText = 'sắp diễn ra'; }
+      if (savedSessionIds.has(session.id)) { tone = 'mine'; badge = staffText('Đã điểm danh', 'Attendance recorded'); statusText = staffText('đã điểm danh', 'attendance recorded'); }
+      else if (ended) { tone = 'full'; badge = staffText('Chưa điểm danh', 'Attendance not recorded'); statusText = staffText('đã diễn ra, chưa điểm danh', 'past, attendance not recorded'); }
+      else { tone = 'open'; badge = seats; statusText = staffText('sắp diễn ra', 'upcoming'); }
     } else if (ended) {
-      tone = 'past'; badge = seats; statusText = 'đã qua';
+      tone = 'past'; badge = seats; statusText = staffText('đã qua', 'past');
     } else if (session.bookedCount >= session.capacity) {
-      tone = 'full'; badge = 'Đầy'; statusText = 'đã đầy';
+      tone = 'full'; badge = staffText('Đầy', 'Full'); statusText = staffText('đã đầy', 'full');
     } else {
-      tone = 'open'; badge = seats; statusText = 'còn chỗ';
+      tone = 'open'; badge = seats; statusText = staffText('còn chỗ', 'spaces available');
     }
     return {
       id: String(session.id),
@@ -65,7 +66,7 @@ export function coachSessionEvents(
       meta: session.roomName || undefined,
       badge,
       tone,
-      ariaLabel: `${session.className}, ${shortDate(session.sessionDate)} ${hhmm(session.startTime)}–${hhmm(session.endTime)}${session.roomName ? `, ${session.roomName}` : ''}, ${seats} học viên, ${statusText}`,
+      ariaLabel: `${session.className}, ${shortDate(session.sessionDate)} ${hhmm(session.startTime)}–${hhmm(session.endTime)}${session.roomName ? `, ${session.roomName}` : ''}, ${seats} ${staffText('học viên', 'members')}, ${statusText}`,
     };
   });
 }
@@ -82,6 +83,6 @@ export function ptBookingEvents(bookings: PtBookingLike[]): TimetableEvent[] {
       title: `PT 1:1 · ${booking.memberName}`,
       badge: '1:1',
       tone: 'mine' as const,
-      ariaLabel: `Kèm riêng 1:1 với ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`,
+      ariaLabel: staffText(`Kèm riêng 1:1 với ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`, `One-to-one coaching with ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`),
     }));
 }

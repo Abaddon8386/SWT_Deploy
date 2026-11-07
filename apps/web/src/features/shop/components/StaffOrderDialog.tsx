@@ -1,7 +1,6 @@
+import { useSourceLanguage, sourceFormat, sourceText, sourceError, sourceNotify as notify, sourceFormatPair } from '../shopI18n';
 import { useState } from 'react';
 import { formatCenterDateTime } from '../../../shared/lib/centerTime';
-import { errorMessage } from '../../../shared/lib/errorMessage';
-import { notify } from '../../../shared/lib/portalNotices';
 import { ActionMenu } from '../../../shared/ui/ActionMenu';
 import { Modal } from '../../../shared/ui/Modal';
 import { shopApi } from '../shopApi';
@@ -17,13 +16,14 @@ export interface StaffOrderDialogProps {
 }
 
 export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialogProps) {
+  useSourceLanguage();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
 
   // Shipping form state
   const [carrier, setCarrier] = useState(order.trackingCarrier ?? '');
   const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber ?? '');
-  const [trackingError, setTrackingError] = useState('');
+  const [trackingError, setTrackingError] = useState<string | Error>('');
 
   // Counter payment state
   const [counterMethod, setCounterMethod] = useState<CounterPaymentMethod>('cash');
@@ -31,14 +31,14 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
   // Cancel form state
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
-  const [cancelReasonError, setCancelReasonError] = useState('');
+  const [cancelReasonError, setCancelReasonError] = useState<string | Error>('');
   const [restock, setRestock] = useState(true);
 
   const isTerminal = order.status === 'completed' || order.status === 'cancelled';
 
   const runAction = async (
     fn: () => Promise<OrderDto>,
-    successMsg: string,
+    successMsg: string | import('../../../shared/i18n').SourceMessage,
     recordNotice = false,
   ) => {
     if (busy) return;
@@ -49,7 +49,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
       notify(successMsg, 'success', recordNotice ? { record: true } : {});
       onUpdated(updated);
     } catch (err) {
-      setError(errorMessage(err, 'Không thể cập nhật đơn hàng. Vui lòng thử lại.'));
+      setError(sourceError(err, 'Không thể cập nhật đơn hàng. Vui lòng thử lại.'));
     } finally {
       setBusy(false);
     }
@@ -69,7 +69,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
           carrier: carrier.trim(),
           trackingNumber: trimmedTracking,
         }),
-      `Đã giao đơn ${order.code} cho đơn vị vận chuyển.`,
+      sourceFormatPair("Đã giao đơn {0} cho đơn vị vận chuyển.", order.code),
     );
   };
 
@@ -83,14 +83,14 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
     setCancelReasonError('');
     await runAction(
       () => shopApi.staff.cancel(order.id, { reason: trimmedReason, restock }),
-      `Đã hủy đơn ${order.code}.`,
+      sourceFormatPair("Đã hủy đơn {0}.", order.code),
       true,
     );
   };
 
   return (
     <Modal
-      title={`Đơn hàng ${order.code}`}
+      title={sourceFormat("Đơn hàng {0}", order.code)}
       className="shop-staff-dialog"
       busy={busy}
       onClose={() => {
@@ -109,12 +109,12 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
         >
           <div>
             <p style={{ margin: 0 }}>
-              <strong>{order.member?.fullName ?? 'Hội viên'}</strong>
+              <strong>{order.member?.fullName ?? sourceText('Hội viên')}</strong>
               {order.member?.phone ? ` · ${order.member.phone}` : ''}
             </p>
             <p className="muted" style={{ margin: '4px 0 0' }}>
-              Đặt lúc {formatCenterDateTime(order.createdAt)} ·{' '}
-              {order.fulfillment === 'pickup' ? 'Nhận tại quầy SÖL' : 'Giao tận nơi'}
+              {sourceText("Đặt lúc ")}{formatCenterDateTime(order.createdAt)} ·{' '}
+              {order.fulfillment === 'pickup' ? sourceText('Nhận tại quầy SÖL') : sourceText('Giao tận nơi')}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -124,7 +124,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
               paymentMethod={order.paymentMethod}
             />
             {!isTerminal && !showCancel && (
-              <ActionMenu label="Thao tác khác">
+              <ActionMenu label={sourceText("Thao tác khác")}>
                 <button
                   type="button"
                   className="action-menu__item action-menu__item--danger"
@@ -134,21 +134,20 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                     setCancelReasonError('');
                   }}
                 >
-                  Hủy đơn
-                </button>
+                  {sourceText("Hủy đơn")}</button>
               </ActionMenu>
             )}
           </div>
         </div>
 
-        <div className="portal-table-wrapper" role="region" aria-label="Sản phẩm trong đơn" tabIndex={0}>
+        <div className="portal-table-wrapper" role="region" aria-label={sourceText("Sản phẩm trong đơn")} tabIndex={0}>
           <table className="portal-table">
             <thead>
               <tr>
-                <th scope="col">Sản phẩm</th>
+                <th scope="col">{sourceText("Sản phẩm")}</th>
                 <th scope="col">SKU</th>
-                <th scope="col">SL</th>
-                <th scope="col">Thành tiền</th>
+                <th scope="col">{sourceText("SL")}</th>
+                <th scope="col">{sourceText("Thành tiền")}</th>
               </tr>
             </thead>
             <tbody>
@@ -174,22 +173,22 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
           style={{ display: 'grid', gap: 6, padding: '12px 14px' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span className="muted">Tạm tính</span>
+            <span className="muted">{sourceText("Tạm tính")}</span>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatVnd(order.subtotal)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span className="muted">Phí giao hàng</span>
+            <span className="muted">{sourceText("Phí giao hàng")}</span>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatVnd(order.shippingFee)}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <strong>Tổng cộng</strong>
+            <strong>{sourceText("Tổng cộng")}</strong>
             <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatVnd(order.total)}</strong>
           </div>
           {order.refundedAmount != null && order.refundedAmount > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span className="muted">Đã hoàn vào Ví SÖL</span>
+              <span className="muted">{sourceText("Đã hoàn vào Ví SÖL")}</span>
               <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {formatVnd(order.refundedAmount)}
               </strong>
@@ -200,8 +199,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
         {order.fulfillment === 'delivery' && order.shipping ? (
           <div className="portal-card" style={{ padding: '12px 14px' }}>
             <h3 className="portal-card-title" style={{ marginBottom: 6 }}>
-              Địa chỉ giao hàng
-            </h3>
+              {sourceText("Địa chỉ giao hàng")}</h3>
             <p style={{ margin: 0 }}>
               <strong>{order.shipping.recipientName}</strong> · {order.shipping.phone}
             </p>
@@ -210,12 +208,12 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
             </p>
             {order.shipping.note && (
               <p className="muted" style={{ margin: '4px 0 0' }}>
-                Ghi chú: {order.shipping.note}
+                {sourceText("Ghi chú: ")}{order.shipping.note}
               </p>
             )}
             {order.trackingNumber && (
               <p style={{ margin: '6px 0 0' }}>
-                Vận đơn: {order.trackingCarrier ? `${order.trackingCarrier} · ` : ''}
+                {sourceText("Vận đơn: ")}{order.trackingCarrier ? `${order.trackingCarrier} · ` : ''}
                 <strong>{order.trackingNumber}</strong>
               </p>
             )}
@@ -223,10 +221,9 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
         ) : (
           <div className="portal-card" style={{ padding: '12px 14px' }}>
             <h3 className="portal-card-title" style={{ marginBottom: 6 }}>
-              Nhận tại quầy SÖL
-            </h3>
+              {sourceText("Nhận tại quầy SÖL")}</h3>
             <p style={{ margin: 0 }}>
-              {order.pickupAddress || 'Quầy lễ tân trung tâm SÖL Fitness'}
+              {order.pickupAddress || sourceText('Quầy lễ tân trung tâm SÖL Fitness')}
             </p>
           </div>
         )}
@@ -241,11 +238,11 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
               onClick={() =>
                 void runAction(
                   () => shopApi.staff.startProcessing(order.id),
-                  `Đã bắt đầu chuẩn bị đơn ${order.code}.`,
+                  sourceFormatPair("Đã bắt đầu chuẩn bị đơn {0}.", order.code),
                 )
               }
             >
-              {busy ? 'Đang xử lý…' : 'Bắt đầu chuẩn bị'}
+              {busy ? sourceText('Đang xử lý…') : sourceText('Bắt đầu chuẩn bị')}
             </button>
           </div>
         )}
@@ -254,8 +251,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
           <form className="stack" onSubmit={e => void handleShip(e)} noValidate>
             <div className="shop-field">
               <label className="shop-label" htmlFor="staff-ship-carrier">
-                Đơn vị vận chuyển
-              </label>
+                {sourceText("Đơn vị vận chuyển")}</label>
               <input
                 id="staff-ship-carrier"
                 className="shop-input"
@@ -264,13 +260,12 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                 value={carrier}
                 disabled={busy}
                 onChange={e => setCarrier(e.target.value)}
-                placeholder="GHN, GHTK, Viettel Post…"
+                placeholder={sourceText("GHN, GHTK, Viettel Post…")}
               />
             </div>
             <div className="shop-field">
               <label className="shop-label" htmlFor="staff-ship-tracking">
-                Mã vận đơn
-              </label>
+                {sourceText("Mã vận đơn")}</label>
               <input
                 id="staff-ship-tracking"
                 className="shop-input"
@@ -287,13 +282,13 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
               />
               {trackingError && (
                 <p className="form-error" role="alert">
-                  {trackingError}
+                  {sourceText(trackingError)}
                 </p>
               )}
             </div>
             <div className="form-actions">
               <button type="submit" className="btn-primary" disabled={busy}>
-                {busy ? 'Đang gửi…' : 'Giao cho vận chuyển'}
+                {busy ? sourceText('Đang gửi…') : sourceText('Giao cho vận chuyển')}
               </button>
             </div>
           </form>
@@ -308,11 +303,11 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
               onClick={() =>
                 void runAction(
                   () => shopApi.staff.readyForPickup(order.id),
-                  `Đơn ${order.code} đã sẵn sàng nhận tại quầy.`,
+                  sourceFormatPair("Đơn {0} đã sẵn sàng nhận tại quầy.", order.code),
                 )
               }
             >
-              {busy ? 'Đang xử lý…' : 'Sẵn sàng nhận tại quầy'}
+              {busy ? sourceText('Đang xử lý…') : sourceText('Sẵn sàng nhận tại quầy')}
             </button>
           </div>
         )}
@@ -326,11 +321,11 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
               onClick={() =>
                 void runAction(
                   () => shopApi.staff.complete(order.id),
-                  `Đã hoàn tất đơn ${order.code}.`,
+                  sourceFormatPair("Đã hoàn tất đơn {0}.", order.code),
                 )
               }
             >
-              {busy ? 'Đang xử lý…' : 'Đã giao thành công'}
+              {busy ? sourceText('Đang xử lý…') : sourceText('Đã giao thành công')}
             </button>
           </div>
         )}
@@ -338,8 +333,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
         {order.status === 'ready_for_pickup' && (
           <div className="stack">
             <p className="muted" style={{ margin: 0 }}>
-              Lưu ý: Kiểm tra thẻ hội viên trước khi giao sản phẩm tại quầy.
-            </p>
+              {sourceText("Lưu ý: Kiểm tra thẻ hội viên trước khi giao sản phẩm tại quầy.")}</p>
             <div className="form-actions">
               <button
                 type="button"
@@ -348,11 +342,11 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                 onClick={() =>
                   void runAction(
                     () => shopApi.staff.complete(order.id),
-                    `Đã giao đơn ${order.code} tại quầy.`,
+                    sourceFormatPair("Đã giao đơn {0} tại quầy.", order.code),
                   )
                 }
               >
-                {busy ? 'Đang xử lý…' : 'Đã giao tại quầy'}
+                {busy ? sourceText('Đang xử lý…') : sourceText('Đã giao tại quầy')}
               </button>
             </div>
           </div>
@@ -362,8 +356,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
           <div className="stack">
             <div className="shop-field">
               <label className="shop-label" htmlFor="staff-counter-method">
-                Phương thức thu tiền
-              </label>
+                {sourceText("Phương thức thu tiền")}</label>
               <Select
                 id="staff-counter-method"
                 className="shop-select"
@@ -371,9 +364,9 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                 disabled={busy}
                 onChange={e => setCounterMethod(e.target.value as CounterPaymentMethod)}
               >
-                <option value="cash">Tiền mặt</option>
-                <option value="pos">Quẹt thẻ</option>
-                <option value="bank_transfer">Chuyển khoản</option>
+                <option value="cash">{sourceText("Tiền mặt")}</option>
+                <option value="pos">{sourceText("Quẹt thẻ")}</option>
+                <option value="bank_transfer">{sourceText("Chuyển khoản")}</option>
               </Select>
             </div>
             <div className="form-actions">
@@ -384,12 +377,12 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                 onClick={() =>
                   void runAction(
                     () => shopApi.staff.counterPayment(order.id, counterMethod),
-                    `Đã thu tiền tại quầy cho đơn ${order.code}.`,
+                    sourceFormatPair("Đã thu tiền tại quầy cho đơn {0}.", order.code),
                     true,
                   )
                 }
               >
-                {busy ? 'Đang thu tiền…' : 'Thu tiền tại quầy'}
+                {busy ? sourceText('Đang thu tiền…') : sourceText('Thu tiền tại quầy')}
               </button>
             </div>
           </div>
@@ -403,18 +396,14 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
             noValidate
           >
             <h3 className="portal-card-title" style={{ margin: 0 }}>
-              Hủy đơn hàng
-            </h3>
+              {sourceText("Hủy đơn hàng")}</h3>
             {order.paidAt != null && (
               <p style={{ margin: 0 }}>
-                Đơn đã thanh toán — sẽ hoàn <strong>{formatVnd(order.total)}</strong> vào Ví SÖL của
-                hội viên.
-              </p>
+                {sourceText("Đơn đã thanh toán — sẽ hoàn ")}<strong>{formatVnd(order.total)}</strong> {sourceText(" vào Ví SÖL của hội viên.")}</p>
             )}
             <div className="shop-field">
               <label className="shop-label" htmlFor="staff-cancel-reason">
-                Lý do hủy đơn
-              </label>
+                {sourceText("Lý do hủy đơn")}</label>
               <textarea
                 id="staff-cancel-reason"
                 className="shop-textarea"
@@ -431,7 +420,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
               />
               {cancelReasonError && (
                 <p className="form-error" role="alert">
-                  {cancelReasonError}
+                  {sourceText(cancelReasonError)}
                 </p>
               )}
             </div>
@@ -442,7 +431,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                 disabled={busy}
                 onChange={e => setRestock(e.target.checked)}
               />
-              <span>Nhập lại kho</span>
+              <span>{sourceText("Nhập lại kho")}</span>
             </label>
             <div className="form-actions">
               <button
@@ -451,10 +440,9 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
                 disabled={busy}
                 onClick={() => setShowCancel(false)}
               >
-                Quay lại
-              </button>
+                {sourceText("Quay lại")}</button>
               <button type="submit" className="btn-danger" disabled={busy}>
-                {busy ? 'Đang hủy…' : 'Xác nhận hủy đơn'}
+                {busy ? sourceText('Đang hủy…') : sourceText('Xác nhận hủy đơn')}
               </button>
             </div>
           </form>
@@ -462,7 +450,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
 
         {error && (
           <p className="form-error" role="alert">
-            {error}
+            {sourceText(error)}
           </p>
         )}
       </div>

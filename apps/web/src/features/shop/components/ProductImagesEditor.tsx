@@ -1,6 +1,5 @@
+import { useSourceLanguage, sourceText, sourceFormat, sourceError, sourceNotify as notify } from '../shopI18n';
 import { useRef, useState } from 'react';
-import { errorMessage } from '../../../shared/lib/errorMessage';
-import { notify } from '../../../shared/lib/portalNotices';
 import { shopApi } from '../shopApi';
 import type { ProductImageDto } from '../shopTypes';
 
@@ -23,7 +22,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh.'));
+    reader.onerror = () => reject(sourceError(null, 'Không thể đọc tệp ảnh.'));
     reader.readAsDataURL(file);
   });
 }
@@ -34,10 +33,11 @@ export function ProductImagesEditor({
   onChange,
   disabled = false,
 }: ProductImagesEditorProps) {
+  useSourceLanguage();
   const [altText, setAltText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
@@ -69,7 +69,7 @@ export function ProductImagesEditor({
   const handleUpload = async () => {
     if (busy || disabled) return;
     if (images.length >= MAX_IMAGES) {
-      setError(`Mỗi sản phẩm tối đa ${MAX_IMAGES} ảnh.`);
+      setError(sourceFormat("Mỗi sản phẩm tối đa {0} ảnh.", MAX_IMAGES));
       return;
     }
     const trimmedAlt = altText.trim();
@@ -111,7 +111,7 @@ export function ProductImagesEditor({
         fileInputRef.current.value = '';
       }
     } catch (err) {
-      setError(errorMessage(err, 'Không thể tải ảnh lên. Vui lòng thử lại.'));
+      setError(sourceError(err, 'Không thể tải ảnh lên. Vui lòng thử lại.'));
     } finally {
       setBusy(false);
     }
@@ -134,7 +134,7 @@ export function ProductImagesEditor({
         );
         onChange(updated.images);
       } catch (err) {
-        setError(errorMessage(err, 'Không thể đổi thứ tự ảnh.'));
+        setError(sourceError(err, 'Không thể đổi thứ tự ảnh.'));
       } finally {
         setBusy(false);
       }
@@ -153,7 +153,7 @@ export function ProductImagesEditor({
         onChange(updated.images);
         notify('Đã xóa ảnh sản phẩm.', 'success');
       } catch (err) {
-        setError(errorMessage(err, 'Không thể xóa ảnh sản phẩm.'));
+        setError(sourceError(err, 'Không thể xóa ảnh sản phẩm.'));
       } finally {
         setBusy(false);
       }
@@ -163,7 +163,7 @@ export function ProductImagesEditor({
   };
 
   return (
-    <section className="portal-card stack" aria-label="Ảnh sản phẩm">
+    <section className="portal-card stack" aria-label={sourceText("Ảnh sản phẩm")}>
       <div
         style={{
           display: 'flex',
@@ -174,9 +174,9 @@ export function ProductImagesEditor({
         }}
       >
         <h2 className="portal-card-title" style={{ margin: 0 }}>
-          Ảnh sản phẩm ({images.length}/{MAX_IMAGES})
+          {sourceText("Ảnh sản phẩm (")}{images.length}/{MAX_IMAGES})
         </h2>
-        <span className="muted">JPEG, PNG, WEBP · Tối đa 1,5 MB/ảnh</span>
+        <span className="muted">{sourceText("JPEG, PNG, WEBP · Tối đa 1,5 MB/ảnh")}</span>
       </div>
 
       {images.length > 0 && (
@@ -216,14 +216,14 @@ export function ProductImagesEditor({
                 />
                 <div>
                   <strong>{img.alt}</strong>
-                  <div className="muted">Ảnh #{idx + 1}</div>
+                  <div className="muted">{sourceText("Ảnh #")}{idx + 1}</div>
                 </div>
               </div>
               <div className="shop-image-actions">
                 <button
                   type="button"
                   className="btn-secondary btn-sm"
-                  aria-label={`Chuyển ảnh ${img.alt} lên`}
+                  aria-label={sourceFormat("Chuyển ảnh {0} lên", img.alt)}
                   disabled={busy || disabled || idx === 0}
                   onClick={() => void handleMove(idx, -1)}
                 >
@@ -232,7 +232,7 @@ export function ProductImagesEditor({
                 <button
                   type="button"
                   className="btn-secondary btn-sm"
-                  aria-label={`Chuyển ảnh ${img.alt} xuống`}
+                  aria-label={sourceFormat("Chuyển ảnh {0} xuống", img.alt)}
                   disabled={busy || disabled || idx === images.length - 1}
                   onClick={() => void handleMove(idx, 1)}
                 >
@@ -244,8 +244,7 @@ export function ProductImagesEditor({
                   disabled={busy || disabled}
                   onClick={() => void handleRemove(img)}
                 >
-                  Xóa ảnh
-                </button>
+                  {sourceText("Xóa ảnh")}</button>
               </div>
             </li>
           ))}
@@ -262,8 +261,7 @@ export function ProductImagesEditor({
       >
         <div className="shop-field">
           <label className="shop-label" htmlFor="product-image-file">
-            Tệp ảnh
-          </label>
+            {sourceText("Tệp ảnh")}</label>
           <input
             ref={fileInputRef}
             id="product-image-file"
@@ -276,8 +274,7 @@ export function ProductImagesEditor({
         </div>
         <div className="shop-field">
           <label className="shop-label" htmlFor="product-image-alt">
-            Mô tả ảnh (alt)
-          </label>
+            {sourceText("Mô tả ảnh (alt)")}</label>
           <input
             id="product-image-alt"
             type="text"
@@ -285,7 +282,7 @@ export function ProductImagesEditor({
             maxLength={160}
             value={altText}
             disabled={busy || disabled || images.length >= MAX_IMAGES}
-            placeholder="Mặt trước hũ SÖL Whey Isolate"
+            placeholder={sourceText("Mặt trước hũ SÖL Whey Isolate")}
             onChange={e => {
               setAltText(e.target.value);
               if (error) setError('');
@@ -299,14 +296,14 @@ export function ProductImagesEditor({
             disabled={busy || disabled || images.length >= MAX_IMAGES}
             onClick={() => void handleUpload()}
           >
-            {busy ? 'Đang tải…' : 'Tải ảnh lên'}
+            {busy ? sourceText('Đang tải…') : sourceText('Tải ảnh lên')}
           </button>
         </div>
       </div>
 
       {error && (
         <p className="form-error" role="alert">
-          {error}
+          {sourceText(error)}
         </p>
       )}
     </section>

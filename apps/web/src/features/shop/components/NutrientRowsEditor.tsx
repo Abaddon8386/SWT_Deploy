@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText, sourceFormat } from '../shopI18n';
 import type { NutrientDto } from '../shopTypes';
 import { NutritionFacts } from './NutritionFacts';
 
@@ -30,6 +31,7 @@ export function NutrientRowsEditor({
   disabled = false,
   servingSizeError,
 }: NutrientRowsEditorProps) {
+  useSourceLanguage();
   const updateRow = (index: number, patch: Partial<NutrientRowDraft>) => {
     onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   };
@@ -79,7 +81,7 @@ export function NutrientRowsEditor({
     }));
 
   return (
-    <section className="portal-card stack" aria-label="Thành phần mỗi khẩu phần">
+    <section className="portal-card stack" aria-label={sourceText("Thành phần mỗi khẩu phần")}>
       <div
         style={{
           display: 'flex',
@@ -90,22 +92,19 @@ export function NutrientRowsEditor({
         }}
       >
         <h2 className="portal-card-title" style={{ margin: 0 }}>
-          Thành phần mỗi khẩu phần
-        </h2>
+          {sourceText("Thành phần mỗi khẩu phần")}</h2>
         <button
           type="button"
           className="btn-secondary btn-sm"
           disabled={disabled || rows.length >= 30}
           onClick={addRow}
         >
-          Thêm thành phần
-        </button>
+          {sourceText("Thêm thành phần")}</button>
       </div>
 
       <div className="shop-field" style={{ maxWidth: 360 }}>
         <label className="shop-label" htmlFor="product-serving-size">
-          Khẩu phần (Serving size)
-        </label>
+          {sourceText("Khẩu phần (Serving size)")}</label>
         <input
           id="product-serving-size"
           data-field="servingSize"
@@ -115,36 +114,35 @@ export function NutrientRowsEditor({
           disabled={disabled}
           maxLength={60}
           aria-invalid={Boolean(servingSizeError)}
-          placeholder="1 muỗng (33 g)"
+          placeholder={sourceText("1 muỗng (33 g)")}
           onChange={e => onServingSizeChange(e.target.value)}
         />
         {servingSizeError && (
           <p className="form-error" role="alert">
-            {servingSizeError}
+            {sourceText(servingSizeError)}
           </p>
         )}
       </div>
 
       <div className="shop-nutrient-editor">
-        <div className="portal-table-wrapper" role="region" aria-label="Biên tập thành phần dinh dưỡng" tabIndex={0}>
+        <div className="portal-table-wrapper" role="region" aria-label={sourceText("Biên tập thành phần dinh dưỡng")} tabIndex={0}>
           <table className="portal-table shop-editor-table">
             <thead>
               <tr>
-                <th scope="col">Tên chất</th>
-                <th scope="col">Lượng</th>
-                <th scope="col">Đơn vị</th>
-                <th scope="col">% NCKN</th>
-                <th scope="col">Hàng con</th>
-                <th scope="col">Nổi bật</th>
-                <th scope="col">Xóa</th>
+                <th scope="col">{sourceText("Tên chất")}</th>
+                <th scope="col">{sourceText("Lượng")}</th>
+                <th scope="col">{sourceText("Đơn vị")}</th>
+                <th scope="col">{sourceText("% NCKN")}</th>
+                <th scope="col">{sourceText("Hàng con")}</th>
+                <th scope="col">{sourceText("Nổi bật")}</th>
+                <th scope="col">{sourceText("Xóa")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="muted">
-                    Chưa có dòng thành phần. Nhấn “Thêm thành phần” để nhập bảng dinh dưỡng.
-                  </td>
+                    {sourceText("Chưa có dòng thành phần. Nhấn “Thêm thành phần” để nhập bảng dinh dưỡng.")}</td>
                 </tr>
               ) : (
                 rows.map((row, idx) => (
@@ -153,11 +151,11 @@ export function NutrientRowsEditor({
                       <input
                         type="text"
                         className="shop-input"
-                        aria-label={`Tên chất ${idx + 1}`}
+                        aria-label={sourceFormat("Tên chất {0}", idx + 1)}
                         value={row.name}
                         disabled={disabled}
                         maxLength={80}
-                        placeholder="Đạm"
+                        placeholder={sourceText("Đạm")}
                         onChange={e => updateRow(idx, { name: e.target.value })}
                       />
                     </td>
@@ -165,7 +163,7 @@ export function NutrientRowsEditor({
                       <input
                         type="number"
                         className="shop-input"
-                        aria-label={`Lượng chất ${idx + 1}`}
+                        aria-label={sourceFormat("Lượng chất {0}", idx + 1)}
                         value={row.amount}
                         disabled={disabled}
                         step="0.01"
@@ -178,7 +176,7 @@ export function NutrientRowsEditor({
                       <input
                         type="text"
                         className="shop-input"
-                        aria-label={`Đơn vị chất ${idx + 1}`}
+                        aria-label={sourceFormat("Đơn vị chất {0}", idx + 1)}
                         value={row.unit}
                         disabled={disabled}
                         maxLength={12}
@@ -190,7 +188,7 @@ export function NutrientRowsEditor({
                       <input
                         type="number"
                         className="shop-input"
-                        aria-label={`% NCKN chất ${idx + 1}`}
+                        aria-label={sourceFormat("% NCKN chất {0}", idx + 1)}
                         value={row.dailyValuePercent}
                         disabled={disabled}
                         step={1}
@@ -203,7 +201,7 @@ export function NutrientRowsEditor({
                       <label className="shop-checkbox-target">
                         <input
                           type="checkbox"
-                          aria-label={`Hàng con chất ${idx + 1}`}
+                          aria-label={sourceFormat("Hàng con chất {0}", idx + 1)}
                           checked={row.subRow}
                           disabled={disabled}
                           onChange={e => updateRow(idx, { subRow: e.target.checked })}
@@ -214,7 +212,7 @@ export function NutrientRowsEditor({
                       <label className="shop-checkbox-target">
                         <input
                           type="checkbox"
-                          aria-label={`Nổi bật chất ${idx + 1}`}
+                          aria-label={sourceFormat("Nổi bật chất {0}", idx + 1)}
                           checked={row.highlight}
                           disabled={disabled}
                           onChange={e => toggleHighlight(idx, e.target.checked)}
@@ -228,8 +226,7 @@ export function NutrientRowsEditor({
                         disabled={disabled}
                         onClick={() => removeRow(idx)}
                       >
-                        Xóa
-                      </button>
+                        {sourceText("Xóa")}</button>
                     </td>
                   </tr>
                 ))
@@ -239,9 +236,9 @@ export function NutrientRowsEditor({
         </div>
 
         <div className="stack">
-          <span className="shop-label">Xem trước nhãn thành phần</span>
+          <span className="shop-label">{sourceText("Xem trước nhãn thành phần")}</span>
           <NutritionFacts
-            servingSize={servingSize.trim() || '1 khẩu phần'}
+            servingSize={servingSize.trim() || sourceText('1 khẩu phần')}
             servings={servingsPreview}
             nutrients={previewNutrients}
           />

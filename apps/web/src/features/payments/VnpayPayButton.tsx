@@ -1,3 +1,5 @@
+﻿import type { SourceMessage } from '../../shared/i18n/language';
+import { useLanguage } from '../../shared/i18n/language';
 import { sourceMessage, useI18n } from '../../shared/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { localizableError } from '../../shared/lib/errorMessage';
@@ -16,10 +18,11 @@ export function VnpayPayButton({
   disabled?: boolean;
   onPaid?: () => void;
 }) {
+  useLanguage();
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [walletBusy, setWalletBusy] = useState(false);
-  const [error, setError] = useState<string | Error>('');
+  const [error, setError] = useState<string | Error | SourceMessage>('');
   const sending = useRef(false);
 
   // Leaving VNPay with the browser's Back button restores this page from the back/forward cache exactly as it was,
@@ -43,7 +46,7 @@ export function VnpayPayButton({
     setError('');
     try {
       const order = prepare ? await prepare() : target;
-      if (!order) throw Object.assign(new Error('Không tìm thấy khoản cần thanh toán.'), { translation: sourceMessage('Không tìm thấy khoản cần thanh toán.') });
+      if (!order) throw Object.assign(new Error('Không tìm thấy khoản cần thanh toán.'), { translation: sourceMessage('Không tìm thấy khoản cần thanh toán.', "Payment item not found.") });
       const checkout = await createVnpayCheckout(order);
       navigateToVnpay(checkout.paymentUrl);
     } catch (reason) {
@@ -60,11 +63,11 @@ export function VnpayPayButton({
     setError('');
     try {
       const order = prepare ? await prepare() : target;
-      if (!order) throw Object.assign(new Error('Không tìm thấy khoản cần thanh toán.'), { translation: sourceMessage('Không tìm thấy khoản cần thanh toán.') });
+      if (!order) throw Object.assign(new Error('Không tìm thấy khoản cần thanh toán.'), { translation: sourceMessage('Không tìm thấy khoản cần thanh toán.', "Payment item not found.") });
       await payWithWallet(order);
       window.dispatchEvent(new CustomEvent('wallet-updated'));
       window.dispatchEvent(new CustomEvent('member-notifications-changed'));
-      notify(t("Thanh toán bằng Ví SÖL thành công."), 'success', { translation: sourceMessage("Thanh toán bằng Ví SÖL thành công."),  record: true });
+      notify(t("Thanh toán bằng Ví SÖL thành công.", "SÖL Wallet payment successful."), 'success', { translation: sourceMessage("Thanh toán bằng Ví SÖL thành công.", "SÖL Wallet payment successful."),  record: true });
       onPaid?.();
     } catch (reason) {
       setError(localizableError(reason, 'Không thể thanh toán bằng Ví SÖL. Vui lòng kiểm tra số dư hoặc nạp thêm tiền vào Ví.'));
@@ -78,7 +81,7 @@ export function VnpayPayButton({
     <div className="stack" data-i18n-managed>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className="btn-primary" disabled={busy || walletBusy || disabled} onClick={() => void pay()}>
-          {busy ? t("Đang chuyển tới VNPay…") : t("Thanh toán VNPay Sandbox")}
+          {busy ? t("Đang chuyển tới VNPay…", "Redirecting to VNPay…") : t("Thanh toán VNPay Sandbox", "Pay with VNPay Sandbox")}
         </button>
         <button
           type="button"
@@ -87,7 +90,7 @@ export function VnpayPayButton({
           disabled={busy || walletBusy || disabled}
           onClick={() => void handlePayWithWallet()}
         >
-          {walletBusy ? t("Đang trừ Ví…") : t("Thanh toán bằng Ví SÖL")}
+          {walletBusy ? t("Đang trừ Ví…", "Charging wallet…") : t("Thanh toán bằng Ví SÖL", "Pay with SÖL Wallet")}
         </button>
       </div>
       {error && (

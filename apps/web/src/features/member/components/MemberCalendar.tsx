@@ -1,9 +1,9 @@
+﻿import { memberError, memberRenderMessage, memberNotify, memberMessage } from '../memberI18n';
+import type { SourceMessage } from '../../../shared/i18n/language';
+import { useLanguage } from '../../../shared/i18n/language';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
-import { notify } from '../../../shared/lib/portalNotices';
-import { errorMessage } from '../../../shared/lib/errorMessage';
-import { useLanguage } from '../../../shared/i18n/language';
 import { centerNowParts } from '../../../shared/lib/centerTime';
 import { courtsApi, type CourtBooking } from '../../courts/courtsApi';
 import {
@@ -210,12 +210,12 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
   const [courts, setCourts] = useState<CourtBooking[]>([]);
   const [courtError, setCourtError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | SourceMessage>('');
   const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [dialogError, setDialogError] = useState('');
+  const [dialogError, setDialogError] = useState<string | SourceMessage>('');
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -246,10 +246,10 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
     setError('');
     loadClassEvents(from, to)
       .then((events) => { if (active) setClassEvents(events); })
-      .catch((cause) => { if (active) setError(errorMessage(cause, lang === 'en' ? 'Unable to load your schedule.' : 'Không thể tải lịch của bạn.')); })
+      .catch((cause) => { if (active) setError(memberError(cause, 'Không thể tải lịch của bạn.')); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [from, to, retry, lang]);
+  }, [from, to, retry]);
 
   // Lượt đặt sân và buổi học sắp tới (cho thanh "Tiếp theo") không phụ thuộc tuần đang xem.
   useEffect(() => {
@@ -324,12 +324,12 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
     try {
       if (selected.seat.type === 'booking') await cancelBooking(selected.seat.id);
       else await cancelEnrollment(selected.seat.id);
-      notify(english ? `Cancelled your place in "${title(selected)}".` : `Đã hủy chỗ lớp "${selected.title}".`, 'success', { record: true });
+      memberNotify(memberMessage(`Đã hủy chỗ lớp "${selected.title}".`, `Booking for class "${selected.title}" cancelled.`), 'success', { record: true });
       setSelected(null);
       setRetry((value) => value + 1);
       onBookingChange?.();
     } catch (cause) {
-      setDialogError(errorMessage(cause, text('Không thể hủy chỗ.', 'Unable to cancel your place.')));
+      setDialogError(memberError(cause, 'Không thể hủy chỗ.'));
     } finally {
       setBusy(false);
     }
@@ -359,13 +359,13 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
   const isEmpty = !loading && !error && !courtError && events.length === 0;
 
   return (
-    <section className="mcal mcal--member" data-i18n-managed aria-label={text("Lịch của tôi", "My schedule")}>
+    <section data-i18n-managed className="mcal mcal--member"  aria-label={text("Lịch của tôi", "My schedule")}>
       <header className="mcal__toolbar">
         <div className="mcal__nav">
-          <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? text('Tuần trước', 'Previous week') : text('Tháng trước', 'Previous month')} onClick={() => shift(-1)}>
+          <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? text("Tuần trước", 'Previous week') : text("Tháng trước", 'Previous month')} onClick={() => shift(-1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
           </button>
-          <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? text('Tuần sau', 'Next week') : text('Tháng sau', 'Next month')} onClick={() => shift(1)}>
+          <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? text("Tuần sau", 'Next week') : text("Tháng sau", 'Next month')} onClick={() => shift(1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
           <button type="button" className="mcal__today-btn" onClick={() => { setFocusDay(null); setView('week'); setAnchor(today); }}>{labels.thisWeek}</button>
@@ -405,13 +405,13 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
       {error && (
         <div className="mcal__state" role="alert">
           <strong>{text("Không tải được lịch", "Unable to load schedule")}</strong>
-          <p>{error}</p>
+          <p>{memberRenderMessage(error)}</p>
           <button type="button" className="btn-secondary btn-sm" onClick={() => setRetry((value) => value + 1)}>{text("Thử lại", "Retry")}</button>
         </div>
       )}
       {courtError && !error && (
         <p className="mcal__note" role="status">
-          {text('Chưa tải được lịch đặt sân.', 'Unable to load court bookings.')} {' '}
+          {text("Chưa tải được lịch đặt sân.", 'Unable to load court bookings.')} {' '}
           <button type="button" className="mcal__link-btn" onClick={() => setRetry((value) => value + 1)}>{text("Thử lại", "Retry")}</button>
         </p>
       )}
@@ -427,7 +427,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                 type="button"
                 className={`mcal__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
                 aria-pressed={day === activeDay}
-                aria-label={`${dayLabel(day)} ${shortDate(day)}, ${count} ${text('lịch', 'bookings')}`}
+                aria-label={`${dayLabel(day)} ${shortDate(day)}, ${count} ${text("lịch", 'bookings')}`}
                 onClick={() => setFocusDay(day)}
               >
                 <span>{english ? dayLabel(day).slice(0, 3) : weekdayShort(day)}</span>
@@ -508,7 +508,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                 <button
                   type="button"
                   className="mcal__cell-day"
-                  aria-label={`${text('Xem tuần có', 'View week containing')} ${dayLabel(day)} ${shortDate(day)}, ${list.length} ${text('lịch', 'bookings')}`}
+                  aria-label={`${text("Xem tuần có", 'View week containing')} ${dayLabel(day)} ${shortDate(day)}, ${list.length} ${text("lịch", 'bookings')}`}
                   onClick={() => { setAnchor(day); setView('week'); }}
                 >
                   {Number(day.slice(8))}
@@ -528,7 +528,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                   ))}
                   {list.length > 3 && (
                     <button type="button" className="mcal__more" onClick={() => { setAnchor(day); setView('week'); }}>
-                      +{list.length - 3} {text('lịch khác', 'more bookings')}
+                      +{list.length - 3} {text("lịch khác", 'more bookings')}
                     </button>
                   )}
                 </div>
@@ -547,7 +547,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
             {selected.coach && <div className="kv-row"><span>{text("Huấn luyện viên", "Coach")}</span><strong>{selected.coach}</strong></div>}
             {selected.cancelled && <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{text("Buổi học đã bị hủy", "Class session cancelled")}</strong></div>}
           </div>
-          {dialogError && <div className="form-error" role="alert">{dialogError}</div>}
+          {dialogError && <div className="form-error" role="alert">{memberRenderMessage(dialogError)}</div>}
           <div className="mcal__dialog-actions">
             <button type="button" className="btn-secondary" onClick={closeDialog} disabled={busy}>{text("Đóng", "Close")}</button>
             {selected.kind === 'court' ? (
@@ -557,12 +557,12 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                 <>
                   <button type="button" className="btn-secondary" onClick={() => setConfirmCancel(false)} disabled={busy}>{text("Giữ chỗ", "Keep booking")}</button>
                   <button type="button" className="btn-danger" onClick={() => void handleCancel()} disabled={busy}>
-                    {busy ? text('Đang hủy...', 'Cancelling...') : text('Xác nhận hủy', 'Confirm cancellation')}
+                    {busy ? text("Đang hủy...", 'Cancelling...') : text("Xác nhận hủy", 'Confirm cancellation')}
                   </button>
                 </>
               ) : (
                 <button type="button" className="btn-secondary" onClick={() => setConfirmCancel(true)}>
-                  {selected.seat.type === 'booking' ? text('Hủy buổi này', 'Cancel this session') : text('Hủy đặt chỗ', 'Cancel booking')}
+                  {selected.seat.type === 'booking' ? text("Hủy buổi này", 'Cancel this session') : text("Hủy đặt chỗ", 'Cancel booking')}
                 </button>
               )
             )}

@@ -1,3 +1,4 @@
+import { sourceText, useSourceLanguage, sourceFormat } from "../../shop/shopI18n";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { DISCIPLINES } from '../../../shared/lib/disciplines';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
@@ -19,12 +20,11 @@ const tickerItems = [
   'GROUP TRAINING',
 ];
 
-const manifestoWords = 'Mạnh mẽ trong phòng tạ. Linh hoạt qua từng chuyển động. Bền bỉ sau mỗi hiệp tập.'.split(' ');
 
 const services = [
-  { title: 'WeightLifting', description: 'Tập tạ đúng kỹ thuật, tăng sức mạnh nền tảng.', icon: 'weights' },
-  { title: 'Private Training', description: 'Huấn luyện 1:1 theo nhịp độ riêng.', icon: 'training' },
-  { title: 'Build Muscle', description: 'Phát triển cơ bắp săn chắc, cân đối.', icon: 'muscle' },
+  { get title() { return sourceText('WeightLifting'); }, get description() { return sourceText('Tập tạ đúng kỹ thuật, tăng sức mạnh nền tảng.'); }, icon: 'weights' },
+  { get title() { return sourceText('Private Training'); }, get description() { return sourceText('Huấn luyện 1:1 theo nhịp độ riêng.'); }, icon: 'training' },
+  { get title() { return sourceText('Build Muscle'); }, get description() { return sourceText('Phát triển cơ bắp săn chắc, cân đối.'); }, icon: 'muscle' },
 ];
 const serviceShapes = [
   'M37 30L259 0Q290-2 295 32L319 231Q323 280 279 280H72Q33 280 27 241L1 80Q-5 40 37 30Z',
@@ -32,20 +32,20 @@ const serviceShapes = [
   'M61 0L283 30Q325 40 319 80L293 241Q287 280 248 280H41Q-3 280 1 231L25 32Q30-2 61 0Z',
 ];
 const clubMetrics = [
-  { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, label: 'MỞ CỬA MỖI NGÀY' },
-  { value: '05 Zones', countTo: 5, format: (n: number) => `${String(n).padStart(2, '0')} Zones`, label: 'TỔ HỢP ĐA BỘ MÔN' },
-  { value: 'Lịch lớp', label: 'ĐẶT CHỖ TRỰC TUYẾN' },
-  { value: 'QR Pass', label: '01 THẺ ĐA PHÂN KHU' },
+  { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, get label() { return sourceText('MỞ CỬA MỖI NGÀY'); } },
+  { get value() { return sourceText('05 Zones'); }, countTo: 5, format: (n: number) => sourceFormat('{0} Phân khu', String(n).padStart(2, '0')), get label() { return sourceText('TỔ HỢP ĐA BỘ MÔN'); } },
+  { get value() { return sourceText('Lịch lớp'); }, get label() { return sourceText('ĐẶT CHỖ TRỰC TUYẾN'); } },
+  { get value() { return sourceText('QR Pass'); }, get label() { return sourceText('01 THẺ ĐA PHÂN KHU'); } },
 ];
 const MUSCLE_CLOSE_DELAY_MS = 600;
 
 const muscleGroups = [
   {
     id: 'chest',
-    name: 'Cơ Ngực (Pectorals)',
-    zone: 'UPPER & MID CHEST',
-    goal: 'Tăng độ dày & đường nét khung ngực',
-    tip: 'Hạ tạ có kiểm soát 2–3 giây và khép bả vai để giảm tải khớp vai trước.',
+    get name() { return sourceText('Cơ Ngực (Pectorals)'); },
+    get zone() { return sourceText('UPPER & MID CHEST'); },
+    get goal() { return sourceText('Tăng độ dày & đường nét khung ngực'); },
+    get tip() { return sourceText('Hạ tạ có kiểm soát 2–3 giây và khép bả vai để giảm tải khớp vai trước.'); },
     exercises: [
       'Incline Dumbbell Press · 4 hiệp × 8–10 lần',
       'Cable Chest Fly · 3 hiệp × 12 lần',
@@ -61,10 +61,10 @@ const muscleGroups = [
   },
   {
     id: 'shoulders',
-    name: 'Cơ Vai & Cầu Vai (Deltoids & Traps)',
-    zone: 'DELTOIDS & TRAPS',
-    goal: 'Mở rộng khung vai & ổn định khớp bả vai',
-    tip: 'Đẩy tạ trong mặt phẳng xương bả vai (góc 30°) để bảo vệ khớp xoay vai.',
+    get name() { return sourceText('Cơ Vai & Cầu Vai (Deltoids & Traps)'); },
+    get zone() { return sourceText('DELTOIDS & TRAPS'); },
+    get goal() { return sourceText('Mở rộng khung vai & ổn định khớp bả vai'); },
+    get tip() { return sourceText('Đẩy tạ trong mặt phẳng xương bả vai (góc 30°) để bảo vệ khớp xoay vai.'); },
     exercises: [
       'Seated Dumbbell Overhead Press · 4 hiệp × 8–10 lần',
       'Lateral Raise & Face Pull · 4 hiệp × 12–15 lần',
@@ -81,10 +81,10 @@ const muscleGroups = [
   },
   {
     id: 'arms',
-    name: 'Bắp Tay Trước & Tay Sau (Biceps & Triceps)',
-    zone: 'BICEPS & TRICEPS',
-    goal: 'Phát triển lực kéo – đẩy đối xứng',
-    tip: 'Cố định khuỷu tay sát thân người khi cuộn tạ hoặc kéo cáp.',
+    get name() { return sourceText('Bắp Tay Trước & Tay Sau (Biceps & Triceps)'); },
+    get zone() { return sourceText('BICEPS & TRICEPS'); },
+    get goal() { return sourceText('Phát triển lực kéo – đẩy đối xứng'); },
+    get tip() { return sourceText('Cố định khuỷu tay sát thân người khi cuộn tạ hoặc kéo cáp.'); },
     exercises: [
       'Incline Dumbbell Curl · 3 hiệp × 10–12 lần',
       'Rope Triceps Pushdown · 4 hiệp × 12 lần',
@@ -101,10 +101,10 @@ const muscleGroups = [
   },
   {
     id: 'core',
-    name: 'Cơ Bụng & Liên Sườn (Core & Obliques)',
+    get name() { return sourceText('Cơ Bụng & Liên Sườn (Core & Obliques)'); },
     zone: 'ABS & OBLIQUES',
-    goal: 'Siết cơ trọng tâm & truyền lực xoay',
-    tip: 'Thở ra nén chặt thành bụng, tránh võng thắt lưng.',
+    get goal() { return sourceText('Siết cơ trọng tâm & truyền lực xoay'); },
+    get tip() { return sourceText('Thở ra nén chặt thành bụng, tránh võng thắt lưng.'); },
     exercises: [
       'Hanging Knee Raise · 3 hiệp × 12 lần',
       'Cable Pallof Press & Plank · 3 hiệp × 45 giây',
@@ -120,10 +120,10 @@ const muscleGroups = [
   },
   {
     id: 'forearms',
-    name: 'Cẳng Tay & Lực Nắm (Forearms & Grip)',
-    zone: 'FOREARMS & GRIP',
-    goal: 'Tăng lực cầm tạ & ổn định cổ tay khi cầm vợt',
-    tip: 'Giữ cổ tay thẳng trục với cẳng tay trong mọi bài kéo và đánh bóng.',
+    get name() { return sourceText('Cẳng Tay & Lực Nắm (Forearms & Grip)'); },
+    get zone() { return sourceText('FOREARMS & GRIP'); },
+    get goal() { return sourceText('Tăng lực cầm tạ & ổn định cổ tay khi cầm vợt'); },
+    get tip() { return sourceText('Giữ cổ tay thẳng trục với cẳng tay trong mọi bài kéo và đánh bóng.'); },
     exercises: [
       'Farmer’s Walk · 3 hiệp × 40m',
       'Reverse Curl & Dead Hang · 3 hiệp × 40 giây',
@@ -140,10 +140,10 @@ const muscleGroups = [
   },
   {
     id: 'legs',
-    name: 'Cơ Đùi & Bắp Chân (Quads & Calves)',
-    zone: 'QUADS & CALVES',
-    goal: 'Sức mạnh thân dưới & tốc độ bứt tốc trên sân',
-    tip: 'Mở hướng đầu gối theo mũi chân và kiểm soát nhịp gập hông – gối.',
+    get name() { return sourceText('Cơ Đùi & Bắp Chân (Quads & Calves)'); },
+    get zone() { return sourceText('QUADS & CALVES'); },
+    get goal() { return sourceText('Sức mạnh thân dưới & tốc độ bứt tốc trên sân'); },
+    get tip() { return sourceText('Mở hướng đầu gối theo mũi chân và kiểm soát nhịp gập hông – gối.'); },
     exercises: [
       'Barbell / Goblet Squat · 4 hiệp × 8–10 lần',
       'Bulgarian Split Squat & Calf Raise · 3 hiệp × 12 lần',
@@ -169,49 +169,49 @@ const coachAvatars = [
 const dailyRhythmItems = [
   {
     id: 'morning' as const,
-    label: 'Sáng · 06:00–09:00',
-    title: 'Khởi động thể lực sáng sớm',
+    get label() { return sourceText('Sáng · 06:00–09:00'); },
+    get title() { return sourceText('Khởi động thể lực sáng sớm'); },
     highlights: ['Morning Strength', 'Bơi sáng', 'Tennis'],
   },
   {
     id: 'midday' as const,
-    label: 'Trưa · 11:30–14:00',
-    title: 'Tập gọn 45 phút giờ nghỉ trưa',
+    get label() { return sourceText('Trưa · 11:30–14:00'); },
+    get title() { return sourceText('Tập gọn 45 phút giờ nghỉ trưa'); },
     highlights: ['Kèm 1:1', 'Core & Mobility', 'Thả lỏng'],
   },
   {
     id: 'evening' as const,
-    label: 'Chiều · 17:00–19:30',
-    title: 'Nhịp tập sôi động sau giờ làm',
+    get label() { return sourceText('Chiều · 17:00–19:30'); },
+    get title() { return sourceText('Nhịp tập sôi động sau giờ làm'); },
     highlights: ['Barbell Club', 'Lớp Bơi', 'Đánh đôi Tennis'],
   },
   {
     id: 'night' as const,
-    label: 'Tối · 19:30–22:00',
-    title: 'Vận động nhẹ & Giãn cơ cuối ngày',
+    get label() { return sourceText('Tối · 19:30–22:00'); },
+    get title() { return sourceText('Vận động nhẹ & Giãn cơ cuối ngày'); },
     highlights: ['Tập cá nhân', 'Bơi thư giãn', 'Giãn cơ'],
   },
 ] as const;
 
 const spaces = [
-  { title: 'Không gian cho những mục tiêu lớn.', image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', meta: 'Khu máy tập' },
-  { title: 'Tập trung vào từng chuyển động.', image: '/images/fitness/strength-session.jpg', label: 'Free weights', meta: 'Khu tạ rời & Power Rack' },
-  { title: 'Tìm lại nhịp điệu của chính mình.', image: '/images/about-movement-studio.jpg', label: 'Movement studio', meta: 'Core & Giãn cơ' },
-  { title: 'Làn nước xanh mát bốn mùa.', image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', meta: 'Hồ bơi bốn mùa' },
-  { title: 'Sân đấu giàu năng lượng.', image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', meta: 'Sân Tennis CLB' },
+  { get title() { return sourceText('Không gian cho những mục tiêu lớn.'); }, image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', get meta() { return sourceText('Khu máy tập'); } },
+  { get title() { return sourceText('Tập trung vào từng chuyển động.'); }, image: '/images/fitness/strength-session.jpg', label: 'Free weights', get meta() { return sourceText('Khu tạ rời & Power Rack'); } },
+  { get title() { return sourceText('Tìm lại nhịp điệu của chính mình.'); }, image: '/images/about-movement-studio.jpg', label: 'Movement studio', get meta() { return sourceText('Core & Giãn cơ'); } },
+  { get title() { return sourceText('Làn nước xanh mát bốn mùa.'); }, image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', get meta() { return sourceText('Hồ bơi bốn mùa'); } },
+  { get title() { return sourceText('Sân đấu giàu năng lượng.'); }, image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', get meta() { return sourceText('Sân Tennis CLB'); } },
 ];
 
 const journeySteps = [
-  { step: '01', title: 'Tạo tài khoản & chọn gói tập', description: 'Đăng ký trực tuyến nhanh gọn.' },
-  { step: '02', title: 'Cập nhật chỉ số & mục tiêu', description: 'Nhận gợi ý lộ trình theo BMI.' },
-  { step: '03', title: 'Đặt lịch & quét QR check-in', description: 'Giữ chỗ & vào cửa bằng thẻ QR.' },
+  { step: '01', get title() { return sourceText('Tạo tài khoản & chọn gói tập'); }, get description() { return sourceText('Đăng ký trực tuyến nhanh gọn.'); } },
+  { step: '02', get title() { return sourceText('Cập nhật chỉ số & mục tiêu'); }, get description() { return sourceText('Nhận gợi ý lộ trình theo BMI.'); } },
+  { step: '03', get title() { return sourceText('Đặt lịch & quét QR check-in'); }, get description() { return sourceText('Giữ chỗ & vào cửa bằng thẻ QR.'); } },
 ];
 const memberBenefits = [
   {
     tag: 'Bộ môn',
     idx: '01',
-    title: 'Đặt lịch tập trên Portal',
-    description: 'Xem lịch lớp theo bộ môn trong Portal. Bạn có thể đặt lớp khi gói tập đang hoạt động, còn hạn và còn lượt đặt theo quy định của gói.',
+    get title() { return sourceText('Đặt lịch tập trên Portal'); },
+    get description() { return sourceText('Xem lịch lớp theo bộ môn trong Portal. Bạn có thể đặt lớp khi gói tập đang hoạt động, còn hạn và còn lượt đặt theo quy định của gói.'); },
     perks: [
       'Gym · Bơi lội · Boxing · Tennis · Cầu lông · Yoga',
       'Khu Strength Floor, Free Weights & Movement Studio',
@@ -220,10 +220,10 @@ const memberBenefits = [
     ],
   },
   {
-    tag: 'Lớp',
+    get tag() { return sourceText('Lớp'); },
     idx: '02',
-    title: 'Lớp nhóm theo gói tập',
-    description: 'Xem bộ môn, huấn luyện viên và chỗ trống trên lịch lớp. Số lượt đặt lớp phụ thuộc vào gói tập bạn đã kích hoạt.',
+    get title() { return sourceText('Lớp nhóm theo gói tập'); },
+    get description() { return sourceText('Xem bộ môn, huấn luyện viên và chỗ trống trên lịch lớp. Số lượt đặt lớp phụ thuộc vào gói tập bạn đã kích hoạt.'); },
     perks: [
       'Lịch lớp sáng — chiều — tối mỗi ngày',
       'Biết trước HLV, studio, giờ, còn bao nhiêu chỗ',
@@ -234,8 +234,8 @@ const memberBenefits = [
   {
     tag: 'HLV',
     idx: '03',
-    title: 'HLV theo dõi từng buổi tập',
-    description: 'Mỗi buổi HLV ghi lại chỉ số của bạn — mức tạ, số lần tập, thời gian và tiến độ. Bạn xem lại tiến độ cá nhân bất cứ lúc nào.',
+    get title() { return sourceText('HLV theo dõi từng buổi tập'); },
+    get description() { return sourceText('Mỗi buổi HLV ghi lại chỉ số của bạn — mức tạ, số lần tập, thời gian và tiến độ. Bạn xem lại tiến độ cá nhân bất cứ lúc nào.'); },
     perks: [
       'HLV có chứng chỉ đúng từng bộ môn',
       'Kết quả từng buổi, lưu trên Portal',
@@ -244,10 +244,10 @@ const memberBenefits = [
     ],
   },
   {
-    tag: 'Kế hoạch',
+    get tag() { return sourceText('Kế hoạch'); },
     idx: '04',
-    title: 'Kế hoạch tuần cho riêng bạn',
-    description: 'Dựa trên chỉ số BMI và mục tiêu cá nhân, hệ thống đề xuất lịch tập tuần cân bằng giữa Gym, Bơi và Tennis; có trợ lý giải đáp 24/7.',
+    get title() { return sourceText('Kế hoạch tuần cho riêng bạn'); },
+    get description() { return sourceText('Dựa trên chỉ số BMI và mục tiêu cá nhân, hệ thống đề xuất lịch tập tuần cân bằng giữa Gym, Bơi và Tennis; có trợ lý giải đáp 24/7.'); },
     perks: [
       'Kế hoạch theo mục tiêu: giảm mỡ, tăng cơ, sức bền',
       'HLV định hướng lộ trình đa bộ môn',
@@ -258,24 +258,25 @@ const memberBenefits = [
 ] as const;
 const faqs = [
   {
-    question: 'Người mới bắt đầu có theo kịp không?',
-    answer: 'Có. Mỗi bộ môn đều có lớp nhập môn hướng dẫn từ cơ bản.',
+    get question() { return sourceText('Người mới bắt đầu có theo kịp không?'); },
+    get answer() { return sourceText('Có. Mỗi bộ môn đều có lớp nhập môn hướng dẫn từ cơ bản.'); },
   },
   {
-    question: 'Gói hội viên đã bao gồm những bộ môn nào?',
-    answer: 'Quyền lợi, thời hạn và số lượt đặt lớp được hiển thị theo từng gói tại bảng giá và Portal. Hãy xem mô tả gói hoặc liên hệ lễ tân để xác nhận phạm vi sử dụng.',
+    get question() { return sourceText('Gói hội viên đã bao gồm những bộ môn nào?'); },
+    get answer() { return sourceText('Quyền lợi, thời hạn và số lượt đặt lớp được hiển thị theo từng gói tại bảng giá và Portal. Hãy xem mô tả gói hoặc liên hệ lễ tân để xác nhận phạm vi sử dụng.'); },
   },
   {
-    question: 'Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?',
-    answer: 'Có. Bạn gửi yêu cầu bảo lưu (Freeze) trực tiếp trên Portal hội viên.',
+    get question() { return sourceText('Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?'); },
+    get answer() { return sourceText('Có. Bạn gửi yêu cầu bảo lưu (Freeze) trực tiếp trên Portal hội viên.'); },
   },
   {
-    question: 'Làm sao để đặt lớp học hoặc đặt sân?',
-    answer: 'Đăng nhập vào Portal để xem lịch lớp và chỗ trống. Để đặt lớp, bạn cần có gói tập đang hoạt động, còn hạn và còn lượt đặt theo gói.',
+    get question() { return sourceText('Làm sao để đặt lớp học hoặc đặt sân?'); },
+    get answer() { return sourceText('Đăng nhập vào Portal để xem lịch lớp và chỗ trống. Để đặt lớp, bạn cần có gói tập đang hoạt động, còn hạn và còn lượt đặt theo gói.'); },
   },
 ];
 
 function CountUpMetric({ value, countTo, format }: { value: string; countTo: number; format: (n: number) => string }) {
+  useSourceLanguage();
   const ref = useRef<HTMLElement>(null);
   const [display, setDisplay] = useState(value);
 
@@ -316,6 +317,7 @@ function CountUpMetric({ value, countTo, format }: { value: string; countTo: num
 }
 
 function ServiceIcon({ type }: { type: string }) {
+  useSourceLanguage();
   return <svg className="fit-service-icon" viewBox="0 0 64 64" fill="none" stroke="#805e50" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {type === 'weights' ? <g transform="translate(0 -1.5)">
       <path d="M6 17h52" /><rect x="3" y="10" width="5" height="15" rx="1" fill="#ada59a" /><rect x="10" y="7" width="5" height="21" rx="1" fill="#c8bfb3" /><rect x="49" y="7" width="5" height="21" rx="1" fill="#c8bfb3" /><rect x="56" y="10" width="5" height="15" rx="1" fill="#ada59a" />
@@ -344,6 +346,8 @@ const handleCardPointerLeave = (event: PointerEvent<HTMLElement>) => {
 };
 
 export function FitnessLanding() {
+  const manifestoWords = sourceText('Mạnh mẽ trong phòng tạ. Linh hoạt qua từng chuyển động. Bền bỉ sau mỗi hiệp tập.').split(' ');
+  useSourceLanguage();
   const user = getCurrentUser();
   const { catalog, error: catalogError, retry: retryCatalog } = usePublicCatalog();
   const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
@@ -400,9 +404,9 @@ export function FitnessLanding() {
   return <main id="public-main">
     <section className="fit-hero" id="hero" aria-labelledby="hero-title">
       <div className="fit-hero-lines" aria-hidden="true" />
-      <h1 id="hero-title" className="fit-hero-title"><span>BUILD YOUR</span><span>BODY SHAPES<span className="fit-title-dot">.</span></span></h1>
-      <div className="fit-hero-copy"><p>Mạnh mẽ từ thể chất.<br />Tự tin từ bên trong.</p>
-        <a href="#trainers" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{coachAvatars.map((coach) => <LoadingImage key={coach.name} src={`/images/fitness/${coach.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span><span className="fit-review-label">Đội ngũ đồng hành</span></a>
+      <h1 id="hero-title" className="fit-hero-title"><span>{sourceText("BUILD YOUR")}</span><span>{sourceText("BODY SHAPES")}<span className="fit-title-dot">.</span></span></h1>
+      <div className="fit-hero-copy"><p>{sourceText("Mạnh mẽ từ thể chất.")}<br />{sourceText("Tự tin từ bên trong.")}</p>
+        <a href="#trainers" className="fit-reviews"><span>{sourceText("Cùng nhau tiến bộ")}</span><span className="fit-avatar-row">{coachAvatars.map((coach) => <LoadingImage key={coach.name} src={`/images/fitness/${coach.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span><span className="fit-review-label">{sourceText("Đội ngũ đồng hành")}</span></a>
       </div>
       <LoadingImage
         className="fit-hero-athlete"
@@ -411,7 +415,7 @@ export function FitnessLanding() {
         sizes="(max-width: 768px) 92vw, 42vw"
         width={1024}
         height={1536}
-        alt="Vận động viên ngồi tập tạ đơn, hướng ánh nhìn xuống, trên nền tối"
+        alt={sourceText("Vận động viên ngồi tập tạ đơn, hướng ánh nhìn xuống, trên nền tối")}
         fetchPriority="high"
         decoding="async"
       />
@@ -421,7 +425,7 @@ export function FitnessLanding() {
           viewBox="0 0 1024 1536"
           preserveAspectRatio="xMidYMid meet"
           role="group"
-          aria-label="Bản đồ nhóm cơ tương tác trên cơ thể vận động viên"
+          aria-label={sourceText("Bản đồ nhóm cơ tương tác trên cơ thể vận động viên")}
         >
           <defs>
             <filter id="fit-muscle-feather" x="-30%" y="-30%" width="160%" height="160%">
@@ -450,7 +454,7 @@ export function FitnessLanding() {
               data-muscle={group.id}
               role="button"
               tabIndex={0}
-              aria-label={`Vùng cơ: ${group.name}`}
+              aria-label={sourceFormat("Vùng cơ: {0}", group.name)}
               aria-pressed={isActive}
               onPointerEnter={() => activateMuscle(group.id)}
               onMouseEnter={() => activateMuscle(group.id)}
@@ -493,31 +497,31 @@ export function FitnessLanding() {
         >
           <span className="fit-muscle-zone-badge">{activeMuscle.zone}</span>
           <h3>{activeMuscle.name}</h3>
-          <p className="fit-muscle-goal"><strong>Mục tiêu:</strong> {activeMuscle.goal}</p>
+          <p className="fit-muscle-goal"><strong>{sourceText("Mục tiêu:")}</strong> {activeMuscle.goal}</p>
           <ul className="fit-muscle-exercises">
-            {activeMuscle.exercises.map((exercise) => <li key={exercise}><span aria-hidden="true">✦</span>{exercise}</li>)}
+            {activeMuscle.exercises.map((exercise) => <li key={sourceText(exercise)}><span aria-hidden="true">✦</span>{sourceText(exercise)}</li>)}
           </ul>
           <Link to={muscleDetailPath} className="fit-pill fit-muscle-cta">
-            Xem chi tiết &amp; Mua gói tập<RoundArrow diagonal />
+            {sourceText("Xem chi tiết & Mua gói tập")}<RoundArrow diagonal />
           </Link>
         </aside>}
       </div>
-      <div className="fit-hero-action"><Link to={joinPath} className="fit-pill">Bắt đầu ngay<RoundArrow /></Link><span>YOUR BODY. YOUR JOURNEY.</span></div>
-      <span className="fit-hero-index" aria-hidden="true">01 / THE BEGINNING</span>
+      <div className="fit-hero-action"><Link to={joinPath} className="fit-pill">{sourceText("Bắt đầu ngay")}<RoundArrow /></Link><span>{sourceText("YOUR BODY. YOUR JOURNEY.")}</span></div>
+      <span className="fit-hero-index" aria-hidden="true">{sourceText("01 / THE BEGINNING")}</span>
     </section>
-    <section className="fit-services" id="disciplines" aria-label="Các hình thức tập luyện">
+    <section className="fit-services" id="disciplines" aria-label={sourceText("Các hình thức tập luyện")}>
       <div className="fit-services-glow" aria-hidden="true" />
       {services.map((service, index) => <a key={service.title} className={`fit-service fit-service-${index}`} data-reveal="lift" href="#packages"><svg className="fit-service-surface" viewBox="0 0 320 280" preserveAspectRatio="none" aria-hidden="true"><path d={serviceShapes[index]} /></svg><ServiceIcon type={service.icon} /><h2>{service.title}</h2><span className="fit-service-rule" /><p>{service.description}</p></a>)}
     </section>
     <div className="fit-ticker" aria-hidden="true">
       <div className="fit-marquee-track">
         {[0, 1].map((groupIndex) => <div key={groupIndex} className="fit-marquee-group">
-          {tickerItems.map((item) => <span key={`${groupIndex}-${item}`} className="fit-marquee-item">{item}<i /></span>)}
+          {tickerItems.map((item) => <span key={`${groupIndex}-${item}`} className="fit-marquee-item">{sourceText(item)}<i /></span>)}
         </div>)}
       </div>
     </div>
     <section className="fit-section fit-space" id="about" aria-labelledby="space-title"><span id="intelligence" />
-      <div className="fit-metrics-grid" aria-label="Tiêu chuẩn câu lạc bộ">
+      <div className="fit-metrics-grid" aria-label={sourceText("Tiêu chuẩn câu lạc bộ")}>
         {clubMetrics.map((item) => <article key={item.label} className="fit-metric-card" data-reveal="lift">
           <span className="fit-kicker">{item.label}</span>
           {'countTo' in item && item.countTo !== undefined
@@ -532,21 +536,21 @@ export function FitnessLanding() {
         <LoadingImage key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" />
         <div className="fit-space-shade" />
         <div key={space} className="fit-space-content fit-blur-morph">
-          <span className="fit-kicker">05 PHÂN KHU TẬP LUYỆN</span>
+          <span className="fit-kicker">{sourceText("05 PHÂN KHU TẬP LUYỆN")}</span>
           <h2 id="space-title">{spaces[space].title}</h2>
           <p className="fit-space-meta">{spaces[space].meta}</p>
-          <a className="fit-pill" href="#contact">Ghé thăm SÖL<RoundArrow diagonal /></a>
+          <a className="fit-pill" href="#contact">{sourceText("Ghé thăm SÖL")}<RoundArrow diagonal /></a>
         </div>
-        <div className="fit-space-tabs" aria-label="Khám phá không gian">{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><LoadingImage src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span className="fit-space-tab-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></button>)}</div>
+        <div className="fit-space-tabs" aria-label={sourceText("Khám phá không gian")}>{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><LoadingImage src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span className="fit-space-tab-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></button>)}</div>
         <span className="fit-space-number">0{space + 1} / 0{spaces.length}</span>
       </div>
-      <div className="fit-rhythm-explorer" data-reveal="lift" aria-label="Nhịp sinh hoạt trong ngày tại câu lạc bộ">
+      <div className="fit-rhythm-explorer" data-reveal="lift" aria-label={sourceText("Nhịp sinh hoạt trong ngày tại câu lạc bộ")}>
         <div className="fit-rhythm-head">
           <div>
-            <span className="fit-kicker">NHỊP TẬP TRONG NGÀY</span>
-            <h3>Các khung giờ trong ngày</h3>
+            <span className="fit-kicker">{sourceText("NHỊP TẬP TRONG NGÀY")}</span>
+            <h3>{sourceText("Các khung giờ trong ngày")}</h3>
           </div>
-          <div className="fit-rhythm-tabs" role="tablist" aria-label="Chọn khung giờ trong ngày">
+          <div className="fit-rhythm-tabs" role="tablist" aria-label={sourceText("Chọn khung giờ trong ngày")}>
             {dailyRhythmItems.map((item, idx) => <button
               key={item.id}
               type="button"
@@ -563,7 +567,7 @@ export function FitnessLanding() {
           <div className="fit-rhythm-copy">
             <h4>{activeRhythm.title}</h4>
             <ul>
-              {activeRhythm.highlights.map((pt) => <li key={pt}><span aria-hidden="true">✓</span>{pt}</li>)}
+              {activeRhythm.highlights.map((pt) => <li key={sourceText(pt)}><span aria-hidden="true">✓</span>{sourceText(pt)}</li>)}
             </ul>
           </div>
         </div>
@@ -571,22 +575,22 @@ export function FitnessLanding() {
     </section>
     <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
       <SportStack classPath={classPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
-        <span className="fit-kicker">SÖL SPORTS CLUB</span>
-        <SplitHeading id="multisport-title" lines={['Các bộ môn']} />
+        <span className="fit-kicker">{"SÖL SPORTS CLUB"}</span>
+        <SplitHeading id="multisport-title" lines={[sourceText('Các bộ môn')]} />
       </div>} />
     </section>
     <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
       <div className="fit-section-heading" data-reveal="soft">
-        <span className="fit-kicker">BETTER WITH A COACH</span>
-        <SplitHeading id="trainers-title" lines={['Our Trainers']} />
+        <span className="fit-kicker">{sourceText("BETTER WITH A COACH")}</span>
+        <SplitHeading id="trainers-title" lines={[sourceText('Our Trainers')]} />
       </div>
       <div>{catalog ? <CatalogTrainers catalog={catalog} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="trainers" />}</div>
     </section>
     <section className="fit-section fit-journey" id="journey" aria-labelledby="journey-title">
       <div className="fit-journey-steps" data-reveal="soft">
         <div className="fit-section-heading">
-          <span className="fit-kicker">HOW YOUR ROUTINE BEGINS</span>
-          <SplitHeading id="journey-title" lines={['Your First Week', 'At SÖL']} />
+          <span className="fit-kicker">{sourceText("HOW YOUR ROUTINE BEGINS")}</span>
+          <SplitHeading id="journey-title" lines={[sourceText('Your First Week'), sourceText('At SÖL')]} />
         </div>
         <ol className="fit-step-list" style={{ '--active-step': activeStep } as CSSProperties}>
           {journeySteps.map((item, index) => <li
@@ -603,11 +607,11 @@ export function FitnessLanding() {
             </div>
           </li>)}
         </ol>
-        <div key={activeStep} className="fit-journey-preview fit-blur-morph" aria-label="Minh họa trực quan theo từng bước">
+        <div key={activeStep} className="fit-journey-preview fit-blur-morph" aria-label={sourceText("Minh họa trực quan theo từng bước")}>
           {activeStep === 0 ? <div className="fit-preview-widget fit-preview-qr">
             <div className="fit-preview-head">
-              <span className="fit-kicker">01 · DIGITAL PASS &amp; SLOT CHECK</span>
-              <span className="fit-preview-live"><i />QR Active</span>
+              <span className="fit-kicker">{sourceText("01 · DIGITAL PASS & SLOT CHECK")}</span>
+              <span className="fit-preview-live"><i />{sourceText("QR Active")}</span>
             </div>
             <div className="fit-preview-slots" aria-hidden="true">
               {['06:30', '08:00', '09:30', '12:00', '16:00', '17:30', '18:30', '19:30'].map((slot, idx) => <span
@@ -620,24 +624,24 @@ export function FitnessLanding() {
             </div>
           </div> : activeStep === 1 ? <div className="fit-preview-widget fit-preview-ai">
             <div className="fit-preview-head">
-              <span className="fit-kicker">02 · WEEKLY MULTI-SPORT PLAN</span>
-              <span className="fit-preview-live"><i />Gợi ý mẫu</span>
+              <span className="fit-kicker">{sourceText("02 · WEEKLY MULTI-SPORT PLAN")}</span>
+              <span className="fit-preview-live"><i />{sourceText("Gợi ý mẫu")}</span>
             </div>
             <div className="fit-preview-chat" aria-hidden="true">
-              <div className="fit-chat-user">Mục tiêu săn chắc · 4 buổi/tuần sau 17:30</div>
+              <div className="fit-chat-user">{sourceText("Mục tiêu săn chắc · 4 buổi/tuần sau 17:30")}</div>
               <div className="fit-chat-bot">
                 <div className="fit-chat-tags">
-                  <span>T2 · Strength</span>
-                  <span>T4 · Bơi lội</span>
-                  <span>T6 · Tennis</span>
-                  <span>CN · Mobility</span>
+                  <span>{sourceText("T2 · Strength")}</span>
+                  <span>{sourceText("T4 · Bơi lội")}</span>
+                  <span>{sourceText("T6 · Tennis")}</span>
+                  <span>{sourceText("CN · Mobility")}</span>
                 </div>
               </div>
             </div>
           </div> : <div className="fit-preview-widget fit-preview-chart">
             <div className="fit-preview-head">
-              <span className="fit-kicker">03 · CONSISTENCY CURVE</span>
-              <span className="fit-preview-live"><i />85% hoàn thành</span>
+              <span className="fit-kicker">{sourceText("03 · CONSISTENCY CURVE")}</span>
+              <span className="fit-preview-live"><i />{sourceText("85% hoàn thành")}</span>
             </div>
             <svg className="fit-progress-svg" viewBox="0 0 320 92" fill="none" aria-hidden="true">
               <defs>
@@ -661,42 +665,42 @@ export function FitnessLanding() {
         </div>
       </div>
       <div className="fit-bmi-card" data-reveal="tilt" aria-labelledby="bmi-title">
-        <span className="fit-kicker">BODY METRIC &amp; GOAL CHECK</span>
-        <h3 id="bmi-title">Tính Nhanh BMI &amp; Lộ Trình<span className="fit-title-dot">.</span></h3>
+        <span className="fit-kicker">{sourceText("BODY METRIC & GOAL CHECK")}</span>
+        <h3 id="bmi-title">{sourceText("Tính Nhanh BMI & Lộ Trình")}<span className="fit-title-dot">.</span></h3>
         <div className="fit-bmi-inputs">
           <label htmlFor="fit-bmi-height">
-            <span>Chiều cao (cm)</span>
+            <span>{sourceText("Chiều cao (cm)")}</span>
             <input id="fit-bmi-height" type="number" min={100} max={240} value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
           </label>
           <label htmlFor="fit-bmi-weight">
-            <span>Cân nặng (kg)</span>
+            <span>{sourceText("Cân nặng (kg)")}</span>
             <input id="fit-bmi-weight" type="number" min={30} max={250} value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
           </label>
         </div>
-        <div className="fit-bmi-goals" role="group" aria-label="Chọn mục tiêu tập luyện">
-          <button type="button" onClick={() => setGoalType('lean')} aria-pressed={goalType === 'lean'}>Giảm mỡ &amp; Săn chắc</button>
-          <button type="button" onClick={() => setGoalType('muscle')} aria-pressed={goalType === 'muscle'}>Tăng cơ &amp; Sức mạnh</button>
-          <button type="button" onClick={() => setGoalType('balance')} aria-pressed={goalType === 'balance'}>Dẻo dai &amp; Cân bằng</button>
+        <div className="fit-bmi-goals" role="group" aria-label={sourceText("Chọn mục tiêu tập luyện")}>
+          <button type="button" onClick={() => setGoalType('lean')} aria-pressed={goalType === 'lean'}>{sourceText("Giảm mỡ & Săn chắc")}</button>
+          <button type="button" onClick={() => setGoalType('muscle')} aria-pressed={goalType === 'muscle'}>{sourceText("Tăng cơ & Sức mạnh")}</button>
+          <button type="button" onClick={() => setGoalType('balance')} aria-pressed={goalType === 'balance'}>{sourceText("Dẻo dai & Cân bằng")}</button>
         </div>
         <div className="fit-bmi-result" aria-live="polite">
           <div>
-            <span className="fit-kicker">CHỈ SỐ BMI ƯỚC TÍNH</span>
+            <span className="fit-kicker">{sourceText("CHỈ SỐ BMI ƯỚC TÍNH")}</span>
             <strong>{bmiValue !== null ? bmiValue : '—'}</strong>
-            <span>{bmiStatus}</span>
+            <span>{sourceText(bmiStatus)}</span>
           </div>
-          <p><strong>Gợi ý:</strong> Xem các gói đang mở tại bảng giá và trao đổi mục tiêu với huấn luyện viên.</p>
+          <p><strong>{sourceText("Gợi ý:")}</strong> {sourceText(" Xem các gói đang mở tại bảng giá và trao đổi mục tiêu với huấn luyện viên.")}</p>
         </div>
-        <Link to={planPath} className="fit-pill">Nhận lộ trình<RoundArrow diagonal /></Link>
+        <Link to={planPath} className="fit-pill">{sourceText("Nhận lộ trình")}<RoundArrow diagonal /></Link>
       </div>
     </section>
     <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title">
-      <div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
+      <div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">{sourceText("MAKE TIME FOR YOURSELF")}</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
       {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="packages" />}
     </section>
     <ProductShelf />
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
-        <span className="fit-kicker">FAQ</span>
+        <span className="fit-kicker">{sourceText("FAQ")}</span>
         <SplitHeading id="faq-title" lines={['Frequently Asked', 'Questions']} />
       </div>
       <div className="fit-faq-list">
@@ -725,13 +729,13 @@ export function FitnessLanding() {
     </section>
     <section className="fit-benefits" id="benefits" aria-labelledby="benefits-title">
       <div className="fit-benefits-sticky">
-        <div className="fit-benefits-bg" aria-hidden="true">THÀNH VIÊN</div>
+        <div className="fit-benefits-bg" aria-hidden="true">{sourceText("THÀNH VIÊN")}</div>
         <div className="fit-benefits-head" data-reveal="soft">
           <div>
-            <span className="fit-benefits-eyebrow"><i aria-hidden="true" />Quyền lợi thành viên</span>
+            <span className="fit-benefits-eyebrow"><i aria-hidden="true" />{sourceText("Quyền lợi thành viên")}</span>
             <h2 id="benefits-title" className="fit-benefits-title">
-              Bạn nhận được<br />
-              gì <span>khi có gói.</span>
+              {sourceText("Bạn nhận được")}<br />
+              {sourceText("gì ")}<span>{sourceText("khi có gói.")}</span>
             </h2>
           </div>
           <div className="fit-benefits-progress" aria-hidden="true"><i /></div>
@@ -745,14 +749,14 @@ export function FitnessLanding() {
             <h3>{benefit.title}</h3>
             <p>{benefit.description}</p>
             <ul>
-              {benefit.perks.map((perk) => <li key={perk}>{perk}</li>)}
+              {benefit.perks.map((perk) => <li key={sourceText(perk)}>{sourceText(perk)}</li>)}
             </ul>
           </article>)}
           <article className="fit-benefit-card fit-benefit-end" data-reveal="lift">
-            <h3>Chưa có gói vẫn trải nghiệm được</h3>
-            <p>Tạo tài khoản miễn phí để xem lịch lớp và chọn gói phù hợp. Thanh toán tại quầy lễ tân để kích hoạt gói trước khi đặt lớp và check-in.</p>
+            <h3>{sourceText("Chưa có gói vẫn trải nghiệm được")}</h3>
+            <p>{sourceText("Tạo tài khoản miễn phí để xem lịch lớp và chọn gói phù hợp. Thanh toán tại quầy lễ tân để kích hoạt gói trước khi đặt lớp và check-in.")}</p>
             <Link to={joinPath} className="fit-benefit-end-btn">
-              {accountLabel}
+              {sourceText(accountLabel)}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 12h14" />
                 <path d="m12 5 7 7-7 7" />
@@ -762,7 +766,7 @@ export function FitnessLanding() {
         </div>
       </div>
     </section>
-    <section className="fit-final-cta" data-reveal="soft"><span className="fit-kicker">ONE SMALL STEP. A STRONGER YOU.</span><h2>READY WHEN<br /><em>YOU ARE.</em></h2><Link to={joinPath} className="fit-pill">Bắt đầu hành trình<RoundArrow diagonal /></Link><span className="fit-cta-star" aria-hidden="true">✳</span></section>
+    <section className="fit-final-cta" data-reveal="soft"><span className="fit-kicker">{sourceText("ONE SMALL STEP. A STRONGER YOU.")}</span><h2>{sourceText("READY WHEN")}<br /><em>{sourceText("YOU ARE.")}</em></h2><Link to={joinPath} className="fit-pill">{sourceText("Bắt đầu hành trình")}<RoundArrow diagonal /></Link><span className="fit-cta-star" aria-hidden="true">✳</span></section>
   </main>;
 }
 

@@ -1,3 +1,4 @@
+import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { useCallback, useEffect, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
@@ -11,13 +12,12 @@ import {
   type CoachReviewDto,
 } from '../coaching/coachReviewApi';
 import { getCoaches } from '../member/coachBookingApi';
-import { notify } from '../../shared/lib/portalNotices';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 import { Select } from '../../shared/ui/Select';
 export function ManagerCoachReviewsPage() {
+  const { t } = useStaffI18n();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
@@ -30,7 +30,7 @@ export function ManagerCoachReviewsPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
 
   const [activeTab, setActiveTab] = useState<'leaderboard' | 'member_reviews'>('leaderboard');
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<StaffMessage>('');
 
   // Edit Modal State for a Coach's Monthly Review
   const [editingReview, setEditingReview] = useState<CoachMonthlyReviewDto | null>(null);
@@ -85,7 +85,7 @@ export function ManagerCoachReviewsPage() {
     try {
       const generated = await generateMonthlyReviews(selectedYear, selectedMonth);
       setReviews(generated);
-      notify(`Đã tự động tổng hợp đánh giá và tạo Bảng xếp hạng tháng ${selectedMonth}/${selectedYear} thành công!`, 'success');
+      notify(staffMessage(`Đã tự động tổng hợp đánh giá và tạo Bảng xếp hạng tháng ${selectedMonth}/${selectedYear} thành công!`, `Compiled evaluations and created rankings for month ${selectedMonth}/${selectedYear} successfully!`), 'success');
     } catch (err: unknown) {
       setError((errorMessage(err, 'Không thể tổng hợp đánh giá.')));
     } finally {
@@ -114,7 +114,7 @@ export function ManagerCoachReviewsPage() {
         status: 'published',
       });
       setReviews((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      notify(`Đã cập nhật và gửi thông báo vinh danh cho HLV ${updated.coachName}!`, 'success');
+      notify(staffMessage(`Đã cập nhật và gửi thông báo vinh danh cho HLV ${updated.coachName}!`, `Updated and notified coach of recognition ${updated.coachName}!`), 'success');
       setEditingReview(null);
     } catch (err: unknown) {
       setError((errorMessage(err, 'Không thể lưu bản đánh giá.')));
@@ -124,10 +124,10 @@ export function ManagerCoachReviewsPage() {
   }
 
   return (
-    <div className="portal-container" style={{ display: 'grid', gap: 20 }}>
+    <div data-i18n-managed className="portal-container" style={{ display: 'grid', gap: 20 }}>
       <PageHeader
-        eyebrow="Quản lý Trung tâm"
-        title="Bảng xếp hạng & đánh giá huấn luyện viên tháng"
+        eyebrow={t("Quản lý Trung tâm")}
+        title={t("Bảng xếp hạng & đánh giá huấn luyện viên tháng")}
       />
 
       {/* Bar điều khiển Tháng / Năm & Thao tác */}
@@ -143,7 +143,7 @@ export function ManagerCoachReviewsPage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>Kỳ đánh giá:</span>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{t("Kỳ đánh giá:")}</span>
           <Select
             className="portal-input"
             value={String(selectedMonth)}
@@ -151,8 +151,8 @@ export function ManagerCoachReviewsPage() {
             style={{ width: 130 }}
           >
             {Array.from({ length: 12 }).map((_, i) => (
-              <option key={i + 1} value={i + 1}>
-                Tháng {i + 1}
+              <option data-i18n-managed key={i + 1} value={i + 1}>
+                {t("Tháng ")}{i + 1}
               </option>
             ))}
           </Select>
@@ -164,7 +164,7 @@ export function ManagerCoachReviewsPage() {
             style={{ width: 100 }}
           >
             {[2025, 2026, 2027].map((y) => (
-              <option key={y} value={y}>
+              <option data-i18n-managed key={y} value={y}>
                 {y}
               </option>
             ))}
@@ -174,23 +174,23 @@ export function ManagerCoachReviewsPage() {
         <div style={{ display: 'flex', gap: 10 }}>
           {/* Chưa có bảng tổng kết: đây là việc chính; đã có thì chỉ cần khi muốn tính lại */}
           {reviews.length === 0 ? (
-            <button
+            <button data-i18n-managed
               type="button"
               className="btn-primary"
               disabled={generating}
               onClick={() => void handleAutoGenerate()}
             >
-              {generating ? 'Đang tổng hợp…' : 'Tự động tổng hợp số liệu tháng'}
+              {generating ? t('Đang tổng hợp…') : t('Tự động tổng hợp số liệu tháng')}
             </button>
           ) : (
-            <ActionMenu label="Tùy chọn kỳ đánh giá">
+            <ActionMenu label={t("Tùy chọn kỳ đánh giá")}>
               <button
                 type="button"
                 className="btn-secondary btn-sm"
                 disabled={generating}
                 onClick={() => void handleAutoGenerate()}
               >
-                {generating ? 'Đang tổng hợp…' : 'Tự động tổng hợp số liệu tháng'}
+                {generating ? t('Đang tổng hợp…') : t('Tự động tổng hợp số liệu tháng')}
               </button>
             </ActionMenu>
           )}
@@ -198,7 +198,7 @@ export function ManagerCoachReviewsPage() {
       </div>
 
       {error && (
-        <div
+        <div data-i18n-managed
           className="portal-card"
           role="alert"
           style={{
@@ -210,7 +210,7 @@ export function ManagerCoachReviewsPage() {
             alignItems: 'center',
           }}
         >
-          <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{error}</strong>
+          <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{t(error)}</strong>
           <button
             type="button"
             className="btn-secondary btn-sm"
@@ -229,35 +229,34 @@ export function ManagerCoachReviewsPage() {
           className={`filter-chip ${activeTab === 'leaderboard' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('leaderboard')}
         >
-          Bảng xếp hạng Top Coach ({reviews.length})
+          {t("Bảng xếp hạng Top Coach (")}{reviews.length})
         </button>
         <button
           type="button"
           className={`filter-chip ${activeTab === 'member_reviews' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('member_reviews')}
         >
-          Đánh giá từ Hội viên ({memberReviews.length})
+          {t("Đánh giá từ Hội viên (")}{memberReviews.length})
         </button>
       </div>
 
       {loading ? (
-        <div className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
-          <p className="row-card__meta">Đang tải bảng xếp hạng và đánh giá...</p>
+        <div data-i18n-managed className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
+          <p className="row-card__meta">{t("Đang tải bảng xếp hạng và đánh giá...")}</p>
         </div>
       ) : activeTab === 'leaderboard' ? (
         reviews.length === 0 ? (
-          <div className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
+          <div data-i18n-managed className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
             <p className="row-card__meta">
-              Chưa có bảng tổng kết tháng {selectedMonth}/{selectedYear}. Bấm nút "Tự động tổng hợp số liệu tháng" ở trên để bắt đầu!
-            </p>
+              {t("Chưa có bảng tổng kết tháng ")}{selectedMonth}/{selectedYear}{t(". Bấm nút \"Tự động tổng hợp số liệu tháng\" ở trên để bắt đầu!")}</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 14 }}>
+          <div data-i18n-managed style={{ display: 'grid', gap: 14 }}>
             {reviews.map((r) => {
               const rankColor =
                 r.rankPosition === 1 ? 'var(--portal-rank-gold)' : r.rankPosition === 2 ? 'var(--portal-rank-silver)' : r.rankPosition === 3 ? 'var(--portal-rank-bronze)' : 'var(--portal-muted)';
               return (
-                <div
+                <div data-i18n-managed
                   key={r.id}
                   className="portal-card"
                   style={{
@@ -303,21 +302,21 @@ export function ManagerCoachReviewsPage() {
                             color: 'var(--portal-salmon, #ce9180)',
                           }}
                         >
-                          {r.badge || 'Huấn luyện viên'}
+                          {r.badge || t('Huấn luyện viên')}
                         </span>
                       </div>
 
                       <p className="row-card__meta" style={{ margin: '4px 0 0', fontSize: 13 }}>
-                        Chuyên môn: <strong>{r.coachSpecialization}</strong> • Đánh giá:{' '}
+                        {t("Chuyên môn: ")}<strong>{r.coachSpecialization}</strong> {t(" • Đánh giá:")}{' '}
                         <strong style={{ color: 'var(--portal-star)' }}>
                           {r.averageRating != null ? r.averageRating.toFixed(1) : '0.0'} / 5.0
-                        </strong> ({r.totalReviews} lượt) • Tổng số buổi dạy:{' '}
-                        <strong>{r.totalSessions} buổi</strong>
+                        </strong> ({r.totalReviews} {t(" lượt) • Tổng số buổi dạy:")}{' '}
+                        <strong>{r.totalSessions} {t(" buổi")}</strong>
                       </p>
 
                       {r.managerFeedback && (
-                        <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--portal-muted, #71717a)', fontStyle: 'italic' }}>
-                          Lời phê của Quản lý: "{r.managerFeedback}"
+                        <p data-i18n-managed style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--portal-muted, #71717a)', fontStyle: 'italic' }}>
+                          {t("Lời phê của Quản lý: \"")}{r.managerFeedback}"
                         </p>
                       )}
                     </div>
@@ -325,7 +324,7 @@ export function ManagerCoachReviewsPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>Mức thưởng tháng</span>
+                      <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>{t("Mức thưởng tháng")}</span>
                       <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums' }}>
                         {formatPrice(r.bonusAmount)}
                       </div>
@@ -336,8 +335,7 @@ export function ManagerCoachReviewsPage() {
                       className="btn-secondary btn-sm"
                       onClick={() => handleOpenEdit(r)}
                     >
-                      Sửa danh hiệu & Thưởng
-                    </button>
+                      {t("Sửa danh hiệu & Thưởng")}</button>
                   </div>
                 </div>
               );
@@ -347,29 +345,28 @@ export function ManagerCoachReviewsPage() {
       ) : (
         /* Member Reviews Tab */
         memberReviews.length === 0 ? (
-          <div className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
-            <p className="row-card__meta">Chưa có đánh giá nào từ học viên trong giai đoạn này.</p>
+          <div data-i18n-managed className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
+            <p className="row-card__meta">{t("Chưa có đánh giá nào từ học viên trong giai đoạn này.")}</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div data-i18n-managed style={{ display: 'grid', gap: 12 }}>
             {memberReviews.map((mr) => (
-              <div key={mr.id} className="portal-card" style={{ padding: '16px 20px' }}>
+              <div data-i18n-managed key={mr.id} className="portal-card" style={{ padding: '16px 20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <div>
                     <strong style={{ fontSize: 15 }}>{mr.memberName}</strong>
                     <span className="row-card__meta" style={{ marginLeft: 8 }}>
-                      đánh giá HLV <strong>{mr.coachName}</strong>
+                      {t("đánh giá HLV ")}<strong>{mr.coachName}</strong>
                     </span>
                   </div>
                   <span style={{ color: 'var(--portal-star)', fontWeight: 800, fontSize: 15 }}>
-                    {'⭐'.repeat(mr.rating)} ({mr.rating} sao)
-                  </span>
+                    {'⭐'.repeat(mr.rating)} ({mr.rating} {t("sao)")}</span>
                 </div>
                 <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--portal-paper, #202020)', lineHeight: 1.5 }}>
-                  "{mr.comment || 'Không có nhận xét chi tiết.'}"
+                  "{mr.comment || t('Không có nhận xét chi tiết.')}"
                 </p>
                 <span className="row-card__meta" style={{ display: 'block', marginTop: 6, fontSize: 11 }}>
-                  Gửi lúc: {formatCenterDateTime(mr.createdAt)}
+                  {t("Gửi lúc: ")}{formatCenterDateTime(mr.createdAt)}
                 </span>
               </div>
             ))}
@@ -380,14 +377,13 @@ export function ManagerCoachReviewsPage() {
       {/* Modal Chỉnh sửa Đánh giá & Trao thưởng tháng */}
       {editingReview && (
         <Modal
-          title={`Đánh giá tháng & Khen thưởng: HLV ${editingReview.coachName}`}
+          title={t(`Đánh giá tháng & Khen thưởng: HLV ${editingReview.coachName}`, `Monthly evaluation & Award: Coach ${editingReview.coachName}`)}
           onClose={() => setEditingReview(null)}
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                Thứ hạng (Rank):
-              </label>
+                {t("Thứ hạng (Rank):")}</label>
               <input
                 type="number"
                 min={1}
@@ -400,12 +396,11 @@ export function ManagerCoachReviewsPage() {
 
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                Danh hiệu trao tặng (Badge / Title):
-              </label>
+                {t("Danh hiệu trao tặng (Badge / Title):")}</label>
               <input
                 type="text"
                 className="portal-input"
-                placeholder="Ví dụ: Top 1: Coach of the Month 🏆"
+                placeholder={t("Ví dụ: Top 1: Coach of the Month 🏆")}
                 value={editBadge}
                 onChange={(e) => setEditBadge(e.target.value)}
               />
@@ -413,8 +408,7 @@ export function ManagerCoachReviewsPage() {
 
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                Mức thưởng tiền mặt (VNĐ):
-              </label>
+                {t("Mức thưởng tiền mặt (VNĐ):")}</label>
               <input
                 type="number"
                 step={100000}
@@ -426,8 +420,7 @@ export function ManagerCoachReviewsPage() {
 
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                Nhận xét tổng kết của Quản lý gửi cho Coach:
-              </label>
+                {t("Nhận xét tổng kết của Quản lý gửi cho Coach:")}</label>
               <textarea
                 rows={3}
                 className="portal-input"
@@ -444,15 +437,14 @@ export function ManagerCoachReviewsPage() {
                 disabled={savingId !== null}
                 onClick={() => setEditingReview(null)}
               >
-                Hủy
-              </button>
+                {t("Hủy")}</button>
               <button
                 type="button"
                 className="btn-primary"
                 disabled={savingId !== null}
                 onClick={() => void handleSaveEdit()}
               >
-                {savingId !== null ? 'Đang lưu…' : 'Lưu & Công bố cho HLV'}
+                {savingId !== null ? t('Đang lưu…') : t('Lưu & Công bố cho HLV')}
               </button>
             </div>
           </div>

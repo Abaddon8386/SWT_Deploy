@@ -1,3 +1,4 @@
+import { setLanguage } from '../../../shared/i18n';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
@@ -74,7 +75,12 @@ it('renders featured products on the shelf and filters by goal', async () => {
     featuredFirst: true,
   });
   expect(host.querySelector('#products')).not.toBeNull();
+  expect(host.textContent).toContain('NẠP NĂNG LƯỢNG TẬP LUYỆN');
+  await act(async () => setLanguage('en'));
   expect(host.textContent).toContain('FUEL THE WORK');
+  expect(host.textContent).toContain('SÖL Whey Isolate');
+  await act(async () => setLanguage('vi'));
+  expect(host.textContent).toContain('NẠP NĂNG LƯỢNG TẬP LUYỆN');
   expect(host.textContent).toContain('SÖL Whey Isolate');
   expect(host.querySelector('a[href="/products"]')?.textContent).toContain('Xem tất cả sản phẩm');
 

@@ -1,3 +1,4 @@
+import { staffTranslation, useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { Select } from '../../shared/ui/Select';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
@@ -9,14 +10,13 @@ import {
   Permission,
 } from './userApi';
 import { Modal } from '../../shared/ui/Modal';
-import { notify } from '../../shared/lib/portalNotices';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
-import { errorMessage } from '../../shared/lib/errorMessage';
 
 export function UserManagerPage() {
+  const { t } = useStaffI18n();
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [rolePerms, setRolePerms] = useState<Record<SystemRole, string[]>>({
     ADMIN: [],
@@ -30,8 +30,8 @@ export function UserManagerPage() {
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<StaffMessage | null>(null);
+  const [editError, setEditError] = useState<StaffMessage | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const [formData, setFormData] = useState({
     name: '',
@@ -64,7 +64,7 @@ export function UserManagerPage() {
   }>({});
 
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState('');
+  const [loadError, setLoadError] = useState<StaffMessage>('');
   const [permissions, setPermissions] = useState<Permission[]>([]);
 
   const [deletingUser, setDeletingUser] = useState<UserAccount | null>(null);
@@ -113,11 +113,11 @@ export function UserManagerPage() {
   async function handleToggleLock(user: UserAccount) {
     const locking = user.status === 'ACTIVE';
     const confirmed = await confirm({
-      title: locking ? 'Khóa tài khoản?' : 'Mở khóa tài khoản?',
+      title: locking ? staffMessage('Khóa tài khoản?', staffTranslation('Khóa tài khoản?')) : staffMessage('Mở khóa tài khoản?', staffTranslation('Mở khóa tài khoản?')),
       message: locking
-        ? `"${user.name}" sẽ không thể đăng nhập cho tới khi được mở khóa.`
-        : `"${user.name}" sẽ đăng nhập lại được ngay.`,
-      confirmLabel: locking ? 'Khóa tài khoản' : 'Mở khóa',
+        ? staffMessage(`"${user.name}" sẽ không thể đăng nhập cho tới khi được mở khóa.`, `"${user.name}" will not be able to sign in until unlocked.`)
+        : staffMessage(`"${user.name}" sẽ đăng nhập lại được ngay.`, `"${user.name}" will be able to sign in immediately.`),
+      confirmLabel: locking ? staffMessage('Khóa tài khoản', staffTranslation('Khóa tài khoản')) : staffMessage('Mở khóa', staffTranslation('Mở khóa')),
       danger: locking,
     });
     if (!confirmed) return;
@@ -127,8 +127,8 @@ export function UserManagerPage() {
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       notify(
         updated.status === 'ACTIVE'
-          ? `Đã mở khóa tài khoản "${user.name}".`
-          : `Đã khóa tài khoản "${user.name}".`,
+          ? staffMessage(`Đã mở khóa tài khoản "${user.name}".`, `Unlocked account "${user.name}".`)
+          : staffMessage(`Đã khóa tài khoản "${user.name}".`, `Locked account "${user.name}".`),
         'success'
       );
     } catch (err) {
@@ -143,7 +143,7 @@ export function UserManagerPage() {
     try {
       await userApi.deleteUser(deletingUser.id);
       setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
-      notify(`Đã xóa tài khoản "${deletingUser.name}".`, 'success');
+      notify(staffMessage(`Đã xóa tài khoản "${deletingUser.name}".`, `Deleted account "${deletingUser.name}".`), 'success');
       setDeletingUser(null);
     } catch (err) {
       const msg = errorMessage(err, 'Không thể xóa tài khoản.');
@@ -158,7 +158,7 @@ export function UserManagerPage() {
     try {
       const res = await userApi.cleanupInactiveUsers();
       setCleanupResult(res);
-      notify(res.message || `Đã dọn dẹp ${res.deletedCount} tài khoản không hoạt động.`, 'success');
+      notify(res.message ? new Error(res.message) : staffMessage(`Đã dọn dẹp ${res.deletedCount} tài khoản không hoạt động.`, `Cleaned up ${res.deletedCount} inactive accounts.`), 'success');
       // Refresh user list
       const u = await userApi.getUsers();
       setUsers(u);
@@ -230,7 +230,7 @@ export function UserManagerPage() {
       setUsers((prev) => [created, ...prev]);
       setIsModalOpen(false);
       setFormData({ name: '', email: '', phone: '', password: '', role: 'COACH', gender: 'female' });
-      notify(`Đã tạo tài khoản "${created.name}".`, 'success');
+      notify(staffMessage(`Đã tạo tài khoản "${created.name}".`, `Created account "${created.name}".`), 'success');
     } catch (err) {
       setCreateError(errorMessage(err, 'Không thể tạo người dùng.'));
     } finally {
@@ -288,7 +288,7 @@ export function UserManagerPage() {
       });
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setEditingUser(null);
-      notify(`Đã cập nhật tài khoản "${updated.name}".`, 'success');
+      notify(staffMessage(`Đã cập nhật tài khoản "${updated.name}".`, `Updated account "${updated.name}".`), 'success');
     } catch (err) {
       setEditError(errorMessage(err, 'Không thể cập nhật tài khoản.'));
     } finally {
@@ -322,23 +322,23 @@ export function UserManagerPage() {
   const getRoleBadge = (role: SystemRole) => {
     switch (role) {
       case 'ADMIN':
-        return <span className="portal-badge">Quản trị hệ thống</span>;
+        return <span data-i18n-managed className="portal-badge">{t("Quản trị hệ thống")}</span>;
       case 'CENTER_MANAGER':
-        return <span className="badge badge-warning">Quản lý trung tâm</span>;
+        return <span data-i18n-managed className="badge badge-warning">{t("Quản lý trung tâm")}</span>;
       case 'COACH':
-        return <span className="badge badge-info">Huấn luyện viên</span>;
+        return <span data-i18n-managed className="badge badge-info">{t("Huấn luyện viên")}</span>;
       case 'RECEPTIONIST':
-        return <span className="badge badge-neutral">Lễ tân</span>;
+        return <span data-i18n-managed className="badge badge-neutral">{t("Lễ tân")}</span>;
       case 'MEMBER':
-        return <span className="badge">Hội viên</span>;
+        return <span data-i18n-managed className="badge">{t("Hội viên")}</span>;
     }
   };
 
   return (
-    <div className="portal-container">
+    <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow="Quản trị hệ thống"
-        title="Tài khoản & phân quyền"
+        eyebrow={t("Quản trị hệ thống")}
+        title={t("Tài khoản & phân quyền")}
       />
 
       {/* Tabs */}
@@ -348,43 +348,41 @@ export function UserManagerPage() {
           className={`portal-tab ${activeTab === 'USERS' ? 'active' : ''}`}
           onClick={() => setActiveTab('USERS')}
         >
-          Danh sách tài khoản ({users.length})
+          {t("Danh sách tài khoản (")}{users.length})
         </button>
         <button
           type="button"
           className={`portal-tab ${activeTab === 'ROLES' ? 'active' : ''}`}
           onClick={() => setActiveTab('ROLES')}
         >
-          Phân quyền
-        </button>
+          {t("Phân quyền")}</button>
       </div>
 
       {loadError && (
-        <div role="alert" className="portal-alert">
-          <span>{loadError}</span>
+        <div data-i18n-managed role="alert" className="portal-alert">
+          <span>{t(loadError)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void loadData()}>
-            Thử lại
-          </button>
+            {t("Thử lại")}</button>
         </div>
       )}
 
       {loading ? (
-        <div className="portal-card" aria-busy="true">
+        <div data-i18n-managed className="portal-card" aria-busy="true">
           <div style={{ display: 'grid', gap: 12 }}>
             <div className="portal-skeleton" style={{ height: 42, borderRadius: 8 }} />
             {[1, 2, 3, 4, 5].map((n) => (
-              <div key={n} className="portal-skeleton" style={{ height: 52, borderRadius: 8 }} />
+              <div data-i18n-managed key={n} className="portal-skeleton" style={{ height: 52, borderRadius: 8 }} />
             ))}
           </div>
         </div>
       ) : activeTab === 'USERS' ? (
-        <div>
+        <div data-i18n-managed>
           {/* Controls / Filter Bar */}
           <div className="portal-toolbar">
             <input
               type="text"
               className="portal-input"
-              placeholder="Tìm kiếm theo họ tên, email hoặc SĐT..."
+              placeholder={t("Tìm kiếm theo họ tên, email hoặc SĐT...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -393,12 +391,12 @@ export function UserManagerPage() {
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
             >
-              <option value="ALL">Tất cả vai trò</option>
-              <option value="CENTER_MANAGER">Quản lý trung tâm</option>
-              <option value="ADMIN">Quản trị hệ thống</option>
-              <option value="COACH">Huấn luyện viên</option>
-              <option value="RECEPTIONIST">Lễ tân</option>
-              <option value="MEMBER">Hội viên</option>
+              <option value="ALL">{t("Tất cả vai trò")}</option>
+              <option value="CENTER_MANAGER">{t("Quản lý trung tâm")}</option>
+              <option value="ADMIN">{t("Quản trị hệ thống")}</option>
+              <option value="COACH">{t("Huấn luyện viên")}</option>
+              <option value="RECEPTIONIST">{t("Lễ tân")}</option>
+              <option value="MEMBER">{t("Hội viên")}</option>
             </Select>
             <button
               type="button"
@@ -409,32 +407,29 @@ export function UserManagerPage() {
                 setIsModalOpen(true);
               }}
             >
-              Thêm tài khoản
-            </button>
-            <ActionMenu label="Tùy chọn quản trị">
+              {t("Thêm tài khoản")}</button>
+            <ActionMenu label={t("Tùy chọn quản trị")}>
               <button
                 type="button"
                 className="btn-secondary btn-sm"
-                title="Tài khoản không đăng nhập quá 6 tháng sẽ tự động xóa mềm (ngoại trừ hội viên đang bảo lưu)"
+                title={t("Tài khoản không đăng nhập quá 6 tháng sẽ tự động xóa mềm (ngoại trừ hội viên đang bảo lưu)")}
                 onClick={() => {
                   setCleanupResult(null);
                   setShowCleanupModal(true);
                 }}
               >
-                Quét & Dọn dẹp ngay
-              </button>
+                {t("Quét & Dọn dẹp ngay")}</button>
             </ActionMenu>
           </div>
 
           {/* User Table */}
           <div className="portal-card portal-card--flush">
             {filteredUsers.length === 0 ? (
-              <div className="portal-state" style={{ minHeight: '180px' }}>
+              <div data-i18n-managed className="portal-state" style={{ minHeight: '180px' }}>
                 <p style={{ margin: 0 }}>
-                  Không tìm thấy tài khoản nào phù hợp với bộ lọc hiện tại.
-                </p>
+                  {t("Không tìm thấy tài khoản nào phù hợp với bộ lọc hiện tại.")}</p>
                 {(searchTerm || roleFilter !== 'ALL') && (
-                  <button
+                  <button data-i18n-managed
                     type="button"
                     className="btn-secondary btn-sm"
                     style={{ marginTop: 8 }}
@@ -443,38 +438,37 @@ export function UserManagerPage() {
                       setRoleFilter('ALL');
                     }}
                   >
-                    Xóa bộ lọc tìm kiếm
-                  </button>
+                    {t("Xóa bộ lọc tìm kiếm")}</button>
                 )}
               </div>
             ) : (
-              <div className="portal-table-wrapper">
+              <div data-i18n-managed className="portal-table-wrapper">
                 <table className="portal-table">
                   <thead>
                     <tr>
-                      <th>Họ và tên</th>
-                      <th>Giới tính</th>
-                      <th>Liên hệ</th>
-                      <th>Vai trò</th>
-                      <th>Trạng thái</th>
-                      <th>Đăng nhập / Ngày tạo</th>
-                      <th className="actions">Thao tác</th>
+                      <th>{t("Họ và tên")}</th>
+                      <th>{t("Giới tính")}</th>
+                      <th>{t("Liên hệ")}</th>
+                      <th>{t("Vai trò")}</th>
+                      <th>{t("Trạng thái")}</th>
+                      <th>{t("Đăng nhập / Ngày tạo")}</th>
+                      <th className="actions">{t("Thao tác")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.map((u) => (
-                      <tr key={u.id}>
+                      <tr data-i18n-managed key={u.id}>
                         <td>
                           <strong>{u.name}</strong>
                           <div className="muted">ID: {u.id}</div>
                         </td>
                         <td>
                           {u.gender === 'male' ? (
-                            <span className="badge badge-neutral">Nam</span>
+                            <span data-i18n-managed className="badge badge-neutral">{t("Nam")}</span>
                           ) : u.gender === 'female' ? (
-                            <span className="badge badge-neutral" style={{ color: 'var(--portal-salmon)' }}>Nữ</span>
+                            <span data-i18n-managed className="badge badge-neutral" style={{ color: 'var(--portal-salmon)' }}>{t("Nữ")}</span>
                           ) : (
-                            <span className="badge badge-neutral">Khác</span>
+                            <span data-i18n-managed className="badge badge-neutral">{t("Khác")}</span>
                           )}
                         </td>
                         <td>
@@ -485,12 +479,12 @@ export function UserManagerPage() {
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                             {u.status === 'ACTIVE' ? (
-                              <span className="badge badge-success">Đang hoạt động</span>
+                              <span data-i18n-managed className="badge badge-success">{t("Đang hoạt động")}</span>
                             ) : (
-                              <span className="badge badge-warning">Đã khóa</span>
+                              <span data-i18n-managed className="badge badge-warning">{t("Đã khóa")}</span>
                             )}
                             {u.is_frozen && (
-                              <span
+                              <span data-i18n-managed
                                 className="badge"
                                 style={{
                                   background: 'color-mix(in srgb, var(--portal-info) 12%, transparent)',
@@ -498,48 +492,46 @@ export function UserManagerPage() {
                                   border: '1px solid color-mix(in srgb, var(--portal-info) 30%, transparent)',
                                   fontSize: '0.72rem',
                                 }}
-                                title="Hội viên đang có gói bảo lưu tập (được miễn trừ tự động xóa)"
+                                title={t("Hội viên đang có gói bảo lưu tập (được miễn trừ tự động xóa)")}
                               >
-                                Đang bảo lưu tập
-                              </span>
+                                {t("Đang bảo lưu tập")}</span>
                             )}
                           </div>
                         </td>
                         <td>
                           <div style={{ fontSize: '0.85rem' }}>
                             {u.last_login_at ? (
-                              <span>Đăng nhập: {formatCenterDateTime(u.last_login_at.replace(' ', 'T'))}</span>
+                              <span data-i18n-managed>{t("Đăng nhập: ")}{formatCenterDateTime(u.last_login_at.replace(' ', 'T'))}</span>
                             ) : (
-                              <span className="muted" style={{ fontStyle: 'italic' }}>Chưa đăng nhập</span>
+                              <span data-i18n-managed className="muted" style={{ fontStyle: 'italic' }}>{t("Chưa đăng nhập")}</span>
                             )}
                           </div>
-                          <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>Tạo: {formatCenterDate(u.created_at)}</div>
+                          <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>{t("Tạo: ")}{formatCenterDate(u.created_at)}</div>
                         </td>
                         <td className="actions">
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
-                              title="Chỉnh sửa thông tin tài khoản"
+                              title={t("Chỉnh sửa thông tin tài khoản")}
                               onClick={() => handleOpenEdit(u)}
                             >
-                              Sửa
-                            </button>
-                            <ActionMenu label={`Thao tác khác với ${u.name}`}>
+                              {t("Sửa")}</button>
+                            <ActionMenu label={t(`Thao tác khác với ${u.name}`, `More actions for ${u.name}`)}>
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
                               disabled={u.role === 'CENTER_MANAGER'}
                               title={
                                 u.role === 'CENTER_MANAGER'
-                                  ? 'Không thể khóa tài khoản Quản lý trung tâm'
+                                  ? t('Không thể khóa tài khoản Quản lý trung tâm')
                                   : u.status === 'ACTIVE'
-                                    ? 'Khóa tài khoản'
-                                    : 'Mở khóa tài khoản'
+                                    ? t('Khóa tài khoản')
+                                    : t('Mở khóa tài khoản')
                               }
                               onClick={() => handleToggleLock(u)}
                             >
-                              {u.status === 'ACTIVE' ? 'Khóa' : 'Kích hoạt'}
+                              {u.status === 'ACTIVE' ? t('Khóa') : t('Kích hoạt')}
                             </button>
                             <button
                               type="button"
@@ -548,13 +540,12 @@ export function UserManagerPage() {
                               disabled={u.role === 'CENTER_MANAGER'}
                               title={
                                 u.role === 'CENTER_MANAGER'
-                                  ? 'Không thể xóa tài khoản Quản lý trung tâm'
-                                  : 'Xóa tài khoản'
+                                  ? t('Không thể xóa tài khoản Quản lý trung tâm')
+                                  : t('Xóa tài khoản')
                               }
                               onClick={() => setDeletingUser(u)}
                             >
-                              Xóa
-                            </button>
+                              {t("Xóa")}</button>
                             </ActionMenu>
                           </div>
                         </td>
@@ -568,26 +559,26 @@ export function UserManagerPage() {
         </div>
       ) : (
         /* Matrix Phân quyền RBAC */
-        <div className="portal-card portal-card--flush">
+        <div data-i18n-managed className="portal-card portal-card--flush">
           <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--portal-border)' }}>
-            <h2 className="portal-card-title">Phân quyền vai trò</h2>
+            <h2 className="portal-card-title">{t("Phân quyền vai trò")}</h2>
           </div>
 
           <div className="portal-table-wrapper">
             <table className="portal-table">
               <thead>
                 <tr>
-                  <th style={{ width: '42%' }}>Chức năng</th>
+                  <th style={{ width: '42%' }}>{t("Chức năng")}</th>
                   {CORE_ROLES.map((r) => (
-                    <th key={r.id} style={{ textAlign: 'center' }}>
-                      {r.name}
+                    <th data-i18n-managed key={r.id} style={{ textAlign: 'center' }}>
+                      {t(r.name)}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {permissions.map((perm) => (
-                  <tr key={perm.id}>
+                  <tr data-i18n-managed key={perm.id}>
                     <td>
                       <strong>{perm.name}</strong>
                     </td>
@@ -596,15 +587,15 @@ export function UserManagerPage() {
                       const isChecked = rolePerms[role.id]?.includes(perm.id) ?? false;
 
                       return (
-                        <td key={role.id} style={{ textAlign: 'center' }}>
-                          <input
+                        <td data-i18n-managed key={role.id} style={{ textAlign: 'center' }}>
+                          <input data-i18n-managed
                             type="checkbox"
                             checked={isChecked}
                             disabled={isManager}
                             title={
                               isManager
-                                ? 'Quyền quản trị hệ thống'
-                                : 'Nhấp để gán hoặc hủy quyền'
+                                ? t('Quyền quản trị hệ thống')
+                                : t('Nhấp để gán hoặc hủy quyền')
                             }
                             onChange={() => handleTogglePermission(role.id, perm.id)}
                             style={{
@@ -629,7 +620,7 @@ export function UserManagerPage() {
       {/* Modal Thêm tài khoản mới */}
       {isModalOpen && (
         <Modal
-          title="Thêm tài khoản"
+          title={t("Thêm tài khoản")}
           onClose={() => {
             if (!isCreating) {
               setIsModalOpen(false);
@@ -639,13 +630,13 @@ export function UserManagerPage() {
         >
           <form onSubmit={handleCreateUser} style={{ display: 'grid', gap: 14 }} noValidate>
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-name">Họ và tên *</label>
+              <label className="portal-label" htmlFor="user-name">{t("Họ và tên *")}</label>
               <input
                 id="user-name"
                 type="text"
                 className="portal-input"
                 autoFocus
-                placeholder="Vd: Nguyễn Thị Mai"
+                placeholder={t("Vd: Nguyễn Thị Mai")}
                 value={formData.name}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value });
@@ -653,8 +644,8 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.name && (
-                <div className="form-error">
-                  {fieldErrors.name}
+                <div data-i18n-managed className="form-error">
+                  {t(fieldErrors.name)}
                 </div>
               )}
             </div>
@@ -673,14 +664,14 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.email && (
-                <div className="form-error">
-                  {fieldErrors.email}
+                <div data-i18n-managed className="form-error">
+                  {t(fieldErrors.email)}
                 </div>
               )}
             </div>
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-phone">Số điện thoại *</label>
+              <label className="portal-label" htmlFor="user-phone">{t("Số điện thoại *")}</label>
               <input
                 id="user-phone"
                 type="tel"
@@ -695,20 +686,20 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.phone && (
-                <div className="form-error">
-                  {fieldErrors.phone}
+                <div data-i18n-managed className="form-error">
+                  {t(fieldErrors.phone)}
                 </div>
               )}
             </div>
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-pass">Mật khẩu khởi tạo *</label>
+              <label className="portal-label" htmlFor="user-pass">{t("Mật khẩu khởi tạo *")}</label>
               <input
                 id="user-pass"
                 type="password"
                 className="portal-input"
                 autoComplete="new-password"
-                placeholder="Tối thiểu 6 ký tự"
+                placeholder={t("Tối thiểu 6 ký tự")}
                 value={formData.password}
                 onChange={(e) => {
                   setFormData({ ...formData, password: e.target.value });
@@ -716,14 +707,14 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.password && (
-                <div className="form-error">
-                  {fieldErrors.password}
+                <div data-i18n-managed className="form-error">
+                  {t(fieldErrors.password)}
                 </div>
               )}
             </div>
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-gender">Giới tính *</label>
+              <label className="portal-label" htmlFor="user-gender">{t("Giới tính *")}</label>
               <Select
                 id="user-gender"
                 className="portal-select"
@@ -733,19 +724,19 @@ export function UserManagerPage() {
                   if (fieldErrors.gender) setFieldErrors((prev) => ({ ...prev, gender: undefined }));
                 }}
               >
-                <option value="male">Nam (Male)</option>
-                <option value="female">Nữ (Female)</option>
-                <option value="other">Khác (Other)</option>
+                <option value="male">{t("Nam (Male)")}</option>
+                <option value="female">{t("Nữ (Female)")}</option>
+                <option value="other">{t("Khác (Other)")}</option>
               </Select>
               {fieldErrors.gender && (
-                <div className="form-error">
-                  {fieldErrors.gender}
+                <div data-i18n-managed className="form-error">
+                  {t(fieldErrors.gender)}
                 </div>
               )}
             </div>
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-role">Vai trò *</label>
+              <label className="portal-label" htmlFor="user-role">{t("Vai trò *")}</label>
               <Select
                 id="user-role"
                 className="portal-select"
@@ -754,15 +745,15 @@ export function UserManagerPage() {
                   setFormData({ ...formData, role: e.target.value as SystemRole })
                 }
               >
-                <option value="COACH">Huấn luyện viên (Coach)</option>
-                <option value="RECEPTIONIST">Lễ tân (Receptionist)</option>
-                <option value="MEMBER">Hội viên (Member)</option>
-                <option value="CENTER_MANAGER">Quản lý trung tâm (Center Manager)</option>
-                <option value="ADMIN">Quản trị hệ thống (Admin)</option>
+                <option value="COACH">{t("Huấn luyện viên (Coach)")}</option>
+                <option value="RECEPTIONIST">{t("Lễ tân (Receptionist)")}</option>
+                <option value="MEMBER">{t("Hội viên (Member)")}</option>
+                <option value="CENTER_MANAGER">{t("Quản lý trung tâm (Center Manager)")}</option>
+                <option value="ADMIN">{t("Quản trị hệ thống (Admin)")}</option>
               </Select>
             </div>
 
-            {createError && <p className="form-error" role="alert">{createError}</p>}
+            {createError && <p className="form-error" role="alert">{t(createError)}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
               <button
                 type="button"
@@ -773,16 +764,15 @@ export function UserManagerPage() {
                   setFieldErrors({});
                 }}
               >
-                Hủy
-              </button>
+                {t("Hủy")}</button>
               <button type="submit" className="btn-primary" disabled={isCreating}>
                 {isCreating ? (
                   <>
-                    <span className="spinner" />
-                    <span>Đang tạo...</span>
+                    <span data-i18n-managed className="spinner" />
+                    <span data-i18n-managed>{t("Đang tạo...")}</span>
                   </>
                 ) : (
-                  'Tạo tài khoản'
+                  t('Tạo tài khoản')
                 )}
               </button>
             </div>
@@ -792,7 +782,7 @@ export function UserManagerPage() {
 
       {editingUser && (
         <Modal
-          title={`Chỉnh sửa tài khoản — ${editingUser.name}`}
+          title={t(`Chỉnh sửa tài khoản — ${editingUser.name}`, `Edit account — ${editingUser.name}`)}
           onClose={() => {
             if (!isUpdating) {
               setEditingUser(null);
@@ -802,7 +792,7 @@ export function UserManagerPage() {
         >
           <form onSubmit={handleUpdateUser} style={{ display: 'grid', gap: 14 }} noValidate>
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="edit-user-email">Email (không thể thay đổi)</label>
+              <label className="portal-label" htmlFor="edit-user-email">{t("Email (không thể thay đổi)")}</label>
               <input
                 id="edit-user-email"
                 type="email"
@@ -814,13 +804,13 @@ export function UserManagerPage() {
             </div>
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="edit-user-name">Họ và tên *</label>
+              <label className="portal-label" htmlFor="edit-user-name">{t("Họ và tên *")}</label>
               <input
                 id="edit-user-name"
                 type="text"
                 className="portal-input"
                 autoFocus
-                placeholder="Vd: Nguyễn Thị Mai"
+                placeholder={t("Vd: Nguyễn Thị Mai")}
                 value={editFormData.name}
                 onChange={(e) => {
                   setEditFormData({ ...editFormData, name: e.target.value });
@@ -828,14 +818,14 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.name && (
-                <div className="form-error">
-                  {editFieldErrors.name}
+                <div data-i18n-managed className="form-error">
+                  {t(editFieldErrors.name)}
                 </div>
               )}
             </div>
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="edit-user-phone">Số điện thoại</label>
+              <label className="portal-label" htmlFor="edit-user-phone">{t("Số điện thoại")}</label>
               <input
                 id="edit-user-phone"
                 type="tel"
@@ -850,14 +840,14 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.phone && (
-                <div className="form-error">
-                  {editFieldErrors.phone}
+                <div data-i18n-managed className="form-error">
+                  {t(editFieldErrors.phone)}
                 </div>
               )}
             </div>
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="edit-user-gender">Giới tính *</label>
+              <label className="portal-label" htmlFor="edit-user-gender">{t("Giới tính *")}</label>
               <Select
                 id="edit-user-gender"
                 className="portal-select"
@@ -866,14 +856,14 @@ export function UserManagerPage() {
                   setEditFormData({ ...editFormData, gender: e.target.value as UserGender })
                 }
               >
-                <option value="male">Nam (Male)</option>
-                <option value="female">Nữ (Female)</option>
-                <option value="other">Khác (Other)</option>
+                <option value="male">{t("Nam (Male)")}</option>
+                <option value="female">{t("Nữ (Female)")}</option>
+                <option value="other">{t("Khác (Other)")}</option>
               </Select>
             </div>
 
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="edit-user-role">Vai trò *</label>
+              <label className="portal-label" htmlFor="edit-user-role">{t("Vai trò *")}</label>
               <Select
                 id="edit-user-role"
                 className="portal-select"
@@ -882,16 +872,16 @@ export function UserManagerPage() {
                   setEditFormData({ ...editFormData, role: e.target.value as SystemRole })
                 }
               >
-                <option value="COACH">Huấn luyện viên (Coach)</option>
-                <option value="RECEPTIONIST">Lễ tân (Receptionist)</option>
-                <option value="MEMBER">Hội viên (Member)</option>
-                <option value="CENTER_MANAGER">Quản lý trung tâm (Center Manager)</option>
-                <option value="ADMIN">Quản trị hệ thống (Admin)</option>
+                <option value="COACH">{t("Huấn luyện viên (Coach)")}</option>
+                <option value="RECEPTIONIST">{t("Lễ tân (Receptionist)")}</option>
+                <option value="MEMBER">{t("Hội viên (Member)")}</option>
+                <option value="CENTER_MANAGER">{t("Quản lý trung tâm (Center Manager)")}</option>
+                <option value="ADMIN">{t("Quản trị hệ thống (Admin)")}</option>
               </Select>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
-              {editError && <p className="form-error" role="alert" style={{ flexBasis: '100%' }}>{editError}</p>}
+              {editError && <p className="form-error" role="alert" style={{ flexBasis: '100%' }}>{t(editError)}</p>}
               <button
                 type="button"
                 className="btn-secondary"
@@ -901,16 +891,15 @@ export function UserManagerPage() {
                   setEditFieldErrors({});
                 }}
               >
-                Hủy
-              </button>
+                {t("Hủy")}</button>
               <button type="submit" className="btn-primary" disabled={isUpdating}>
                 {isUpdating ? (
                   <>
-                    <span className="spinner" />
-                    <span>Đang lưu...</span>
+                    <span data-i18n-managed className="spinner" />
+                    <span data-i18n-managed>{t("Đang lưu...")}</span>
                   </>
                 ) : (
-                  'Lưu thay đổi'
+                  t('Lưu thay đổi')
                 )}
               </button>
             </div>
@@ -921,17 +910,17 @@ export function UserManagerPage() {
       {/* Modal Xác nhận xóa tài khoản */}
       {deletingUser && (
         <Modal
-          title="Xác nhận xóa tài khoản"
+          title={t("Xác nhận xóa tài khoản")}
           onClose={() => {
             if (!isDeleting) setDeletingUser(null);
           }}
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <p style={{ margin: 0, lineHeight: 1.5 }}>
-              Bạn có chắc chắn muốn xóa tài khoản của <strong>{deletingUser.name}</strong> ({deletingUser.email})?
+              {t("Bạn có chắc chắn muốn xóa tài khoản của ")}<strong>{deletingUser.name}</strong> ({deletingUser.email})?
             </p>
             {deletingUser.is_frozen && (
-              <div
+              <div data-i18n-managed
                 style={{
                   padding: '10px 12px',
                   borderRadius: 6,
@@ -941,8 +930,7 @@ export function UserManagerPage() {
                   color: 'var(--portal-info)',
                 }}
               >
-                Tài khoản này hiện đang có gói tập bảo lưu. Vui lòng cân nhắc trước khi xóa thủ công.
-              </div>
+                {t("Tài khoản này hiện đang có gói tập bảo lưu. Vui lòng cân nhắc trước khi xóa thủ công.")}</div>
             )}
             <div
               style={{
@@ -954,8 +942,7 @@ export function UserManagerPage() {
                 color: 'var(--portal-danger)',
               }}
             >
-              Lưu ý: Thao tác này sẽ xóa mềm tài khoản khỏi hệ thống và vô hiệu hóa quyền truy cập vĩnh viễn.
-            </div>
+              {t("Lưu ý: Thao tác này sẽ xóa mềm tài khoản khỏi hệ thống và vô hiệu hóa quyền truy cập vĩnh viễn.")}</div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
               <button
@@ -964,15 +951,14 @@ export function UserManagerPage() {
                 disabled={isDeleting}
                 onClick={() => setDeletingUser(null)}
               >
-                Hủy
-              </button>
+                {t("Hủy")}</button>
               <button
                 type="button"
                 className="btn-danger"
                 disabled={isDeleting}
                 onClick={() => void handleConfirmDelete()}
               >
-                {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
+                {isDeleting ? t('Đang xóa...') : t('Xác nhận xóa')}
               </button>
             </div>
           </div>
@@ -982,7 +968,7 @@ export function UserManagerPage() {
       {/* Modal Quét & dọn dẹp tài khoản > 6 tháng */}
       {showCleanupModal && (
         <Modal
-          title="Quét & dọn dẹp tài khoản quá 6 tháng"
+          title={t("Quét & dọn dẹp tài khoản quá 6 tháng")}
           onClose={() => {
             if (!isCleaning) {
               setShowCleanupModal(false);
@@ -992,16 +978,15 @@ export function UserManagerPage() {
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <p style={{ margin: 0, lineHeight: 1.5 }}>
-              Hệ thống sẽ quét toàn bộ tài khoản và tự động xóa mềm những tài khoản thỏa mãn các điều kiện:
-            </p>
+              {t("Hệ thống sẽ quét toàn bộ tài khoản và tự động xóa mềm những tài khoản thỏa mãn các điều kiện:")}</p>
             <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.88rem', display: 'grid', gap: 6 }}>
-              <li>Không đăng nhập trong vòng <strong>6 tháng qua</strong> (hoặc tạo quá 6 tháng nhưng chưa từng đăng nhập).</li>
-              <li><strong>Không</strong> xóa tài khoản Quản lý trung tâm (Center Manager).</li>
-              <li><strong>Không</strong> xóa tài khoản hội viên đang có gói dịch vụ trong trạng thái <strong>bảo lưu tập (frozen)</strong>.</li>
+              <li>{t("Không đăng nhập trong vòng ")}<strong>{t("6 tháng qua")}</strong> {t(" (hoặc tạo quá 6 tháng nhưng chưa từng đăng nhập).")}</li>
+              <li><strong>{t("Không")}</strong> {t(" xóa tài khoản Quản lý trung tâm (Center Manager).")}</li>
+              <li><strong>{t("Không")}</strong> {t(" xóa tài khoản hội viên đang có gói dịch vụ trong trạng thái ")}<strong>{t("bảo lưu tập (frozen)")}</strong>.</li>
             </ul>
 
             {cleanupResult && (
-              <div
+              <div data-i18n-managed
                 style={{
                   padding: '12px 14px',
                   borderRadius: 6,
@@ -1011,7 +996,7 @@ export function UserManagerPage() {
                   color: 'var(--portal-success)',
                 }}
               >
-                {cleanupResult.message || `Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`}
+                {cleanupResult.message || t(`Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`, `Cleanup completed successfully ${cleanupResult.deletedCount} inactive accounts.`)}
               </div>
             )}
 
@@ -1025,10 +1010,10 @@ export function UserManagerPage() {
                   setCleanupResult(null);
                 }}
               >
-                {cleanupResult ? 'Đóng' : 'Hủy'}
+                {cleanupResult ? t('Đóng') : t('Hủy')}
               </button>
               {!cleanupResult && (
-                <button
+                <button data-i18n-managed
                   type="button"
                   className="btn-primary"
                   disabled={isCleaning}
@@ -1036,11 +1021,11 @@ export function UserManagerPage() {
                 >
                   {isCleaning ? (
                     <>
-                      <span className="spinner" />
-                      <span>Đang quét & dọn dẹp...</span>
+                      <span data-i18n-managed className="spinner" />
+                      <span data-i18n-managed>{t("Đang quét & dọn dẹp...")}</span>
                     </>
                   ) : (
-                    'Bắt đầu quét & dọn dẹp'
+                    t('Bắt đầu quét & dọn dẹp')
                   )}
                 </button>
               )}

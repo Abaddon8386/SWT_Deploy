@@ -1,11 +1,10 @@
+import { staffLocale, staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
-import { notify } from '../../shared/lib/portalNotices';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDate, formatTimeRange } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
@@ -60,13 +59,14 @@ export interface EvaluationHistoryRecord {
 
 
 export function CoachAttendancePage() {
+  const { t } = useStaffI18n();
   const STORAGE_KEY_HISTORY = coachHistoryStorageKey('attendance');
   const STORAGE_KEY_EVAL_HISTORY = coachHistoryStorageKey('evaluation');
   const [activeTab, setActiveTab] = useState<'attendance' | 'evaluation' | 'attendance-history' | 'eval-history'>('attendance');
   const [sessions, setSessions] = useState<CoachClassSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [loadedSessionId, setLoadedSessionId] = useState<number | null>(null);
-  const [rosterError, setRosterError] = useState<string | null>(null);
+  const [rosterError, setRosterError] = useState<StaffMessage | null>(null);
   const [students, setStudents] = useState<AttendanceStudent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -78,7 +78,7 @@ export function CoachAttendancePage() {
   // Modal sửa đánh giá giữa màn hình (ở lại tab Lịch sử)
   const [editingEvalRecord, setEditingEvalRecord] = useState<EvaluationHistoryRecord | null>(null);
 
-  const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [sessionsError, setSessionsError] = useState<StaffMessage | null>(null);
   const [sessionsAttempt, setSessionsAttempt] = useState(0);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
@@ -256,7 +256,7 @@ export function CoachAttendancePage() {
 
       const presentCount = students.filter((s) => s.status === 'present').length;
       const absentCount = students.filter((s) => s.status === 'absent').length;
-      const nowFormatted = new Date().toLocaleString('vi-VN', {
+      const nowFormatted = new Date().toLocaleString(staffLocale(), {
         hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
@@ -314,7 +314,7 @@ export function CoachAttendancePage() {
 
       const totalScore = students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
       const averageScore = students.length > 0 ? Math.round(totalScore / students.length) : 0;
-      const nowFormatted = new Date().toLocaleString('vi-VN', {
+      const nowFormatted = new Date().toLocaleString(staffLocale(), {
         hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
@@ -349,9 +349,9 @@ export function CoachAttendancePage() {
 
   // Xoá điểm danh buổi hiện tại
   const confirmHide = () => confirm({
-    title: 'Ẩn bản ghi?',
-    message: 'Bản ghi chỉ bị ẩn trên trình duyệt này. Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.',
-    confirmLabel: 'Ẩn bản ghi',
+    title: staffMessage('Ẩn bản ghi?', staffTranslation('Ẩn bản ghi?')),
+    message: staffMessage('Bản ghi chỉ bị ẩn trên trình duyệt này. Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.', staffTranslation('Bản ghi chỉ bị ẩn trên trình duyệt này. Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.')),
+    confirmLabel: staffMessage('Ẩn bản ghi', staffTranslation('Ẩn bản ghi')),
   });
 
   const handleDeleteCurrentAttendance = async () => {
@@ -403,7 +403,7 @@ export function CoachAttendancePage() {
 
       const presentCount = editingAttendanceRecord.students.filter((s) => s.status === 'present').length;
       const absentCount = editingAttendanceRecord.students.filter((s) => s.status === 'absent').length;
-      const nowFormatted = new Date().toLocaleString('vi-VN', {
+      const nowFormatted = new Date().toLocaleString(staffLocale(), {
         hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
@@ -489,7 +489,7 @@ export function CoachAttendancePage() {
         editingEvalRecord.students.length > 0
           ? Math.round(totalScore / editingEvalRecord.students.length)
           : 0;
-      const nowFormatted = new Date().toLocaleString('vi-VN', {
+      const nowFormatted = new Date().toLocaleString(staffLocale(), {
         hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
@@ -545,17 +545,17 @@ export function CoachAttendancePage() {
   }, [students]);
 
   return (
-    <div className="coach-attendance-page portal-container">
+    <div data-i18n-managed className="coach-attendance-page portal-container">
       <PageHeader
-        eyebrow="Huấn luyện viên"
+        eyebrow={t("Huấn luyện viên")}
         title={
           activeTab === 'evaluation'
-            ? 'Đánh giá tiến bộ học viên'
+            ? t('Đánh giá tiến bộ học viên')
             : activeTab === 'attendance-history'
-            ? 'Lịch sử điểm danh lớp học'
+            ? t('Lịch sử điểm danh lớp học')
             : activeTab === 'eval-history'
-            ? 'Lịch sử đánh giá học viên'
-            : 'Điểm danh buổi học'
+            ? t('Lịch sử đánh giá học viên')
+            : t('Điểm danh buổi học')
         }
       />
 
@@ -566,42 +566,40 @@ export function CoachAttendancePage() {
           className={`attendance-tab-btn ${activeTab === 'attendance' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('attendance')}
         >
-          Điểm danh buổi học
-        </button>
+          {t("Điểm danh buổi học")}</button>
         <button
           type="button"
           className={`attendance-tab-btn ${activeTab === 'evaluation' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('evaluation')}
         >
-          Đánh giá học viên
-        </button>
+          {t("Đánh giá học viên")}</button>
         <button
           type="button"
           className={`attendance-tab-btn ${activeTab === 'attendance-history' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('attendance-history')}
         >
-          Lịch sử điểm danh ({history.length})
+          {t("Lịch sử điểm danh (")}{history.length})
         </button>
         <button
           type="button"
           className={`attendance-tab-btn ${activeTab === 'eval-history' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('eval-history')}
         >
-          Lịch sử đánh giá ({evalHistory.length})
+          {t("Lịch sử đánh giá (")}{evalHistory.length})
         </button>
       </div>
 
       {sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
-        <div className="coach-error-box" role="alert">
-          {sessionsError}{' '}
-          <button type="button" className="btn-secondary btn-sm" onClick={() => setSessionsAttempt((n) => n + 1)}>Thử lại</button>
+        <div data-i18n-managed className="coach-error-box" role="alert">
+          {t(sessionsError)}{' '}
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setSessionsAttempt((n) => n + 1)}>{t("Thử lại")}</button>
         </div>
       )}
 
       {/* Chọn buổi học trên thời khóa biểu tuần (Dùng cho tab Điểm danh & Đánh giá) */}
       {!sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
         <WeeklyTimetable
-          label="Thời khóa biểu buổi dạy cần điểm danh"
+          label={t("Thời khóa biểu buổi dạy cần điểm danh")}
           weekStart={weekStart}
           events={coachSessionEvents(
             sessions.filter((s) => classFilter === 'ALL' || s.className === classFilter),
@@ -618,65 +616,64 @@ export function CoachAttendancePage() {
             const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
             headerRef.current?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
           }}
-          emptyLabel="Tuần này bạn chưa có buổi dạy nào."
+          emptyLabel={t("Tuần này bạn chưa có buổi dạy nào.")}
           toolbar={
             <div className="attendance-class-filter">
               <Select
                 className="portal-select"
                 value={classFilter}
                 onChange={(e) => setClassFilter(e.target.value)}
-                aria-label="Lọc theo lớp"
+                aria-label={t("Lọc theo lớp")}
               >
-                <option value="ALL">Tất cả lớp</option>
+                <option value="ALL">{t("Tất cả lớp")}</option>
                 {[...new Set(sessions.map((s) => s.className))].sort((a, b) => a.localeCompare(b)).map((name) => (
-                  <option key={name} value={name}>{name}</option>
+                  <option data-i18n-managed key={name} value={name}>{name}</option>
                 ))}
               </Select>
             </div>
           }
           legend={[
-            { tone: 'open', label: 'Sắp diễn ra' },
-            { tone: 'full', label: 'Đã diễn ra, chưa điểm danh' },
-            { tone: 'mine', label: 'Đã điểm danh' },
-            { tone: 'cancelled', label: 'Đã hủy' },
+            { tone: 'open', label: t('Sắp diễn ra') },
+            { tone: 'full', label: t('Đã diễn ra, chưa điểm danh') },
+            { tone: 'mine', label: t('Đã điểm danh') },
+            { tone: 'cancelled', label: t('Đã hủy') },
           ]}
         />
       )}
 
       {/* Header Selector & Session Info (Dùng cho tab Điểm danh & Đánh giá) */}
       {!sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
-        <div className="attendance-header-card" ref={headerRef}>
+        <div data-i18n-managed className="attendance-header-card" ref={headerRef}>
           <div className="attendance-session-meta">
             <div className="session-title-wrap">
               <h3 className="session-name-title">
-                {activeSession?.className || 'Buổi tập Huấn luyện viên'}
+                {activeSession?.className || t('Buổi tập Huấn luyện viên')}
               </h3>
               {currentSavedRecord ? (
-                <span className="session-status-badge is-saved">
-                  Đã lưu điểm danh lúc {currentSavedRecord.savedAt}
+                <span data-i18n-managed className="session-status-badge is-saved">
+                  {t("Đã lưu điểm danh lúc ")}{currentSavedRecord.savedAt}
                 </span>
               ) : (
-                <span className="session-status-badge is-pending">
-                  Chưa lưu điểm danh
-                </span>
+                <span data-i18n-managed className="session-status-badge is-pending">
+                  {t("Chưa lưu điểm danh")}</span>
               )}
             </div>
             <div className="session-details-row">
               <span>
-                Phòng: <strong>{activeSession?.roomName || 'Studio chính'}</strong>
+                {t("Phòng: ")}<strong>{activeSession?.roomName || t('Studio chính')}</strong>
               </span>
               <span>
-                Ngày: <strong>{activeSession ? formatCenterDate(activeSession.sessionDate) : '—'}</strong>
+                {t("Ngày: ")}<strong>{activeSession ? formatCenterDate(activeSession.sessionDate) : '—'}</strong>
               </span>
               <span>
-                Giờ: <strong>{activeSession ? formatTimeRange(activeSession.startTime, activeSession.endTime) : '—'}</strong>
+                {t("Giờ: ")}<strong>{activeSession ? formatTimeRange(activeSession.startTime, activeSession.endTime) : '—'}</strong>
               </span>
               <span>
-                Đã đăng ký: <strong>{students.length} học viên</strong>
+                {t("Đã đăng ký: ")}<strong>{students.length} {t(" học viên")}</strong>
               </span>
               {activeSession?.disciplineName && (
-                <span>
-                  Bộ môn: <strong>{activeSession.disciplineName}</strong>
+                <span data-i18n-managed>
+                  {t("Bộ môn: ")}<strong>{activeSession.disciplineName}</strong>
                 </span>
               )}
             </div>
@@ -685,7 +682,7 @@ export function CoachAttendancePage() {
       )}
 
       {rosterError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
-        <div className="coach-error-box" role="alert">{rosterError}</div>
+        <div data-i18n-managed className="coach-error-box" role="alert">{t(rosterError)}</div>
       )}
 
       {/* =========================================================================
@@ -694,21 +691,21 @@ export function CoachAttendancePage() {
       {activeTab === 'attendance' && (
         <>
           {/* Quick Summary: Chỉ giữ Có mặt và Vắng mặt */}
-          <div className="attendance-quick-summary">
+          <div data-i18n-managed className="attendance-quick-summary">
             <div className="summary-pill-card is-present">
-              <span className="pill-label">Có mặt</span>
+              <span className="pill-label">{t("Có mặt")}</span>
               <span className="pill-value">{summaryCounts.present}</span>
             </div>
             <div className="summary-pill-card is-absent">
-              <span className="pill-label">Vắng mặt</span>
+              <span className="pill-label">{t("Vắng mặt")}</span>
               <span className="pill-value">{summaryCounts.absent}</span>
             </div>
             <div className="summary-pill-card">
-              <span className="pill-label">Tổng học viên</span>
+              <span className="pill-label">{t("Tổng học viên")}</span>
               <span className="pill-value">{summaryCounts.total}</span>
             </div>
             <div className="summary-pill-card">
-              <span className="pill-label">Tỷ lệ chuyên cần</span>
+              <span className="pill-label">{t("Tỷ lệ chuyên cần")}</span>
               <span className="pill-value" style={{ color: 'var(--portal-salmon)' }}>
                 {summaryCounts.rate}%
               </span>
@@ -716,10 +713,9 @@ export function CoachAttendancePage() {
           </div>
 
           {/* Toolbar */}
-          <div className="attendance-toolbar">
+          <div data-i18n-managed className="attendance-toolbar">
             <span style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
-              Danh sách <strong>{students.length}</strong> học viên đã ghi danh:
-            </span>
+              {t("Danh sách ")}<strong>{students.length}</strong> {t(" học viên đã ghi danh:")}</span>
             <div className="toolbar-btn-group">
               <button
                 type="button"
@@ -727,33 +723,31 @@ export function CoachAttendancePage() {
                 onClick={handleMarkAllPresent}
                 disabled={!rosterReady || saving || savingEvaluation || students.length === 0}
               >
-                Điểm danh nhanh tất cả Có mặt
-              </button>
+                {t("Điểm danh nhanh tất cả Có mặt")}</button>
               {currentSavedRecord && (
-                <button
+                <button data-i18n-managed
                   type="button"
                   className="btn-delete-attendance"
                   onClick={handleDeleteCurrentAttendance}
-                  title="Ẩn bản ghi trên trình duyệt này"
+                  title={t("Ẩn bản ghi trên trình duyệt này")}
                 >
-                  Ẩn trên trình duyệt này
-                </button>
+                  {t("Ẩn trên trình duyệt này")}</button>
               )}
             </div>
           </div>
 
           {/* Danh sách học viên ĐIỂM DANH */}
           {loading ? (
-            <LoadingSkeleton label="Đang tải danh sách học viên buổi học…" count={5} />
+            <LoadingSkeleton label={t("Đang tải danh sách học viên buổi học…")} count={5} />
           ) : students.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-              <p>Chưa có học viên nào book buổi học này.</p>
+            <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+              <p>{t("Chưa có học viên nào book buổi học này.")}</p>
             </div>
           ) : (
-            <div className="attendance-students-list">
+            <div data-i18n-managed className="attendance-students-list">
               {students.map((student) => {
                 return (
-                  <div key={student.id} className="attendance-student-card">
+                  <div data-i18n-managed key={student.id} className="attendance-student-card">
                     <div className="student-card-top-row">
                       <div className="student-identity-group">
                         <div className="student-avatar-circle">
@@ -769,23 +763,23 @@ export function CoachAttendancePage() {
                       <div
                         className="attendance-radio-group"
                         role="radiogroup"
-                        aria-label={`Trạng thái điểm danh của ${student.fullName}`}
+                        aria-label={t(`Trạng thái điểm danh của ${student.fullName}`, `Attendance status for ${student.fullName}`)}
                       >
                         {STATUS_CONFIG.map((cfg) => {
                           const isSelected = student.status === cfg.value;
                           return (
-                            <label
+                            <label data-i18n-managed
                               key={cfg.value}
                               className={`radio-status-label ${cfg.className} ${isSelected ? 'is-active' : ''}`}
                             >
-                              <input
+                              <input data-i18n-managed
                                 type="radio"
                                 name={`attendance-status-${student.id}`}
                                 value={cfg.value}
                                 checked={isSelected}
                                 onChange={() => handleUpdateStatus(student.id, cfg.value)}
                               />
-                              <span
+                              <span data-i18n-managed
                                 style={{
                                   width: '8px',
                                   height: '8px',
@@ -794,7 +788,7 @@ export function CoachAttendancePage() {
                                   display: 'inline-block',
                                 }}
                               />
-                              {cfg.label}
+                              {t(cfg.label)}
                             </label>
                           );
                         })}
@@ -807,7 +801,7 @@ export function CoachAttendancePage() {
           )}
 
           {/* Bottom Save Action */}
-          <div className="attendance-bottom-actions">
+          <div data-i18n-managed className="attendance-bottom-actions">
             <button
               type="button"
               className="btn-batch-save"
@@ -815,10 +809,10 @@ export function CoachAttendancePage() {
               disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
             >
               {saving
-                ? 'Đang lưu...'
+                ? t('Đang lưu...')
                 : currentSavedRecord
-                ? 'Cập nhật điểm danh'
-                : 'Lưu điểm danh'}
+                ? t('Cập nhật điểm danh')
+                : t('Lưu điểm danh')}
             </button>
           </div>
         </>
@@ -828,24 +822,24 @@ export function CoachAttendancePage() {
           TAB 2: ĐÁNH GIÁ HỌC VIÊN TÁCH RIÊNG (Chuyên biệt cho Chấm điểm & Nhận xét)
           ========================================================================= */}
       {activeTab === 'evaluation' && (
-        <div className="attendance-evaluation-section">
+        <div data-i18n-managed className="attendance-evaluation-section">
           <div className="evaluation-section-header">
             <div>
-              <h3 className="section-title">Đánh giá tiến bộ kỹ thuật học viên</h3>
+              <h3 className="section-title">{t("Đánh giá tiến bộ kỹ thuật học viên")}</h3>
             </div>
           </div>
 
           {loading ? (
-            <LoadingSkeleton label="Đang tải danh sách học viên…" variant="cards" count={3} />
+            <LoadingSkeleton label={t("Đang tải danh sách học viên…")} variant="cards" count={3} />
           ) : students.length === 0 ? (
-            <div className="attendance-empty-state">
-              <p>Chưa có học viên nào trong buổi học này để đánh giá.</p>
+            <div data-i18n-managed className="attendance-empty-state">
+              <p>{t("Chưa có học viên nào trong buổi học này để đánh giá.")}</p>
             </div>
           ) : (
-            <div className="evaluation-cards-list">
+            <div data-i18n-managed className="evaluation-cards-list">
               {students.map((student) => {
                 return (
-                  <div key={student.id} className="evaluation-card">
+                  <div data-i18n-managed key={student.id} className="evaluation-card">
                     <div className="evaluation-card-header">
                       <div className="student-identity-group">
                         <div className="student-avatar-circle">
@@ -859,7 +853,7 @@ export function CoachAttendancePage() {
 
                       <div className="evaluation-status-tag">
                         <span className={`status-pill ${student.status === 'present' ? 'is-present' : 'is-absent'}`}>
-                          {student.status === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                          {student.status === 'present' ? t('Có mặt') : t('Vắng mặt')}
                         </span>
                       </div>
                     </div>
@@ -868,7 +862,7 @@ export function CoachAttendancePage() {
                       {/* Thang điểm tiến bộ */}
                       <div className="eval-form-row">
                         <div className="eval-slider-header">
-                          <span className="eval-label">Thang điểm tiến bộ (Progress Score):</span>
+                          <span className="eval-label">{t("Thang điểm tiến bộ (Progress Score):")}</span>
                           <span className="score-badge">{student.progressScore || 80}/100</span>
                         </div>
                         <input
@@ -878,23 +872,22 @@ export function CoachAttendancePage() {
                           className="eval-score-slider"
                           value={student.progressScore || 80}
                           onChange={(e) => handleUpdateScore(student.id, Number(e.target.value))}
-                          aria-label={`Điểm tiến bộ của ${student.fullName}`}
+                          aria-label={t(`Điểm tiến bộ của ${student.fullName}`, `Progress score for ${student.fullName}`)}
                         />
                       </div>
 
                       {/* Ô nhận xét kỹ thuật */}
                       <div className="eval-form-row">
                         <label className="eval-label" htmlFor={`notes-${student.id}`}>
-                          Nhận xét kỹ thuật, động tác và lưu ý sức khỏe:
-                        </label>
+                          {t("Nhận xét kỹ thuật, động tác và lưu ý sức khỏe:")}</label>
                         <textarea
                           id={`notes-${student.id}`}
                           className="eval-comment-textarea"
                           rows={2}
-                          placeholder="Ví dụ: Kiểm soát cơ lõi tốt, giữ thẳng lưng khi thực hiện động tác kéo cáp..."
+                          placeholder={t("Ví dụ: Kiểm soát cơ lõi tốt, giữ thẳng lưng khi thực hiện động tác kéo cáp...")}
                           value={student.notes}
                           onChange={(e) => handleUpdateNotes(student.id, e.target.value)}
-                          aria-label={`Nhận xét kỹ thuật của ${student.fullName}`}
+                          aria-label={t(`Nhận xét kỹ thuật của ${student.fullName}`, `Technical feedback for ${student.fullName}`)}
                         />
                       </div>
                     </div>
@@ -912,7 +905,7 @@ export function CoachAttendancePage() {
               onClick={handleSaveEvaluations}
               disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
             >
-              {savingEvaluation ? 'Đang lưu đánh giá...' : 'Lưu tất cả đánh giá'}
+              {savingEvaluation ? t('Đang lưu đánh giá...') : t('Lưu tất cả đánh giá')}
             </button>
           </div>
         </div>
@@ -922,19 +915,19 @@ export function CoachAttendancePage() {
           TAB 3: LỊCH SỬ ĐIỂM DANH (Sửa trực tiếp bằng khung giữa màn hình, không nhảy tab)
           ========================================================================= */}
       {activeTab === 'attendance-history' && (
-        <div className="attendance-history-section">
+        <div data-i18n-managed className="attendance-history-section">
           <div className="history-header-bar">
             <div>
-              <h3 className="section-title">Lịch sử các buổi đã điểm danh</h3>
+              <h3 className="section-title">{t("Lịch sử các buổi đã điểm danh")}</h3>
             </div>
           </div>
 
           {history.length === 0 ? (
-            <div className="attendance-empty-state">
-              <p>Chưa có lịch sử điểm danh nào được lưu.</p>
+            <div data-i18n-managed className="attendance-empty-state">
+              <p>{t("Chưa có lịch sử điểm danh nào được lưu.")}</p>
             </div>
           ) : (
-            <div className="history-cards-grid">
+            <div data-i18n-managed className="history-cards-grid">
               {history.map((record) => {
                 const rate =
                   record.totalStudents > 0
@@ -942,38 +935,38 @@ export function CoachAttendancePage() {
                     : 0;
 
                 return (
-                  <div key={record.id} className="history-record-card">
+                  <div data-i18n-managed key={record.id} className="history-record-card">
                     <div className="history-card-header">
                       <div>
                         <h4 className="history-class-name">{record.className}</h4>
                         <div className="history-meta-sub">
-                          <span>Phòng: {record.roomName}</span>
+                          <span>{t("Phòng: ")}{record.roomName}</span>
                           <span>•</span>
                           <span>
                             {formatTimeRange(record.startTime, record.endTime)}
                           </span>
                           <span>•</span>
-                          <span>Ngày: {record.sessionDate}</span>
+                          <span>{t("Ngày: ")}{record.sessionDate}</span>
                         </div>
                       </div>
-                      <span className="history-saved-badge">Đã lưu: {record.savedAt}</span>
+                      <span className="history-saved-badge">{t("Đã lưu: ")}{record.savedAt}</span>
                     </div>
 
                     <div className="history-stat-row">
                       <div className="stat-pill is-present">
-                        <span className="stat-label">Có mặt:</span>
+                        <span className="stat-label">{t("Có mặt:")}</span>
                         <span className="stat-num">{record.presentCount}</span>
                       </div>
                       <div className="stat-pill is-absent">
-                        <span className="stat-label">Vắng mặt:</span>
+                        <span className="stat-label">{t("Vắng mặt:")}</span>
                         <span className="stat-num">{record.absentCount}</span>
                       </div>
                       <div className="stat-pill is-total">
-                        <span className="stat-label">Tổng học viên:</span>
+                        <span className="stat-label">{t("Tổng học viên:")}</span>
                         <span className="stat-num">{record.totalStudents}</span>
                       </div>
                       <div className="stat-pill is-rate">
-                        <span className="stat-label">Tỷ lệ:</span>
+                        <span className="stat-label">{t("Tỷ lệ:")}</span>
                         <span className="stat-num">{rate}%</span>
                       </div>
                     </div>
@@ -984,15 +977,13 @@ export function CoachAttendancePage() {
                         className="btn-history-edit"
                         onClick={() => handleOpenEditAttendanceModal(record)}
                       >
-                        Sửa điểm danh
-                      </button>
+                        {t("Sửa điểm danh")}</button>
                       <button
                         type="button"
                         className="btn-history-delete"
                         onClick={() => handleDeleteFromHistory(record.id)}
                       >
-                  Ẩn trên trình duyệt này
-                      </button>
+                  {t("Ẩn trên trình duyệt này")}</button>
                     </div>
                   </div>
                 );
@@ -1006,46 +997,46 @@ export function CoachAttendancePage() {
           TAB 4: LỊCH SỬ ĐÁNH GIÁ (Mới bổ sung theo yêu cầu)
           ========================================================================= */}
       {activeTab === 'eval-history' && (
-        <div className="attendance-history-section">
+        <div data-i18n-managed className="attendance-history-section">
           <div className="history-header-bar">
             <div>
-              <h3 className="section-title">Lịch sử đánh giá tiến bộ học viên</h3>
+              <h3 className="section-title">{t("Lịch sử đánh giá tiến bộ học viên")}</h3>
             </div>
           </div>
 
           {evalHistory.length === 0 ? (
-            <div className="attendance-empty-state">
-              <p>Chưa có lịch sử đánh giá nào được lưu.</p>
+            <div data-i18n-managed className="attendance-empty-state">
+              <p>{t("Chưa có lịch sử đánh giá nào được lưu.")}</p>
             </div>
           ) : (
-            <div className="history-cards-grid">
+            <div data-i18n-managed className="history-cards-grid">
               {evalHistory.map((record) => {
                 return (
-                  <div key={record.id} className="history-record-card">
+                  <div data-i18n-managed key={record.id} className="history-record-card">
                     <div className="history-card-header">
                       <div>
                         <h4 className="history-class-name">{record.className}</h4>
                         <div className="history-meta-sub">
-                          <span>Phòng: {record.roomName}</span>
+                          <span>{t("Phòng: ")}{record.roomName}</span>
                           <span>•</span>
                           <span>
                             {formatTimeRange(record.startTime, record.endTime)}
                           </span>
                           <span>•</span>
-                          <span>Ngày: {record.sessionDate}</span>
+                          <span>{t("Ngày: ")}{record.sessionDate}</span>
                         </div>
                       </div>
-                      <span className="history-saved-badge">Đã đánh giá: {record.savedAt}</span>
+                      <span className="history-saved-badge">{t("Đã đánh giá: ")}{record.savedAt}</span>
                     </div>
 
                     <div className="history-stat-row">
                       <div className="stat-pill is-rate">
-                        <span className="stat-label">Điểm trung bình lớp:</span>
+                        <span className="stat-label">{t("Điểm trung bình lớp:")}</span>
                         <span className="stat-num">{record.averageScore}/100</span>
                       </div>
                       <div className="stat-pill is-total">
-                        <span className="stat-label">Đã đánh giá:</span>
-                        <span className="stat-num">{record.totalStudents} học viên</span>
+                        <span className="stat-label">{t("Đã đánh giá:")}</span>
+                        <span className="stat-num">{record.totalStudents} {t(" học viên")}</span>
                       </div>
                     </div>
 
@@ -1055,15 +1046,13 @@ export function CoachAttendancePage() {
                         className="btn-history-edit"
                         onClick={() => handleOpenEditEvalModal(record)}
                       >
-                        Sửa đánh giá
-                      </button>
+                        {t("Sửa đánh giá")}</button>
                       <button
                         type="button"
                         className="btn-history-delete"
                         onClick={() => handleDeleteFromEvalHistory(record.id)}
                       >
-                  Ẩn trên trình duyệt này
-                      </button>
+                  {t("Ẩn trên trình duyệt này")}</button>
                     </div>
                   </div>
                 );
@@ -1078,21 +1067,21 @@ export function CoachAttendancePage() {
           ========================================================================= */}
       {editingAttendanceRecord && (
         <Modal
-          title={`Sửa điểm danh: ${editingAttendanceRecord.className}`}
+          title={t(`Sửa điểm danh: ${editingAttendanceRecord.className}`, `Edit attendance: ${editingAttendanceRecord.className}`)}
           busy={saving}
           onClose={() => setEditingAttendanceRecord(null)}
         >
           <div className="modal-edit-container">
             <div className="modal-record-meta-bar">
-              <span>Phòng: <strong>{editingAttendanceRecord.roomName}</strong></span>
-              <span>Giờ: <strong>{formatTimeRange(editingAttendanceRecord.startTime, editingAttendanceRecord.endTime)}</strong></span>
-              <span>Ngày: <strong>{editingAttendanceRecord.sessionDate}</strong></span>
+              <span>{t("Phòng: ")}<strong>{editingAttendanceRecord.roomName}</strong></span>
+              <span>{t("Giờ: ")}<strong>{formatTimeRange(editingAttendanceRecord.startTime, editingAttendanceRecord.endTime)}</strong></span>
+              <span>{t("Ngày: ")}<strong>{editingAttendanceRecord.sessionDate}</strong></span>
             </div>
 
             <div className="modal-students-edit-list">
               {editingAttendanceRecord.students.map((student) => {
                 return (
-                  <div key={student.id} className="modal-student-edit-item">
+                  <div data-i18n-managed key={student.id} className="modal-student-edit-item">
                     <div className="student-identity-group">
                       <div className="student-avatar-circle">
                         {student.fullName.charAt(0).toUpperCase()}
@@ -1108,18 +1097,18 @@ export function CoachAttendancePage() {
                       {STATUS_CONFIG.map((cfg) => {
                         const isSelected = student.status === cfg.value;
                         return (
-                          <label
+                          <label data-i18n-managed
                             key={cfg.value}
                             className={`radio-status-label ${cfg.className} ${isSelected ? 'is-active' : ''}`}
                           >
-                            <input
+                            <input data-i18n-managed
                               type="radio"
                               name={`modal-status-${student.id}`}
                               value={cfg.value}
                               checked={isSelected}
                               onChange={() => handleUpdateModalAttendanceStatus(student.id, cfg.value)}
                             />
-                            <span
+                            <span data-i18n-managed
                               style={{
                                 width: '8px',
                                 height: '8px',
@@ -1128,7 +1117,7 @@ export function CoachAttendancePage() {
                                 display: 'inline-block',
                               }}
                             />
-                            {cfg.label}
+                            {t(cfg.label)}
                           </label>
                         );
                       })}
@@ -1145,16 +1134,14 @@ export function CoachAttendancePage() {
                 disabled={saving}
                 onClick={() => setEditingAttendanceRecord(null)}
               >
-                Hủy bỏ
-              </button>
+                {t("Hủy bỏ")}</button>
               <button
                 type="button"
                 className="btn-modal-save"
                 disabled={saving}
                 onClick={handleSaveModalAttendance}
               >
-                Lưu cập nhật
-              </button>
+                {t("Lưu cập nhật")}</button>
             </div>
           </div>
         </Modal>
@@ -1165,21 +1152,21 @@ export function CoachAttendancePage() {
           ========================================================================= */}
       {editingEvalRecord && (
         <Modal
-          title={`Sửa đánh giá tiến bộ: ${editingEvalRecord.className}`}
+          title={t(`Sửa đánh giá tiến bộ: ${editingEvalRecord.className}`, `Edit progress evaluation: ${editingEvalRecord.className}`)}
           busy={saving}
           onClose={() => setEditingEvalRecord(null)}
         >
           <div className="modal-edit-container">
             <div className="modal-record-meta-bar">
-              <span>Phòng: <strong>{editingEvalRecord.roomName}</strong></span>
-              <span>Giờ: <strong>{formatTimeRange(editingEvalRecord.startTime, editingEvalRecord.endTime)}</strong></span>
-              <span>Ngày: <strong>{editingEvalRecord.sessionDate}</strong></span>
+              <span>{t("Phòng: ")}<strong>{editingEvalRecord.roomName}</strong></span>
+              <span>{t("Giờ: ")}<strong>{formatTimeRange(editingEvalRecord.startTime, editingEvalRecord.endTime)}</strong></span>
+              <span>{t("Ngày: ")}<strong>{editingEvalRecord.sessionDate}</strong></span>
             </div>
 
             <div className="modal-students-edit-list">
               {editingEvalRecord.students.map((student) => {
                 return (
-                  <div key={student.id} className="modal-eval-student-item">
+                  <div data-i18n-managed key={student.id} className="modal-eval-student-item">
                     <div className="evaluation-card-header">
                       <div className="student-identity-group">
                         <div className="student-avatar-circle">
@@ -1191,13 +1178,13 @@ export function CoachAttendancePage() {
                         </div>
                       </div>
                       <span className={`status-pill ${student.status === 'present' ? 'is-present' : 'is-absent'}`}>
-                        {student.status === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                        {student.status === 'present' ? t('Có mặt') : t('Vắng mặt')}
                       </span>
                     </div>
 
                     <div className="eval-form-row" style={{ marginTop: '10px' }}>
                       <div className="eval-slider-header">
-                        <span className="eval-label">Thang điểm tiến bộ:</span>
+                        <span className="eval-label">{t("Thang điểm tiến bộ:")}</span>
                         <span className="score-badge">{student.progressScore || 80}/100</span>
                       </div>
                       <input
@@ -1207,21 +1194,20 @@ export function CoachAttendancePage() {
                         className="eval-score-slider"
                         value={student.progressScore || 80}
                         onChange={(e) => handleUpdateModalEvalScore(student.id, Number(e.target.value))}
-                        aria-label={`Điểm tiến bộ của ${student.fullName}`}
+                        aria-label={t(`Điểm tiến bộ của ${student.fullName}`, `Progress score for ${student.fullName}`)}
                       />
                     </div>
 
                     <div className="eval-form-row">
                       <label className="eval-label" htmlFor={`modal-notes-${student.id}`}>
-                        Nhận xét kỹ thuật:
-                      </label>
+                        {t("Nhận xét kỹ thuật:")}</label>
                       <textarea
                         id={`modal-notes-${student.id}`}
                         className="eval-comment-textarea"
                         rows={2}
                         value={student.notes}
                         onChange={(e) => handleUpdateModalEvalNotes(student.id, e.target.value)}
-                        aria-label={`Nhận xét kỹ thuật của ${student.fullName}`}
+                        aria-label={t(`Nhận xét kỹ thuật của ${student.fullName}`, `Technical feedback for ${student.fullName}`)}
                       />
                     </div>
                   </div>
@@ -1236,16 +1222,14 @@ export function CoachAttendancePage() {
                 disabled={saving}
                 onClick={() => setEditingEvalRecord(null)}
               >
-                Hủy bỏ
-              </button>
+                {t("Hủy bỏ")}</button>
               <button
                 type="button"
                 className="btn-modal-save"
                 disabled={saving}
                 onClick={handleSaveModalEval}
               >
-                Lưu cập nhật
-              </button>
+                {t("Lưu cập nhật")}</button>
             </div>
           </div>
         </Modal>

@@ -1,3 +1,4 @@
+import { staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from './staffI18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
@@ -10,8 +11,6 @@ import {
   type StaffInternalRequestDto,
   type RequestType,
 } from './staffRequestApi';
-import { notify } from '../../shared/lib/portalNotices';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 
 import { DatePicker } from '../../shared/ui/DatePicker';
@@ -30,10 +29,11 @@ const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }
 };
 
 export function StaffInternalRequestsPage() {
+  const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
   const [requests, setRequests] = useState<StaffInternalRequestDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<StaffMessage>('');
 
   // Filter
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -47,7 +47,7 @@ export function StaffInternalRequestsPage() {
   const [createEndDate, setCreateEndDate] = useState<string>('');
   const [createTargetShift, setCreateTargetShift] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [formError, setFormError] = useState<string>('');
+  const [formError, setFormError] = useState<StaffMessage>('');
 
   // Cancel target
   const [cancellingId, setCancellingId] = useState<number | null>(null);
@@ -119,7 +119,7 @@ export function StaffInternalRequestsPage() {
   }
 
   async function handleCancelRequest(id: number) {
-    if (!(await confirm({ title: 'Hủy đơn từ?', message: 'Đơn sẽ không còn được gửi tới quản lý để duyệt.', confirmLabel: 'Hủy đơn', cancelLabel: 'Giữ đơn', danger: true }))) return;
+    if (!(await confirm({ title: staffMessage('Hủy đơn từ?', staffTranslation('Hủy đơn từ?')), message: staffMessage('Đơn sẽ không còn được gửi tới quản lý để duyệt.', staffTranslation('Đơn sẽ không còn được gửi tới quản lý để duyệt.')), confirmLabel: staffMessage('Hủy đơn', staffTranslation('Hủy đơn')), cancelLabel: staffMessage('Giữ đơn', staffTranslation('Giữ đơn')), danger: true }))) return;
     setCancellingId(id);
     try {
       await cancelStaffRequest(id);
@@ -133,10 +133,10 @@ export function StaffInternalRequestsPage() {
   }
 
   return (
-    <div className="portal-container">
+    <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow="Vận hành nội bộ"
-        title="Đơn từ & đề xuất nội bộ"
+        eyebrow={t("Vận hành nội bộ")}
+        title={t("Đơn từ & đề xuất nội bộ")}
       />
 
       {/* Top action row */}
@@ -153,13 +153,13 @@ export function StaffInternalRequestsPage() {
         {/* Status filter tabs */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
-            { key: 'ALL', label: 'Tất cả' },
-            { key: 'PENDING', label: 'Chờ duyệt' },
-            { key: 'APPROVED', label: 'Đã duyệt' },
-            { key: 'REJECTED', label: 'Từ chối' },
-            { key: 'CANCELLED', label: 'Đã hủy' },
+            { key: 'ALL', label: t('Tất cả') },
+            { key: 'PENDING', label: t('Chờ duyệt') },
+            { key: 'APPROVED', label: t('Đã duyệt') },
+            { key: 'REJECTED', label: t('Từ chối') },
+            { key: 'CANCELLED', label: t('Đã hủy') },
           ].map((tab) => (
-            <button
+            <button data-i18n-managed
               key={tab.key}
               type="button"
               onClick={() => setStatusFilter(tab.key)}
@@ -183,7 +183,7 @@ export function StaffInternalRequestsPage() {
                 transition: 'background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
               }}
             >
-              {tab.label}
+              {t(tab.label)}
             </button>
           ))}
         </div>
@@ -211,12 +211,11 @@ export function StaffInternalRequestsPage() {
             gap: 8,
           }}
         >
-          <span>＋</span> Tạo đơn từ mới
-        </button>
+          <span>＋</span> {t(" Tạo đơn từ mới")}</button>
       </div>
 
       {error && (
-        <div
+        <div data-i18n-managed
           role="alert"
           style={{
             background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
@@ -232,7 +231,7 @@ export function StaffInternalRequestsPage() {
             fontWeight: 600,
           }}
         >
-          <span>{error}</span>
+          <span>{t(error)}</span>
           <button
             type="button"
             onClick={() => setError('')}
@@ -244,15 +243,15 @@ export function StaffInternalRequestsPage() {
       )}
 
       {loading ? (
-        <div className="portal-card" role="status" aria-busy="true" style={{ padding: 32, textAlign: 'center' }}>
+        <div data-i18n-managed className="portal-card" role="status" aria-busy="true" style={{ padding: 32, textAlign: 'center' }}>
           <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
             <div className="portal-skeleton" style={{ height: 56, borderRadius: 12 }} />
             <div className="portal-skeleton" style={{ height: 56, borderRadius: 12 }} />
           </div>
-          <p style={{ margin: 0, color: 'var(--portal-muted)' }}>Đang tải danh sách đơn từ...</p>
+          <p style={{ margin: 0, color: 'var(--portal-muted)' }}>{t("Đang tải danh sách đơn từ...")}</p>
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div
+        <div data-i18n-managed
           className="portal-card"
           style={{
             padding: '48px 32px',
@@ -263,21 +262,19 @@ export function StaffInternalRequestsPage() {
           }}
         >
           <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
-            Không có đơn từ nào trong danh sách
-          </p>
+            {t("Không có đơn từ nào trong danh sách")}</p>
           <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-            Bạn chưa gửi đơn từ nào hoặc không có đơn phù hợp với bộ lọc hiện tại.
-          </span>
+            {t("Bạn chưa gửi đơn từ nào hoặc không có đơn phù hợp với bộ lọc hiện tại.")}</span>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: 16 }}>
+        <div data-i18n-managed style={{ display: 'grid', gap: 16 }}>
           {filteredRequests.map((req) => {
             const typeInfo = TYPE_LABELS[req.requestType] || TYPE_LABELS.OTHER;
             const statusInfo = STATUS_LABELS[req.status] || STATUS_LABELS.PENDING;
             const isPending = req.status === 'PENDING';
 
             return (
-              <div
+              <div data-i18n-managed
                 key={req.id}
                 className="portal-card"
                 style={{
@@ -311,10 +308,10 @@ export function StaffInternalRequestsPage() {
                         color: typeInfo.color,
                       }}
                     >
-                      {typeInfo.label}
+                      {t(typeInfo.label)}
                     </span>
                     <span style={{ fontSize: 12, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                      Mã đơn #{req.id} • Ngày tạo:{' '}
+                      {t("Mã đơn #")}{req.id} {t(" • Ngày tạo:")}{' '}
                       {formatCenterDateTime(req.createdAt)}
                     </span>
                   </div>
@@ -329,7 +326,7 @@ export function StaffInternalRequestsPage() {
                       color: statusInfo.color,
                     }}
                   >
-                    {statusInfo.label}
+                    {t(statusInfo.label)}
                   </span>
                 </div>
 
@@ -357,18 +354,18 @@ export function StaffInternalRequestsPage() {
                   }}
                 >
                   {req.startDate && (
-                    <div>
-                      <strong style={{ color: 'var(--portal-muted)' }}>Thời gian:</strong>{' '}
+                    <div data-i18n-managed>
+                      <strong style={{ color: 'var(--portal-muted)' }}>{t("Thời gian:")}</strong>{' '}
                       {formatCenterDate(req.startDate)}
-                      {req.endDate && req.endDate !== req.startDate ? ` đến ${formatCenterDate(req.endDate)}` : ''}
-                      {req.replacementUserFullName ? ` · Thay thế: ${req.replacementUserFullName}` : ''}
+                      {req.endDate && req.endDate !== req.startDate ? t(` đến ${formatCenterDate(req.endDate)}`, ` to ${formatCenterDate(req.endDate)}`) : ''}
+                      {req.replacementUserFullName ? t(` · Thay thế: ${req.replacementUserFullName}`, ` · Substitute: ${req.replacementUserFullName}`) : ''}
 
                     </div>
                   )}
 
                   {req.targetShift && (
-                    <div>
-                      <strong style={{ color: 'var(--portal-muted)' }}>Ca / Buổi liên quan:</strong>{' '}
+                    <div data-i18n-managed>
+                      <strong style={{ color: 'var(--portal-muted)' }}>{t("Ca / Buổi liên quan:")}</strong>{' '}
                       {req.targetShift}
                     </div>
                   )}
@@ -376,7 +373,7 @@ export function StaffInternalRequestsPage() {
 
                 {/* Manager review result */}
                 {req.reviewedAt && (
-                  <div
+                  <div data-i18n-managed
                     style={{
                       padding: '12px 16px',
                       borderRadius: 10,
@@ -389,13 +386,13 @@ export function StaffInternalRequestsPage() {
                     }}
                   >
                     <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
-                      {req.status === 'APPROVED' ? 'Quản lý chấp thuận' : 'Quản lý từ chối'} •{' '}
-                      Người duyệt: {req.reviewedByName || 'Ban Quản Lý'} (
+                      {req.status === 'APPROVED' ? t('Quản lý chấp thuận') : t('Quản lý từ chối')} •{' '}
+                      {t("Người duyệt: ")}{req.reviewedByName || t('Ban Quản Lý')} (
                       {formatCenterDate(req.reviewedAt)})
                     </div>
                     {req.managerNotes && (
-                      <div style={{ marginTop: 4, color: 'var(--portal-paper)', fontStyle: 'italic' }}>
-                        Lời phê: "{req.managerNotes}"
+                      <div data-i18n-managed style={{ marginTop: 4, color: 'var(--portal-paper)', fontStyle: 'italic' }}>
+                        {t("Lời phê: \"")}{req.managerNotes}"
                       </div>
                     )}
                   </div>
@@ -403,7 +400,7 @@ export function StaffInternalRequestsPage() {
 
                 {/* Footer Action (Cancel button if pending) */}
                 {isPending && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>
+                  <div data-i18n-managed style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>
                     <button
                       type="button"
                       disabled={cancellingId === req.id}
@@ -421,7 +418,7 @@ export function StaffInternalRequestsPage() {
                         transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
                       }}
                     >
-                      {cancellingId === req.id ? 'Đang hủy...' : 'Hủy đơn từ này'}
+                      {cancellingId === req.id ? t('Đang hủy...') : t('Hủy đơn từ này')}
                     </button>
                   </div>
                 )}
@@ -433,10 +430,10 @@ export function StaffInternalRequestsPage() {
 
       {/* Modal tạo đơn từ mới */}
       {showCreateModal && (
-        <Modal title="Tạo đơn từ & đề xuất mới" onClose={() => setShowCreateModal(false)}>
+        <Modal title={t("Tạo đơn từ & đề xuất mới")} onClose={() => setShowCreateModal(false)}>
           <form onSubmit={handleCreateSubmit} style={{ display: 'grid', gap: 16 }}>
             {formError && (
-              <div
+              <div data-i18n-managed
                 role="alert"
                 style={{
                   padding: '10px 14px',
@@ -447,34 +444,32 @@ export function StaffInternalRequestsPage() {
                   fontWeight: 600,
                 }}
               >
-                {formError}
+                {t(formError)}
               </div>
             )}
 
             <div>
               <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                Loại đơn từ:
-              </label>
+                {t("Loại đơn từ:")}</label>
               <Select
                 value={createType}
                 onChange={(e) => setCreateType(e.target.value as RequestType)}
                 style={{ width: '100%' }}
               >
-                <option value="LEAVE">Xin nghỉ phép (Leave)</option>
-                <option value="SHIFT_EXCHANGE">Đổi ca trực / làm việc (Shift Exchange)</option>
-                <option value="SCHEDULE_CHANGE">Đổi lịch dạy / đứng lớp (Schedule Change)</option>
-                <option value="OTHER">Đề xuất công việc / khác (Other)</option>
+                <option value="LEAVE">{t("Xin nghỉ phép (Leave)")}</option>
+                <option value="SHIFT_EXCHANGE">{t("Đổi ca trực / làm việc (Shift Exchange)")}</option>
+                <option value="SCHEDULE_CHANGE">{t("Đổi lịch dạy / đứng lớp (Schedule Change)")}</option>
+                <option value="OTHER">{t("Đề xuất công việc / khác (Other)")}</option>
               </Select>
             </div>
 
             <div>
               <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                Tiêu đề đơn:
-              </label>
+                {t("Tiêu đề đơn:")}</label>
               <input
                 type="text"
                 className="portal-input"
-                placeholder="Ví dụ: Xin nghỉ phép cá nhân ngày 05/11, Đổi ca trực sáng..."
+                placeholder={t("Ví dụ: Xin nghỉ phép cá nhân ngày 05/11, Đổi ca trực sáng...")}
                 value={createTitle}
                 onChange={(e) => setCreateTitle(e.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 10 }}
@@ -484,7 +479,7 @@ export function StaffInternalRequestsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label htmlFor="internal-request-start" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                  {createType === 'LEAVE' ? 'Ngày bắt đầu nghỉ:' : 'Ngày áp dụng:'}
+                  {createType === 'LEAVE' ? t('Ngày bắt đầu nghỉ:') : t('Ngày áp dụng:')}
                 </label>
                 <DatePicker
                   id="internal-request-start"
@@ -495,7 +490,7 @@ export function StaffInternalRequestsPage() {
 
               <div>
                 <label htmlFor="internal-request-end" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                  {createType === 'LEAVE' ? 'Ngày kết thúc nghỉ:' : 'Ngày kết thúc (tùy chọn):'}
+                  {createType === 'LEAVE' ? t('Ngày kết thúc nghỉ:') : t('Ngày kết thúc (tùy chọn):')}
                 </label>
                 <DatePicker
                   id="internal-request-end"
@@ -506,14 +501,13 @@ export function StaffInternalRequestsPage() {
             </div>
 
             {(createType === 'SHIFT_EXCHANGE' || createType === 'SCHEDULE_CHANGE') && (
-              <div>
+              <div data-i18n-managed>
                 <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                  Ca trực / Khung giờ dạy cần đổi:
-                </label>
-                <input
+                  {t("Ca trực / Khung giờ dạy cần đổi:")}</label>
+                <input data-i18n-managed
                   type="text"
                   className="portal-input"
-                  placeholder="Ví dụ: Ca sáng (06:00 - 14:00) đổi sang Ca tối, hoặc Lớp Boxing 18:00..."
+                  placeholder={t("Ví dụ: Ca sáng (06:00 - 14:00) đổi sang Ca tối, hoặc Lớp Boxing 18:00...")}
                   value={createTargetShift}
                   onChange={(e) => setCreateTargetShift(e.target.value)}
                   style={{ width: '100%', padding: '10px 14px', borderRadius: 10 }}
@@ -523,12 +517,11 @@ export function StaffInternalRequestsPage() {
 
             <div>
               <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                Lý do & Nội dung chi tiết:
-              </label>
+                {t("Lý do & Nội dung chi tiết:")}</label>
               <textarea
                 className="portal-input"
                 rows={4}
-                placeholder="Nêu rõ lý do, kế hoạch bàn giao hoặc người hỗ trợ thay thế..."
+                placeholder={t("Nêu rõ lý do, kế hoạch bàn giao hoặc người hỗ trợ thay thế...")}
                 value={createReason}
                 onChange={(e) => setCreateReason(e.target.value)}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 10, resize: 'vertical' }}
@@ -541,8 +534,7 @@ export function StaffInternalRequestsPage() {
                 className="btn-secondary"
                 onClick={() => setShowCreateModal(false)}
               >
-                Hủy
-              </button>
+                {t("Hủy")}</button>
               <button
                 type="submit"
                 disabled={submitting}
@@ -557,7 +549,7 @@ export function StaffInternalRequestsPage() {
                   color: 'var(--portal-on-accent)',
                 }}
               >
-                {submitting ? 'Đang gửi đơn...' : 'Gửi đơn tới Quản Lý'}
+                {submitting ? t('Đang gửi đơn...') : t('Gửi đơn tới Quản Lý')}
               </button>
             </div>
           </form>

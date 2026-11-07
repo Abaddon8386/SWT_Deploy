@@ -1,6 +1,5 @@
+import { useSourceLanguage, sourceFormat, sourceText, sourceError, sourceNotify as notify, sourceFormatPair } from '../shopI18n';
 import { useState } from 'react';
-import { errorMessage } from '../../../shared/lib/errorMessage';
-import { notify } from '../../../shared/lib/portalNotices';
 import { Modal } from '../../../shared/ui/Modal';
 import { shopApi } from '../shopApi';
 import type { VariantAdminDto } from '../shopTypes';
@@ -13,11 +12,12 @@ export interface StockAdjustDialogProps {
 }
 
 export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustDialogProps) {
+  useSourceLanguage();
   const [deltaText, setDeltaText] = useState('10');
   const [reason, setReason] = useState<'restock' | 'adjustment'>('restock');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
 
   const parsedDelta = Number(deltaText);
   const isValidNumber = Number.isInteger(parsedDelta) && parsedDelta !== 0;
@@ -41,10 +41,10 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
         reason,
         note: note.trim() || null,
       });
-      notify(`Đã điều chỉnh tồn kho cho ${variant.label}.`, 'success');
+      notify(sourceFormatPair("Đã điều chỉnh tồn kho cho {0}.", variant.label), 'success');
       onAdjusted(updated);
     } catch (err) {
-      setError(errorMessage(err, 'Không thể điều chỉnh tồn kho. Vui lòng thử lại.'));
+      setError(sourceError(err, 'Không thể điều chỉnh tồn kho. Vui lòng thử lại.'));
     } finally {
       setBusy(false);
     }
@@ -52,7 +52,7 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
 
   return (
     <Modal
-      title={`Điều chỉnh tồn kho · ${variant.label}`}
+      title={sourceFormat("Điều chỉnh tồn kho · {0}", variant.label)}
       busy={busy}
       onClose={() => {
         if (!busy) onClose();
@@ -60,12 +60,12 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
     >
       <div className="stack">
         <p style={{ margin: 0 }}>
-          SKU: <strong>{variant.sku}</strong> · Tồn hiện tại:{' '}
+          SKU: <strong>{variant.sku}</strong> {sourceText(" · Tồn hiện tại:")}{' '}
           <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{variant.stock}</strong>
           {isValidNumber && (
             <>
               {' '}
-              → Sau điều chỉnh:{' '}
+              {sourceText("→ Sau điều chỉnh:")}{' '}
               <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{resultingStock}</strong>
             </>
           )}
@@ -73,8 +73,7 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
 
         <div className="shop-field">
           <label className="shop-label" htmlFor="stock-adjust-reason">
-            Lý do điều chỉnh
-          </label>
+            {sourceText("Lý do điều chỉnh")}</label>
           <Select
             id="stock-adjust-reason"
             className="shop-select"
@@ -82,15 +81,14 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
             disabled={busy}
             onChange={e => setReason(e.target.value as 'restock' | 'adjustment')}
           >
-            <option value="restock">Nhập thêm hàng</option>
-            <option value="adjustment">Kiểm kê / điều chỉnh</option>
+            <option value="restock">{sourceText("Nhập thêm hàng")}</option>
+            <option value="adjustment">{sourceText("Kiểm kê / điều chỉnh")}</option>
           </Select>
         </div>
 
         <div className="shop-field">
           <label className="shop-label" htmlFor="stock-adjust-delta">
-            Số lượng thay đổi (+ nhập thêm / − giảm trừ)
-          </label>
+            {sourceText("Số lượng thay đổi (+ nhập thêm / − giảm trừ)")}</label>
           <input
             id="stock-adjust-delta"
             className="shop-input"
@@ -108,8 +106,7 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
 
         <div className="shop-field">
           <label className="shop-label" htmlFor="stock-adjust-note">
-            Ghi chú (tùy chọn)
-          </label>
+            {sourceText("Ghi chú (tùy chọn)")}</label>
           <input
             id="stock-adjust-note"
             className="shop-input"
@@ -118,27 +115,26 @@ export function StockAdjustDialog({ variant, onClose, onAdjusted }: StockAdjustD
             value={note}
             disabled={busy}
             onChange={e => setNote(e.target.value)}
-            placeholder="Phiếu nhập lô 11/2026…"
+            placeholder={sourceText("Phiếu nhập lô 11/2026…")}
           />
         </div>
 
         {error && (
           <p className="form-error" role="alert">
-            {error}
+            {sourceText(error)}
           </p>
         )}
 
         <div className="form-actions">
           <button type="button" className="btn-secondary" disabled={busy} onClick={onClose}>
-            Hủy
-          </button>
+            {sourceText("Hủy")}</button>
           <button
             type="button"
             className="btn-primary"
             disabled={busy}
             onClick={() => void handleSubmit()}
           >
-            {busy ? 'Đang lưu…' : 'Lưu điều chỉnh'}
+            {busy ? sourceText('Đang lưu…') : sourceText('Lưu điều chỉnh')}
           </button>
         </div>
       </div>

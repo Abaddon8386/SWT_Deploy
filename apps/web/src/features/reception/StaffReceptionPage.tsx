@@ -1,7 +1,7 @@
+import { staffLocale, useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { CoachHealthMetrics } from '../coaching/CoachHealthMetrics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
@@ -10,7 +10,6 @@ import { PaymentInvoice } from './PaymentInvoice';
 import { GateQrPanel } from './GateQrPanel';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
-import { notify } from '../../shared/lib/portalNotices';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 import {
   maskCitizenId,
@@ -27,9 +26,10 @@ import {
 } from './receptionApi';
 import { Link } from 'react-router-dom';
 
-const vnd = (n: number) => `${n.toLocaleString('vi-VN')} đ`;
+const vnd = (n: number) => `${n.toLocaleString(staffLocale())} đ`;
 
 export function StaffReceptionPage() {
+  const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
 
   // BR-01: Chỉ RECEPTIONIST / STAFF và CENTER_MANAGER / MANAGER được truy cập
@@ -39,8 +39,8 @@ export function StaffReceptionPage() {
   }, [currentUser]);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<StaffMessage | null>(null);
+  const [paymentError, setPaymentError] = useState<StaffMessage | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchResults, setSearchResults] = useState<MemberLookupResult[]>([]);
@@ -55,7 +55,7 @@ export function StaffReceptionPage() {
   const [renewalCandidates, setRenewalCandidates] = useState<RenewalCandidate[]>([]);
   const [selectedOffer, setSelectedOffer] = useState('');
   const [loadingOffers, setLoadingOffers] = useState(false);
-  const [offersError, setOffersError] = useState('');
+  const [offersError, setOffersError] = useState<StaffMessage>('');
   const [offersRetry, setOffersRetry] = useState(0);
 
   // Danh sách yêu cầu bảo lưu gói tập đang chờ xử lý
@@ -66,7 +66,7 @@ export function StaffReceptionPage() {
   // Buổi PT 1:1 trả phí chờ thu tiền
   const [unpaidPt, setUnpaidPt] = useState<UnpaidCoachBooking[]>([]);
   const [loadingPt, setLoadingPt] = useState(true);
-  const [ptError, setPtError] = useState('');
+  const [ptError, setPtError] = useState<StaffMessage>('');
   const [processingPtId, setProcessingPtId] = useState<number | null>(null);
 
   // Form thanh toán
@@ -80,7 +80,7 @@ export function StaffReceptionPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelRefundAmount, setCancelRefundAmount] = useState('');
-  const [cancelModalError, setCancelModalError] = useState<string | null>(null);
+  const [cancelModalError, setCancelModalError] = useState<StaffMessage | null>(null);
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
   // Popup Hóa đơn điện tử sau khi thanh toán thành công (BR-04)
@@ -100,7 +100,7 @@ export function StaffReceptionPage() {
   const [rejectingTrial, setRejectingTrial] = useState<ReceptionTrialItem | null>(null);
   const [trialRejectReason, setTrialRejectReason] = useState('');
   const [isSubmittingTrialReject, setIsSubmittingTrialReject] = useState(false);
-  const [trialRejectError, setTrialRejectError] = useState<string | null>(null);
+  const [trialRejectError, setTrialRejectError] = useState<StaffMessage | null>(null);
 
   useEffect(() => {
     setReceiptImage(null);
@@ -232,7 +232,7 @@ export function StaffReceptionPage() {
         refundAmount: parsedRefund,
       });
       notify(
-        `Đã trình yêu cầu hủy gói tập & hoàn tiền của hội viên ${selectedMember.fullName} lên Quản lý trung tâm phê duyệt.`,
+        staffMessage(`Đã trình yêu cầu hủy gói tập & hoàn tiền của hội viên ${selectedMember.fullName} lên Quản lý trung tâm phê duyệt.`, `Submitted membership cancellation & refund request for member ${selectedMember.fullName} to the center manager for approval.`),
         'success', { record: true }
       );
       setIsCancelModalOpen(false);
@@ -266,7 +266,7 @@ export function StaffReceptionPage() {
     setCancellingPendingId(item.id);
     try {
       await receptionApi.cancelPendingSubscription(item.id);
-      notify(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, 'success', { record: true });
+      notify(staffMessage(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, `Cancelled membership request #${item.id} (${item.packageName}) for member ${item.memberName}.`), 'success', { record: true });
       await loadPendingSubscriptions();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Hủy yêu cầu gói tập thất bại.'); await loadPendingSubscriptions();
@@ -282,7 +282,7 @@ export function StaffReceptionPage() {
     try {
       const res = await receptionApi.approveHoldRequest(item.id);
       notify(
-        `Đã xác nhận bảo lưu gói "${item.packageName}" cho ${item.memberName}. Đã tự động hủy ${res.cancelledEnrollmentsCount} lịch sắp tới.`,
+        staffMessage(`Đã xác nhận bảo lưu gói "${item.packageName}" cho ${item.memberName}. Đã tự động hủy ${res.cancelledEnrollmentsCount} lịch sắp tới.`, `Confirmed freeze of membership "${item.packageName}" cho ${item.memberName}. Automatically cancelled ${res.cancelledEnrollmentsCount} upcoming bookings.`),
         'success', { record: true },
       );
       await loadPendingHolds();
@@ -299,7 +299,7 @@ export function StaffReceptionPage() {
     setProcessingPtId(item.id);
     try {
       await receptionApi.confirmCoachBookingPayment(item.id, method);
-      notify(`Đã thu ${vnd(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, 'success', { record: true });
+      notify(staffMessage(`Đã thu ${vnd(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, `Collected ${vnd(item.hourlyRate)} PT sessions for ${item.memberName} (${formatCenterDate(item.bookingDate)}).`), 'success', { record: true });
       await loadUnpaidPt();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Xác nhận thu tiền buổi PT thất bại.');
@@ -315,7 +315,7 @@ export function StaffReceptionPage() {
     setProcessingHoldId(item.id);
     try {
       await receptionApi.rejectHoldRequest(item.id);
-      notify(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, 'success', { record: true });
+      notify(staffMessage(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, `Rejected freeze request for member ${item.memberName}.`), 'success', { record: true });
       await loadPendingHolds();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Từ chối yêu cầu bảo lưu thất bại.'); await loadPendingHolds();
@@ -331,7 +331,7 @@ export function StaffReceptionPage() {
     try {
       await receptionApi.approveTrial(item.id);
       notify(
-        `Đã kích hoạt Gói Trải Nghiệm 3 Ngày cho ${item.memberName}. Họ tên đã đồng bộ theo ${item.documentType}: "${item.documentFullName}".`,
+        staffMessage(`Đã kích hoạt Gói Trải Nghiệm 3 Ngày cho ${item.memberName}. Họ tên đã đồng bộ theo ${item.documentType}: "${item.documentFullName}".`, `Activated the 3-Day Trial for ${item.memberName}. Account name synchronized with ${item.documentType}: "${item.documentFullName}".`),
         'success',
         { record: true }
       );
@@ -363,7 +363,7 @@ export function StaffReceptionPage() {
     setTrialRejectError(null);
     try {
       await receptionApi.rejectTrial(rejectingTrial.id, reason);
-      notify(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, 'info', { record: true });
+      notify(staffMessage(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, `Rejected trial application for ${rejectingTrial.memberName}.`), 'info', { record: true });
       setRejectingTrial(null);
       if (inspectingTrial?.id === rejectingTrial.id) setInspectingTrial(null);
       await loadPendingTrials();
@@ -377,21 +377,18 @@ export function StaffReceptionPage() {
   // BR-01: Forbidden Guard khi vai trò không hợp lệ
   if (!hasAccess) {
     return (
-      <div className="portal-container" data-testid="reception-forbidden-guard">
+      <div data-i18n-managed className="portal-container" data-testid="reception-forbidden-guard">
         <div className="portal-card">
           <div className="portal-state" style={{ padding: '60px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--portal-danger, #fca5a5)', marginBottom: '12px' }} role="img" aria-label="Forbidden">
               403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-              403 - Quyền truy cập bị từ chối
-            </h2>
+              {t("403 - Quyền truy cập bị từ chối")}</h2>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
-              Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền truy cập quầy lễ tân &amp; thu ngân.
-            </p>
+              {t("Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền truy cập quầy lễ tân & thu ngân.")}</p>
             <Link to="/portal" className="btn-secondary">
-              Về trang chủ Portal
-            </Link>
+              {t("Về trang chủ Portal")}</Link>
           </div>
         </div>
       </div>
@@ -479,7 +476,7 @@ export function StaffReceptionPage() {
       setCompletedMemberName(selectedMember.fullName);
       setCompletedMembershipCode(selectedMember.membershipCode);
       setCompletedPayment(result);
-      notify(result.invoiceNumber ? `Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}` : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true });
+      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true });
       setSelectedMember(null);
       setSelectedPending(null);
       await loadPendingSubscriptions();
@@ -492,10 +489,10 @@ export function StaffReceptionPage() {
   };
 
   return (
-    <div className="portal-container">
+    <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow="Lễ tân &amp; Thu ngân"
-        title="Quầy lễ tân"
+        eyebrow={t("Lễ tân &amp; Thu ngân")}
+        title={t("Quầy lễ tân")}
       />
 
       <div className="reception-top">
@@ -510,9 +507,9 @@ export function StaffReceptionPage() {
               <div style={{ flex: 1 }}>
                 <input
                   type="text"
-                  placeholder="Nhập Số điện thoại, Mã hội viên (MB-...) hoặc CCCD để tra cứu..."
+                  placeholder={t("Nhập Số điện thoại, Mã hội viên (MB-...) hoặc CCCD để tra cứu...")}
                   className="portal-input"
-                  aria-label="Tra cứu hội viên theo số điện thoại, mã hội viên hoặc CCCD"
+                  aria-label={t("Tra cứu hội viên theo số điện thoại, mã hội viên hoặc CCCD")}
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); if (searchError) setSearchError(null); }}
                   disabled={isSearching}
@@ -524,25 +521,24 @@ export function StaffReceptionPage() {
               <button type="submit" className="btn-primary" disabled={isSearching}>
                 {isSearching ? (
                   <>
-                    <span className="spinner" />
-                    <span>Đang tìm...</span>
+                    <span data-i18n-managed className="spinner" />
+                    <span data-i18n-managed>{t("Đang tìm...")}</span>
                   </>
                 ) : (
-                  'Tra cứu hội viên'
+                  t('Tra cứu hội viên')
                 )}
               </button>
             </form>
-            {searchError && <p id="reception-search-error" className="form-error" role="alert">{searchError}</p>}
+            {searchError && <p id="reception-search-error" className="form-error" role="alert">{t(searchError)}</p>}
 
             {/* Danh sách kết quả nếu có nhiều hơn 1 người */}
             {searchResults.length > 1 && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)' }}>
+              <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)' }}>
                 <div style={{ fontSize: '0.86rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-                  Tìm thấy {searchResults.length} hội viên. Chọn hội viên để kiểm tra yêu cầu:
-                </div>
+                  {t("Tìm thấy ")}{searchResults.length} {t(" hội viên. Chọn hội viên để kiểm tra yêu cầu:")}</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {searchResults.map((m) => (
-                    <button
+                    <button data-i18n-managed
                       key={m.userId}
                       type="button"
                       className={`btn-secondary btn-sm ${selectedMember?.userId === m.userId ? 'btn-primary' : ''}`}
@@ -563,16 +559,16 @@ export function StaffReceptionPage() {
           <div className="portal-card reception-top__queue">
             <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 className="portal-card-title">Gói tập chờ thanh toán ({pendingList.length})</h2>
+                <h2 className="portal-card-title">{t("Gói tập chờ thanh toán (")}{pendingList.length})</h2>
               </div>
-              <RefreshButton label="Làm mới danh sách" onClick={() => void loadPendingSubscriptions()} disabled={loadingPending} />
+              <RefreshButton label={t("Làm mới danh sách")} onClick={() => void loadPendingSubscriptions()} disabled={loadingPending} />
             </div>
 
             {loadingPending ? (
-              <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
-                <span className="sr-only">Đang tải danh sách yêu cầu chờ thanh toán...</span>
+              <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+                <span className="sr-only">{t("Đang tải danh sách yêu cầu chờ thanh toán...")}</span>
                 {[1, 2].map((idx) => (
-                  <div
+                  <div data-i18n-managed
                     key={idx}
                     aria-hidden="true"
                     style={{
@@ -596,15 +592,14 @@ export function StaffReceptionPage() {
                 ))}
               </div>
             ) : pendingList.length === 0 ? (
-              <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                Hiện không có yêu cầu đăng ký gói tập nào đang ở trạng thái chờ thanh toán.
-              </div>
+              <div data-i18n-managed style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                {t("Hiện không có yêu cầu đăng ký gói tập nào đang ở trạng thái chờ thanh toán.")}</div>
             ) : (
-              <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+              <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
                 {pendingList.map((item) => {
                   const isSelected = selectedPending?.id === item.id;
                   return (
-                    <div
+                    <div data-i18n-managed
                       key={item.id}
                       role="button"
                       tabIndex={0}
@@ -639,7 +634,7 @@ export function StaffReceptionPage() {
                               fontSize: '0.92rem',
                             }}
                           >
-                            Yêu cầu #{item.id}
+                            {t("Yêu cầu #")}{item.id}
                           </span>
                           <strong>{item.memberName}</strong>
                           <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
@@ -647,7 +642,7 @@ export function StaffReceptionPage() {
                           </span>
                         </div>
                         <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '4px' }}>
-                          Gói hội viên đã chọn: <strong>{item.packageName}</strong> ({item.durationDays} ngày • {item.startDate} → {item.endDate})
+                          {t("Gói hội viên đã chọn: ")}<strong>{item.packageName}</strong> ({item.durationDays} {t(" ngày • ")}{item.startDate} → {item.endDate})
                         </div>
                       </div>
 
@@ -657,8 +652,7 @@ export function StaffReceptionPage() {
                             {vnd(item.packagePrice)}
                           </div>
                           <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
-                            CHỜ THANH TOÁN
-                          </span>
+                            {t("CHỜ THANH TOÁN")}</span>
                         </div>
                         <button
                           type="button"
@@ -668,7 +662,7 @@ export function StaffReceptionPage() {
                             handleSelectPendingItem(item);
                           }}
                         >
-                          {isSelected ? 'Đang chọn xử lý' : 'Chọn xác nhận'}
+                          {isSelected ? t('Đang chọn xử lý') : t('Chọn xác nhận')}
                         </button>
                         <button
                           type="button"
@@ -680,7 +674,7 @@ export function StaffReceptionPage() {
                             void handleCancelPendingItem(item);
                           }}
                         >
-                          {cancellingPendingId === item.id ? 'Đang hủy...' : 'Hủy yêu cầu'}
+                          {cancellingPendingId === item.id ? t('Đang hủy...') : t('Hủy yêu cầu')}
                         </button>
                       </div>
                     </div>
@@ -696,32 +690,32 @@ export function StaffReceptionPage() {
         {/* Thông tin hội viên tìm thấy (BR-01 Empty state & BR-05 Masked CCCD) */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Thông tin hội viên</h2>
+            <h2 className="portal-card-title">{t("Thông tin hội viên")}</h2>
             {selectedMember && (
-              <span className={`badge ${selectedMember.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                {selectedPending ? 'CHỜ THANH TOÁN' : selectedMember.status?.toUpperCase()}
+              <span data-i18n-managed className={`badge ${selectedMember.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
+                {selectedPending ? t('CHỜ THANH TOÁN') : selectedMember.status?.toUpperCase()}
               </span>
             )}
           </div>
 
-          {isSearching ? <LoadingSkeleton label="Đang tra cứu thông tin hội viên…" count={4} /> : selectedMember ? (
-            <div>
+          {isSearching ? <LoadingSkeleton label={t("Đang tra cứu thông tin hội viên…")} count={4} /> : selectedMember ? (
+            <div data-i18n-managed>
               <div className="kv-list">
                 <div className="kv-row">
-                  <span>Họ và tên</span>
+                  <span>{t("Họ và tên")}</span>
                   <strong>{selectedMember.fullName}</strong>
                 </div>
 
                 <div className="kv-row">
-                  <span>Mã hội viên</span>
+                  <span>{t("Mã hội viên")}</span>
                   <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>
                     {selectedMember.membershipCode || `MB-2026-${String(selectedMember.userId).padStart(3, '0')}`}
                   </span>
                 </div>
 
                 <div className="kv-row">
-                  <span>Số điện thoại</span>
-                  <strong>{selectedMember.phone || 'Chưa cập nhật'}</strong>
+                  <span>{t("Số điện thoại")}</span>
+                  <strong>{selectedMember.phone || t('Chưa cập nhật')}</strong>
                 </div>
 
                 <div className="kv-row">
@@ -731,41 +725,41 @@ export function StaffReceptionPage() {
 
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
-                  <span>Số CCCD (Bảo mật)</span>
+                  <span>{t("Số CCCD (Bảo mật)")}</span>
                   <span style={{ fontFamily: 'monospace', color: 'var(--color-text-main)' }}>
-                    {maskCitizenId(selectedMember.citizenId)}
+                    {selectedMember.citizenId ? maskCitizenId(selectedMember.citizenId) : t('Chưa cập nhật')}
                   </span>
                 </div>
 
                 <div className="kv-row">
-                  <span>Gói tập yêu cầu</span>
+                  <span>{t("Gói tập yêu cầu")}</span>
                   <strong>
                     {selectedPending
-                      ? `${selectedPending.packageName} (Yêu cầu #${selectedPending.id})`
+                      ? t(`${selectedPending.packageName} (Yêu cầu #${selectedPending.id})`, `${selectedPending.packageName} (Request #${selectedPending.id})`)
                       : activeCandidate
-                        ? `${activeCandidate.packageName} (Đang hoạt động)`
-                        : selectedMember.currentPackage || 'Chưa có yêu cầu gói tập chờ thanh toán'}
+                        ? t(`${activeCandidate.packageName} (Đang hoạt động)`, `${activeCandidate.packageName} (Active)`)
+                        : selectedMember.currentPackage || t('Chưa có yêu cầu gói tập chờ thanh toán')}
                   </strong>
                 </div>
 
                 <div className="kv-row">
-                  <span>Thời hạn gói</span>
+                  <span>{t("Thời hạn gói")}</span>
                   <span style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
                     {selectedPending
-                      ? `${selectedPending.startDate} → ${selectedPending.endDate} (${selectedPending.durationDays} ngày)`
+                      ? t(`${selectedPending.startDate} → ${selectedPending.endDate} (${selectedPending.durationDays} ngày)`, `${selectedPending.startDate} → ${selectedPending.endDate} (${selectedPending.durationDays} days)`)
                       : activeCandidate
                         ? `${activeCandidate.startDate} → ${activeCandidate.endDate}`
-                        : selectedMember.endDate || 'Chưa kích hoạt'}
+                        : selectedMember.endDate || t('Chưa kích hoạt')}
                   </span>
                 </div>
 
                 {selectedPending && receiptImage && (
-                  <div className="kv-row" style={{ display: 'block' }}>
-                    <span>Ảnh hóa đơn hội viên đã gửi</span>
+                  <div data-i18n-managed className="kv-row" style={{ display: 'block' }}>
+                    <span>{t("Ảnh hóa đơn hội viên đã gửi")}</span>
                     <a href={receiptImage} target="_blank" rel="noreferrer">
                       <img
                         src={receiptImage}
-                        alt="Ảnh hóa đơn thanh toán tiền mặt"
+                        alt={t("Ảnh hóa đơn thanh toán tiền mặt")}
                         style={{ display: 'block', marginTop: 8, maxWidth: '100%', maxHeight: 280, borderRadius: 8 }}
                       />
                     </a>
@@ -774,32 +768,30 @@ export function StaffReceptionPage() {
               </div>
 
               {!selectedPending && (activeCandidate || selectedMember.status?.toUpperCase() === 'ACTIVE') && (
-                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                   <span style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
-                    Hội viên yêu cầu hủy gói tại quầy? Trình Quản lý phê duyệt hoàn tiền về Ví:
-                  </span>
+                    {t("Hội viên yêu cầu hủy gói tại quầy? Trình Quản lý phê duyệt hoàn tiền về Ví:")}</span>
                   <button
                     type="button"
                     className="btn-secondary btn-sm"
                     style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
                     onClick={handleOpenCancelModal}
                   >
-                    Yêu cầu hủy gói &amp; hoàn tiền
-                  </button>
+                    {t("Yêu cầu hủy gói & hoàn tiền")}</button>
                 </div>
               )}
             </div>
           ) : (
             /* BR-01: Trạng thái trống rõ ràng */
-            <div className="portal-empty" style={{ padding: '40px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '10px' }}>TRA CỨU</div>
+            <div data-i18n-managed className="portal-empty" style={{ padding: '40px 16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '10px' }}>{t("TRA CỨU")}</div>
               <h3 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: 'var(--color-text-main)' }}>
-                {hasSearched ? 'Không tìm thấy hội viên' : 'Chưa chọn hội viên'}
+                {hasSearched ? t('Không tìm thấy hội viên') : t('Chưa chọn hội viên')}
               </h3>
               <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', margin: 0 }}>
                 {hasSearched
-                  ? `Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`
-                  : 'Hãy ấn vào một Yêu cầu đang chờ ở danh sách trên hoặc tra cứu SĐT hội viên.'}
+                  ? t(`Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`, `No results match "${searchQuery}". Please check the phone number, membership code or national ID.`)
+                  : t('Hãy ấn vào một Yêu cầu đang chờ ở danh sách trên hoặc tra cứu SĐT hội viên.')}
               </p>
             </div>
           )}
@@ -808,40 +800,40 @@ export function StaffReceptionPage() {
         {/* Panel thu ngân & Xác nhận gói tập do Hội viên đã chọn */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Xác nhận thanh toán</h2>
+            <h2 className="portal-card-title">{t("Xác nhận thanh toán")}</h2>
           </div>
 
           <form onSubmit={handlePayment}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="pos-package">
-                {selectedPending ? 'Gói tập trong yêu cầu chờ thanh toán' : 'Chọn gói tập mua mới hoặc gia hạn'}
+                {selectedPending ? t('Gói tập trong yêu cầu chờ thanh toán') : t('Chọn gói tập mua mới hoặc gia hạn')}
               </label>
               {selectedPending ? (
-                <input id="pos-package" type="text" className="portal-input"
+                <input data-i18n-managed id="pos-package" type="text" className="portal-input"
                   value={`${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`}
                   disabled readOnly />
-              ) : loadingOffers ? <LoadingSkeleton label="Đang tải gói tập và lựa chọn gia hạn…" count={1} /> : (
+              ) : loadingOffers ? <LoadingSkeleton label={t("Đang tải gói tập và lựa chọn gia hạn…")} count={1} /> : (
                 <Select id="pos-package" className="portal-select" value={selectedOffer}
                   onChange={(event) => setSelectedOffer(event.target.value)}
                   disabled={!selectedMember || loadingPending || loadingOffers || !!offersError || isSubmittingPayment}>
-                  <option value="">Chọn gói tập</option>
+                  <option value="">{t("Chọn gói tập")}</option>
                   {renewalCandidates
                     .filter((candidate) => packages.some((pkg) => pkg.id === candidate.packageId))
                     .map((candidate) => (
-                      <option key={`renew:${candidate.id}`} value={`renew:${candidate.id}`}>
-                        Gia hạn: {candidate.packageName} — kỳ đến {candidate.endDate}
+                      <option data-i18n-managed key={`renew:${candidate.id}`} value={`renew:${candidate.id}`}>
+                        {t("Gia hạn: ")}{candidate.packageName} {t(" — kỳ đến ")}{candidate.endDate}
                       </option>
                     ))}
                   {packages.map((pkg) => (
-                    <option key={`buy:${pkg.id}`} value={`buy:${pkg.id}`}>
-                      Mua mới: {pkg.name} — {vnd(pkg.price)}
+                    <option data-i18n-managed key={`buy:${pkg.id}`} value={`buy:${pkg.id}`}>
+                      {t("Mua mới: ")}{pkg.name} — {vnd(pkg.price)}
                     </option>
                   ))}
                 </Select>
               )}
-              {offersError && <p role="alert">{offersError} <button type="button" className="btn-secondary" onClick={() => setOffersRetry((n) => n + 1)}>Thử lại</button></p>}
+              {offersError && <p role="alert">{t(offersError)} <button type="button" className="btn-secondary" onClick={() => setOffersRetry((n) => n + 1)}>{t("Thử lại")}</button></p>}
               {!selectedPending && !loadingOffers && selectedMember && !offersError && packages.length === 0 && (
-                <p>Hiện không có gói tập đang hoạt động.</p>
+                <p data-i18n-managed>{t("Hiện không có gói tập đang hoạt động.")}</p>
               )}
             </div>
 
@@ -849,8 +841,7 @@ export function StaffReceptionPage() {
               {/* BR-02: Số tiền hiển thị theo giá gói và KHÔNG cho sửa tay */}
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="pos-amount">
-                  Số tiền thu (Không sửa tay)
-                </label>
+                  {t("Số tiền thu (Không sửa tay)")}</label>
                 <input
                   id="pos-amount"
                   type="text"
@@ -871,8 +862,7 @@ export function StaffReceptionPage() {
               {/* BR-03: Bắt buộc chọn hình thức thanh toán */}
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="pos-method">
-                  Hình thức thanh toán *
-                </label>
+                  {t("Hình thức thanh toán *")}</label>
                 <Select
                   id="pos-method"
                   className="portal-select"
@@ -880,27 +870,26 @@ export function StaffReceptionPage() {
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                   disabled={isSubmittingPayment}
                 >
-                  <option value="cash">Tiền mặt tại quầy</option>
+                  <option value="cash">{t("Tiền mặt tại quầy")}</option>
                 </Select>
               </div>
             </div>
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="pos-notes">
-                Ghi chú giao dịch
-              </label>
+                {t("Ghi chú giao dịch")}</label>
               <input
                 id="pos-notes"
                 type="text"
                 className="portal-input"
-                placeholder="Ghi chú thêm về giao dịch..."
+                placeholder={t("Ghi chú thêm về giao dịch...")}
                 value={paymentNotes}
                 onChange={(e) => setPaymentNotes(e.target.value)}
                 disabled={isSubmittingPayment}
               />
             </div>
 
-            {paymentError && <p className="form-error" role="alert">{paymentError}</p>}
+            {paymentError && <p className="form-error" role="alert">{t(paymentError)}</p>}
             <button
               type="submit"
               className="btn-primary"
@@ -909,11 +898,11 @@ export function StaffReceptionPage() {
             >
               {isSubmittingPayment ? (
                 <>
-                  <span className="spinner" />
-                  <span>Đang xử lý thu tiền...</span>
+                  <span data-i18n-managed className="spinner" />
+                  <span data-i18n-managed>{t("Đang xử lý thu tiền...")}</span>
                 </>
               ) : (
-                'Xác nhận thu tiền & xuất hóa đơn'
+                t('Xác nhận thu tiền & xuất hóa đơn')
               )}
             </button>
           </form>
@@ -924,14 +913,14 @@ export function StaffReceptionPage() {
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 className="portal-card-title">Đơn trải nghiệm 3 ngày chờ duyệt ({trialList.length})</h2>
+            <h2 className="portal-card-title">{t("Đơn trải nghiệm 3 ngày chờ duyệt (")}{trialList.length})</h2>
           </div>
-          <RefreshButton label="Làm mới đơn thử" onClick={() => void loadPendingTrials()} disabled={loadingTrials} />
+          <RefreshButton label={t("Làm mới đơn thử")} onClick={() => void loadPendingTrials()} disabled={loadingTrials} />
         </div>
 
         {loadingTrials ? (
-          <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
-            <span className="sr-only">Đang tải danh sách đơn đăng ký trải nghiệm...</span>
+          <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+            <span className="sr-only">{t("Đang tải danh sách đơn đăng ký trải nghiệm...")}</span>
             <div
               aria-hidden="true"
               style={{
@@ -946,15 +935,14 @@ export function StaffReceptionPage() {
             </div>
           </div>
         ) : trialList.length === 0 ? (
-          <div style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            Hiện không có đơn đăng ký Gói Trải Nghiệm 3 Ngày nào đang chờ duyệt.
-          </div>
+          <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+            {t("Hiện không có đơn đăng ký Gói Trải Nghiệm 3 Ngày nào đang chờ duyệt.")}</div>
         ) : (
-          <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
             {trialList.map((item) => {
               const isBusy = processingTrialId === item.id;
               return (
-                <div
+                <div data-i18n-managed
                   key={item.id}
                   style={{
                     display: 'flex',
@@ -978,11 +966,11 @@ export function StaffReceptionPage() {
                           fontSize: '0.92rem',
                         }}
                       >
-                        Đơn thử #{item.id}
+                        {t("Đơn thử #")}{item.id}
                       </span>
                       <strong>{item.memberName}</strong>
                       <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                        ({item.membershipCode || 'Hội viên mới'})
+                        ({item.membershipCode || t('Hội viên mới')})
                       </span>
                       <span
                         style={{
@@ -994,29 +982,29 @@ export function StaffReceptionPage() {
                           color: item.documentType === 'PASSPORT' ? '#2563eb' : 'var(--portal-salmon)',
                         }}
                       >
-                        {item.documentType === 'PASSPORT' ? `Hộ chiếu (${item.nationality || 'Nước ngoài'})` : 'CCCD'}
+                        {item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Nước ngoài'})`) : 'CCCD'}
                       </span>
                     </div>
 
                     <div style={{ marginTop: '8px', fontSize: '0.88rem', color: 'var(--color-text-muted)', display: 'grid', gap: '4px' }}>
                       <div>
-                        <strong>Tên trên giấy tờ:</strong>{' '}
+                        <strong>{t("Tên trên giấy tờ:")}</strong>{' '}
                         <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{item.documentFullName}</span>
                         {item.memberName !== item.documentFullName && (
-                          <span style={{ fontSize: '0.78rem', color: 'var(--portal-salmon)', marginLeft: '6px' }}>
-                            (Đồng bộ họ tên: &quot;{item.memberName}&quot; → &quot;{item.documentFullName}&quot;)
+                          <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--portal-salmon)', marginLeft: '6px' }}>
+                            {t("(Đồng bộ họ tên: \"")}{item.memberName}&quot; → &quot;{item.documentFullName}&quot;)
                           </span>
                         )}
                       </div>
                       <div>
-                        <strong>Số giấy tờ:</strong> {item.documentNumberMasked}
-                        {item.nationality && ` • Quốc tịch: ${item.nationality}`}
+                        <strong>{t("Số giấy tờ:")}</strong> {item.documentNumberMasked}
+                        {item.nationality && t(` • Quốc tịch: ${item.nationality}`, ` • Nationality: ${item.nationality}`)}
                       </div>
                       <div>
-                        <strong>Email/SĐT:</strong> {item.memberEmail} {item.memberPhone ? `• ${item.memberPhone}` : ''}
+                        <strong>{t("Email/SĐT:")}</strong> {item.memberEmail} {item.memberPhone ? `• ${item.memberPhone}` : ''}
                       </div>
                       <div>
-                        <strong>Thời gian nộp:</strong> {formatCenterDate(item.requestedAt)}
+                        <strong>{t("Thời gian nộp:")}</strong> {formatCenterDate(item.requestedAt)}
                       </div>
                     </div>
                   </div>
@@ -1027,15 +1015,14 @@ export function StaffReceptionPage() {
                       className="btn-secondary btn-sm"
                       onClick={() => setInspectingTrial(item)}
                     >
-                      👁️ Xem giấy tờ & Ảnh
-                    </button>
+                      {t("👁️ Xem giấy tờ & Ảnh")}</button>
                     <button
                       type="button"
                       className="btn-primary btn-sm"
                       disabled={isBusy}
                       onClick={() => void handleApproveTrial(item)}
                     >
-                      {isBusy ? 'Đang duyệt…' : '✓ Duyệt & Kích hoạt'}
+                      {isBusy ? t('Đang duyệt…') : t('✓ Duyệt & Kích hoạt')}
                     </button>
                     <button
                       type="button"
@@ -1044,8 +1031,7 @@ export function StaffReceptionPage() {
                       disabled={isBusy}
                       onClick={() => handleOpenRejectTrial(item)}
                     >
-                      ✕ Từ chối
-                    </button>
+                      {t("✕ Từ chối")}</button>
                   </div>
                 </div>
               );
@@ -1058,14 +1044,14 @@ export function StaffReceptionPage() {
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 className="portal-card-title">Yêu cầu bảo lưu ({holdList.length})</h2>
+            <h2 className="portal-card-title">{t("Yêu cầu bảo lưu (")}{holdList.length})</h2>
           </div>
-          <RefreshButton label="Làm mới bảo lưu" onClick={() => void loadPendingHolds()} disabled={loadingHolds} />
+          <RefreshButton label={t("Làm mới bảo lưu")} onClick={() => void loadPendingHolds()} disabled={loadingHolds} />
         </div>
 
         {loadingHolds ? (
-          <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
-            <span className="sr-only">Đang tải danh sách yêu cầu bảo lưu...</span>
+          <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+            <span className="sr-only">{t("Đang tải danh sách yêu cầu bảo lưu...")}</span>
             <div
               aria-hidden="true"
               style={{
@@ -1080,15 +1066,14 @@ export function StaffReceptionPage() {
             </div>
           </div>
         ) : holdList.length === 0 ? (
-          <div style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            Hiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.
-          </div>
+          <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+            {t("Hiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.")}</div>
         ) : (
-          <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
             {holdList.map((item) => {
               const isBusy = processingHoldId === item.id;
               return (
-                <div
+                <div data-i18n-managed
                   key={item.id}
                   style={{
                     display: 'flex',
@@ -1112,16 +1097,16 @@ export function StaffReceptionPage() {
                           fontSize: '0.92rem',
                         }}
                       >
-                        Bảo lưu #{item.id}
+                        {t("Bảo lưu #")}{item.id}
                       </span>
                       <strong>{item.memberName}</strong>
                       <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
                         ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
                       </span>
-                      <span className="badge badge-warning">CHỜ DUYỆT BẢO LƯU</span>
+                      <span className="badge badge-warning">{t("CHỜ DUYỆT BẢO LƯU")}</span>
                     </div>
                     <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
-                      Gói tập đang hoạt động: <strong>{item.packageName}</strong> ({item.startDate} → {item.endDate})
+                      {t("Gói tập đang hoạt động: ")}<strong>{item.packageName}</strong> ({item.startDate} → {item.endDate})
                     </div>
                     <div
                       style={{
@@ -1134,7 +1119,7 @@ export function StaffReceptionPage() {
                         color: 'var(--color-text-main)',
                       }}
                     >
-                      <strong>Lý do hội viên nhập:</strong> {item.holdReason}
+                      <strong>{t("Lý do hội viên nhập:")}</strong> {item.holdReason}
                     </div>
                   </div>
 
@@ -1145,7 +1130,7 @@ export function StaffReceptionPage() {
                       disabled={processingHoldId !== null}
                       onClick={() => void handleRejectHold(item)}
                     >
-                      {isBusy ? 'Đang xử lý...' : 'Từ chối'}
+                      {isBusy ? t('Đang xử lý...') : t('Từ chối')}
                     </button>
                     <button
                       type="button"
@@ -1153,7 +1138,7 @@ export function StaffReceptionPage() {
                       disabled={processingHoldId !== null}
                       onClick={() => void handleApproveHold(item)}
                     >
-                      {isBusy ? 'Đang xử lý...' : 'Xác nhận bảo lưu & hủy lịch sắp tới'}
+                      {isBusy ? t('Đang xử lý...') : t('Xác nhận bảo lưu & hủy lịch sắp tới')}
                     </button>
                   </div>
                 </div>
@@ -1167,28 +1152,27 @@ export function StaffReceptionPage() {
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 className="portal-card-title">Buổi PT chưa thanh toán ({unpaidPt.length})</h2>
+            <h2 className="portal-card-title">{t("Buổi PT chưa thanh toán (")}{unpaidPt.length})</h2>
           </div>
-          <RefreshButton label="Làm mới buổi PT" onClick={() => void loadUnpaidPt()} disabled={loadingPt} />
+          <RefreshButton label={t("Làm mới buổi PT")} onClick={() => void loadUnpaidPt()} disabled={loadingPt} />
         </div>
 
         {loadingPt ? (
-          <LoadingSkeleton label="Đang tải buổi PT chưa thanh toán…" count={2} />
+          <LoadingSkeleton label={t("Đang tải buổi PT chưa thanh toán…")} count={2} />
         ) : ptError ? (
-          <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-            <span style={{ color: 'var(--portal-danger)', fontSize: '0.9rem' }}>{ptError}</span>
-            <button type="button" className="btn-secondary btn-sm" onClick={() => void loadUnpaidPt()}>Thử lại</button>
+          <div data-i18n-managed role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
+            <span style={{ color: 'var(--portal-danger)', fontSize: '0.9rem' }}>{t(ptError)}</span>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => void loadUnpaidPt()}>{t("Thử lại")}</button>
           </div>
         ) : unpaidPt.length === 0 ? (
-          <div style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            Không có buổi PT nào chờ thu tiền.
-          </div>
+          <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+            {t("Không có buổi PT nào chờ thu tiền.")}</div>
         ) : (
-          <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
             {unpaidPt.map((item) => {
               const isBusy = processingPtId === item.id;
               return (
-                <div
+                <div data-i18n-managed
                   key={item.id}
                   style={{
                     display: 'flex',
@@ -1208,10 +1192,10 @@ export function StaffReceptionPage() {
                         PT #{item.id}
                       </span>
                       <strong>{item.memberName}</strong>
-                      {item.status === 'completed' && <span className="badge badge-warning">ĐÃ TẬP</span>}
+                      {item.status === 'completed' && <span className="badge badge-warning">{t("ĐÃ TẬP")}</span>}
                     </div>
                     <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
-                      HLV {item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
+                      {t("HLV")}{item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
                       <strong>{vnd(item.hourlyRate)}</strong>
                     </div>
                   </div>
@@ -1222,7 +1206,7 @@ export function StaffReceptionPage() {
                       disabled={processingPtId !== null}
                       onClick={() => void handleConfirmPt(item, 'cash')}
                     >
-                      {isBusy ? 'Đang xử lý...' : 'Đã thu tiền mặt'}
+                      {isBusy ? t('Đang xử lý...') : t('Đã thu tiền mặt')}
                     </button>
                     <button
                       type="button"
@@ -1230,7 +1214,7 @@ export function StaffReceptionPage() {
                       disabled={processingPtId !== null}
                       onClick={() => void handleConfirmPt(item, 'bank_transfer')}
                     >
-                      {isBusy ? 'Đang xử lý...' : 'Đã nhận chuyển khoản'}
+                      {isBusy ? t('Đang xử lý...') : t('Đã nhận chuyển khoản')}
                     </button>
                   </div>
                 </div>
@@ -1244,32 +1228,31 @@ export function StaffReceptionPage() {
 
       {isCancelModalOpen && selectedMember && (
         <Modal
-          title="Yêu cầu hủy gói tập & Hoàn tiền về Ví"
+          title={t("Yêu cầu hủy gói tập & Hoàn tiền về Ví")}
           onClose={() => setIsCancelModalOpen(false)}
           busy={isSubmittingCancel}
         >
           <form onSubmit={(e) => void handleSubmitCancellationRequest(e)} style={{ display: 'grid', gap: '14px' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-              Hội viên: <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
+              {t("Hội viên: ")}<strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
               {activeCandidate && (
                 <>
-                  <br />
-                  Gói đang hoạt động: <strong>{activeCandidate.packageName}</strong> ({activeCandidate.startDate} → {activeCandidate.endDate})
+                  <br data-i18n-managed />
+                  {t("Gói đang hoạt động: ")}<strong data-i18n-managed>{activeCandidate.packageName}</strong> ({activeCandidate.startDate} → {activeCandidate.endDate})
                 </>
               )}
             </div>
 
             <div className="portal-form-group" style={{ margin: 0 }}>
               <label className="portal-label" htmlFor="reception-cancel-reason">
-                Lý do hủy gói tập (bắt buộc trình Quản lý) *
-              </label>
+                {t("Lý do hủy gói tập (bắt buộc trình Quản lý) *")}</label>
               <textarea
                 id="reception-cancel-reason"
                 className="portal-input"
                 rows={4}
                 maxLength={500}
                 required
-                placeholder="Nhập rõ lý do hội viên yêu cầu hủy gói tập (ví dụ: Chuyển nơi ở, chấn thương có xác nhận y tế...)"
+                placeholder={t("Nhập rõ lý do hội viên yêu cầu hủy gói tập (ví dụ: Chuyển nơi ở, chấn thương có xác nhận y tế...)")}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 disabled={isSubmittingCancel}
@@ -1279,15 +1262,14 @@ export function StaffReceptionPage() {
 
             <div className="portal-form-group" style={{ margin: 0 }}>
               <label className="portal-label" htmlFor="reception-cancel-refund">
-                Số tiền đề xuất hoàn về Ví hội viên (VNĐ)
-              </label>
+                {t("Số tiền đề xuất hoàn về Ví hội viên (VNĐ)")}</label>
               <input
                 id="reception-cancel-refund"
                 type="number"
                 min={0}
                 step={1000}
                 className="portal-input"
-                placeholder="Nhập số tiền hoàn dự kiến..."
+                placeholder={t("Nhập số tiền hoàn dự kiến...")}
                 value={cancelRefundAmount}
                 onChange={(e) => setCancelRefundAmount(e.target.value)}
                 disabled={isSubmittingCancel}
@@ -1295,8 +1277,8 @@ export function StaffReceptionPage() {
             </div>
 
             {cancelModalError && (
-              <p className="form-error" role="alert" style={{ margin: 0 }}>
-                {cancelModalError}
+              <p data-i18n-managed className="form-error" role="alert" style={{ margin: 0 }}>
+                {t(cancelModalError)}
               </p>
             )}
 
@@ -1307,14 +1289,13 @@ export function StaffReceptionPage() {
                 disabled={isSubmittingCancel}
                 onClick={() => setIsCancelModalOpen(false)}
               >
-                Đóng
-              </button>
+                {t("Đóng")}</button>
               <button
                 type="submit"
                 className="btn-primary"
                 disabled={isSubmittingCancel}
               >
-                {isSubmittingCancel ? 'Đang gửi...' : 'Gửi yêu cầu lên Quản lý'}
+                {isSubmittingCancel ? t('Đang gửi...') : t('Gửi yêu cầu lên Quản lý')}
               </button>
             </div>
           </form>
@@ -1324,26 +1305,26 @@ export function StaffReceptionPage() {
       {/* Modal xem chi tiết & ảnh giấy tờ CCCD / Hộ chiếu */}
       {inspectingTrial && (
         <Modal
-          title={`Chi tiết đơn trải nghiệm #${inspectingTrial.id} - ${inspectingTrial.memberName}`}
+          title={t(`Chi tiết đơn trải nghiệm #${inspectingTrial.id} - ${inspectingTrial.memberName}`, `Trial application details #${inspectingTrial.id} - ${inspectingTrial.memberName}`)}
           onClose={() => setInspectingTrial(null)}
           busy={processingTrialId === inspectingTrial.id}
         >
           <div style={{ display: 'grid', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.9rem' }}>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>Hội viên</span>
-                <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || 'Chưa cấp thẻ'})
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Hội viên")}</span>
+                <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || t('Chưa cấp thẻ')})
               </div>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>Loại giấy tờ</span>
-                <strong>{inspectingTrial.documentType === 'PASSPORT' ? `Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})` : 'Căn cước công dân (CCCD)'}</strong>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Loại giấy tờ")}</span>
+                <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Nước ngoài'})`) : t('Căn cước công dân (CCCD)')}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>Số giấy tờ</span>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>
                 <strong style={{ fontFamily: 'monospace' }}>{inspectingTrial.documentNumberMasked}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>Họ và tên trên giấy tờ</span>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Họ và tên trên giấy tờ")}</span>
                 <strong style={{ color: 'var(--portal-salmon)' }}>{inspectingTrial.documentFullName}</strong>
               </div>
             </div>
@@ -1358,46 +1339,43 @@ export function StaffReceptionPage() {
                 color: 'var(--color-text-main)',
               }}
             >
-              ℹ️ <strong>Lưu ý nghiệp vụ:</strong> Khi Lễ tân bấm <strong>Duyệt & Kích hoạt</strong>, hệ thống sẽ tự động đồng bộ họ tên tài khoản thành <strong>&quot;{inspectingTrial.documentFullName}&quot;</strong> và kích hoạt gói 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.
-            </div>
+              ℹ️ <strong>{t("Lưu ý nghiệp vụ:")}</strong> {t(" Khi Lễ tân bấm ")}<strong>{t("Duyệt & Kích hoạt")}</strong>{t(", hệ thống sẽ tự động đồng bộ họ tên tài khoản thành ")}<strong>&quot;{inspectingTrial.documentFullName}&quot;</strong> {t(" và kích hoạt gói 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.")}</div>
 
             {/* Ảnh mặt trước & mặt sau */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '4px' }}>
               <div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-muted)' }}>
-                  Ảnh mặt trước ({inspectingTrial.documentType})
+                  {t("Ảnh mặt trước (")}{inspectingTrial.documentType})
                 </div>
                 {inspectingTrial.frontImageUrl ? (
-                  <div style={{ border: '1px solid var(--color-border-medium)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img
+                  <div data-i18n-managed style={{ border: '1px solid var(--color-border-medium)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                    <img data-i18n-managed
                       src={inspectingTrial.frontImageUrl}
-                      alt="Mặt trước giấy tờ"
+                      alt={t("Mặt trước giấy tờ")}
                       style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }}
                     />
                   </div>
                 ) : (
-                  <div style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--color-bg-card)', borderRadius: '8px', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                    Chưa có ảnh mặt trước
-                  </div>
+                  <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--color-bg-card)', borderRadius: '8px', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                    {t("Chưa có ảnh mặt trước")}</div>
                 )}
               </div>
 
               <div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-muted)' }}>
-                  Ảnh mặt sau ({inspectingTrial.documentType === 'PASSPORT' ? 'Trang thị thực (tùy chọn)' : 'Mặt sau CCCD'})
+                  {t("Ảnh mặt sau (")}{inspectingTrial.documentType === 'PASSPORT' ? t('Trang thị thực (tùy chọn)') : t('Mặt sau CCCD')})
                 </div>
                 {inspectingTrial.backImageUrl ? (
-                  <div style={{ border: '1px solid var(--color-border-medium)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img
+                  <div data-i18n-managed style={{ border: '1px solid var(--color-border-medium)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                    <img data-i18n-managed
                       src={inspectingTrial.backImageUrl}
-                      alt="Mặt sau giấy tờ"
+                      alt={t("Mặt sau giấy tờ")}
                       style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }}
                     />
                   </div>
                 ) : (
-                  <div style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--color-bg-card)', borderRadius: '8px', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                    Chưa có ảnh mặt sau
-                  </div>
+                  <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--color-bg-card)', borderRadius: '8px', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                    {t("Chưa có ảnh mặt sau")}</div>
                 )}
               </div>
             </div>
@@ -1409,8 +1387,7 @@ export function StaffReceptionPage() {
                 disabled={processingTrialId === inspectingTrial.id}
                 onClick={() => setInspectingTrial(null)}
               >
-                Đóng
-              </button>
+                {t("Đóng")}</button>
               <button
                 type="button"
                 className="btn-secondary"
@@ -1418,15 +1395,14 @@ export function StaffReceptionPage() {
                 disabled={processingTrialId === inspectingTrial.id}
                 onClick={() => handleOpenRejectTrial(inspectingTrial)}
               >
-                ✕ Từ chối đơn
-              </button>
+                {t("✕ Từ chối đơn")}</button>
               <button
                 type="button"
                 className="btn-primary"
                 disabled={processingTrialId === inspectingTrial.id}
                 onClick={() => void handleApproveTrial(inspectingTrial)}
               >
-                {processingTrialId === inspectingTrial.id ? 'Đang duyệt…' : '✓ Phê duyệt & Kích hoạt'}
+                {processingTrialId === inspectingTrial.id ? t('Đang duyệt…') : t('✓ Phê duyệt & Kích hoạt')}
               </button>
             </div>
           </div>
@@ -1436,26 +1412,24 @@ export function StaffReceptionPage() {
       {/* Modal từ chối đơn đăng ký gói trải nghiệm */}
       {rejectingTrial && (
         <Modal
-          title={`Từ chối đơn thử #${rejectingTrial.id} - ${rejectingTrial.memberName}`}
+          title={t(`Từ chối đơn thử #${rejectingTrial.id} - ${rejectingTrial.memberName}`, `Reject trial application #${rejectingTrial.id} - ${rejectingTrial.memberName}`)}
           onClose={() => setRejectingTrial(null)}
           busy={isSubmittingTrialReject}
         >
           <form onSubmit={(e) => void handleSubmitRejectTrial(e)} style={{ display: 'grid', gap: '14px' }}>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-              Vui lòng nhập lý do từ chối để hội viên nhận thông báo và chỉnh sửa nộp lại giấy tờ phù hợp.
-            </p>
+              {t("Vui lòng nhập lý do từ chối để hội viên nhận thông báo và chỉnh sửa nộp lại giấy tờ phù hợp.")}</p>
 
             <div className="portal-form-group" style={{ margin: 0 }}>
               <label className="portal-label" htmlFor="trial-reject-reason">
-                Lý do từ chối *
-              </label>
+                {t("Lý do từ chối *")}</label>
               <textarea
                 id="trial-reject-reason"
                 className="portal-input"
                 rows={3}
                 maxLength={500}
                 required
-                placeholder="Vd: Ảnh chụp mờ không đọc được thông tin, số CCCD không khớp bản gốc, v.v."
+                placeholder={t("Vd: Ảnh chụp mờ không đọc được thông tin, số CCCD không khớp bản gốc, v.v.")}
                 value={trialRejectReason}
                 onChange={(e) => setTrialRejectReason(e.target.value)}
                 disabled={isSubmittingTrialReject}
@@ -1464,8 +1438,8 @@ export function StaffReceptionPage() {
             </div>
 
             {trialRejectError && (
-              <p className="form-error" role="alert" style={{ margin: 0 }}>
-                {trialRejectError}
+              <p data-i18n-managed className="form-error" role="alert" style={{ margin: 0 }}>
+                {t(trialRejectError)}
               </p>
             )}
 
@@ -1476,15 +1450,14 @@ export function StaffReceptionPage() {
                 disabled={isSubmittingTrialReject}
                 onClick={() => setRejectingTrial(null)}
               >
-                Hủy
-              </button>
+                {t("Hủy")}</button>
               <button
                 type="submit"
                 className="btn-primary"
                 style={{ background: 'var(--portal-danger, #ef4444)' }}
                 disabled={isSubmittingTrialReject}
               >
-                {isSubmittingTrialReject ? 'Đang từ chối…' : 'Xác nhận từ chối'}
+                {isSubmittingTrialReject ? t('Đang từ chối…') : t('Xác nhận từ chối')}
               </button>
             </div>
           </form>

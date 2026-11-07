@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText } from "../shop/shopI18n";
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { usePublicCatalog } from './publicCatalog';
 import { CatalogSchedule, CatalogStatus } from './components/CatalogSections';
@@ -8,6 +9,7 @@ import { DISCIPLINES } from '../../shared/lib/disciplines';
 import { SPORT_PAGES, SPORT_PAGE_LIST, sportIdFromPath, type SportPageId } from './sportPages';
 
 export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
+  useSourceLanguage();
   const { sportId } = useParams<{ sportId?: string }>();
   const { pathname } = useLocation();
   const key: SportPageId = forcedSport ?? sportIdFromPath(sportId ? `/sports/${sportId}` : pathname) ?? 'swimming';
@@ -26,9 +28,8 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
         <section className="fit-section fit-trainer-story-hero" aria-labelledby="sport-page-title">
           <div className="fit-trainer-story-topbar" data-reveal="soft">
             <Link to="/#multisport" className="fit-text-link fit-back-link">
-              ← Quay lại Trang chủ
-            </Link>
-            <div className="fit-trainer-switcher" role="navigation" aria-label="Chọn bộ môn">
+              {sourceText("← Quay lại Trang chủ")}</Link>
+            <div className="fit-trainer-switcher" role="navigation" aria-label={sourceText("Chọn bộ môn")}>
               {SPORT_PAGE_LIST.map((item) => (
                 <Link
                   key={item.id}
@@ -62,7 +63,7 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
               </h1>
 
               <div className="fit-sport-page-programs">
-                <span className="fit-kicker">CHƯƠNG TRÌNH TẬP LUYỆN</span>
+                <span className="fit-kicker">{sourceText("CHƯƠNG TRÌNH TẬP LUYỆN")}</span>
                 <div className="fit-sport-page-program-grid">
                   {sport.programs.map((prog) => (
                     <article key={prog.code} className="fit-sport-page-program-card">
@@ -78,13 +79,13 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
 
               <div className="fit-trainer-hero-actions">
                 <Link to={bookPath} className="fit-pill">
-                  Đặt lịch {sportName}
+                  {sourceText("Đặt lịch ")}{sportName}
                   <RoundArrow diagonal />
                 </Link>
                 <Link to={joinPath} className="fit-text-link">
-                  Xem gói tập <RoundArrow diagonal />
+                  {sourceText("Xem gói tập ")}<RoundArrow diagonal />
                 </Link>
-                {hasCourts && <Link to={classesPath} className="fit-text-link">Xem lịch lớp <RoundArrow diagonal /></Link>}
+                {hasCourts && <Link to={classesPath} className="fit-text-link">{sourceText("Xem lịch lớp ")}<RoundArrow diagonal /></Link>}
               </div>
             </div>
           </div>

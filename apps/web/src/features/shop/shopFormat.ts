@@ -1,3 +1,4 @@
+import { sourceText, sourceFormat } from "./shopI18n";
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import type { FulfillmentMethod, OrderPaymentMethod, OrderStatus, ProductForm, ProductGoal } from './shopTypes';
 
@@ -5,24 +6,24 @@ export const formatVnd = (amount: number): string => formatPrice(amount);
 
 export function pricePerServingLabel(amount: number | null | undefined): string {
   if (amount == null || !Number.isFinite(amount) || amount <= 0) return '';
-  return `${formatPrice(amount)} / lần dùng`;
+  return sourceFormat('{0} / lần dùng', formatPrice(amount));
 }
 
 export const GOAL_LABELS: Record<ProductGoal, string> = {
-  muscle_gain: 'Tăng cơ',
-  recovery: 'Phục hồi',
-  energy: 'Năng lượng',
-  weight_management: 'Kiểm soát cân nặng',
-  wellness: 'Sức khỏe tổng quát',
+  get muscle_gain() { return sourceText('Tăng cơ'); },
+  get recovery() { return sourceText('Phục hồi'); },
+  get energy() { return sourceText('Năng lượng'); },
+  get weight_management() { return sourceText('Kiểm soát cân nặng'); },
+  get wellness() { return sourceText('Sức khỏe tổng quát'); },
 };
 
 export const FORM_LABELS: Record<ProductForm, string> = {
-  powder: 'Bột',
-  capsule: 'Viên nang',
-  tablet: 'Viên nén',
-  liquid: 'Nước',
-  bar: 'Thanh',
-  other: 'Khác',
+  get powder() { return sourceText('Bột'); },
+  get capsule() { return sourceText('Viên nang'); },
+  get tablet() { return sourceText('Viên nén'); },
+  get liquid() { return sourceText('Nước'); },
+  get bar() { return sourceText('Thanh'); },
+  get other() { return sourceText('Khác'); },
 };
 
 export function orderStatusLabel(
@@ -32,19 +33,19 @@ export function orderStatusLabel(
 ): string {
   switch (status) {
     case 'pending_payment':
-      return paymentMethod === 'counter' ? 'Chờ trả tại quầy' : 'Chờ thanh toán';
+      return paymentMethod === 'counter' ? sourceText('Chờ trả tại quầy') : sourceText('Chờ thanh toán');
     case 'paid':
-      return 'Đã thanh toán';
+      return sourceText('Đã thanh toán');
     case 'processing':
-      return 'Đang chuẩn bị';
+      return sourceText('Đang chuẩn bị');
     case 'shipping':
-      return 'Đang giao';
+      return sourceText('Đang giao');
     case 'ready_for_pickup':
-      return 'Chờ nhận tại quầy';
+      return sourceText('Chờ nhận tại quầy');
     case 'completed':
-      return fulfillment === 'pickup' ? 'Đã nhận tại quầy' : 'Đã giao';
+      return fulfillment === 'pickup' ? sourceText('Đã nhận tại quầy') : sourceText('Đã giao');
     case 'cancelled':
-      return 'Đã hủy';
+      return sourceText('Đã hủy');
     default:
       return status;
   }

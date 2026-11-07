@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigation } from 'react-router-dom';
 import { apiFetch, clearAuthSession, syncSessionWithServer, TOKEN_STORAGE_KEY, type UserSession } from '../../shared/api/client';
 import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
-import { LanguageSetting, useDomLanguageSync, useI18n } from '../../shared/i18n';
+import { LanguageSetting, useI18n } from '../../shared/i18n';
 import { localizableError } from '../../shared/lib/errorMessage';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
@@ -135,7 +135,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const previousPath = useRef(location.pathname);
   const mainRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
-  useDomLanguageSync(mainRef);
   const isMember = user.role === 'MEMBER';
   // Mọi vai trò đều mở được hộp thư server và thông báo thao tác tại client.
   const hasServerNotifications = true;
@@ -451,7 +450,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                       <span>{t('Ví của tôi', 'My Wallet')}</span>
                     </span>
                     <strong style={{ color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums' }}>
-                      {walletBalance.toLocaleString('vi-VN')} đ
+                      {walletBalance.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
                     </strong>
                   </button>}
 
@@ -537,7 +536,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
             <div>
               <div className="portal-label">{t('Số dư khả dụng', 'Available balance')}</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>
-                {walletBalance.toLocaleString('vi-VN')} đ
+                {walletBalance.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
               </div>
             </div>
             <button type="button" className="btn-secondary btn-sm" onClick={refreshWallet} disabled={walletLoading}>
@@ -568,7 +567,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                       setTopupAmount(String(amt));
                     }}
                   >
-                    +{amt.toLocaleString('vi-VN')} đ
+                    +{amt.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
                   </button>
                 ))}
               </div>
@@ -642,7 +641,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {credit ? '+' : '-'}{absAmount.toLocaleString('vi-VN')} đ
+                      {credit ? '+' : '-'}{absAmount.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
                     </div>
                   </div>
                 );

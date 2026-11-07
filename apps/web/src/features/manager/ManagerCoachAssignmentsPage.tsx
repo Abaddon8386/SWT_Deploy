@@ -1,9 +1,9 @@
+import { staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffNotify as notify } from '../operations/staffI18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
-import { notify } from '../../shared/lib/portalNotices';
 import { centerNowParts, formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { addDays } from '../../shared/lib/recurrence';
 import {
@@ -13,7 +13,7 @@ import {
   type CoachAssignmentStudent,
 } from './coachAssignmentsApi';
 import { apiFetch } from '../../shared/api/client';
-import { errorMessage as safeMessage } from '../../shared/lib/errorMessage';
+import { staffError as safeMessage, staffText } from '../operations/staffI18n';
 import './manager-coach-assignments.css';
 
 import { Select } from '../../shared/ui/Select';
@@ -26,24 +26,25 @@ interface MemberLookupItem {
 }
 
 function assignmentSchedule(student: CoachAssignmentStudent): string | null {
-  if (student.assignmentType === 'TRAINING_PLAN' && student.endDate) return `Hạn: ${formatCenterDate(student.endDate)}`;
+  if (student.assignmentType === 'TRAINING_PLAN' && student.endDate) return staffText(`Hạn: ${formatCenterDate(student.endDate)}`, `Expires: ${formatCenterDate(student.endDate)}`);
   return student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), student.nextSession) : null;
 }
 
 export function ManagerCoachAssignmentsPage() {
+  const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
   const loadGeneration = useRef(0);
   const [data, setData] = useState<CoachAssignmentData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<StaffMessage | null>(null);
   const [search, setSearch] = useState('');
   const [coachFilter, setCoachFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [busy, setBusy] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<StaffMessage | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
-  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupError, setLookupError] = useState<StaffMessage | null>(null);
 
   // Modals state
   const [isAssignOpen, setIsAssignOpen] = useState(false);
@@ -186,7 +187,7 @@ export function ManagerCoachAssignmentsPage() {
   };
 
   const handleRemoveAssignment = async (student: CoachAssignmentStudent) => {
-    if (busy || !(await confirm({ title: 'Kết thúc phân công', message: `Hủy phân công giáo án của ${student.fullName}? Lịch sử giáo án được giữ lại.`, confirmLabel: 'Kết thúc phân công', danger: true }))) {
+    if (busy || !(await confirm({ title: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), message: staffMessage(`Hủy phân công giáo án của ${student.fullName}? Lịch sử giáo án được giữ lại.`, `Cancel the training plan assignment for ${student.fullName}? Training plan history will be retained.`), confirmLabel: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), danger: true }))) {
       return;
     }
     setBusy(true);
@@ -216,10 +217,10 @@ export function ManagerCoachAssignmentsPage() {
   }, [data]);
 
   return (
-    <div className="coach-assignments-page">
+    <div data-i18n-managed className="coach-assignments-page">
       <PageHeader
-        eyebrow="Vận hành & Huấn luyện"
-        title="Quản lý HLV & Học viên phụ trách"
+        eyebrow={t("Vận hành & Huấn luyện")}
+        title={t("Quản lý HLV & Học viên phụ trách")}
         actions={
           <button
             type="button"
@@ -227,60 +228,59 @@ export function ManagerCoachAssignmentsPage() {
             onClick={handleOpenAssign}
             disabled={busy || loading}
           >
-            + Phân công học viên mới
-          </button>
+            {t("+ Phân công học viên mới")}</button>
         }
       />
 
       {confirmDialog}
 
       {error && (
-        <div className="portal-alert portal-alert--error" role="alert">
-          {error} <button type="button" onClick={() => void load()}>Thử lại</button>
+        <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
+          {t(error)} <button type="button" onClick={() => void load()}>{t("Thử lại")}</button>
         </div>
       )}
 
       {/* Summary KPI Cards */}
-      <section className="coach-assignments-stats" aria-label="Thống kê tổng quan">
+      <section className="coach-assignments-stats" aria-label={t("Thống kê tổng quan")}>
         <div className="coach-stat-card">
-          <span className="coach-stat-card__label">Tổng số Huấn luyện viên</span>
+          <span className="coach-stat-card__label">{t("Tổng số Huấn luyện viên")}</span>
           <span className="coach-stat-card__value">{data?.stats.activeCoaches ?? 0}</span>
         </div>
         <div className="coach-stat-card">
-          <span className="coach-stat-card__label">Tổng học viên đang theo kèm</span>
+          <span className="coach-stat-card__label">{t("Tổng học viên đang theo kèm")}</span>
           <span className="coach-stat-card__value">{data?.stats.totalAssignedStudents ?? 0}</span>
         </div>
         <div className="coach-stat-card">
-          <span className="coach-stat-card__label">Học viên tập 1:1 (PT)</span>
+          <span className="coach-stat-card__label">{t("Học viên tập 1:1 (PT)")}</span>
           <span className="coach-stat-card__value">{data?.stats.totalPtStudents ?? 0}</span>
         </div>
         <div className="coach-stat-card">
-          <span className="coach-stat-card__label">Theo giáo án riêng</span>
+          <span className="coach-stat-card__label">{t("Theo giáo án riêng")}</span>
           <span className="coach-stat-card__value">{data?.stats.totalPlanStudents ?? 0}</span>
         </div>
       </section>
 
       {/* Toolbar: Filters, Search, View switch */}
-      <section className="coach-assignments-toolbar" aria-label="Bộ lọc và tìm kiếm">
+      <section className="coach-assignments-toolbar" aria-label={t("Bộ lọc và tìm kiếm")}>
         <div className="coach-assignments-filters">
           <input
             type="search"
             className="coach-search-input"
-            placeholder="Tìm theo tên HLV, học viên, mã thẻ, SĐT..."
+            placeholder={t("Tìm theo tên HLV, học viên, mã thẻ, SĐT...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            aria-label="Tìm kiếm"
+            aria-label={t("Tìm kiếm")}
           />
 
           <Select
             className="coach-filter-select"
             value={coachFilter}
             onChange={(e) => setCoachFilter(e.target.value)}
-            aria-label="Lọc theo Huấn luyện viên"
+            aria-label={t("Lọc theo Huấn luyện viên")}
           >
-            <option value="">Tất cả Huấn luyện viên</option>
+            <option value="">{t("Tất cả Huấn luyện viên")}</option>
             {allCoachesList.map((c) => (
-              <option key={c.coachId} value={c.coachId}>
+              <option data-i18n-managed key={c.coachId} value={c.coachId}>
                 {c.coachName} ({c.specialization})
               </option>
             ))}
@@ -290,12 +290,12 @@ export function ManagerCoachAssignmentsPage() {
             className="coach-filter-select"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            aria-label="Lọc theo hình thức"
+            aria-label={t("Lọc theo hình thức")}
           >
-            <option value="ALL">Tất cả hình thức</option>
-            <option value="TRAINING_PLAN">Theo giáo án riêng</option>
-            <option value="PT_1_1">Tập 1:1 với HLV (PT)</option>
-            <option value="CLASS">Lớp học nhóm</option>
+            <option value="ALL">{t("Tất cả hình thức")}</option>
+            <option value="TRAINING_PLAN">{t("Theo giáo án riêng")}</option>
+            <option value="PT_1_1">{t("Tập 1:1 với HLV (PT)")}</option>
+            <option value="CLASS">{t("Lớp học nhóm")}</option>
           </Select>
         </div>
 
@@ -305,31 +305,29 @@ export function ManagerCoachAssignmentsPage() {
             className={`coach-view-button${viewMode === 'cards' ? ' coach-view-button--active' : ''}`}
             onClick={() => setViewMode('cards')}
           >
-            Theo HLV
-          </button>
+            {t("Theo HLV")}</button>
           <button
             type="button"
             className={`coach-view-button${viewMode === 'table' ? ' coach-view-button--active' : ''}`}
             onClick={() => setViewMode('table')}
           >
-            Bảng danh sách
-          </button>
+            {t("Bảng danh sách")}</button>
         </div>
       </section>
 
       {/* Main View Area */}
       {loading ? (
-        <LoadingSkeleton label="Đang tải dữ liệu HLV và học viên..." count={4} />
+        <LoadingSkeleton label={t("Đang tải dữ liệu HLV và học viên...")} count={4} />
       ) : !data || data.coaches.length === 0 ? (
-        <div className="portal-empty">
-          <h3>Không tìm thấy dữ liệu</h3>
-          <p>Không có huấn luyện viên hoặc học viên nào phù hợp với bộ lọc hiện tại.</p>
+        <div data-i18n-managed className="portal-empty">
+          <h3>{t("Không tìm thấy dữ liệu")}</h3>
+          <p>{t("Không có huấn luyện viên hoặc học viên nào phù hợp với bộ lọc hiện tại.")}</p>
         </div>
       ) : viewMode === 'cards' ? (
         /* Card View by Coach */
-        <div className="coach-cards-grid">
+        <div data-i18n-managed className="coach-cards-grid">
           {data.coaches.map((coach: CoachAssignmentOverview) => (
-            <article key={coach.coachId} className="coach-card-panel">
+            <article data-i18n-managed key={coach.coachId} className="coach-card-panel">
               <header className="coach-card-header">
                 <div className="coach-info-main">
                   <div className="coach-avatar-badge" aria-hidden="true">
@@ -347,28 +345,24 @@ export function ManagerCoachAssignmentsPage() {
 
                 <div className="coach-student-pills">
                   <span className="student-count-pill">
-                    <strong>{coach.totalStudentsCount}</strong> tổng học viên
-                  </span>
+                    <strong>{coach.totalStudentsCount}</strong> {t(" tổng học viên")}</span>
                   <span className="student-count-pill">
                     <strong>{coach.ptStudentsCount}</strong> PT 1:1
                   </span>
                   <span className="student-count-pill">
-                    <strong>{coach.planStudentsCount}</strong> Giáo án
-                  </span>
+                    <strong>{coach.planStudentsCount}</strong> {t(" Giáo án")}</span>
                   <span className="student-count-pill">
-                    <strong>{coach.classStudentsCount}</strong> Lớp nhóm
-                  </span>
+                    <strong>{coach.classStudentsCount}</strong> {t(" Lớp nhóm")}</span>
                 </div>
               </header>
 
               {coach.students.length === 0 ? (
-                <div style={{ padding: '1.25rem', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
-                  HLV hiện chưa có học viên nào trong danh mục lọc này.
-                </div>
+                <div data-i18n-managed style={{ padding: '1.25rem', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
+                  {t("HLV hiện chưa có học viên nào trong danh mục lọc này.")}</div>
               ) : (
-                <div className="coach-students-list">
+                <div data-i18n-managed className="coach-students-list">
                   {coach.students.map((student) => (
-                    <div key={`${student.assignmentType}-${student.referenceId}-${student.memberId}`} className="coach-student-row">
+                    <div data-i18n-managed key={`${student.assignmentType}-${student.referenceId}-${student.memberId}`} className="coach-student-row">
                       <div className="coach-student-profile">
                         <div className="student-avatar-circle">
                           {student.fullName.charAt(0).toUpperCase()}
@@ -396,7 +390,7 @@ export function ManagerCoachAssignmentsPage() {
                       <div className="coach-student-detail">
                         <div>{student.detail}</div>
                         {assignmentSchedule(student) && (
-                          <small style={{ color: 'var(--portal-salmon)', display: 'block', marginTop: '0.2rem' }}>
+                          <small data-i18n-managed style={{ color: 'var(--portal-salmon)', display: 'block', marginTop: '0.2rem' }}>
                             {assignmentSchedule(student)}
                           </small>
                         )}
@@ -408,8 +402,7 @@ export function ManagerCoachAssignmentsPage() {
                           className="coach-action-btn"
                           onClick={() => setSelectedStudentDetail(student)}
                         >
-                          Chi tiết
-                        </button>
+                          {t("Chi tiết")}</button>
                         {student.assignmentType !== 'CLASS' && <button
                           type="button"
                           className="coach-action-btn"
@@ -421,17 +414,15 @@ export function ManagerCoachAssignmentsPage() {
                               currentCoachName: coach.coachName,
                             }); }}
                         >
-                          Điều chuyển HLV
-                        </button>}
+                          {t("Điều chuyển HLV")}</button>}
                         {student.assignmentType === 'TRAINING_PLAN' && (
-                          <button
+                          <button data-i18n-managed
                             type="button"
                             className="coach-action-btn coach-action-btn--danger"
                             disabled={busy}
                             onClick={() => void handleRemoveAssignment(student)}
                           >
-                            Kết thúc
-                          </button>
+                            {t("Kết thúc")}</button>
                         )}
                       </div>
                     </div>
@@ -443,21 +434,21 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       ) : (
         /* Table View */
-        <div className="coach-table-container">
+        <div data-i18n-managed className="coach-table-container">
           <table className="coach-table">
             <thead>
               <tr>
-                <th>Học viên</th>
-                <th>HLV phụ trách</th>
-                <th>Hình thức</th>
-                <th>Chi tiết & Mục tiêu</th>
-                <th>Hạn / Lịch tiếp theo</th>
-                <th>Thao tác</th>
+                <th>{t("Học viên")}</th>
+                <th>{t("HLV phụ trách")}</th>
+                <th>{t("Hình thức")}</th>
+                <th>{t("Chi tiết & Mục tiêu")}</th>
+                <th>{t("Hạn / Lịch tiếp theo")}</th>
+                <th>{t("Thao tác")}</th>
               </tr>
             </thead>
             <tbody>
               {flattenedStudents.map((item) => (
-                <tr key={`table-${item.assignmentType}-${item.referenceId}-${item.memberId}`}>
+                <tr data-i18n-managed key={`table-${item.assignmentType}-${item.referenceId}-${item.memberId}`}>
                   <td>
                     <strong>{item.fullName}</strong>
                     <div style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>
@@ -484,7 +475,7 @@ export function ManagerCoachAssignmentsPage() {
                     </span>
                   </td>
                   <td>{item.detail}</td>
-                  <td>{assignmentSchedule(item) || 'Đang hoạt động'}</td>
+                  <td>{assignmentSchedule(item) || t('Đang hoạt động')}</td>
                   <td>
                     <div className="coach-student-actions">
                       <button
@@ -492,8 +483,7 @@ export function ManagerCoachAssignmentsPage() {
                         className="coach-action-btn"
                         onClick={() => setSelectedStudentDetail(item)}
                       >
-                        Chi tiết
-                      </button>
+                        {t("Chi tiết")}</button>
                       {item.assignmentType !== 'CLASS' && <button
                         type="button"
                         className="coach-action-btn"
@@ -505,9 +495,8 @@ export function ManagerCoachAssignmentsPage() {
                             currentCoachName: item.coachName,
                           }); }}
                       >
-                        Điều chuyển
-                      </button>}
-                      {item.assignmentType === 'TRAINING_PLAN' && <button type="button" className="coach-action-btn coach-action-btn--danger" disabled={busy} onClick={() => void handleRemoveAssignment(item)}>Kết thúc</button>}
+                        {t("Điều chuyển")}</button>}
+                      {item.assignmentType === 'TRAINING_PLAN' && <button type="button" className="coach-action-btn coach-action-btn--danger" disabled={busy} onClick={() => void handleRemoveAssignment(item)}>{t("Kết thúc")}</button>}
                     </div>
                   </td>
                 </tr>
@@ -519,12 +508,12 @@ export function ManagerCoachAssignmentsPage() {
 
       {/* Modal 1: Assign Student to Coach */}
       {isAssignOpen && (
-        <Modal title="Phân công học viên mới cho Huấn luyện viên" busy={busy} onClose={() => setIsAssignOpen(false)}>
+        <Modal title={t("Phân công học viên mới cho Huấn luyện viên")} busy={busy} onClose={() => setIsAssignOpen(false)}>
           <form className="coach-modal-form" onSubmit={(e) => void handleAssignSubmit(e)}>
             <fieldset disabled={busy}>
-            {formError && <p className="portal-alert portal-alert--error" role="alert">{formError}</p>}
+            {formError && <p className="portal-alert portal-alert--error" role="alert">{t(formError)}</p>}
             <div className="coach-form-group">
-              <label htmlFor="assign-coach-select">Chọn Huấn luyện viên phụ trách *</label>
+              <label htmlFor="assign-coach-select">{t("Chọn Huấn luyện viên phụ trách *")}</label>
               <Select
                 id="assign-coach-select"
                 className="coach-form-control"
@@ -533,20 +522,20 @@ export function ManagerCoachAssignmentsPage() {
                 required
               >
                 {allCoachesList.map((c) => (
-                  <option key={c.coachId} value={c.coachId}>
-                    {c.coachName} - Chuyên môn: {c.specialization}
+                  <option data-i18n-managed key={c.coachId} value={c.coachId}>
+                    {c.coachName} {t(" - Chuyên môn: ")}{c.specialization}
                   </option>
                 ))}
               </Select>
             </div>
 
             <div className="coach-form-group">
-              <label htmlFor="assign-member-search">Tìm kiếm học viên theo tên / mã thẻ / SĐT *</label>
+              <label htmlFor="assign-member-search">{t("Tìm kiếm học viên theo tên / mã thẻ / SĐT *")}</label>
               <input
                 id="assign-member-search"
                 type="text"
                 className="coach-form-control"
-                placeholder="Nhập tên hoặc mã thẻ học viên (vd: SOL-MB...)"
+                placeholder={t("Nhập tên hoặc mã thẻ học viên (vd: SOL-MB...)")}
                 value={memberSearchQuery}
                 onChange={(e) => {
                   setMemberSearchQuery(e.target.value);
@@ -554,7 +543,7 @@ export function ManagerCoachAssignmentsPage() {
                 }}
               />
               {memberSearchResults.length > 0 && !selectedMember && (
-                <ul
+                <ul data-i18n-managed
                   style={{
                     background: 'var(--portal-raised)',
                     border: '1px solid var(--portal-border, rgba(255, 255, 255, 0.15))',
@@ -567,7 +556,7 @@ export function ManagerCoachAssignmentsPage() {
                   }}
                 >
                   {memberSearchResults.map((m) => (
-                    <li key={m.userId}>
+                    <li data-i18n-managed key={m.userId}>
                     <button type="button" className="coach-member-result" disabled={busy}
                       style={{
                         padding: '0.4rem 0.6rem',
@@ -582,29 +571,29 @@ export function ManagerCoachAssignmentsPage() {
                         setMemberSearchResults([]);
                       }}
                     >
-                      <strong>{m.fullName}</strong> — Mã thẻ: {m.membershipCode} {m.phone ? `• SĐT: ${m.phone}` : ''}
+                      <strong>{m.fullName}</strong> {t(" — Mã thẻ: ")}{m.membershipCode} {m.phone ? t(`• SĐT: ${m.phone}`, `• Phone: ${m.phone}`) : ''}
                     </button>
                     </li>
                   ))}
                 </ul>
               )}
-              {lookupLoading && <p role="status">Đang tìm học viên…</p>}
-              {lookupError && <p role="alert">{lookupError}</p>}
-              {!lookupLoading && !lookupError && !selectedMember && memberSearchQuery.length >= 2 && memberSearchResults.length === 0 && <p>Không tìm thấy học viên phù hợp.</p>}
+              {lookupLoading && <p role="status">{t("Đang tìm học viên…")}</p>}
+              {lookupError && <p role="alert">{t(lookupError)}</p>}
+              {!lookupLoading && !lookupError && !selectedMember && memberSearchQuery.length >= 2 && memberSearchResults.length === 0 && <p>{t("Không tìm thấy học viên phù hợp.")}</p>}
               {selectedMember && (
-                <div style={{ fontSize: '0.85rem', color: 'var(--portal-success)', marginTop: '0.25rem' }}>
-                  Đã chọn học viên: <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode})
+                <div data-i18n-managed style={{ fontSize: '0.85rem', color: 'var(--portal-success)', marginTop: '0.25rem' }}>
+                  {t("Đã chọn học viên: ")}<strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode})
                 </div>
               )}
             </div>
 
             <div className="coach-form-group">
-              <label htmlFor="assign-goal">Mục tiêu luyện tập</label>
+              <label htmlFor="assign-goal">{t("Mục tiêu luyện tập")}</label>
               <input
                 id="assign-goal"
                 type="text"
                 className="coach-form-control"
-                placeholder="Ví dụ: Giảm mỡ tăng cơ, rèn luyện thể lực 3 buổi/tuần"
+                placeholder={t("Ví dụ: Giảm mỡ tăng cơ, rèn luyện thể lực 3 buổi/tuần")}
                 value={assignGoal}
                 onChange={(e) => setAssignGoal(e.target.value)}
               />
@@ -612,7 +601,7 @@ export function ManagerCoachAssignmentsPage() {
 
             <div className="coach-form-row">
               <div className="coach-form-group">
-                <label htmlFor="assign-start-date">Ngày bắt đầu *</label>
+                <label htmlFor="assign-start-date">{t("Ngày bắt đầu *")}</label>
                 <DatePicker
                   id="assign-start-date"
                   value={assignStartDate}
@@ -621,7 +610,7 @@ export function ManagerCoachAssignmentsPage() {
                 />
               </div>
               <div className="coach-form-group">
-                <label htmlFor="assign-end-date">Ngày kết thúc *</label>
+                <label htmlFor="assign-end-date">{t("Ngày kết thúc *")}</label>
                 <DatePicker
                   id="assign-end-date"
                   value={assignEndDate}
@@ -638,14 +627,13 @@ export function ManagerCoachAssignmentsPage() {
                 onClick={() => setIsAssignOpen(false)}
                 disabled={busy}
               >
-                Hủy bỏ
-              </button>
+                {t("Hủy bỏ")}</button>
               <button
                 type="submit"
                 className="coach-action-btn coach-action-btn--primary"
                 disabled={busy || !selectedMember || !assignCoachId}
               >
-                {busy ? 'Đang phân công…' : 'Xác nhận phân công'}
+                {busy ? t('Đang phân công…') : t('Xác nhận phân công')}
               </button>
             </div>
             </fieldset>
@@ -656,16 +644,16 @@ export function ManagerCoachAssignmentsPage() {
       {/* Modal 2: Reassign Student */}
       {reassignStudent && (
         <Modal
-          title={`Điều chuyển HLV cho học viên: ${reassignStudent.student.fullName}`}
+          title={t(`Điều chuyển HLV cho học viên: ${reassignStudent.student.fullName}`, `Transfer coach for member: ${reassignStudent.student.fullName}`)}
           busy={busy}
           onClose={() => setReassignStudent(null)}
         >
           <form className="coach-modal-form" onSubmit={(e) => void handleReassignSubmit(e)}>
             <fieldset disabled={busy}>
-            {formError && <p className="portal-alert portal-alert--error" role="alert">{formError}</p>}
-            <p>Chỉ chuyển {reassignStudent.student.assignmentTypeLabel}: {reassignStudent.student.detail}. Các phân công khác được giữ nguyên.</p>
+            {formError && <p className="portal-alert portal-alert--error" role="alert">{t(formError)}</p>}
+            <p>{t("Chỉ chuyển ")}{reassignStudent.student.assignmentTypeLabel}: {reassignStudent.student.detail}{t(". Các phân công khác được giữ nguyên.")}</p>
             <div className="coach-form-group">
-              <label>Học viên</label>
+              <label>{t("Học viên")}</label>
               <input
                 type="text"
                 className="coach-form-control"
@@ -675,7 +663,7 @@ export function ManagerCoachAssignmentsPage() {
             </div>
 
             <div className="coach-form-group">
-              <label>HLV hiện tại</label>
+              <label>{t("HLV hiện tại")}</label>
               <input
                 type="text"
                 className="coach-form-control"
@@ -685,7 +673,7 @@ export function ManagerCoachAssignmentsPage() {
             </div>
 
             <div className="coach-form-group">
-              <label htmlFor="reassign-target-coach">Chọn Huấn luyện viên tiếp nhận mới *</label>
+              <label htmlFor="reassign-target-coach">{t("Chọn Huấn luyện viên tiếp nhận mới *")}</label>
               <Select
                 id="reassign-target-coach"
                 className="coach-form-control"
@@ -693,24 +681,24 @@ export function ManagerCoachAssignmentsPage() {
                 onChange={(e) => setTargetCoachId(Number(e.target.value))}
                 required
               >
-                <option value="">-- Chọn HLV mới --</option>
+                <option value="">{t("-- Chọn HLV mới --")}</option>
                 {allCoachesList
                   .filter((c) => c.coachId !== reassignStudent.currentCoachId)
                   .map((c) => (
-                    <option key={c.coachId} value={c.coachId}>
-                      {c.coachName} - Chuyên môn: {c.specialization}
+                    <option data-i18n-managed key={c.coachId} value={c.coachId}>
+                      {c.coachName} {t(" - Chuyên môn: ")}{c.specialization}
                     </option>
                   ))}
               </Select>
             </div>
 
             <div className="coach-form-group">
-              <label htmlFor="reassign-reason">Lý do điều chuyển</label>
+              <label htmlFor="reassign-reason">{t("Lý do điều chuyển")}</label>
               <textarea
                 id="reassign-reason"
                 className="coach-form-control"
                 rows={2}
-                placeholder="Nhập lý do điều chuyển (vd: HLV cũ nghỉ phép, điều chỉnh lịch tập...)"
+                placeholder={t("Nhập lý do điều chuyển (vd: HLV cũ nghỉ phép, điều chỉnh lịch tập...)")}
                 value={reassignReason}
                 onChange={(e) => setReassignReason(e.target.value)}
               />
@@ -723,14 +711,13 @@ export function ManagerCoachAssignmentsPage() {
                 onClick={() => setReassignStudent(null)}
                 disabled={busy}
               >
-                Hủy
-              </button>
+                {t("Hủy")}</button>
               <button
                 type="submit"
                 className="coach-action-btn coach-action-btn--primary"
                 disabled={busy || !targetCoachId}
               >
-                {busy ? 'Đang điều chuyển…' : 'Xác nhận điều chuyển'}
+                {busy ? t('Đang điều chuyển…') : t('Xác nhận điều chuyển')}
               </button>
             </div>
             </fieldset>
@@ -741,45 +728,45 @@ export function ManagerCoachAssignmentsPage() {
       {/* Modal 3: Student Details */}
       {selectedStudentDetail && (
         <Modal
-          title={`Hồ sơ học viên: ${selectedStudentDetail.fullName}`}
+          title={t(`Hồ sơ học viên: ${selectedStudentDetail.fullName}`, `Member profile: ${selectedStudentDetail.fullName}`)}
           onClose={() => setSelectedStudentDetail(null)}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', fontSize: '0.9rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <small style={{ color: 'var(--portal-muted)', display: 'block' }}>Mã hội viên</small>
+                <small style={{ color: 'var(--portal-muted)', display: 'block' }}>{t("Mã hội viên")}</small>
                 <strong>{selectedStudentDetail.membershipCode}</strong>
               </div>
               <div>
-                <small style={{ color: 'var(--portal-muted)', display: 'block' }}>Số điện thoại</small>
-                <span>{selectedStudentDetail.phone || 'Chưa cập nhật'}</span>
+                <small style={{ color: 'var(--portal-muted)', display: 'block' }}>{t("Số điện thoại")}</small>
+                <span>{selectedStudentDetail.phone || t('Chưa cập nhật')}</span>
               </div>
               <div>
                 <small style={{ color: 'var(--portal-muted)', display: 'block' }}>Email</small>
-                <span>{selectedStudentDetail.email || 'Chưa cập nhật'}</span>
+                <span>{selectedStudentDetail.email || t('Chưa cập nhật')}</span>
               </div>
               <div>
-                <small style={{ color: 'var(--portal-muted)', display: 'block' }}>Trình độ thể lực</small>
-                <span style={{ textTransform: 'capitalize' }}>{selectedStudentDetail.fitnessLevel || 'Mới bắt đầu'}</span>
+                <small style={{ color: 'var(--portal-muted)', display: 'block' }}>{t("Trình độ thể lực")}</small>
+                <span style={{ textTransform: 'capitalize' }}>{selectedStudentDetail.fitnessLevel || t('Mới bắt đầu')}</span>
               </div>
             </div>
 
             <div>
-              <small style={{ color: 'var(--portal-muted)', display: 'block' }}>Mục tiêu luyện tập</small>
+              <small style={{ color: 'var(--portal-muted)', display: 'block' }}>{t("Mục tiêu luyện tập")}</small>
               <p style={{ margin: '0.2rem 0', fontWeight: 500, color: 'var(--portal-paper)' }}>
-                {selectedStudentDetail.fitnessGoal || selectedStudentDetail.detail || 'Rèn luyện sức khỏe'}
+                {selectedStudentDetail.fitnessGoal || selectedStudentDetail.detail || t('Rèn luyện sức khỏe')}
               </p>
             </div>
 
             <div>
-              <small style={{ color: 'var(--portal-muted)', display: 'block' }}>Ghi chú sức khỏe & Tiền sử</small>
+              <small style={{ color: 'var(--portal-muted)', display: 'block' }}>{t("Ghi chú sức khỏe & Tiền sử")}</small>
               <p style={{ margin: '0.2rem 0', color: selectedStudentDetail.healthNotes ? 'var(--portal-warning)' : 'var(--portal-muted)' }}>
-                {selectedStudentDetail.healthNotes || 'Không có ghi chú bệnh lý đặc biệt.'}
+                {selectedStudentDetail.healthNotes || t('Không có ghi chú bệnh lý đặc biệt.')}
               </p>
             </div>
 
             <div>
-              <small style={{ color: 'var(--portal-muted)', display: 'block' }}>Hình thức & Lịch tập</small>
+              <small style={{ color: 'var(--portal-muted)', display: 'block' }}>{t("Hình thức & Lịch tập")}</small>
               <div style={{ marginTop: '0.25rem' }}>
                 <span
                   className={`coach-student-type-pill coach-student-type-pill--${
@@ -802,8 +789,7 @@ export function ManagerCoachAssignmentsPage() {
                 className="coach-action-btn coach-action-btn--primary"
                 onClick={() => setSelectedStudentDetail(null)}
               >
-                Đóng
-              </button>
+                {t("Đóng")}</button>
             </div>
           </div>
         </Modal>

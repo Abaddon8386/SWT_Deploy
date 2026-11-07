@@ -1,6 +1,5 @@
+import { useSourceLanguage, sourceText, sourceError, sourceNotify as notify, sourcePair, sourceFormatPair } from '../shopI18n';
 import { useCallback, useEffect, useState } from 'react';
-import { errorMessage } from '../../../shared/lib/errorMessage';
-import { notify } from '../../../shared/lib/portalNotices';
 import { useConfirm } from '../../../shared/ui/ConfirmDialog';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../../shared/ui/Modal';
@@ -11,16 +10,17 @@ import { AddressForm } from './AddressForm';
 const MAX_ADDRESSES = 5;
 
 export function MemberAddressBook() {
+  useSourceLanguage();
   const [confirm, confirmDialog] = useConfirm();
   const [addresses, setAddresses] = useState<AddressDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<{
     id: number | null;
     initialValue?: Partial<AddressRequest>;
   } | null>(null);
-  const [modalError, setModalError] = useState('');
+  const [modalError, setModalError] = useState<string | Error>('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -29,7 +29,7 @@ export function MemberAddressBook() {
       const list = await shopApi.listAddresses();
       setAddresses(list);
     } catch (err) {
-      setError(errorMessage(err, 'Không thể tải sổ địa chỉ giao hàng. Vui lòng thử lại.'));
+      setError(sourceError(err, 'Không thể tải sổ địa chỉ giao hàng. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ export function MemberAddressBook() {
         'success',
       );
     } catch (err) {
-      setModalError(errorMessage(err, 'Không thể lưu địa chỉ giao hàng. Vui lòng thử lại.'));
+      setModalError(sourceError(err, 'Không thể lưu địa chỉ giao hàng. Vui lòng thử lại.'));
     } finally {
       setBusy(false);
     }
@@ -67,7 +67,7 @@ export function MemberAddressBook() {
       setAddresses(updated);
       notify('Đã đặt làm địa chỉ mặc định.', 'success');
     } catch (err) {
-      const msg = errorMessage(err, 'Không thể đặt địa chỉ mặc định.');
+      const msg = sourceError(err, 'Không thể đặt địa chỉ mặc định.');
       setError(msg);
       notify(msg, 'error');
     } finally {
@@ -78,9 +78,9 @@ export function MemberAddressBook() {
   const handleDelete = async (addr: AddressDto) => {
     if (busy) return;
     const ok = await confirm({
-      title: 'Xóa địa chỉ giao hàng',
-      message: `Xóa địa chỉ của ${addr.recipientName} (${addr.streetLine}, ${addr.wardName}, ${addr.provinceName})?`,
-      confirmLabel: 'Xóa địa chỉ',
+      title: sourcePair('Xóa địa chỉ giao hàng'),
+      message: sourceFormatPair("Xóa địa chỉ của {0} ({1}, {2}, {3})?", addr.recipientName, addr.streetLine, addr.wardName, addr.provinceName),
+      confirmLabel: sourcePair('Xóa địa chỉ'),
       danger: true,
     });
     if (!ok) return;
@@ -91,7 +91,7 @@ export function MemberAddressBook() {
       setAddresses(updated);
       notify('Đã xóa địa chỉ giao hàng.', 'success');
     } catch (err) {
-      const msg = errorMessage(err, 'Không thể xóa địa chỉ giao hàng.');
+      const msg = sourceError(err, 'Không thể xóa địa chỉ giao hàng.');
       setError(msg);
       notify(msg, 'error');
     } finally {
@@ -102,7 +102,7 @@ export function MemberAddressBook() {
   const atLimit = addresses.length >= MAX_ADDRESSES;
 
   return (
-    <section className="stack" aria-label="Sổ địa chỉ giao hàng">
+    <section className="stack" aria-label={sourceText("Sổ địa chỉ giao hàng")}>
       <div
         style={{
           display: 'flex',
@@ -113,7 +113,7 @@ export function MemberAddressBook() {
         }}
       >
         <p className="muted" style={{ margin: 0 }}>
-          Lưu tối đa {MAX_ADDRESSES} địa chỉ giao hàng ({addresses.length}/{MAX_ADDRESSES}).
+          {sourceText("Lưu tối đa ")}{MAX_ADDRESSES}{sourceText(" địa chỉ giao hàng (")}{addresses.length}/{MAX_ADDRESSES}).
         </p>
         <button
           type="button"
@@ -124,22 +124,20 @@ export function MemberAddressBook() {
             setEditing({ id: null, initialValue: { makeDefault: addresses.length === 0 } });
           }}
         >
-          Thêm địa chỉ
-        </button>
+          {sourceText("Thêm địa chỉ")}</button>
       </div>
 
       {loading ? (
-        <LoadingSkeleton label="Đang tải sổ địa chỉ…" variant="rows" count={2} />
+        <LoadingSkeleton label={sourceText("Đang tải sổ địa chỉ…")} variant="rows" count={2} />
       ) : error ? (
         <div className="portal-alert" role="alert">
-          <span>{error}</span>
+          <span>{sourceText(error)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>
-            Thử lại
-          </button>
+            {sourceText("Thử lại")}</button>
         </div>
       ) : !addresses.length ? (
         <div className="portal-card portal-state">
-          <p style={{ margin: 0 }}>Bạn chưa lưu địa chỉ giao hàng nào.</p>
+          <p style={{ margin: 0 }}>{sourceText("Bạn chưa lưu địa chỉ giao hàng nào.")}</p>
         </div>
       ) : (
         <div className="stack">
@@ -158,14 +156,14 @@ export function MemberAddressBook() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <strong>{addr.recipientName}</strong>
                     <span className="muted">{addr.phone}</span>
-                    {addr.isDefault && <span className="shop-status-pill">Mặc định</span>}
+                    {addr.isDefault && <span className="shop-status-pill">{sourceText("Mặc định")}</span>}
                   </div>
                   <p style={{ margin: '4px 0 0' }}>
                     {addr.streetLine}, {addr.wardName}, {addr.provinceName}
                   </p>
                   {addr.note && (
                     <p className="muted" style={{ margin: '4px 0 0' }}>
-                      Ghi chú: {addr.note}
+                      {sourceText("Ghi chú: ")}{addr.note}
                     </p>
                   )}
                 </div>
@@ -190,8 +188,7 @@ export function MemberAddressBook() {
                       });
                     }}
                   >
-                    Sửa
-                  </button>
+                    {sourceText("Sửa")}</button>
                   {!addr.isDefault && (
                     <button
                       type="button"
@@ -199,8 +196,7 @@ export function MemberAddressBook() {
                       disabled={busy}
                       onClick={() => void handleMakeDefault(addr)}
                     >
-                      Đặt làm mặc định
-                    </button>
+                      {sourceText("Đặt làm mặc định")}</button>
                   )}
                   <button
                     type="button"
@@ -208,8 +204,7 @@ export function MemberAddressBook() {
                     disabled={busy}
                     onClick={() => void handleDelete(addr)}
                   >
-                    Xóa
-                  </button>
+                    {sourceText("Xóa")}</button>
                 </div>
               </div>
             </article>
@@ -219,7 +214,7 @@ export function MemberAddressBook() {
 
       {editing && (
         <Modal
-          title={editing.id == null ? 'Thêm địa chỉ giao hàng' : 'Sửa địa chỉ giao hàng'}
+          title={editing.id == null ? sourceText('Thêm địa chỉ giao hàng') : sourceText('Sửa địa chỉ giao hàng')}
           busy={busy}
           onClose={() => {
             if (!busy) setEditing(null);
@@ -234,7 +229,7 @@ export function MemberAddressBook() {
             />
             {modalError && (
               <p className="form-error" role="alert">
-                {modalError}
+                {sourceText(modalError)}
               </p>
             )}
           </div>

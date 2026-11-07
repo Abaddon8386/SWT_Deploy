@@ -1,3 +1,4 @@
+import { staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { TrainingPlanResults } from './TrainingPlanResults';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise } from './trainingExercise';
@@ -6,8 +7,6 @@ import { DatePicker } from '../../shared/ui/DatePicker';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
-import { notify } from '../../shared/lib/portalNotices';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { aiApi, type SavedTrainingPlan, type SavedTrainingPlanItem } from './aiApi';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -21,15 +20,16 @@ const formatDate = (iso: string) => iso.split('-').reverse().join('/');
 
 /** Chỉnh sửa giáo án và bài tập trên server; giữ ID bài tập và lịch sử tập của hội viên. */
 export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) {
+  const { t } = useStaffI18n();
   const [resultPlan, setResultPlan] = useState<SavedTrainingPlan | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const [plans, setPlans] = useState<SavedTrainingPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const [loadError, setLoadError] = useState<StaffMessage>('');
   const [attempt, setAttempt] = useState(0);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [editing, setEditing] = useState<{ plan: SavedTrainingPlan; goal: string; startDate: string; endDate: string; items: SavedTrainingPlanItem[] } | null>(null);
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState<StaffMessage>('');
 
   const load = useCallback(() => setAttempt((value) => value + 1), []);
 
@@ -80,9 +80,9 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
   const remove = async (plan: SavedTrainingPlan) => {
     if (busyId !== null) return;
     const confirmed = await confirm({
-      title: plan.status === 'active' ? 'Ngừng áp dụng giáo án?' : 'Xóa giáo án nháp?',
-      message: plan.status === 'active' ? 'Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.' : `Giáo án của ${plan.memberName ?? `hội viên #${plan.memberId}`} sẽ bị xóa cùng toàn bộ bài tập. Không thể hoàn tác.`,
-      confirmLabel: 'Xóa',
+      title: plan.status === 'active' ? staffMessage('Ngừng áp dụng giáo án?', staffTranslation('Ngừng áp dụng giáo án?')) : staffMessage('Xóa giáo án nháp?', staffTranslation('Xóa giáo án nháp?')),
+      message: plan.status === 'active' ? staffMessage('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.', staffTranslation('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.')) : staffMessage(`Giáo án của ${plan.memberName ?? `hội viên #${plan.memberId}`} sẽ bị xóa cùng toàn bộ bài tập. Không thể hoàn tác.`, `Training plan for ${plan.memberName ?? `member #${plan.memberId}`} will be deleted with all exercises. This cannot be undone.`),
+      confirmLabel: staffMessage('Xóa', staffTranslation('Xóa')),
       danger: true,
     });
     if (!confirmed) return;
@@ -99,57 +99,55 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
   };
 
   return (
-    <section className="portal-card" aria-labelledby="saved-plans-heading" style={{ marginTop: '24px' }}>
+    <section data-i18n-managed className="portal-card" aria-labelledby="saved-plans-heading" style={{ marginTop: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-        <h2 id="saved-plans-heading" className="portal-card-title">Giáo án đã lưu</h2>
-        <button type="button" className="btn-secondary btn-sm" onClick={load} disabled={loading}>Tải lại</button>
+        <h2 id="saved-plans-heading" className="portal-card-title">{t("Giáo án đã lưu")}</h2>
+        <button type="button" className="btn-secondary btn-sm" onClick={load} disabled={loading}>{t("Tải lại")}</button>
       </div>
       {loading ? (
-        <LoadingSkeleton label="Đang tải giáo án đã lưu" variant="table" />
+        <LoadingSkeleton label={t("Đang tải giáo án đã lưu")} variant="table" />
       ) : loadError ? (
-        <div role="alert" className="portal-alert">
-          {loadError} <button type="button" className="btn-secondary btn-sm" onClick={load}>Thử lại</button>
+        <div data-i18n-managed role="alert" className="portal-alert">
+          {t(loadError)} <button type="button" className="btn-secondary btn-sm" onClick={load}>{t("Thử lại")}</button>
         </div>
       ) : plans.length === 0 ? (
-        <p role="status">Chưa có giáo án nào được lưu.</p>
+        <p data-i18n-managed role="status">{t("Chưa có giáo án nào được lưu.")}</p>
       ) : (
-        <div className="portal-table-wrapper">
+        <div data-i18n-managed className="portal-table-wrapper">
           <table className="portal-table">
             <thead>
               <tr>
-                <th scope="col">Học viên</th>
-                <th scope="col">Mục tiêu</th>
-                <th scope="col">Thời gian</th>
-                <th scope="col">Bài tập</th>
-                <th scope="col">Trạng thái</th>
-                <th scope="col">Thao tác</th>
+                <th scope="col">{t("Học viên")}</th>
+                <th scope="col">{t("Mục tiêu")}</th>
+                <th scope="col">{t("Thời gian")}</th>
+                <th scope="col">{t("Bài tập")}</th>
+                <th scope="col">{t("Trạng thái")}</th>
+                <th scope="col">{t("Thao tác")}</th>
               </tr>
             </thead>
             <tbody>
               {plans.map((plan) => {
                 const editable = plan.status === 'draft' || plan.status === 'active';
                 return (
-                  <tr key={plan.id}>
-                    <td><strong>{plan.memberName ?? `#${plan.memberId}`}</strong>{plan.coachName && <div className="muted">HLV: {plan.coachName}</div>}</td>
+                  <tr data-i18n-managed key={plan.id}>
+                    <td><strong>{plan.memberName ?? `#${plan.memberId}`}</strong>{plan.coachName && <div className="muted">{t("HLV:")}{plan.coachName}</div>}</td>
                     <td>{plan.goal || <span className="muted">—</span>}</td>
                     <td>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</td>
                     <td>{plan.items?.length ?? 0}</td>
                     <td>
                       <span className={`badge ${plan.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
-                        {STATUS_LABEL[plan.status] ?? plan.status}
+                        {t(STATUS_LABEL[plan.status]) || plan.status}
                       </span>
                     </td>
                     <td className="actions">
-                      <button type="button" className="btn-secondary btn-sm" onClick={() => setResultPlan(plan)}>Kết quả</button>
+                      <button type="button" className="btn-secondary btn-sm" onClick={() => setResultPlan(plan)}>{t("Kết quả")}</button>
                       {editable && (
-                        <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => openEditor(plan)}>
-                          Sửa
-                        </button>
+                        <button data-i18n-managed type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => openEditor(plan)}>
+                          {t("Sửa")}</button>
                       )}
                       {editable && (
-                        <button type="button" className="btn-danger btn-sm" disabled={busyId !== null} onClick={() => void remove(plan)}>
-                          Xóa
-                        </button>
+                        <button data-i18n-managed type="button" className="btn-danger btn-sm" disabled={busyId !== null} onClick={() => void remove(plan)}>
+                          {t("Xóa")}</button>
                       )}
                     </td>
                   </tr>
@@ -160,10 +158,10 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
         </div>
       )}
       {editing && (
-        <Modal title="Chỉnh sửa giáo án" busy={busyId !== null} onClose={() => busyId === null && setEditing(null)}>
+        <Modal title={t("Chỉnh sửa giáo án")} busy={busyId !== null} onClose={() => busyId === null && setEditing(null)}>
           <form onSubmit={(event) => void submitEdit(event)}>
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="plan-edit-goal">Mục tiêu</label>
+              <label className="portal-label" htmlFor="plan-edit-goal">{t("Mục tiêu")}</label>
               <input
                 id="plan-edit-goal"
                 className="portal-input"
@@ -174,7 +172,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
               />
             </div>
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="plan-edit-start">Ngày bắt đầu</label>
+              <label className="portal-label" htmlFor="plan-edit-start">{t("Ngày bắt đầu")}</label>
               <DatePicker
                 id="plan-edit-start"
                 disabled={busyId !== null}
@@ -183,7 +181,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
               />
             </div>
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="plan-edit-end">Ngày kết thúc</label>
+              <label className="portal-label" htmlFor="plan-edit-end">{t("Ngày kết thúc")}</label>
               <DatePicker
                 id="plan-edit-end"
                 disabled={busyId !== null}
@@ -193,24 +191,24 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
               />
             </div>
             <fieldset disabled={busyId !== null} className="plan-exercise-list">
-              <legend>Bài tập trong giáo án</legend>
-              {editing.items.length === 0 && <p className="muted">Giáo án chưa có bài tập.</p>}
+              <legend>{t("Bài tập trong giáo án")}</legend>
+              {editing.items.length === 0 && <p className="muted">{t("Giáo án chưa có bài tập.")}</p>}
               {editing.items.map((item, index) => <fieldset key={item.id} className="plan-exercise-editor">
-                <legend>Bài {index + 1}: {item.exerciseName}</legend>
+                <legend>{t("Bài ")}{index + 1}: {item.exerciseName}</legend>
                 <TrainingExerciseFields prefix={`plan-item-${item.id}`} value={item} onChange={value => { setFormError(''); setEditing({ ...editing, items: editing.items.map(current => current.id === item.id ? { ...current, ...value } : current) }); }} />
               </fieldset>)}
             </fieldset>
-            {formError && <p role="alert" className="form-error">{formError}</p>}
+            {formError && <p role="alert" className="form-error">{t(formError)}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => setEditing(null)}>Hủy</button>
+              <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => setEditing(null)}>{t("Hủy")}</button>
               <button type="submit" className="btn-primary" disabled={busyId !== null} aria-busy={busyId !== null}>
-                {busyId !== null ? 'Đang lưu…' : 'Lưu thay đổi'}
+                {busyId !== null ? t('Đang lưu…') : t('Lưu thay đổi')}
               </button>
             </div>
           </form>
         </Modal>
       )}
-      {resultPlan && <Modal title={'Kết quả · ' + (resultPlan.memberName ?? '#' + resultPlan.memberId)} onClose={() => setResultPlan(null)}><TrainingPlanResults key={resultPlan.id} planId={resultPlan.id} /></Modal>}
+      {resultPlan && <Modal title={t('Kết quả · ') + (resultPlan.memberName ?? '#' + resultPlan.memberId)} onClose={() => setResultPlan(null)}><TrainingPlanResults key={resultPlan.id} planId={resultPlan.id} /></Modal>}
       {confirmDialog}
     </section>
   );

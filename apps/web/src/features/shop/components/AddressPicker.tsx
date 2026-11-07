@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText } from '../shopI18n';
 import { useId } from 'react';
 import type { AddressDto, AddressRequest } from '../shopTypes';
 import { RegionSelects } from './RegionSelects';
@@ -21,6 +22,7 @@ export function AddressPicker({
   onSaveAddressChange: (save: boolean) => void;
   errors?: Partial<Record<string, string>>;
 }) {
+  useSourceLanguage();
   const uid = useId();
   const groupName = `${uid}-addr`;
   const showNewForm = selectedId === 'new' || addresses.length === 0;
@@ -43,7 +45,7 @@ export function AddressPicker({
             <div>
               <div>
                 <strong>{addr.recipientName}</strong> · {addr.phone}
-                {addr.isDefault && <span> · Mặc định</span>}
+                {addr.isDefault && <span> {sourceText(" · Mặc định")}</span>}
               </div>
               <div>
                 {addr.streetLine}, {addr.wardName}, {addr.provinceName}
@@ -62,7 +64,7 @@ export function AddressPicker({
             checked={selectedId === 'new'}
             onChange={() => onSelect('new')}
           />
-          <span>+ Thêm địa chỉ mới</span>
+          <span>{sourceText("+ Thêm địa chỉ mới")}</span>
         </label>
       )}
 
@@ -70,8 +72,7 @@ export function AddressPicker({
         <div className="shop-address-form">
           <div className="shop-field">
             <label htmlFor={`${uid}-name`} className="shop-label portal-label">
-              Họ tên người nhận
-            </label>
+              {sourceText("Họ tên người nhận")}</label>
             <input
               id={`${uid}-name`}
               name="recipientName"
@@ -86,15 +87,14 @@ export function AddressPicker({
             />
             {errors?.recipientName && (
               <p className="form-error" role="alert">
-                {errors.recipientName}
+                {sourceText(errors.recipientName)}
               </p>
             )}
           </div>
 
           <div className="shop-field">
             <label htmlFor={`${uid}-phone`} className="shop-label portal-label">
-              Số điện thoại
-            </label>
+              {sourceText("Số điện thoại")}</label>
             <input
               id={`${uid}-phone`}
               name="phone"
@@ -107,7 +107,7 @@ export function AddressPicker({
             />
             {errors?.phone && (
               <p className="form-error" role="alert">
-                {errors.phone}
+                {sourceText(errors.phone)}
               </p>
             )}
           </div>
@@ -123,8 +123,7 @@ export function AddressPicker({
 
           <div className="shop-field">
             <label htmlFor={`${uid}-street`} className="shop-label portal-label">
-              Số nhà, tên đường
-            </label>
+              {sourceText("Số nhà, tên đường")}</label>
             <input
               id={`${uid}-street`}
               name="streetLine"
@@ -139,15 +138,14 @@ export function AddressPicker({
             />
             {errors?.streetLine && (
               <p className="form-error" role="alert">
-                {errors.streetLine}
+                {sourceText(errors.streetLine)}
               </p>
             )}
           </div>
 
           <div className="shop-field">
             <label htmlFor={`${uid}-note`} className="shop-label portal-label">
-              Ghi chú giao hàng (tùy chọn)
-            </label>
+              {sourceText("Ghi chú giao hàng (tùy chọn)")}</label>
             <input
               id={`${uid}-note`}
               name="note"
@@ -160,7 +158,7 @@ export function AddressPicker({
             />
             {errors?.note && (
               <p className="form-error" role="alert">
-                {errors.note}
+                {sourceText(errors.note)}
               </p>
             )}
           </div>
@@ -171,7 +169,7 @@ export function AddressPicker({
               checked={saveAddress}
               onChange={(e) => onSaveAddressChange(e.target.checked)}
             />
-            <span>Lưu vào sổ địa chỉ</span>
+            <span>{sourceText("Lưu vào sổ địa chỉ")}</span>
           </label>
 
           {saveAddress && (
@@ -183,7 +181,7 @@ export function AddressPicker({
                   onNewAddressChange({ ...newAddress, makeDefault: e.target.checked })
                 }
               />
-              <span>Đặt làm địa chỉ mặc định</span>
+              <span>{sourceText("Đặt làm địa chỉ mặc định")}</span>
             </label>
           )}
         </div>

@@ -1,8 +1,7 @@
+import { useSourceLanguage, sourceText, sourceError, sourceNotify as notify, sourcePair, sourceFormatPair } from './shopI18n';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
-import { errorMessage } from '../../shared/lib/errorMessage';
-import { notify } from '../../shared/lib/portalNotices';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -17,13 +16,14 @@ import { formatVnd } from './shopFormat';
 import type { OrderDto } from './shopTypes';
 
 export function MemberOrderDetailPage() {
+  useSourceLanguage();
   const { orderId } = useParams<{ orderId: string }>();
   const numericId = Number(orderId);
   const validId = Number.isSafeInteger(numericId) && numericId > 0;
   const [confirm, confirmDialog] = useConfirm();
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -38,7 +38,7 @@ export function MemberOrderDetailPage() {
       const res = await shopApi.getMyOrder(numericId);
       setOrder(res);
     } catch (err) {
-      setError(errorMessage(err, 'Không thể tải thông tin đơn hàng. Vui lòng thử lại.'));
+      setError(sourceError(err, 'Không thể tải thông tin đơn hàng. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }
@@ -51,12 +51,12 @@ export function MemberOrderDetailPage() {
   const handleCancel = async () => {
     if (!order || busy) return;
     const ok = await confirm({
-      title: 'Hủy đơn hàng',
+      title: sourcePair('Hủy đơn hàng'),
       message:
         order.paidAt != null
-          ? `Hủy đơn ${order.code}? Số tiền ${formatVnd(order.total)} sẽ được hoàn vào Ví SÖL của bạn.`
-          : `Bạn có chắc chắn muốn hủy đơn hàng ${order.code}?`,
-      confirmLabel: 'Xác nhận hủy',
+          ? sourceFormatPair("Hủy đơn {0}? Số tiền {1} sẽ được hoàn vào Ví SÖL của bạn.", order.code, formatVnd(order.total))
+          : sourceFormatPair("Bạn có chắc chắn muốn hủy đơn hàng {0}?", order.code),
+      confirmLabel: sourcePair('Xác nhận hủy'),
       danger: true,
     });
     if (!ok) return;
@@ -64,9 +64,9 @@ export function MemberOrderDetailPage() {
     try {
       const updated = await shopApi.cancelMyOrder(order.id);
       setOrder(updated);
-      notify(`Đã hủy đơn ${order.code}`, 'success', { record: true });
+      notify(sourceFormatPair("Đã hủy đơn {0}", order.code), 'success', { record: true });
     } catch (err) {
-      const msg = errorMessage(err, 'Không thể hủy đơn hàng. Vui lòng thử lại.');
+      const msg = sourceError(err, 'Không thể hủy đơn hàng. Vui lòng thử lại.');
       notify(msg, 'error');
     } finally {
       setBusy(false);
@@ -76,28 +76,26 @@ export function MemberOrderDetailPage() {
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow="Đơn hàng của tôi"
-        title={order ? order.code : 'Chi tiết đơn hàng'}
+        eyebrow={sourceText("Đơn hàng của tôi")}
+        title={order ? order.code : sourceText('Chi tiết đơn hàng')}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Link to="/member/orders" className="btn-secondary btn-sm">
-              Danh sách đơn hàng
-            </Link>
+              {sourceText("Danh sách đơn hàng")}</Link>
             <RefreshButton
-              label="Làm mới chi tiết đơn"
+              label={sourceText("Làm mới chi tiết đơn")}
               disabled={loading || busy}
               onClick={() => void load()}
             />
             {order?.canCancel && (
-              <ActionMenu label="Thao tác khác">
+              <ActionMenu label={sourceText("Thao tác khác")}>
                 <button
                   type="button"
                   className="action-menu__item action-menu__item--danger"
                   disabled={busy}
                   onClick={() => void handleCancel()}
                 >
-                  Hủy đơn
-                </button>
+                  {sourceText("Hủy đơn")}</button>
               </ActionMenu>
             )}
           </div>
@@ -105,14 +103,13 @@ export function MemberOrderDetailPage() {
       />
 
       {loading ? (
-        <LoadingSkeleton label="Đang tải chi tiết đơn hàng…" variant="rows" count={3} />
+        <LoadingSkeleton label={sourceText("Đang tải chi tiết đơn hàng…")} variant="rows" count={3} />
       ) : error ? (
         <div className="portal-alert" role="alert">
-          <span>{error}</span>
+          <span>{sourceText(error)}</span>
           {validId && (
             <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>
-              Thử lại
-            </button>
+              {sourceText("Thử lại")}</button>
           )}
         </div>
       ) : (
@@ -129,8 +126,8 @@ export function MemberOrderDetailPage() {
                 }}
               >
                 <div>
-                  <strong>Mã đơn: {order.code}</strong>
-                  <span className="muted"> · Đặt lúc {formatCenterDateTime(order.createdAt)}</span>
+                  <strong>{sourceText("Mã đơn: ")}{order.code}</strong>
+                  <span className="muted"> {sourceText(" · Đặt lúc ")}{formatCenterDateTime(order.createdAt)}</span>
                 </div>
                 <OrderStatusPill
                   status={order.status}
@@ -150,7 +147,7 @@ export function MemberOrderDetailPage() {
                   />
                   {order.paymentDueAt && (
                     <p className="muted" style={{ margin: 0 }}>
-                      Giữ hàng đến {formatCenterDateTime(order.paymentDueAt)}
+                      {sourceText("Giữ hàng đến ")}{formatCenterDateTime(order.paymentDueAt)}
                     </p>
                   )}
                 </div>
@@ -161,22 +158,20 @@ export function MemberOrderDetailPage() {
                 order.paymentMethod === 'counter' &&
                 order.paymentDueAt && (
                   <p className="muted" style={{ margin: 0 }}>
-                    Giữ hàng đến {formatCenterDateTime(order.paymentDueAt)} — thanh toán khi nhận
-                    tại quầy
-                  </p>
+                    {sourceText("Giữ hàng đến ")}{formatCenterDateTime(order.paymentDueAt)} {sourceText(" — thanh toán khi nhận tại quầy")}</p>
                 )}
             </section>
 
-            <section className="portal-card stack" aria-label="Sản phẩm trong đơn">
-              <h2 className="portal-card-title">Sản phẩm</h2>
-              <div className="portal-table-wrapper" role="region" aria-label="Sản phẩm trong đơn" tabIndex={0}>
+            <section className="portal-card stack" aria-label={sourceText("Sản phẩm trong đơn")}>
+              <h2 className="portal-card-title">{sourceText("Sản phẩm")}</h2>
+              <div className="portal-table-wrapper" role="region" aria-label={sourceText("Sản phẩm trong đơn")} tabIndex={0}>
                 <table className="portal-table">
                   <thead>
                     <tr>
-                      <th scope="col">Sản phẩm</th>
-                      <th scope="col">Đơn giá</th>
-                      <th scope="col">Số lượng</th>
-                      <th scope="col">Thành tiền</th>
+                      <th scope="col">{sourceText("Sản phẩm")}</th>
+                      <th scope="col">{sourceText("Đơn giá")}</th>
+                      <th scope="col">{sourceText("Số lượng")}</th>
+                      <th scope="col">{sourceText("Thành tiền")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -213,9 +208,9 @@ export function MemberOrderDetailPage() {
                 gap: 16,
               }}
             >
-              <section className="portal-card stack" aria-label="Thông tin nhận hàng">
+              <section className="portal-card stack" aria-label={sourceText("Thông tin nhận hàng")}>
                 <h2 className="portal-card-title">
-                  {order.fulfillment === 'pickup' ? 'Nhận tại quầy' : 'Giao tới'}
+                  {order.fulfillment === 'pickup' ? sourceText('Nhận tại quầy') : sourceText('Giao tới')}
                 </h2>
                 {order.fulfillment === 'delivery' && order.shipping ? (
                   <div className="stack" style={{ gap: 4 }}>
@@ -228,53 +223,52 @@ export function MemberOrderDetailPage() {
                     </p>
                     {order.shipping.note && (
                       <p className="muted" style={{ margin: 0 }}>
-                        Ghi chú: {order.shipping.note}
+                        {sourceText("Ghi chú: ")}{order.shipping.note}
                       </p>
                     )}
                   </div>
                 ) : (
                   <div className="stack" style={{ gap: 4 }}>
                     <p style={{ margin: 0 }}>
-                      {order.pickupAddress || 'Quầy lễ tân trung tâm SÖL Fitness'}
+                      {order.pickupAddress || sourceText('Quầy lễ tân trung tâm SÖL Fitness')}
                     </p>
                     <p className="muted" style={{ margin: 0 }}>
-                      Mang thẻ hội viên khi đến nhận hàng.
-                    </p>
+                      {sourceText("Mang thẻ hội viên khi đến nhận hàng.")}</p>
                   </div>
                 )}
               </section>
 
-              <section className="portal-card stack" aria-label="Thông tin thanh toán">
-                <h2 className="portal-card-title">Thanh toán</h2>
+              <section className="portal-card stack" aria-label={sourceText("Thông tin thanh toán")}>
+                <h2 className="portal-card-title">{sourceText("Thanh toán")}</h2>
                 <p style={{ margin: 0 }}>
-                  Phương thức:{' '}
+                  {sourceText("Phương thức:")}{' '}
                   <strong>
                     {order.paymentMethod === 'counter'
-                      ? 'Trả tại quầy SÖL'
-                      : 'Trực tuyến (VNPay / Ví SÖL)'}
+                      ? sourceText('Trả tại quầy SÖL')
+                      : sourceText('Trực tuyến (VNPay / Ví SÖL)')}
                   </strong>
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="muted">Tạm tính</span>
+                  <span className="muted">{sourceText("Tạm tính")}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {formatVnd(order.subtotal)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="muted">Phí giao hàng</span>
+                  <span className="muted">{sourceText("Phí giao hàng")}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {formatVnd(order.shippingFee)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <strong>Tổng cộng</strong>
+                  <strong>{sourceText("Tổng cộng")}</strong>
                   <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {formatVnd(order.total)}
                   </strong>
                 </div>
                 {order.refundedAmount != null && order.refundedAmount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="muted">Đã hoàn vào Ví SÖL</span>
+                    <span className="muted">{sourceText("Đã hoàn vào Ví SÖL")}</span>
                     <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
                       {formatVnd(order.refundedAmount)}
                     </strong>

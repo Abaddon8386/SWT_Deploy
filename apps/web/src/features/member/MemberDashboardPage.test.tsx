@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n/language';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -43,7 +44,7 @@ describe('SCRUM-85 dashboard', () => {
 
   afterEach(async () => {
     await act(async () => root.unmount());
-    host.remove();
+    host.remove(); setLanguage('vi');
     vi.unstubAllGlobals();
   });
 
@@ -153,5 +154,14 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
     expect(host.textContent).not.toContain('Pilates Cancelled');
     expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
+  });
+  it('switches the mounted dashboard and preserves server membership names', async () => {
+    await renderDashboard();
+    await act(async () => setLanguage('en'));
+    expect(host.textContent).toContain('My overview');
+    expect(host.textContent).toContain('My membership');
+    expect(host.textContent).toContain('Essential');
+    await act(async () => setLanguage('vi'));
+    expect(host.textContent).toContain('Tổng quan của tôi');
   });
 });

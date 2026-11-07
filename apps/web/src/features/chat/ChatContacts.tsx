@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { chatRoleLabel, getContacts, type ChatContact } from './chatApi';
 import { ChatAvatar } from './ChatAvatar';
-import { errorMessage } from '../../shared/lib/errorMessage';
+import { chatError, type ChatError } from './chatMessages';
 import { useI18n } from '../../shared/i18n';
 
 export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatContact) => void; pending: number | null }) {
@@ -13,7 +13,7 @@ export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatCo
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ChatError | null>(null);
   const sequence = useRef({ value: 0 });
   const search = useCallback(async (term: string, nextPage: number) => {
     const request = ++sequence.current.value;
@@ -22,7 +22,7 @@ export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatCo
       const data = await getContacts(term, nextPage);
       if (request !== sequence.current.value) return;
       setContacts(data.content); setPage(nextPage); setTotal(data.totalPages);
-    } catch (e) { if (request === sequence.current.value) setError(errorMessage(e, 'Không thể tải danh bạ.')); }
+    } catch (e) { if (request === sequence.current.value) setError(chatError(e, 'Không thể tải danh bạ.', 'Unable to load contacts.')); }
     finally { if (request === sequence.current.value) setLoading(false); }
   }, []);
   useEffect(() => { const requests = sequence.current; void search('', 0); return () => { requests.value++; }; }, [search]);
@@ -33,7 +33,7 @@ export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatCo
       <div><input id="chat-contact-query" className="portal-input" type="search" value={query} maxLength={80} onChange={e => setQuery(e.target.value)} placeholder={t("Tìm kiếm người nhận...", "Search recipients...")} />
         <button type="submit" className="btn-secondary" disabled={loading}>{t("Tìm", "Search")}</button></div>
     </form>
-    {loading ? <LoadingSkeleton label={t("Đang tải danh bạ…", "Loading contacts…")} count={3} /> : error ? <div role="alert"><p>{error}</p><button className="direct-chat__link" type="button" onClick={() => void search(submitted, page)}>{t("Thử lại", "Retry")}</button></div>
+    {loading ? <LoadingSkeleton label={t("Đang tải danh bạ…", "Loading contacts…")} count={3} /> : error ? <div role="alert"><p>{t(error)}</p><button className="direct-chat__link" type="button" onClick={() => void search(submitted, page)}>{t("Thử lại", "Retry")}</button></div>
       : contacts.length === 0 ? <p className="direct-chat__muted">{t("Không tìm thấy lễ tân hoặc huấn luyện viên phù hợp.", "No matching receptionists or coaches found.")}</p>
         : <ul className="direct-chat__list">{contacts.map(contact => <li key={contact.id}><button type="button" data-contact-id={contact.id} className="direct-chat__person" disabled={pending !== null} onClick={() => onChoose(contact)}>
           <ChatAvatar contact={contact} />
