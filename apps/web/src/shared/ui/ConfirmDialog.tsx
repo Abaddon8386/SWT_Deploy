@@ -1,12 +1,12 @@
-import { useI18n } from '../i18n';
+import { useI18n, type SourceMessage } from '../i18n';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Modal } from './Modal';
 
 export interface ConfirmOptions {
-  title: string;
-  message: ReactNode;
-  confirmLabel?: string;
-  cancelLabel?: string;
+  title: string | SourceMessage;
+  message: ReactNode | SourceMessage;
+  confirmLabel?: string | SourceMessage;
+  cancelLabel?: string | SourceMessage;
   /** Thao tác có hậu quả lớn (xóa, khóa, hủy): nút xác nhận dùng kiểu nguy hiểm. */
   danger?: boolean;
 }
@@ -34,11 +34,14 @@ export function useConfirm() {
     setOptions(null);
   };
 
-  const dialog = options && <Modal title={options.title} onClose={() => settle(false)} returnFocusRef={returnFocus}>
-    <div className="portal-subtitle confirm-dialog__message">{options.message}</div>
+  const message = options?.message;
+  const renderedMessage = message && typeof message === 'object' && 'vi' in message && 'en' in message ? t(message as SourceMessage) : message as ReactNode;
+  const renderLabel = (value: string | SourceMessage) => typeof value === 'string' ? value : t(value);
+  const dialog = options && <Modal title={renderLabel(options.title)} onClose={() => settle(false)} returnFocusRef={returnFocus}>
+    <div className="portal-subtitle confirm-dialog__message">{renderedMessage}</div>
     <div className="form-actions confirm-dialog__actions">
-      <button type="button" className="btn-secondary" onClick={() => settle(false)}>{options.cancelLabel ?? t('Hủy')}</button>
-      <button type="button" className={options.danger ? 'btn-danger' : 'btn-primary'} onClick={() => settle(true)}>{options.confirmLabel ?? t('Xác nhận')}</button>
+      <button type="button" className="btn-secondary" onClick={() => settle(false)}>{options.cancelLabel ? renderLabel(options.cancelLabel) : t('Hủy')}</button>
+      <button type="button" className={options.danger ? 'btn-danger' : 'btn-primary'} onClick={() => settle(true)}>{options.confirmLabel ? renderLabel(options.confirmLabel) : t('Xác nhận')}</button>
     </div>
   </Modal>;
 

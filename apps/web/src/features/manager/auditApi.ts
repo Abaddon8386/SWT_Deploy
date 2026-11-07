@@ -1,3 +1,4 @@
+import { staffSourceError } from '../operations/staffI18n';
 import { apiFetch } from '../../shared/api/client';
 
 export interface AuditLogItem {
@@ -61,7 +62,7 @@ export const auditApi = {
 
     const res = await apiFetch<PageResult<AuditLogItem>>(`/admin/audit-logs?${params.toString()}`);
     if (!res || !Array.isArray(res.content)) {
-      throw new Error('Dữ liệu nhật ký kiểm toán không hợp lệ.');
+      throw staffSourceError('Dữ liệu nhật ký kiểm toán không hợp lệ.', 'Invalid audit log data.');
     }
     return res;
   },
@@ -82,7 +83,7 @@ export const auditApi = {
 
     const res = await apiFetch<ClassOccupancyItem[]>(`/reports/class-utilization${qs}`);
     if (!Array.isArray(res)) {
-      throw new Error('Dữ liệu tỷ lệ lấp đầy không hợp lệ.');
+      throw staffSourceError('Dữ liệu tỷ lệ lấp đầy không hợp lệ.', 'Invalid occupancy data.');
     }
     return res;
   },

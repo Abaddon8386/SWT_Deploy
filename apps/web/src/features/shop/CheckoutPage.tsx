@@ -1,8 +1,7 @@
+import { useSourceLanguage, sourceText, sourceError, sourceNotify as notify, sourceFormatPair } from './shopI18n';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ApiError, getCurrentUser, homePath } from '../../shared/api/client';
-import { errorMessage } from '../../shared/lib/errorMessage';
-import { notify } from '../../shared/lib/portalNotices';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PublicLayout, RoundArrow } from '../landing/components/PublicLayout';
 import { VnpayPayButton } from '../payments/VnpayPayButton';
@@ -63,6 +62,7 @@ function validateNewAddress(addr: AddressRequest): Partial<Record<string, string
 }
 
 export function CheckoutPage() {
+  useSourceLanguage();
   const user = getCurrentUser();
   const navigate = useNavigate();
   const cartLines = useCart();
@@ -88,11 +88,11 @@ export function CheckoutPage() {
   const [quote, setQuote] = useState<QuoteDto | null>(null);
   const [loadingInit, setLoadingInit] = useState(true);
   const [quoting, setQuoting] = useState(false);
-  const [quoteError, setQuoteError] = useState('');
+  const [quoteError, setQuoteError] = useState<string | Error>('');
   const [cartOpen, setCartOpen] = useState(false);
   const cartFocusRef = useRef<HTMLButtonElement | null>(null);
   const quoteRequestRef = useRef(0);
-  const [orderError, setOrderError] = useState('');
+  const [orderError, setOrderError] = useState<string | Error>('');
   const [counterBusy, setCounterBusy] = useState(false);
 
   const clientRequestIdRef = useRef<string>(generateRequestId());
@@ -119,7 +119,7 @@ export function CheckoutPage() {
     } catch (err) {
       if (request === quoteRequestRef.current) {
         setQuote(null);
-        setQuoteError(errorMessage(err, 'Không tải được báo giá đơn hàng.'));
+        setQuoteError(sourceError(err, 'Không tải được báo giá đơn hàng.'));
       }
       return null;
     } finally {
@@ -182,9 +182,9 @@ export function CheckoutPage() {
         <main id="public-main" className="fit-shop-page">
           <section className="fit-section shop-page">
             <div className="fit-catalog-state" role="status">
-              <h1>Mua hàng dành cho tài khoản hội viên.</h1>
+              <h1>{sourceText("Mua hàng dành cho tài khoản hội viên.")}</h1>
               <Link to={homePath(user.role)} className="fit-pill">
-                <span>Về portal</span>
+                <span>{sourceText("Về portal")}</span>
                 <RoundArrow />
               </Link>
             </div>
@@ -200,9 +200,9 @@ export function CheckoutPage() {
         <main id="public-main" className="fit-shop-page">
           <section className="fit-section shop-page">
             <div className="fit-catalog-state" role="status">
-              <h1>Giỏ hàng đang trống.</h1>
+              <h1>{sourceText("Giỏ hàng đang trống.")}</h1>
               <Link to="/products" className="fit-pill">
-                <span>Xem sản phẩm</span>
+                <span>{sourceText("Xem sản phẩm")}</span>
                 <RoundArrow />
               </Link>
             </div>
@@ -229,10 +229,10 @@ export function CheckoutPage() {
           const firstField = Object.keys(errs)[0];
           const el = formRootRef.current?.querySelector<HTMLElement>(`[data-field="${firstField}"]`);
           el?.focus();
-          throw new Error('Vui lòng điền đầy đủ thông tin địa chỉ giao hàng.');
+          throw sourceError(null, 'Vui lòng điền đầy đủ thông tin địa chỉ giao hàng.');
         }
       } else if (typeof selectedAddressId !== 'number') {
-        throw new Error('Vui lòng chọn địa chỉ giao hàng.');
+        throw sourceError(null, 'Vui lòng chọn địa chỉ giao hàng.');
       }
     }
 
@@ -292,7 +292,7 @@ export function CheckoutPage() {
           err.code === 'PRODUCT_OUT_OF_STOCK' ||
           err.status === 409)
       ) {
-        const msg = errorMessage(
+        const msg = sourceError(
           err,
           'Giá hoặc tồn kho sản phẩm vừa thay đổi. Báo giá đã được cập nhật lại.',
         );
@@ -302,7 +302,7 @@ export function CheckoutPage() {
           fulfillment,
         );
       } else {
-        setOrderError(errorMessage(err, 'Không thể tạo đơn hàng. Vui lòng thử lại.'));
+        setOrderError(sourceError(err, 'Không thể tạo đơn hàng. Vui lòng thử lại.'));
       }
       throw err;
     }
@@ -321,7 +321,7 @@ export function CheckoutPage() {
     setCounterBusy(true);
     try {
       const order = await submitOrder('counter');
-      notify(`Đã đặt đơn ${order.code}`, 'success', { record: true });
+      notify(sourceFormatPair("Đã đặt đơn {0}", order.code), 'success', { record: true });
       navigate(`/member/orders/${order.id}`);
     } catch {
       /* Error already displayed in orderError */
@@ -337,19 +337,19 @@ export function CheckoutPage() {
     <PublicLayout>
       <main id="public-main" className="fit-shop-page" ref={formRootRef}>
         <section className="fit-section shop-page" aria-labelledby="checkout-title">
-          <span className="fit-kicker">THANH TOÁN</span>
+          <span className="fit-kicker">{sourceText("THANH TOÁN")}</span>
           <h1 id="checkout-title" className="shop-catalog__title">
-            Hoàn tất đơn hàng<span className="fit-title-dot">.</span>
+            {sourceText("Hoàn tất đơn hàng")}<span className="fit-title-dot">.</span>
           </h1>
 
           {loadingInit && !quote ? (
-            <LoadingSkeleton label="Đang tải thông tin thanh toán…" variant="cards" count={2} />
+            <LoadingSkeleton label={sourceText("Đang tải thông tin thanh toán…")} variant="cards" count={2} />
           ) : (
             <div className="shop-checkout-grid">
               <div className="shop-checkout-main">
                 <div className="shop-checkout-card">
-                  <h2>Nhận hàng</h2>
-                  <div className="shop-fulfillment-options" role="radiogroup" aria-label="Hình thức nhận hàng">
+                  <h2>{sourceText("Nhận hàng")}</h2>
+                  <div className="shop-fulfillment-options" role="radiogroup" aria-label={sourceText("Hình thức nhận hàng")}>
                     <label
                       className={`shop-address-option${fulfillment === 'delivery' ? ' is-selected' : ''}`}
                     >
@@ -363,7 +363,7 @@ export function CheckoutPage() {
                           setOrderError('');
                         }}
                       />
-                      <span>Giao tận nơi</span>
+                      <span>{sourceText("Giao tận nơi")}</span>
                     </label>
                     <label
                       className={`shop-address-option${fulfillment === 'pickup' ? ' is-selected' : ''}`}
@@ -378,13 +378,13 @@ export function CheckoutPage() {
                           setOrderError('');
                         }}
                       />
-                      <span>Nhận tại quầy SÖL</span>
+                      <span>{sourceText("Nhận tại quầy SÖL")}</span>
                     </label>
                   </div>
 
                   {fulfillment === 'delivery' ? (
                     <div className="shop-checkout-addresses">
-                      <h3>Địa chỉ giao hàng</h3>
+                      <h3>{sourceText("Địa chỉ giao hàng")}</h3>
                       <AddressPicker
                         addresses={addresses}
                         selectedId={selectedAddressId}
@@ -407,18 +407,18 @@ export function CheckoutPage() {
                   ) : (
                     <div className="shop-pickup-box">
                       <p>
-                        <strong>Quầy nhận hàng:</strong> {pickupAddress}
+                        <strong>{sourceText("Quầy nhận hàng:")}</strong> {pickupAddress}
                       </p>
-                      <p>Mang thẻ hội viên khi đến nhận.</p>
+                      <p>{sourceText("Mang thẻ hội viên khi đến nhận.")}</p>
                     </div>
                   )}
                 </div>
 
                 <div className="shop-checkout-card">
-                  <h2>Thanh toán</h2>
+                  <h2>{sourceText("Thanh toán")}</h2>
                   {orderError && (
                     <p className="form-error" role="alert">
-                      {orderError}
+                      {sourceText(orderError)}
                     </p>
                   )}
 
@@ -448,21 +448,20 @@ export function CheckoutPage() {
                         }
                         onClick={() => void placeOrderCounter()}
                       >
-                        {counterBusy ? 'Đang đặt đơn…' : 'Đặt hàng, trả tại quầy'}
+                        {counterBusy ? sourceText('Đang đặt đơn…') : sourceText('Đặt hàng, trả tại quầy')}
                       </button>
                     </div>
                   )}
 
                   <p className="shop-checkout__hold-note">
-                    Giữ hàng {holdMinutes} phút để thanh toán.
-                  </p>
+                    {sourceText("Giữ hàng ")}{holdMinutes} {sourceText(" phút để thanh toán.")}</p>
                 </div>
               </div>
 
-              <aside className="shop-checkout-summary shop-checkout-card" aria-label="Tóm tắt đơn hàng" aria-busy={quoting}>
-                <h2>Đơn hàng</h2>
-                {quoting && <p role="status">Đang cập nhật báo giá…</p>}
-                {quoteError && <div role="alert"><p>{quoteError}</p><button type="button" className="btn-secondary" onClick={() => void refreshQuote(cartLines, fulfillment)}>Thử lại</button></div>}
+              <aside className="shop-checkout-summary shop-checkout-card" aria-label={sourceText("Tóm tắt đơn hàng")} aria-busy={quoting}>
+                <h2>{sourceText("Đơn hàng")}</h2>
+                {quoting && <p role="status">{sourceText("Đang cập nhật báo giá…")}</p>}
+                {quoteError && <div role="alert"><p>{sourceText(quoteError)}</p><button type="button" className="btn-secondary" onClick={() => void refreshQuote(cartLines, fulfillment)}>{sourceText("Thử lại")}</button></div>}
                 {quote && !quoting && (
                   <ul className="shop-checkout-items">
                     {quote.lines.map(line => (
@@ -470,7 +469,7 @@ export function CheckoutPage() {
                         <div>
                           <strong>{line.productName}</strong>
                           <span>
-                            {line.variantLabel} × {line.quantity}
+                            {line.variantLabel} {"×"}{line.quantity}
                           </span>
                         </div>
                         <span>{formatVnd(line.lineTotal)}</span>
@@ -478,20 +477,20 @@ export function CheckoutPage() {
                     ))}
                   </ul>
                 )}
-                {quote && !quote.valid && <p className="form-error" role="alert">Giỏ hàng có sản phẩm không còn bán hoặc không đủ tồn kho. Vui lòng sửa giỏ hàng để tiếp tục.</p>}
-                <button ref={cartFocusRef} type="button" className="btn-secondary" onClick={() => setCartOpen(true)}>Sửa giỏ hàng</button>
+                {quote && !quote.valid && <p className="form-error" role="alert">{sourceText("Giỏ hàng có sản phẩm không còn bán hoặc không đủ tồn kho. Vui lòng sửa giỏ hàng để tiếp tục.")}</p>}
+                <button ref={cartFocusRef} type="button" className="btn-secondary" onClick={() => setCartOpen(true)}>{sourceText("Sửa giỏ hàng")}</button>
 
                 <div className="shop-checkout-totals">
                   <div className="shop-checkout-row">
-                    <span>Tạm tính</span>
+                    <span>{sourceText("Tạm tính")}</span>
                     <span>{quote && !quoting ? formatVnd(quote.subtotal) : '—'}</span>
                   </div>
                   <div className="shop-checkout-row">
-                    <span>Phí giao</span>
+                    <span>{sourceText("Phí giao")}</span>
                     <span>{quote && !quoting ? formatVnd(quote.shippingFee) : '—'}</span>
                   </div>
                   <div className="shop-checkout-row shop-checkout-row--total">
-                    <strong>Tổng cộng</strong>
+                    <strong>{sourceText("Tổng cộng")}</strong>
                     <strong aria-live="polite">{quote && !quoting ? formatVnd(quote.total) : '—'}</strong>
                   </div>
                 </div>

@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText, sourceFormat } from "../shopI18n";
 import { formatCenterDateTime } from '../../../shared/lib/centerTime';
 import { formatVnd } from '../shopFormat';
 import type { OrderDto } from '../shopTypes';
@@ -9,19 +10,20 @@ export interface OrderTableProps {
 }
 
 export function OrderTable({ orders, onOpen }: OrderTableProps) {
+  useSourceLanguage();
   return (
-    <div className="portal-table-wrapper" role="region" aria-label="Danh sách đơn hàng" tabIndex={0}>
+    <div className="portal-table-wrapper" role="region" aria-label={sourceText("Danh sách đơn hàng")} tabIndex={0}>
       <table className="portal-table">
         <thead>
           <tr>
-            <th scope="col">Mã đơn</th>
-            <th scope="col">Thời gian</th>
-            <th scope="col">Hội viên</th>
-            <th scope="col">SĐT</th>
-            <th scope="col">Hình thức nhận</th>
-            <th scope="col">Tổng cộng</th>
-            <th scope="col">Trạng thái</th>
-            <th scope="col">Thao tác</th>
+            <th scope="col">{sourceText("Mã đơn")}</th>
+            <th scope="col">{sourceText("Thời gian")}</th>
+            <th scope="col">{sourceText("Hội viên")}</th>
+            <th scope="col">{sourceText("SĐT")}</th>
+            <th scope="col">{sourceText("Hình thức nhận")}</th>
+            <th scope="col">{sourceText("Tổng cộng")}</th>
+            <th scope="col">{sourceText("Trạng thái")}</th>
+            <th scope="col">{sourceText("Thao tác")}</th>
           </tr>
         </thead>
         <tbody>
@@ -33,7 +35,7 @@ export function OrderTable({ orders, onOpen }: OrderTableProps) {
               <td>{formatCenterDateTime(order.createdAt)}</td>
               <td>{order.member?.fullName ?? '—'}</td>
               <td>{order.member?.phone ?? order.shipping?.phone ?? '—'}</td>
-              <td>{order.fulfillment === 'pickup' ? 'Nhận tại quầy' : 'Giao tận nơi'}</td>
+              <td>{order.fulfillment === 'pickup' ? sourceText('Nhận tại quầy') : sourceText('Giao tận nơi')}</td>
               <td style={{ fontVariantNumeric: 'tabular-nums' }}>
                 <strong>{formatVnd(order.total)}</strong>
               </td>
@@ -49,10 +51,9 @@ export function OrderTable({ orders, onOpen }: OrderTableProps) {
                   type="button"
                   className="btn-secondary btn-sm"
                   onClick={() => onOpen(order)}
-                  aria-label={`Mở đơn ${order.code}`}
+                  aria-label={sourceFormat("Mở đơn {0}", order.code)}
                 >
-                  Mở
-                </button>
+                  {sourceText("Mở")}</button>
               </td>
             </tr>
           ))}

@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n/language';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
@@ -27,7 +28,7 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function () { this.open = false; };
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.unstubAllGlobals(); });
 const render = (staff = false) => act(async () => root.render(<MemoryRouter initialEntries={['/member/courts?discipline=Tennis']}>{staff ? <StaffCourtsPage /> : <MemberCourtsPage />}</MemoryRouter>));
 const click = async (text: string) => act(async () => { const button = [...host.querySelectorAll('button')].find(item => item.textContent?.includes(text)); expect(button).toBeTruthy(); button!.click(); });
 
@@ -111,4 +112,15 @@ it('charges the slot price and sends the payment method once the plan quota is u
   expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Còn 0 lượt đặt sân miễn phí');
   await click('Đặt sân & Thanh toán sau qua VNPay');
   expect(courtsApi.book).toHaveBeenCalledWith({ roomId: 5, date: expect.any(String), startTime: '09:00', paymentMethod: 'vnpay' });
+});
+
+it('switches court booking labels and status copy while preserving server court names', async () => {
+  await render();
+  await act(async () => setLanguage('en'));
+  expect(host.textContent).toContain('Book a court');
+  expect(host.textContent).toContain('Available');
+  expect(host.textContent).toContain('Sân A');
+  expect(host.textContent).toContain('You have no court bookings');
+  await act(async () => setLanguage('vi'));
+  expect(host.textContent).toContain('Đặt sân');
 });

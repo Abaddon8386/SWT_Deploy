@@ -1,3 +1,4 @@
+import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -5,9 +6,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { TimePicker } from '../../shared/ui/TimePicker';
 import { Select } from '../../shared/ui/Select';
-import { notify } from '../../shared/lib/portalNotices';
 import { apiFetch, getCurrentUser } from '../../shared/api/client';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import {
   classesApi,
   type ClassItem,
@@ -81,6 +80,7 @@ const defaultFormData = (): FormState => ({
 });
 
 export function StaffClassesPage() {
+  const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
 
   // State dữ liệu
@@ -96,14 +96,14 @@ export function StaffClassesPage() {
   const [existingClassId, setExistingClassId] = useState('');
   const [loading, setLoading] = useState(true);
   const [catalogsLoading, setCatalogsLoading] = useState(true);
-  const [catalogsError, setCatalogsError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [catalogsError, setCatalogsError] = useState<StaffMessage | null>(null);
+  const [error, setError] = useState<StaffMessage | null>(null);
 
   // State Modal Tạo lớp & Form
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedClassDetail, setSelectedClassDetail] = useState<ClassItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<StaffMessage | null>(null);
   const [formData, setFormData] = useState<FormState>(defaultFormData);
   const [pendingClassId, setPendingClassId] = useState<number | null>(null);
   const [pendingClassSignature, setPendingClassSignature] = useState<string | null>(null);
@@ -120,7 +120,7 @@ export function StaffClassesPage() {
     description: '',
     status: 'active',
   });
-  const [editModalError, setEditModalError] = useState<string | null>(null);
+  const [editModalError, setEditModalError] = useState<StaffMessage | null>(null);
 
   // SCRUM-131: State Modal Đổi lịch học
   const [reschedulingClass, setReschedulingClass] = useState<ClassItem | null>(null);
@@ -130,17 +130,17 @@ export function StaffClassesPage() {
     startTime: '08:00',
     endTime: '09:00',
   });
-  const [rescheduleModalError, setRescheduleModalError] = useState<string | null>(null);
+  const [rescheduleModalError, setRescheduleModalError] = useState<StaffMessage | null>(null);
 
   // SCRUM-131: State Modal Xóa lớp học an toàn 2 lần (Double Confirm)
   const [deletingClass, setDeletingClass] = useState<ClassItem | null>(null);
   const [deleteConfirmStep, setDeleteConfirmStep] = useState<1 | 2>(1);
-  const [deleteModalError, setDeleteModalError] = useState<string | null>(null);
+  const [deleteModalError, setDeleteModalError] = useState<StaffMessage | null>(null);
 
   // State Modal Hủy buổi học (Manager)
   const [cancellingSession, setCancellingSession] = useState<ClassSessionItem | null>(null);
   const [cancelSessionReason, setCancelSessionReason] = useState<string>('');
-  const [cancelSessionError, setCancelSessionError] = useState<string | null>(null);
+  const [cancelSessionError, setCancelSessionError] = useState<StaffMessage | null>(null);
 
   // Kiểm tra trùng tên lớp học theo thời gian thực (không phân biệt hoa thường)
   const normalizedInputName = formData.name.trim().toLowerCase();
@@ -165,7 +165,7 @@ export function StaffClassesPage() {
       startTime: string,
       endTime: string,
       excludeSessionId?: number | null,
-    ): string | null => {
+    ): StaffMessage | null => {
       if (!sessionDate || !startTime || !endTime || endTime <= startTime) return null;
       const targetCoachId = coachIdStr ? Number(coachIdStr) : null;
       const targetRoomId = roomIdStr ? Number(roomIdStr) : null;
@@ -204,10 +204,10 @@ export function StaffClassesPage() {
           `#${sCoachId}`;
 
         if (targetRoomId && sRoomId === targetRoomId) {
-          return `Trùng lịch phòng tập: Phòng "${sRoomName}" đã có lớp "${sClassName}" hoạt động trong khung giờ ${existStart} – ${existEnd} ngày ${sessionDate}.`;
+          return staffMessage(`Trùng lịch phòng tập: Phòng "${sRoomName}" đã có lớp "${sClassName}" hoạt động trong khung giờ ${existStart} – ${existEnd} ngày ${sessionDate}.`, `Room schedule conflict: Room "${sRoomName}" already has class "${sClassName}" scheduled ${existStart}–${existEnd} on ${sessionDate}.`);
         }
         if (targetCoachId && sCoachId === targetCoachId) {
-          return `Trùng lịch Huấn luyện viên: HLV "${sCoachName}" đã có lịch dạy lớp "${sClassName}" trong khung giờ ${existStart} – ${existEnd} ngày ${sessionDate}.`;
+          return staffMessage(`Trùng lịch Huấn luyện viên: HLV "${sCoachName}" đã có lịch dạy lớp "${sClassName}" trong khung giờ ${existStart} – ${existEnd} ngày ${sessionDate}.`, `Coach schedule conflict: Coach "${sCoachName}" is already teaching class "${sClassName}" ${existStart}–${existEnd} on ${sessionDate}.`);
         }
       }
       return null;
@@ -324,21 +324,18 @@ export function StaffClassesPage() {
   // BR-01: Forbidden Guard khi vai trò không hợp lệ
   if (!hasAccess) {
     return (
-      <div className="portal-container" data-testid="forbidden-guard">
+      <div data-i18n-managed className="portal-container" data-testid="forbidden-guard">
         <div className="portal-card">
           <div className="portal-state" style={{ padding: '60px 24px' }}>
             <div style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--portal-danger, #fca5a5)', marginBottom: '12px' }} role="img" aria-label="Forbidden">
               403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-              403 - Quyền truy cập bị từ chối
-            </h2>
+              {t("403 - Quyền truy cập bị từ chối")}</h2>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
-              Chỉ Quản lý trung tâm (Center Manager) và Nhân viên được cấp quyền mới có thể truy cập và xem lịch lớp học.
-            </p>
+              {t("Chỉ Quản lý trung tâm (Center Manager) và Nhân viên được cấp quyền mới có thể truy cập và xem lịch lớp học.")}</p>
             <Link to="/portal" className="btn-secondary">
-              Về trang chủ Portal
-            </Link>
+              {t("Về trang chủ Portal")}</Link>
           </div>
         </div>
       </div>
@@ -385,7 +382,7 @@ export function StaffClassesPage() {
     }
 
     if (isDuplicateClassName) {
-      const msg = `Tên lớp học "${formData.name.trim()}" đã tồn tại trong hệ thống. Vui lòng chọn tên khác.`;
+      const msg = staffMessage(`Tên lớp học "${formData.name.trim()}" đã tồn tại trong hệ thống. Vui lòng chọn tên khác.`, `Class name "${formData.name.trim()}" already exists. Please choose another name.`);
       setModalError(msg);
       return;
     }
@@ -504,10 +501,10 @@ export function StaffClassesPage() {
           apiErr.message.includes('Coach schedule conflict'));
 
       const errMessage = hasSpecificConflictMsg
-        ? apiErr.message!
+        ? new Error(apiErr.message!)
         : isConflict
           ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác.'
-          : apiErr?.message || 'Có lỗi xảy ra khi tạo lớp học.';
+          : apiErr?.message ? new Error(apiErr.message) : 'Có lỗi xảy ra khi tạo lớp học.';
 
       setModalError(errMessage);
     } finally {
@@ -544,7 +541,7 @@ export function StaffClassesPage() {
         startTime: formData.startTime,
         endTime: formData.endTime,
       });
-      notify(`Đã thêm buổi học cho lớp "${existingClass.name}".`, 'success');
+      notify(staffMessage(`Đã thêm buổi học cho lớp "${existingClass.name}".`, `Added a session for class "${existingClass.name}".`), 'success');
       setShowModal(false);
       setCreateMode('new');
       setExistingClassId('');
@@ -591,7 +588,7 @@ export function StaffClassesPage() {
     }
 
     if (isDuplicateEditClassName) {
-      const msg = `Tên lớp học "${editFormData.name.trim()}" đã tồn tại trong hệ thống.`;
+      const msg = staffMessage(`Tên lớp học "${editFormData.name.trim()}" đã tồn tại trong hệ thống.`, `Class name "${editFormData.name.trim()}" already exists in the system.`);
       setEditModalError(msg);
       return;
     }
@@ -639,10 +636,10 @@ export function StaffClassesPage() {
         apiErr?.code === 'SCHEDULE_CONFLICT' ||
         apiErr?.status === 409;
       const errMessage = hasSpecificConflictMsg
-        ? apiErr.message!
+        ? new Error(apiErr.message!)
         : isConflict
           ? 'Trùng lịch: Huấn luyện viên hoặc phòng tập mới đã có lịch dạy trùng với buổi học của lớp này.'
-          : apiErr?.message || 'Không thể cập nhật thông tin lớp học.';
+          : apiErr?.message ? new Error(apiErr.message) : 'Không thể cập nhật thông tin lớp học.';
       setEditModalError(errMessage);
     } finally {
       setIsSubmitting(false);
@@ -735,10 +732,10 @@ export function StaffClassesPage() {
         apiErr?.status === 409 ||
         (typeof apiErr?.message === 'string' && apiErr.message.includes('trùng lịch'));
       const errMessage = hasSpecificConflictMsg
-        ? apiErr.message!
+        ? new Error(apiErr.message!)
         : isConflict
           ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn giờ khác.'
-          : apiErr?.message || 'Không thể đổi lịch buổi học.';
+          : apiErr?.message ? new Error(apiErr.message) : 'Không thể đổi lịch buổi học.';
       setRescheduleModalError(errMessage);
     } finally {
       setIsSubmitting(false);
@@ -768,7 +765,7 @@ export function StaffClassesPage() {
       await apiFetch<void>(`/classes/${deletingClass.id}`, {
         method: 'DELETE',
       });
-      notify(`Đã xóa lớp học "${deletingClass.name}" thành công!`, 'success');
+      notify(staffMessage(`Đã xóa lớp học "${deletingClass.name}" thành công!`, `Deleted class "${deletingClass.name}" successfully!`), 'success');
       setDeletingClass(null);
       setDeleteConfirmStep(1);
       if (selectedClassDetail?.id === deletingClass.id) {
@@ -777,7 +774,7 @@ export function StaffClassesPage() {
       await loadData();
     } catch (err: unknown) {
       const apiErr = err as { message?: string };
-      const errMessage = apiErr?.message || 'Không thể xóa lớp học này.';
+      const errMessage = apiErr?.message ? new Error(apiErr.message) : 'Không thể xóa lớp học này.';
       setDeleteModalError(errMessage);
     } finally {
       setIsSubmitting(false);
@@ -833,19 +830,19 @@ export function StaffClassesPage() {
   const getDisciplineName = (cls: ClassItem) => {
     if (cls.disciplineName) return cls.disciplineName;
     const found = disciplines.find((d) => d.id === cls.disciplineId);
-    return found ? found.name : `Bộ môn #${cls.disciplineId}`;
+    return found ? found.name : t(`Bộ môn #${cls.disciplineId}`, `Discipline #${cls.disciplineId}`);
   };
 
   const getCoachName = (cls: ClassItem) => {
     if (cls.coachName) return cls.coachName;
     const found = coaches.find((c) => c.id === cls.coachId);
-    return found ? found.fullName : `HLV #${cls.coachId}`;
+    return found ? found.fullName : t(`HLV #${cls.coachId}`, `Coach #${cls.coachId}`);
   };
 
   const getRoomName = (cls: ClassItem) => {
     if (cls.roomName) return cls.roomName;
     const found = rooms.find((r) => r.id === cls.roomId);
-    return found ? found.name : `Phòng #${cls.roomId}`;
+    return found ? found.name : t(`Phòng #${cls.roomId}`, `Room #${cls.roomId}`);
   };
 
   const getClassSchedule = (cls: ClassItem) => {
@@ -862,7 +859,7 @@ export function StaffClassesPage() {
   const nowTime = `${String(nowForTone.getHours()).padStart(2, '0')}:${String(nowForTone.getMinutes()).padStart(2, '0')}`;
   const timetableEvents: TimetableEvent[] = sessions.map((session) => {
     const cls = classes.find((item) => item.id === session.classId);
-    const name = session.className || cls?.name || `Lớp #${session.classId}`;
+    const name = session.className || cls?.name || t(`Lớp #${session.classId}`, `Class #${session.classId}`);
     const room = session.roomName || cls?.roomName;
     const coach = session.coachName || cls?.coachName;
     const capacity = session.capacity ?? cls?.capacity;
@@ -873,8 +870,8 @@ export function StaffClassesPage() {
       : past ? 'past'
       : capacity !== undefined && booked >= capacity ? 'full'
       : 'open';
-    const seats = capacity !== undefined ? `${booked}/${capacity} chỗ` : undefined;
-    const statusText = tone === 'cancelled' ? 'đã hủy' : tone === 'past' ? 'đã qua' : tone === 'full' ? 'đã đầy' : 'còn chỗ';
+    const seats = capacity !== undefined ? `${booked}/${capacity} ${t('chỗ', 'spaces')}` : undefined;
+    const statusText = tone === 'cancelled' ? t('đã hủy', 'cancelled') : tone === 'past' ? t('đã qua', 'past') : tone === 'full' ? t('đã đầy', 'full') : t('còn chỗ', 'spaces available');
     return {
       id: String(session.id),
       date: session.sessionDate,
@@ -882,9 +879,9 @@ export function StaffClassesPage() {
       endTime: session.endTime,
       title: name,
       meta: [room, coach].filter(Boolean).join(' · ') || undefined,
-      badge: tone === 'cancelled' ? 'Đã hủy' : tone === 'full' ? 'Đầy' : capacity !== undefined ? `${booked}/${capacity}` : undefined,
+      badge: tone === 'cancelled' ? t('Đã hủy', 'Cancelled') : tone === 'full' ? t('Đầy', 'Full') : capacity !== undefined ? `${booked}/${capacity}` : undefined,
       tone,
-      ariaLabel: `${name}, ${shortDate(session.sessionDate)} ${hhmm(session.startTime)}–${hhmm(session.endTime)}${room ? `, ${room}` : ''}${seats ? `, ${seats}` : ''}, ${statusText}. Bấm để xem chi tiết lớp`,
+      ariaLabel: `${name}, ${shortDate(session.sessionDate)} ${hhmm(session.startTime)}–${hhmm(session.endTime)}${room ? `, ${room}` : ''}${seats ? `, ${seats}` : ''}, ${statusText}. ${t('Bấm để xem chi tiết lớp', 'Click to view class details')}`,
     };
   });
 
@@ -895,31 +892,29 @@ export function StaffClassesPage() {
   };
 
   return (
-    <div className="portal-container">
+    <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow="Huấn luyện"
-        title={isManager ? 'Quản lý lớp học & xếp lịch' : 'Lịch học trung tâm'}
+        eyebrow={t("Huấn luyện")}
+        title={isManager ? t('Quản lý lớp học & xếp lịch') : t('Lịch học trung tâm')}
         actions={
           isManager ? (
-            <button
+            <button data-i18n-managed
               type="button"
               className="btn-primary"
               onClick={() => handleOpenModal()}
               data-testid="create-class-button"
             >
-              Tạo lớp học &amp; xếp lịch
-            </button>
+              {t("Tạo lớp học & xếp lịch")}</button>
           ) : (
-            <span className="badge badge-neutral" data-testid="read-only-schedule-badge">
-              Chế độ chỉ xem lịch học
-            </span>
+            <span data-i18n-managed className="badge badge-neutral" data-testid="read-only-schedule-badge">
+              {t("Chế độ chỉ xem lịch học")}</span>
           )
         }
       />
 
       {/* State 3: Error retry */}
       {error && (
-        <div
+        <div data-i18n-managed
           className="portal-alert portal-alert--error"
           style={{
             marginBottom: 20,
@@ -935,7 +930,7 @@ export function StaffClassesPage() {
           data-testid="classes-error"
         >
           <div style={{ color: 'var(--portal-danger, #fca5a5)' }}>
-            <strong>Lỗi tải dữ liệu:</strong> {error}
+            <strong>{t("Lỗi tải dữ liệu:")}</strong> {t(error)}
           </div>
           <button
             type="button"
@@ -943,12 +938,11 @@ export function StaffClassesPage() {
             onClick={() => void loadData()}
             data-testid="retry-button"
           >
-            Thử lại
-          </button>
+            {t("Thử lại")}</button>
         </div>
       )}
 
-      <div className="portal-tabs" role="tablist" aria-label="Chế độ xem lịch học" style={{ marginBottom: 18 }}>
+      <div className="portal-tabs" role="tablist" aria-label={t("Chế độ xem lịch học")} style={{ marginBottom: 18 }}>
         <button
           type="button"
           role="tab"
@@ -957,8 +951,7 @@ export function StaffClassesPage() {
           onClick={() => setView('timetable')}
           data-testid="view-timetable"
         >
-          Thời khóa biểu tuần
-        </button>
+          {t("Thời khóa biểu tuần")}</button>
         <button
           type="button"
           role="tab"
@@ -967,35 +960,34 @@ export function StaffClassesPage() {
           onClick={() => setView('list')}
           data-testid="view-list"
         >
-          Danh sách lớp
-        </button>
+          {t("Danh sách lớp")}</button>
       </div>
 
       {view === 'timetable' ? (
         <WeeklyTimetable
-          label="Thời khóa biểu tuần của trung tâm"
+          label={t("Thời khóa biểu tuần của trung tâm")}
           weekStart={weekStart}
           events={timetableEvents}
           loading={loading}
           onWeekChange={setWeekStart}
           onEventClick={openSessionDetail}
           onSlotClick={isManager ? (slot) => { if (!catalogsLoading) handleOpenModal(slot); } : undefined}
-          slotActionLabel="bấm để tạo lịch"
-          legendNote="Số trên khối: đã đặt / sức chứa"
+          slotActionLabel={t("bấm để tạo lịch")}
+          legendNote={t("Số trên khối: đã đặt / sức chứa")}
           legend={[
-            ...(isManager ? [{ tone: 'free' as const, label: 'Ô trống: bấm để tạo lịch' }] : []),
-            { tone: 'open', label: 'Có lịch, còn chỗ' },
-            { tone: 'full', label: 'Đã đầy' },
-            { tone: 'past', label: 'Đã qua' },
-            { tone: 'cancelled', label: 'Đã hủy' },
+            ...(isManager ? [{ tone: 'free' as const, label: t('Ô trống: bấm để tạo lịch') }] : []),
+            { tone: 'open', label: t('Có lịch, còn chỗ') },
+            { tone: 'full', label: t('Đã đầy') },
+            { tone: 'past', label: t('Đã qua') },
+            { tone: 'cancelled', label: t('Đã hủy') },
           ]}
         />
       ) : loading ? (
-        <div className="portal-card portal-card--flush" data-testid="classes-skeleton">
+        <div data-i18n-managed className="portal-card portal-card--flush" data-testid="classes-skeleton">
           <div style={{ padding: '24px' }}>
             <div style={{ display: 'grid', gap: '16px' }}>
               {[1, 2, 3, 4].map((idx) => (
-                <div
+                <div data-i18n-managed
                   key={idx}
                   style={{
                     display: 'grid',
@@ -1006,13 +998,13 @@ export function StaffClassesPage() {
                     borderBottom: '1px solid var(--portal-border)',
                   }}
                 >
-                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
-                  <div style={{ height: 28, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div data-i18n-managed style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div data-i18n-managed style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div data-i18n-managed style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div data-i18n-managed style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div data-i18n-managed style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div data-i18n-managed style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div data-i18n-managed style={{ height: 28, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
                 </div>
               ))}
             </div>
@@ -1020,44 +1012,42 @@ export function StaffClassesPage() {
         </div>
       ) : classes.length === 0 && !error ? (
         /* State 2: Empty list */
-        <div className="portal-card" data-testid="classes-empty">
+        <div data-i18n-managed className="portal-card" data-testid="classes-empty">
           <div className="portal-state" style={{ padding: '48px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: 12 }}>LỚP HỌC</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: 12 }}>{t("LỚP HỌC")}</div>
             <h3 className="portal-state__title" style={{ marginBottom: 6 }}>
-              Chưa có lớp học nào
-            </h3>
+              {t("Chưa có lớp học nào")}</h3>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: 460, margin: '0 auto 16px auto' }}>
               {isManager
-                ? 'Hiện chưa có lớp học nào trong hệ thống. Hãy tạo lớp học mới để bắt đầu sắp xếp lịch tập cho hội viên và huấn luyện viên.'
-                : 'Hiện chưa có lớp học nào được xếp lịch trong hệ thống.'}
+                ? t('Hiện chưa có lớp học nào trong hệ thống. Hãy tạo lớp học mới để bắt đầu sắp xếp lịch tập cho hội viên và huấn luyện viên.')
+                : t('Hiện chưa có lớp học nào được xếp lịch trong hệ thống.')}
             </p>
             {isManager && (
-              <button type="button" className="btn-primary" onClick={() => handleOpenModal()}>
-                Tạo lớp học đầu tiên
-              </button>
+              <button data-i18n-managed type="button" className="btn-primary" onClick={() => handleOpenModal()}>
+                {t("Tạo lớp học đầu tiên")}</button>
             )}
           </div>
         </div>
       ) : (
         /* Danh sách lớp học */
-        <div className="portal-card portal-card--flush" data-testid="classes-table-wrapper">
+        <div data-i18n-managed className="portal-card portal-card--flush" data-testid="classes-table-wrapper">
           <div className="portal-table-wrapper">
             <table className="portal-table">
               <thead>
                 <tr>
-                  <th>Tên lớp học</th>
-                  <th>Bộ môn</th>
-                  <th>Huấn luyện viên</th>
-                  <th>Phòng tập</th>
-                  <th>Lịch học</th>
-                  <th>Sức chứa</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
+                  <th>{t("Tên lớp học")}</th>
+                  <th>{t("Bộ môn")}</th>
+                  <th>{t("Huấn luyện viên")}</th>
+                  <th>{t("Phòng tập")}</th>
+                  <th>{t("Lịch học")}</th>
+                  <th>{t("Sức chứa")}</th>
+                  <th>{t("Trạng thái")}</th>
+                  <th>{t("Thao tác")}</th>
                 </tr>
               </thead>
               <tbody>
                 {classes.map((cls) => (
-                  <tr key={cls.id}>
+                  <tr data-i18n-managed key={cls.id}>
                     <td>
                       <strong>{cls.name}</strong>
                       <div className="muted" style={{ marginTop: 2, fontSize: '0.8rem' }}>
@@ -1071,11 +1061,11 @@ export function StaffClassesPage() {
                     <td>{getRoomName(cls)}</td>
                     <td>{getClassSchedule(cls)}</td>
                     <td>
-                      <strong>{cls.capacity} học viên</strong>
+                      <strong>{cls.capacity} {t(" học viên")}</strong>
                     </td>
                     <td>
                       <span className={`badge ${cls.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                        {cls.status?.toUpperCase()}
+                        {cls.status === 'ACTIVE' ? t('Đang hoạt động') : cls.status === 'INACTIVE' ? t('Ngừng hoạt động', 'Inactive') : cls.status === 'ARCHIVED' ? t('Lưu trữ', 'Archived') : cls.status}
                       </span>
                     </td>
                     <td>
@@ -1086,27 +1076,24 @@ export function StaffClassesPage() {
                           onClick={() => setSelectedClassDetail(cls)}
                           data-testid={`view-class-${cls.id}`}
                         >
-                          Xem lịch
-                        </button>
+                          {t("Xem lịch")}</button>
                         {isManager && (
                           <>
-                            <button
+                            <button data-i18n-managed
                               type="button"
                               className="btn-secondary btn-sm"
                               onClick={() => handleOpenEditModal(cls)}
                               data-testid={`edit-class-${cls.id}`}
                             >
-                              Sửa
-                            </button>
-                            <button
+                              {t("Sửa")}</button>
+                            <button data-i18n-managed
                               type="button"
                               className="btn-secondary btn-sm"
                               onClick={() => handleOpenRescheduleModal(cls)}
                               data-testid={`reschedule-class-${cls.id}`}
                             >
-                              Đổi lịch
-                            </button>
-                            <button
+                              {t("Đổi lịch")}</button>
+                            <button data-i18n-managed
                               type="button"
                               className="btn-secondary btn-sm"
                               style={{
@@ -1116,8 +1103,7 @@ export function StaffClassesPage() {
                               onClick={() => handleOpenDeleteModal(cls)}
                               data-testid={`delete-class-${cls.id}`}
                             >
-                              Xóa
-                            </button>
+                              {t("Xóa")}</button>
                           </>
                         )}
                       </div>
@@ -1132,34 +1118,34 @@ export function StaffClassesPage() {
 
       {/* Modal: Chi tiết lớp học & lịch các buổi học */}
       {selectedClassDetail && (
-        <Modal title={`Chi tiết lớp học: ${selectedClassDetail.name}`} onClose={() => setSelectedClassDetail(null)}>
+        <Modal title={t(`Chi tiết lớp học: ${selectedClassDetail.name}`, `Class details: ${selectedClassDetail.name}`)} onClose={() => setSelectedClassDetail(null)}>
           <div style={{ display: 'grid', gap: 14 }}>
             <div className="kv-list">
-              <div className="kv-row"><span>Mã lớp</span><strong>CLS-{selectedClassDetail.id}</strong></div>
-              <div className="kv-row"><span>Bộ môn</span><strong>{getDisciplineName(selectedClassDetail)}</strong></div>
-              <div className="kv-row"><span>Huấn luyện viên</span><strong>{getCoachName(selectedClassDetail)}</strong></div>
-              <div className="kv-row"><span>Phòng tập</span><strong>{getRoomName(selectedClassDetail)}</strong></div>
-              <div className="kv-row"><span>Sức chứa tối đa</span><strong>{selectedClassDetail.capacity} học viên</strong></div>
+              <div className="kv-row"><span>{t("Mã lớp")}</span><strong>CLS-{selectedClassDetail.id}</strong></div>
+              <div className="kv-row"><span>{t("Bộ môn")}</span><strong>{getDisciplineName(selectedClassDetail)}</strong></div>
+              <div className="kv-row"><span>{t("Huấn luyện viên")}</span><strong>{getCoachName(selectedClassDetail)}</strong></div>
+              <div className="kv-row"><span>{t("Phòng tập")}</span><strong>{getRoomName(selectedClassDetail)}</strong></div>
+              <div className="kv-row"><span>{t("Sức chứa tối đa")}</span><strong>{selectedClassDetail.capacity} {t(" học viên")}</strong></div>
             </div>
             <div>
-              <h4 style={{ margin: '4px 0 8px', fontSize: '0.88rem' }}>Lịch các buổi học đã xếp</h4>
+              <h4 style={{ margin: '4px 0 8px', fontSize: '0.88rem' }}>{t("Lịch các buổi học đã xếp")}</h4>
               {sessions.filter((s) => s.classId === selectedClassDetail.id).length === 0 ? (
-                <p className="muted" style={{ margin: 0 }}>Chưa có buổi học nào được xếp lịch cho lớp này.</p>
+                <p data-i18n-managed className="muted" style={{ margin: 0 }}>{t("Chưa có buổi học nào được xếp lịch cho lớp này.")}</p>
               ) : (
-                <div style={{ display: 'grid', gap: 8 }}>
+                <div data-i18n-managed style={{ display: 'grid', gap: 8 }}>
                   {sessions.filter((s) => s.classId === selectedClassDetail.id).map((s) => (
-                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'var(--portal-raised)', border: '1px solid var(--portal-border)' }}>
+                    <div data-i18n-managed key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'var(--portal-raised)', border: '1px solid var(--portal-border)' }}>
                       <div>
                         <strong>{s.sessionDate}</strong>
                         <span className="muted" style={{ marginLeft: 8 }}>{s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span className="badge badge-neutral">
-                          {s.status === 'scheduled' ? 'Sắp diễn ra' : s.status === 'completed' ? 'Đã hoàn thành' : 'Đã hủy'}
+                          {s.status === 'scheduled' ? t('Sắp diễn ra') : s.status === 'completed' ? t('Đã hoàn thành') : t('Đã hủy')}
                         </span>
                         {isManager && s.status === 'scheduled' && (
                           <>
-                            <button
+                            <button data-i18n-managed
                               type="button"
                               className="btn-secondary btn-sm"
                               onClick={() => {
@@ -1168,17 +1154,15 @@ export function StaffClassesPage() {
                                 handleOpenRescheduleModal(cls, s);
                               }}
                             >
-                              Đổi lịch
-                            </button>
-                            <button
+                              {t("Đổi lịch")}</button>
+                            <button data-i18n-managed
                               type="button"
                               className="btn-secondary btn-sm"
                               style={{ color: 'var(--portal-danger, #fca5a5)' }}
                               onClick={() => handleOpenCancelSessionModal(s)}
                               data-testid={`cancel-session-${s.id}`}
                             >
-                              Hủy buổi
-                            </button>
+                              {t("Hủy buổi")}</button>
                           </>
                         )}
                       </div>
@@ -1189,7 +1173,7 @@ export function StaffClassesPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
               {isManager ? (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div data-i18n-managed style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
                     className="btn-secondary btn-sm"
@@ -1199,8 +1183,7 @@ export function StaffClassesPage() {
                       handleOpenEditModal(cls);
                     }}
                   >
-                    Sửa thông tin lớp
-                  </button>
+                    {t("Sửa thông tin lớp")}</button>
                   <button
                     type="button"
                     className="btn-secondary btn-sm"
@@ -1211,13 +1194,12 @@ export function StaffClassesPage() {
                       handleOpenDeleteModal(cls);
                     }}
                   >
-                    Xóa lớp học
-                  </button>
+                    {t("Xóa lớp học")}</button>
                 </div>
               ) : (
-                <div />
+                <div data-i18n-managed />
               )}
-              <button type="button" className="btn-secondary" onClick={() => setSelectedClassDetail(null)}>Đóng</button>
+              <button type="button" className="btn-secondary" onClick={() => setSelectedClassDetail(null)}>{t("Đóng")}</button>
             </div>
           </div>
         </Modal>
@@ -1226,36 +1208,34 @@ export function StaffClassesPage() {
       {/* Modal: Hủy buổi học (Manager Only) */}
       {isManager && cancellingSession && (
         <Modal
-          title={`Hủy buổi học: ${cancellingSession.sessionDate} (${cancellingSession.startTime.slice(0, 5)} – ${cancellingSession.endTime.slice(0, 5)})`}
+          title={t(`Hủy buổi học: ${cancellingSession.sessionDate} (${cancellingSession.startTime.slice(0, 5)} – ${cancellingSession.endTime.slice(0, 5)})`, `Cancel session: ${cancellingSession.sessionDate} (${cancellingSession.startTime.slice(0, 5)} – ${cancellingSession.endTime.slice(0, 5)})`)}
           onClose={handleCloseCancelSessionModal}
         >
           <form onSubmit={handleConfirmCancelSession} style={{ display: 'grid', gap: 12 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="cancel-session-reason">
-                Lý do hủy buổi học *
-              </label>
+                {t("Lý do hủy buổi học *")}</label>
               <textarea
                 id="cancel-session-reason"
                 rows={3}
                 required
                 className="portal-textarea"
-                placeholder="Nhập lý do hủy buổi học để thông báo cho học viên..."
+                placeholder={t("Nhập lý do hủy buổi học để thông báo cho học viên...")}
                 value={cancelSessionReason}
                 onChange={(e) => setCancelSessionReason(e.target.value)}
                 disabled={isSubmitting}
               />
             </div>
             {cancelSessionError && (
-              <div role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
-                {cancelSessionError}
+              <div data-i18n-managed role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+                {t(cancelSessionError)}
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button type="button" className="btn-secondary" onClick={handleCloseCancelSessionModal} disabled={isSubmitting}>
-                Quay lại
-              </button>
+                {t("Quay lại")}</button>
               <button type="submit" className="btn-danger" disabled={isSubmitting} data-testid="confirm-cancel-session-btn">
-                {isSubmitting ? 'Đang hủy...' : 'Xác nhận hủy buổi'}
+                {isSubmitting ? t('Đang hủy...') : t('Xác nhận hủy buổi')}
               </button>
             </div>
           </form>
@@ -1264,12 +1244,11 @@ export function StaffClassesPage() {
 
       {/* SCRUM-131 Modal: Chỉnh sửa thông tin lớp học (Manager Only) */}
       {isManager && editingClass && (
-        <Modal title={`Chỉnh sửa lớp học: ${editingClass.name}`} onClose={handleCloseEditModal}>
+        <Modal title={t(`Chỉnh sửa lớp học: ${editingClass.name}`, `Edit class: ${editingClass.name}`)} onClose={handleCloseEditModal}>
           <form onSubmit={handleUpdateClass} style={{ display: 'grid', gap: 12 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="edit-class-name">
-                Tên lớp học *
-              </label>
+                {t("Tên lớp học *")}</label>
               <input
                 id="edit-class-name"
                 type="text"
@@ -1280,17 +1259,15 @@ export function StaffClassesPage() {
                 disabled={isSubmitting}
               />
               {isDuplicateEditClassName && (
-                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.84rem', marginTop: 4 }}>
-                  Tên lớp học này đã tồn tại trong hệ thống.
-                </div>
+                <div data-i18n-managed style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.84rem', marginTop: 4 }}>
+                  {t("Tên lớp học này đã tồn tại trong hệ thống.")}</div>
               )}
             </div>
 
             <div className="grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="edit-class-discipline">
-                  Bộ môn *
-                </label>
+                  {t("Bộ môn *")}</label>
                 <Select
                   id="edit-class-discipline"
                   className="portal-select"
@@ -1299,7 +1276,7 @@ export function StaffClassesPage() {
                   disabled={isSubmitting}
                 >
                   {disciplines.map((d) => (
-                    <option key={d.id} value={d.id}>
+                    <option data-i18n-managed key={d.id} value={d.id}>
                       {d.name}
                     </option>
                   ))}
@@ -1308,8 +1285,7 @@ export function StaffClassesPage() {
 
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="edit-class-capacity">
-                  Sức chứa tối đa *
-                </label>
+                  {t("Sức chứa tối đa *")}</label>
                 <input
                   id="edit-class-capacity"
                   type="number"
@@ -1326,8 +1302,7 @@ export function StaffClassesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="edit-class-coach">
-                Huấn luyện viên phụ trách *
-              </label>
+                {t("Huấn luyện viên phụ trách *")}</label>
               <Select
                 id="edit-class-coach"
                 className="portal-select"
@@ -1336,7 +1311,7 @@ export function StaffClassesPage() {
                 disabled={isSubmitting}
               >
                 {coaches.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option data-i18n-managed key={c.id} value={c.id}>
                     {c.fullName} ({c.email})
                   </option>
                 ))}
@@ -1345,8 +1320,7 @@ export function StaffClassesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="edit-class-room">
-                Phòng tập *
-              </label>
+                {t("Phòng tập *")}</label>
               <Select
                 id="edit-class-room"
                 className="portal-select"
@@ -1355,8 +1329,8 @@ export function StaffClassesPage() {
                 disabled={isSubmitting}
               >
                 {rooms.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} - Sức chứa: {r.capacity} ({r.location || 'Khu trung tâm'})
+                  <option data-i18n-managed key={r.id} value={r.id}>
+                    {r.name} {t(" - Sức chứa: ")}{r.capacity} ({r.location || t('Khu trung tâm')})
                   </option>
                 ))}
               </Select>
@@ -1365,8 +1339,7 @@ export function StaffClassesPage() {
             <div className="grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="edit-class-level">
-                  Cấp độ
-                </label>
+                  {t("Cấp độ")}</label>
                 <Select
                   id="edit-class-level"
                   className="portal-select"
@@ -1374,17 +1347,16 @@ export function StaffClassesPage() {
                   onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value })}
                   disabled={isSubmitting}
                 >
-                  <option value="all">Mọi cấp độ (All levels)</option>
-                  <option value="beginner">Người mới bắt đầu (Beginner)</option>
-                  <option value="intermediate">Trung cấp (Intermediate)</option>
-                  <option value="advanced">Nâng cao (Advanced)</option>
+                  <option value="all">{t("Mọi cấp độ (All levels)")}</option>
+                  <option value="beginner">{t("Người mới bắt đầu (Beginner)")}</option>
+                  <option value="intermediate">{t("Trung cấp (Intermediate)")}</option>
+                  <option value="advanced">{t("Nâng cao (Advanced)")}</option>
                 </Select>
               </div>
 
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="edit-class-status">
-                  Trạng thái lớp
-                </label>
+                  {t("Trạng thái lớp")}</label>
                 <Select
                   id="edit-class-status"
                   className="portal-select"
@@ -1392,17 +1364,16 @@ export function StaffClassesPage() {
                   onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
                   disabled={isSubmitting}
                 >
-                  <option value="active">Đang hoạt động (Active)</option>
-                  <option value="cancelled">Tạm ngưng / Đã hủy (Cancelled)</option>
-                  <option value="archived">Lưu trữ (Archived)</option>
+                  <option value="active">{t("Đang hoạt động (Active)")}</option>
+                  <option value="cancelled">{t("Tạm ngưng / Đã hủy (Cancelled)")}</option>
+                  <option value="archived">{t("Lưu trữ (Archived)")}</option>
                 </Select>
               </div>
             </div>
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="edit-class-desc">
-                Mô tả / Ghi chú
-              </label>
+                {t("Mô tả / Ghi chú")}</label>
               <textarea
                 id="edit-class-desc"
                 rows={2}
@@ -1414,7 +1385,7 @@ export function StaffClassesPage() {
             </div>
 
             {(editModalError || editConflictWarning) && (
-              <div
+              <div data-i18n-managed
                 style={{
                   padding: '12px 16px',
                   backgroundColor: 'var(--portal-raised)',
@@ -1426,21 +1397,20 @@ export function StaffClassesPage() {
                 role="alert"
                 data-testid="edit-schedule-conflict-warning"
               >
-                {editModalError || editConflictWarning}
+                {t(editModalError || editConflictWarning)}
               </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button type="button" className="btn-secondary" onClick={handleCloseEditModal} disabled={isSubmitting}>
-                Hủy bỏ
-              </button>
+                {t("Hủy bỏ")}</button>
               <button
                 type="submit"
                 className="btn-primary"
                 disabled={isSubmitting || isDuplicateEditClassName || Boolean(editConflictWarning)}
                 data-testid="submit-edit-class-button"
               >
-                {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                {isSubmitting ? t('Đang lưu...') : t('Lưu thay đổi')}
               </button>
             </div>
           </form>
@@ -1449,12 +1419,11 @@ export function StaffClassesPage() {
 
       {/* SCRUM-131 Modal: Đổi lịch buổi học (Manager Only) */}
       {isManager && reschedulingClass && (
-        <Modal title={`Đổi lịch học: ${reschedulingClass.name}`} onClose={handleCloseRescheduleModal}>
+        <Modal title={t(`Đổi lịch học: ${reschedulingClass.name}`, `Reschedule class: ${reschedulingClass.name}`)} onClose={handleCloseRescheduleModal}>
           <form onSubmit={handleRescheduleSession} style={{ display: 'grid', gap: 12 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="reschedule-session-select">
-                Chọn buổi học cần đổi lịch
-              </label>
+                {t("Chọn buổi học cần đổi lịch")}</label>
               <Select
                 id="reschedule-session-select"
                 className="portal-select"
@@ -1474,18 +1443,17 @@ export function StaffClassesPage() {
                 {sessions
                   .filter((s) => s.classId === reschedulingClass.id && s.status !== 'cancelled')
                   .map((s) => (
-                    <option key={s.id} value={String(s.id)}>
-                      Buổi #{s.id}: {s.sessionDate} ({s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)})
+                    <option data-i18n-managed key={s.id} value={String(s.id)}>
+                      {t("Buổi #")}{s.id}: {s.sessionDate} ({s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)})
                     </option>
                   ))}
-                <option value="NEW">+ Xếp thêm buổi học mới cho lớp này</option>
+                <option value="NEW">{t("+ Xếp thêm buổi học mới cho lớp này")}</option>
               </Select>
             </div>
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="reschedule-date">
-                Ngày học mới *
-              </label>
+                {t("Ngày học mới *")}</label>
               <DatePicker
                 id="reschedule-date"
                 required
@@ -1499,8 +1467,7 @@ export function StaffClassesPage() {
             <div className="grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="reschedule-start">
-                  Giờ bắt đầu mới *
-                </label>
+                  {t("Giờ bắt đầu mới *")}</label>
                 <TimePicker
                   wholeHour
                   id="reschedule-start"
@@ -1513,8 +1480,7 @@ export function StaffClassesPage() {
 
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="reschedule-end">
-                  Giờ kết thúc mới *
-                </label>
+                  {t("Giờ kết thúc mới *")}</label>
                 <TimePicker
                   wholeHour
                   id="reschedule-end"
@@ -1527,7 +1493,7 @@ export function StaffClassesPage() {
             </div>
 
             {(rescheduleModalError || rescheduleConflictWarning) && (
-              <div
+              <div data-i18n-managed
                 style={{
                   padding: '12px 16px',
                   backgroundColor: 'var(--portal-raised)',
@@ -1539,21 +1505,20 @@ export function StaffClassesPage() {
                 role="alert"
                 data-testid="reschedule-conflict-warning"
               >
-                {rescheduleModalError || rescheduleConflictWarning}
+                {t(rescheduleModalError || rescheduleConflictWarning)}
               </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
               <button type="button" className="btn-secondary" onClick={handleCloseRescheduleModal} disabled={isSubmitting}>
-                Hủy bỏ
-              </button>
+                {t("Hủy bỏ")}</button>
               <button
                 type="submit"
                 className="btn-primary"
                 disabled={isSubmitting || Boolean(rescheduleConflictWarning)}
                 data-testid="submit-reschedule-button"
               >
-                {isSubmitting ? 'Đang cập nhật...' : 'Xác nhận đổi lịch'}
+                {isSubmitting ? t('Đang cập nhật...') : t('Xác nhận đổi lịch')}
               </button>
             </div>
           </form>
@@ -1565,25 +1530,25 @@ export function StaffClassesPage() {
         <Modal
           title={
             deleteConfirmStep === 1
-              ? 'Xác nhận xóa lớp học (Bước 1/2)'
-              : 'Xác nhận xóa vĩnh viễn (Bước 2/2)'
+              ? t('Xác nhận xóa lớp học (Bước 1/2)')
+              : t('Xác nhận xóa vĩnh viễn (Bước 2/2)')
           }
           onClose={handleCloseDeleteModal}
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <div className="kv-list">
-              <div className="kv-row"><span>Tên lớp học</span><strong>{deletingClass.name}</strong></div>
-              <div className="kv-row"><span>Mã lớp</span><strong>CLS-{deletingClass.id}</strong></div>
-              <div className="kv-row"><span>Bộ môn</span><strong>{getDisciplineName(deletingClass)}</strong></div>
-              <div className="kv-row"><span>Huấn luyện viên</span><strong>{getCoachName(deletingClass)}</strong></div>
+              <div className="kv-row"><span>{t("Tên lớp học")}</span><strong>{deletingClass.name}</strong></div>
+              <div className="kv-row"><span>{t("Mã lớp")}</span><strong>CLS-{deletingClass.id}</strong></div>
+              <div className="kv-row"><span>{t("Bộ môn")}</span><strong>{getDisciplineName(deletingClass)}</strong></div>
+              <div className="kv-row"><span>{t("Huấn luyện viên")}</span><strong>{getCoachName(deletingClass)}</strong></div>
               <div className="kv-row">
-                <span>Số buổi học liên quan</span>
-                <strong>{sessions.filter((s) => s.classId === deletingClass.id).length} buổi</strong>
+                <span>{t("Số buổi học liên quan")}</span>
+                <strong>{sessions.filter((s) => s.classId === deletingClass.id).length} {t(" buổi")}</strong>
               </div>
             </div>
 
             {deleteConfirmStep === 1 ? (
-              <div
+              <div data-i18n-managed
                 style={{
                   padding: '12px 16px',
                   borderRadius: 8,
@@ -1593,10 +1558,9 @@ export function StaffClassesPage() {
                 }}
                 data-testid="delete-step-1-box"
               >
-                Bạn đang yêu cầu xóa lớp học <strong>{deletingClass.name}</strong>. Nếu đây là lớp học tạo nhầm và bạn muốn xóa khỏi hệ thống, vui lòng bấm <strong>&quot;Tiếp tục xác nhận lần 2&quot;</strong> để chuyển sang bước xác nhận cuối cùng.
-              </div>
+                {t("Bạn đang yêu cầu xóa lớp học ")}<strong>{deletingClass.name}</strong>{t(". Nếu đây là lớp học tạo nhầm và bạn muốn xóa khỏi hệ thống, vui lòng bấm ")}<strong>{t("\"Tiếp tục xác nhận lần 2\"")}</strong> {t(" để chuyển sang bước xác nhận cuối cùng.")}</div>
             ) : (
-              <div
+              <div data-i18n-managed
                 style={{
                   padding: '14px 16px',
                   borderRadius: 8,
@@ -1608,57 +1572,53 @@ export function StaffClassesPage() {
                 }}
                 data-testid="delete-step-2-box"
               >
-                <strong>CẢNH BÁO XÁC NHẬN LẦN 2 (DOUBLE CONFIRM):</strong>
+                <strong>{t("CẢNH BÁO XÁC NHẬN LẦN 2 (DOUBLE CONFIRM):")}</strong>
                 <div style={{ marginTop: 6 }}>
-                  Thao tác này sẽ xóa vĩnh viễn lớp học <strong>{deletingClass.name}</strong> cùng toàn bộ các buổi học và danh sách đăng ký/chờ liên quan. Hành động này <strong>không thể hoàn tác</strong>. Bạn có chắc chắn đồng ý xóa?
-                </div>
+                  {t("Thao tác này sẽ xóa vĩnh viễn lớp học ")}<strong>{deletingClass.name}</strong> {t(" cùng toàn bộ các buổi học và danh sách đăng ký/chờ liên quan. Hành động này ")}<strong>{t("không thể hoàn tác")}</strong>{t(". Bạn có chắc chắn đồng ý xóa?")}</div>
               </div>
             )}
 
             {deleteModalError && (
-              <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
-                {deleteModalError}
+              <div data-i18n-managed style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+                {t(deleteModalError)}
               </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
               {deleteConfirmStep === 1 ? (
                 <>
-                  <button
+                  <button data-i18n-managed
                     type="button"
                     className="btn-secondary"
                     onClick={handleCloseDeleteModal}
                     disabled={isSubmitting}
                   >
-                    Hủy bỏ
-                  </button>
-                  <button
+                    {t("Hủy bỏ")}</button>
+                  <button data-i18n-managed
                     type="button"
                     className="btn-primary"
                     onClick={() => setDeleteConfirmStep(2)}
                     data-testid="delete-confirm-step1-btn"
                   >
-                    Tiếp tục xác nhận lần 2
-                  </button>
+                    {t("Tiếp tục xác nhận lần 2")}</button>
                 </>
               ) : (
                 <>
-                  <button
+                  <button data-i18n-managed
                     type="button"
                     className="btn-secondary"
                     onClick={() => setDeleteConfirmStep(1)}
                     disabled={isSubmitting}
                   >
-                    Quay lại bước 1
-                  </button>
-                  <button
+                    {t("Quay lại bước 1")}</button>
+                  <button data-i18n-managed
                     type="button"
                     className="btn-danger"
                     onClick={handleConfirmDeleteClass}
                     disabled={isSubmitting}
                     data-testid="delete-confirm-step2-btn"
                   >
-                    {isSubmitting ? 'Đang xóa...' : 'Xác nhận xóa vĩnh viễn'}
+                    {isSubmitting ? t('Đang xóa...') : t('Xác nhận xóa vĩnh viễn')}
                   </button>
                 </>
               )}
@@ -1669,8 +1629,8 @@ export function StaffClassesPage() {
 
       {/* Modal: Tạo lớp học và xếp lịch (Manager Only) */}
       {isManager && showModal && (
-        <Modal title={createMode === 'existing' ? 'Thêm buổi học cho lớp' : 'Tạo lớp học & xếp lịch'} onClose={handleCloseModal}>
-          <div className="filter-chips" role="group" aria-label="Kiểu tạo lịch" style={{ marginBottom: 12 }}>
+        <Modal title={createMode === 'existing' ? t('Thêm buổi học cho lớp') : t('Tạo lớp học & xếp lịch')} onClose={handleCloseModal}>
+          <div className="filter-chips" role="group" aria-label={t("Kiểu tạo lịch")} style={{ marginBottom: 12 }}>
             <button
               type="button"
               className={`filter-chip ${createMode === 'new' ? 'is-active' : ''}`}
@@ -1678,8 +1638,7 @@ export function StaffClassesPage() {
               onClick={() => { setCreateMode('new'); setModalError(null); }}
               disabled={isSubmitting}
             >
-              Lớp mới
-            </button>
+              {t("Lớp mới")}</button>
             <button
               type="button"
               className={`filter-chip ${createMode === 'existing' ? 'is-active' : ''}`}
@@ -1687,13 +1646,12 @@ export function StaffClassesPage() {
               onClick={() => { setCreateMode('existing'); setModalError(null); }}
               disabled={isSubmitting || classes.length === 0}
             >
-              Thêm buổi cho lớp có sẵn
-            </button>
+              {t("Thêm buổi cho lớp có sẵn")}</button>
           </div>
           {createMode === 'existing' ? (
-            <form onSubmit={handleAddSession} style={{ display: 'grid', gap: 11 }}>
+            <form data-i18n-managed onSubmit={handleAddSession} style={{ display: 'grid', gap: 11 }}>
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="existing-class">Lớp học *</label>
+                <label className="portal-label" htmlFor="existing-class">{t("Lớp học *")}</label>
                 <Select
                   id="existing-class"
                   className="portal-select"
@@ -1701,16 +1659,16 @@ export function StaffClassesPage() {
                   onChange={(e) => { setExistingClassId(e.target.value); setModalError(null); }}
                   disabled={isSubmitting}
                 >
-                  <option value="">-- Chọn lớp học --</option>
+                  <option value="">{t("-- Chọn lớp học --")}</option>
                   {classes.filter((cls) => (cls.status || '').toUpperCase() === 'ACTIVE').map((cls) => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name} · {cls.roomName ?? `Phòng #${cls.roomId}`}
+                    <option data-i18n-managed key={cls.id} value={cls.id}>
+                      {cls.name} · {cls.roomName ?? t(`Phòng #${cls.roomId}`, `Room #${cls.roomId}`)}
                     </option>
                   ))}
                 </Select>
               </div>
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="add-session-date">Ngày học *</label>
+                <label className="portal-label" htmlFor="add-session-date">{t("Ngày học *")}</label>
                 <DatePicker
                   id="add-session-date"
                   required
@@ -1722,7 +1680,7 @@ export function StaffClassesPage() {
               </div>
               <div className="grid-2">
                 <div className="portal-form-group">
-                  <label className="portal-label" htmlFor="add-session-start">Giờ bắt đầu *</label>
+                  <label className="portal-label" htmlFor="add-session-start">{t("Giờ bắt đầu *")}</label>
                   <TimePicker
                     wholeHour
                     id="add-session-start"
@@ -1733,7 +1691,7 @@ export function StaffClassesPage() {
                   />
                 </div>
                 <div className="portal-form-group">
-                  <label className="portal-label" htmlFor="add-session-end">Giờ kết thúc *</label>
+                  <label className="portal-label" htmlFor="add-session-end">{t("Giờ kết thúc *")}</label>
                   <TimePicker
                     wholeHour
                     id="add-session-end"
@@ -1745,37 +1703,35 @@ export function StaffClassesPage() {
                 </div>
               </div>
               {(modalError || addSessionConflictWarning) && (
-                <div className="form-error" role="alert" data-testid="add-session-error">
-                  {modalError || addSessionConflictWarning}
+                <div data-i18n-managed className="form-error" role="alert" data-testid="add-session-error">
+                  {t(modalError || addSessionConflictWarning)}
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
                 <button type="button" className="btn-secondary" onClick={handleCloseModal} disabled={isSubmitting}>
-                  Hủy Bỏ
-                </button>
+                  {t("Hủy Bỏ")}</button>
                 <button
                   type="submit"
                   className="btn-primary"
                   disabled={isSubmitting || !existingClass || Boolean(addSessionConflictWarning)}
                   data-testid="submit-add-session-button"
                 >
-                  {isSubmitting ? 'Đang lưu...' : 'Thêm buổi học'}
+                  {isSubmitting ? t('Đang lưu...') : t('Thêm buổi học')}
                 </button>
               </div>
             </form>
-          ) : catalogsLoading ? <LoadingSkeleton label="Đang tải bộ môn, phòng tập và huấn luyện viên…" count={4} />
-            : catalogsError ? <div role="alert"><p>{catalogsError}</p><button type="button" className="btn-secondary" onClick={() => void loadCatalogs()}>Thử lại</button></div>
+          ) : catalogsLoading ? <LoadingSkeleton label={t("Đang tải bộ môn, phòng tập và huấn luyện viên…")} count={4} />
+            : catalogsError ? <div role="alert"><p>{t(catalogsError)}</p><button type="button" className="btn-secondary" onClick={() => void loadCatalogs()}>{t("Thử lại")}</button></div>
             : <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-name">
-                Tên lớp học *
-              </label>
+                {t("Tên lớp học *")}</label>
               <input
                 id="class-name"
                 type="text"
                 required
                 autoFocus
-                placeholder="Ví dụ: Gym cơ bản, Bơi sải nâng cao..."
+                placeholder={t("Ví dụ: Gym cơ bản, Bơi sải nâng cao...")}
                 className="portal-input"
                 style={
                   isDuplicateClassName
@@ -1790,7 +1746,7 @@ export function StaffClassesPage() {
                 disabled={isSubmitting}
               />
               {isDuplicateClassName && (
-                <div
+                <div data-i18n-managed
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1805,8 +1761,7 @@ export function StaffClassesPage() {
                 >
                   <span style={{ fontWeight: 700 }}>!</span>
                   <span>
-                    Tên lớp &quot;{formData.name.trim()}&quot; đã tồn tại trong hệ thống. Vui lòng đặt tên khác!
-                  </span>
+                    {t("Tên lớp \"")}{formData.name.trim()}{t("\" đã tồn tại trong hệ thống. Vui lòng đặt tên khác!")}</span>
                 </div>
               )}
             </div>
@@ -1814,8 +1769,7 @@ export function StaffClassesPage() {
             <div className="grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="class-discipline">
-                  Bộ môn *
-                </label>
+                  {t("Bộ môn *")}</label>
                 <Select
                   id="class-discipline"
                   className="portal-select"
@@ -1823,9 +1777,9 @@ export function StaffClassesPage() {
                   onChange={(e) => setFormData({ ...formData, disciplineId: e.target.value })}
                   disabled={isSubmitting}
                 >
-                  <option value="">-- Chọn bộ môn --</option>
+                  <option value="">{t("-- Chọn bộ môn --")}</option>
                   {disciplines.map((d) => (
-                    <option key={d.id} value={d.id}>
+                    <option data-i18n-managed key={d.id} value={d.id}>
                       {d.name}
                     </option>
                   ))}
@@ -1834,8 +1788,7 @@ export function StaffClassesPage() {
 
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="class-capacity">
-                  Sức chứa Tối Đa *
-                </label>
+                  {t("Sức chứa Tối Đa *")}</label>
                 <input
                   id="class-capacity"
                   type="number"
@@ -1853,8 +1806,7 @@ export function StaffClassesPage() {
             {/* BR-02: Dropdown HLV chỉ liệt kê HLV đang active */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-coach">
-                Huấn luyện viên Phụ Trách *
-              </label>
+                {t("Huấn luyện viên Phụ Trách *")}</label>
               <Select
                 id="class-coach"
                 className="portal-select"
@@ -1862,18 +1814,18 @@ export function StaffClassesPage() {
                 onChange={(e) => setFormData({ ...formData, coachId: e.target.value })}
                 disabled={isSubmitting}
               >
-                <option value="">-- Chọn huấn luyện viên --</option>
+                <option value="">{t("-- Chọn huấn luyện viên --")}</option>
                 {coaches.map((c) => {
                   const genderLabel =
                     c.gender === 'female'
-                      ? 'Nữ'
+                      ? t('Nữ')
                       : c.gender === 'male'
-                      ? 'Nam'
+                      ? t('Nam')
                       : c.gender === 'other'
-                      ? 'Khác'
+                      ? t('Khác')
                       : null;
                   return (
-                    <option key={c.id} value={c.id}>
+                    <option data-i18n-managed key={c.id} value={c.id}>
                       {c.fullName} {genderLabel ? `(${genderLabel})` : ''} - {c.email}
                     </option>
                   );
@@ -1884,8 +1836,7 @@ export function StaffClassesPage() {
             {/* BR-02: Dropdown Phòng chỉ liệt kê phòng available */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-room">
-                Phòng tập *
-              </label>
+                {t("Phòng tập *")}</label>
               <Select
                 id="class-room"
                 className="portal-select"
@@ -1893,10 +1844,10 @@ export function StaffClassesPage() {
                 onChange={(e) => setFormData({ ...formData, roomId: e.target.value })}
                 disabled={isSubmitting}
               >
-                <option value="">-- Chọn phòng tập --</option>
+                <option value="">{t("-- Chọn phòng tập --")}</option>
                 {rooms.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} - Sức chứa: {r.capacity} ({r.location || 'Khu trung tâm'})
+                  <option data-i18n-managed key={r.id} value={r.id}>
+                    {r.name} {t(" - Sức chứa: ")}{r.capacity} ({r.location || t('Khu trung tâm')})
                   </option>
                 ))}
               </Select>
@@ -1905,14 +1856,12 @@ export function StaffClassesPage() {
             {/* Khung giờ và ngày học */}
             <div style={{ padding: '12px', backgroundColor: 'var(--color-bg-warm)', borderRadius: 8, border: '1px solid var(--color-border-subtle)' }}>
               <strong style={{ display: 'block', marginBottom: 10, fontSize: '0.9rem', color: 'var(--color-text-main)' }}>
-                Xếp lịch buổi học đầu tiên
-              </strong>
+                {t("Xếp lịch buổi học đầu tiên")}</strong>
 
               <div className="grid-2" style={{ marginBottom: 10 }}>
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-date">
-                    Ngày Học *
-                  </label>
+                    {t("Ngày Học *")}</label>
                   <DatePicker
                     id="session-date"
                     required
@@ -1925,8 +1874,7 @@ export function StaffClassesPage() {
 
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="class-level">
-                    Cấp Độ
-                  </label>
+                    {t("Cấp Độ")}</label>
                   <Select
                     id="class-level"
                     className="portal-select"
@@ -1934,10 +1882,10 @@ export function StaffClassesPage() {
                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                     disabled={isSubmitting}
                   >
-                    <option value="all">Mọi cấp độ (All levels)</option>
-                    <option value="beginner">Người mới bắt đầu (Beginner)</option>
-                    <option value="intermediate">Trung cấp (Intermediate)</option>
-                    <option value="advanced">Nâng cao (Advanced)</option>
+                    <option value="all">{t("Mọi cấp độ (All levels)")}</option>
+                    <option value="beginner">{t("Người mới bắt đầu (Beginner)")}</option>
+                    <option value="intermediate">{t("Trung cấp (Intermediate)")}</option>
+                    <option value="advanced">{t("Nâng cao (Advanced)")}</option>
                   </Select>
                 </div>
               </div>
@@ -1945,8 +1893,7 @@ export function StaffClassesPage() {
               <div className="grid-2">
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-start">
-                    Giờ bắt đầu *
-                  </label>
+                    {t("Giờ bắt đầu *")}</label>
                   <TimePicker
                     wholeHour
                     id="session-start"
@@ -1959,8 +1906,7 @@ export function StaffClassesPage() {
 
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-end">
-                    Giờ kết thúc *
-                  </label>
+                    {t("Giờ kết thúc *")}</label>
                   <TimePicker
                     wholeHour
                     id="session-end"
@@ -1975,13 +1921,12 @@ export function StaffClassesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-desc">
-                Mô Tả / Ghi Chú
-              </label>
+                {t("Mô Tả / Ghi Chú")}</label>
               <textarea
                 id="class-desc"
                 rows={2}
                 className="portal-textarea"
-                placeholder="Ghi chú về trang phục hoặc dụng cụ cần chuẩn bị..."
+                placeholder={t("Ghi chú về trang phục hoặc dụng cụ cần chuẩn bị...")}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 disabled={isSubmitting}
@@ -1990,7 +1935,7 @@ export function StaffClassesPage() {
 
             {/* Hiển thị lỗi form hoặc cảnh báo trùng lịch trực tiếp trong Modal */}
             {(modalError || createScheduleConflictWarning) && (
-              <div
+              <div data-i18n-managed
                 style={{
                   padding: '12px 16px',
                   backgroundColor: 'var(--portal-raised)',
@@ -2008,7 +1953,7 @@ export function StaffClassesPage() {
                 data-testid="schedule-conflict-warning"
               >
                 <span style={{ fontWeight: 700 }}>!</span>
-                <span>{modalError || createScheduleConflictWarning}</span>
+                <span>{t(modalError || createScheduleConflictWarning)}</span>
               </div>
             )}
 
@@ -2020,8 +1965,7 @@ export function StaffClassesPage() {
                 onClick={handleCloseModal}
                 disabled={isSubmitting}
               >
-                Hủy Bỏ
-              </button>
+                {t("Hủy Bỏ")}</button>
               <button
                 type="submit"
                 className="btn-primary"
@@ -2030,11 +1974,11 @@ export function StaffClassesPage() {
               >
                 {isSubmitting ? (
                   <>
-                    <span className="spinner" />
-                    <span>Đang lưu...</span>
+                    <span data-i18n-managed className="spinner" />
+                    <span data-i18n-managed>{t("Đang lưu...")}</span>
                   </>
                 ) : (
-                  'Lưu & xếp lịch'
+                  t('Lưu & xếp lịch')
                 )}
               </button>
             </div>

@@ -1,3 +1,4 @@
+import { sourceError } from '../shop/shopI18n';
 import { apiFetch } from '../../shared/api/client';
 
 export interface RegisterInput {
@@ -77,7 +78,7 @@ export const googleLoginWithIdToken = (idToken: string) =>
 export const googleRedeemHandoff = (code: string) => {
   const verifier = sessionStorage.getItem(GOOGLE_VERIFIER_KEY);
   sessionStorage.removeItem(GOOGLE_VERIFIER_KEY);
-  if (!verifier) throw new Error('Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.');
+  if (!verifier) throw sourceError(null, 'Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.');
   return apiFetch<GoogleVerifyResponse>('/auth/google/handoff', {
     method: 'POST',
     body: JSON.stringify({ code, verifier }),

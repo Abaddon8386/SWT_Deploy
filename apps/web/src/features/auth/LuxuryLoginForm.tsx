@@ -1,9 +1,8 @@
+import { sourceText, useSourceLanguage, sourceFormat, sourceError, sourceToast as toast, sourceFormatPair } from '../shop/shopI18n';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, type UserSession } from '../../shared/api/client';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { StatusMark } from '../../shared/ui/StatusMark';
-import { toast } from '../../shared/ui/toast';
 import { authDestination, purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
 import { loginSchema } from './authValidation';
 import { loadGoogleIdentity } from './loadGoogleIdentity';
@@ -22,16 +21,17 @@ interface LuxuryLoginFormProps {
 }
 
 const ROLE_NAMES: Record<UserSession['role'], string> = {
-  ADMIN: 'Quản trị hệ thống',
+  get ADMIN() { return sourceText('Quản trị hệ thống'); },
   MEMBER: 'Hội viên',
-  STAFF: 'Lễ tân / Thu ngân',
-  COACH: 'Huấn luyện viên',
-  MANAGER: 'Quản lý trung tâm',
+  get STAFF() { return sourceText('Lễ tân / Thu ngân'); },
+  get COACH() { return sourceText('Huấn luyện viên'); },
+  get MANAGER() { return sourceText('Quản lý trung tâm'); },
 };
 
 type AuthMode = 'standard' | 'google_otp';
 
 export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
+  useSourceLanguage();
   const navigate = useNavigate();
   const { search } = useLocation();
   useEffect(() => rememberPurchaseIntent(search), [search]);
@@ -47,13 +47,13 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   // Google Login Form
   const [googleEmail, setGoogleEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [otpMessage, setOtpMessage] = useState('');
+  const [otpMessage, setOtpMessage] = useState<string | Error | import('../../shared/i18n').SourceMessage>('');
   const [debugOtpCode, setDebugOtpCode] = useState('');
   const [countdown, setCountdown] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState<string | Error>('');
   const [shaking, setShaking] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -80,7 +80,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const fail = useCallback((msg: string) => {
+  const fail = useCallback((msg: string | Error) => {
     setFormError(msg);
     setShaking(true);
   }, []);
@@ -106,7 +106,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       const verifiedEmail = (res.email || '').trim();
       setGoogleEmail(verifiedEmail);
       setOtpMessage(
-        res.message || `Đã gửi mã xác nhận đến gmail ${verifiedEmail}. Hãy nhập mã xác nhận để kích hoạt tài khoản.`
+        (res.message ? new Error(res.message) : null) || sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", verifiedEmail)
       );
       if (res.debugOtp) {
         setDebugOtpCode(res.debugOtp);
@@ -117,13 +117,13 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       }
       setMode('google_otp');
       setCountdown(30);
-      toast(`Mã xác nhận đã được gửi đến ${verifiedEmail}`);
+      toast(sourceFormatPair("Mã xác nhận đã được gửi đến {0}", verifiedEmail));
     } catch (err: unknown) {
-      const msg = errorMessage(err, 'Đăng nhập Google thất bại.');
+      const msg = sourceError(err, 'Đăng nhập Google thất bại.');
       // BR-04 & BR-05: Chặn nhân sự (403) và tài khoản bị khóa
-      if (msg.includes('nhân sự') || msg.toLowerCase().includes('staff') || msg.includes('403')) {
+      if (msg.message.includes('nhân sự') || msg.message.toLowerCase().includes('staff') || msg.message.includes('403')) {
         fail('Vai trò này chưa hỗ trợ đăng nhập Google. Vui lòng đăng nhập bằng email và mật khẩu.');
-      } else if (msg.toLowerCase().includes('khóa') || msg.toLowerCase().includes('locked')) {
+      } else if (msg.message.toLowerCase().includes('khóa') || msg.message.toLowerCase().includes('locked')) {
         fail('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
       } else {
         fail(msg);
@@ -139,7 +139,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     try {
       completeGoogleLogin(await googleRedeemHandoff(code));
     } catch (error) {
-      fail(errorMessage(error, 'Đăng nhập Google thất bại.'));
+      fail(sourceError(error, 'Đăng nhập Google thất bại.'));
     } finally {
       setIsGoogleLoading(false);
     }
@@ -185,7 +185,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
     if (oauthStatus === 'callback') {
       const email = (params.get('email') || '').trim();
-      const message = params.get('message') || `Đã gửi mã xác nhận đến gmail ${email}. Hãy nhập mã xác nhận để kích hoạt tài khoản.`;
+      const message = (params.get('message') ? new Error(params.get('message')!) : null) || sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", email);
       const debugOtp = params.get('debug_otp') || params.get('debugOtp') || '';
       cleanSearchParams();
       if (email) {
@@ -201,7 +201,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
         setFormError('');
         setMode('google_otp');
         setCountdown(30);
-        toast(`Mã xác nhận đã được gửi đến ${email}`);
+        toast(sourceFormatPair("Mã xác nhận đã được gửi đến {0}", email));
       }
       return;
     }
@@ -289,7 +289,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       setSuccess(true);
       navigate(authDestination(res.user.role, search), { viewTransition: true });
     } catch (err: unknown) {
-      const msg = errorMessage(err, 'Đăng nhập không thành công.');
+      const msg = sourceError(err, 'Đăng nhập không thành công.');
       fail(msg);
     } finally {
       setIsLoading(false);
@@ -310,7 +310,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
     try {
       const res = await googleSendOtp(cleanEmail);
-      setOtpMessage(res.message || `Đã gửi mã xác nhận đến gmail ${cleanEmail}. Hãy nhập mã xác nhận để kích hoạt tài khoản.`);
+      setOtpMessage((res.message ? new Error(res.message) : null) || sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", cleanEmail));
       if (res.debugOtp) {
         setDebugOtpCode(res.debugOtp);
         setOtpCode(res.debugOtp);
@@ -320,9 +320,9 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       }
       setMode('google_otp');
       setCountdown(30);
-      toast(`Mã xác nhận đã được gửi đến ${cleanEmail}`);
+      toast(sourceFormatPair("Mã xác nhận đã được gửi đến {0}", cleanEmail));
     } catch (err: unknown) {
-      const msg = errorMessage(err, 'Không thể gửi mã xác nhận đến email.');
+      const msg = sourceError(err, 'Không thể gửi mã xác nhận đến email.');
       fail(msg);
     } finally {
       setIsLoading(false);
@@ -345,7 +345,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       const res = await googleVerifyOtp(googleEmail.trim(), cleanOtp);
       completeGoogleLogin(res);
     } catch (err: unknown) {
-      const msg = errorMessage(err, 'Mã xác nhận không chính xác hoặc đã hết hạn.');
+      const msg = sourceError(err, 'Mã xác nhận không chính xác hoặc đã hết hạn.');
       fail(msg);
     } finally {
       setIsLoading(false);
@@ -394,11 +394,10 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             color: 'var(--color-text-main)',
           }}
         >
-          Phiên đăng nhập đang hoạt động
-        </h2>
+          {sourceText("Phiên đăng nhập đang hoạt động")}</h2>
 
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginBottom: '24px' }}>
-          Đang đăng nhập với tài khoản <strong>{currentUser.name}</strong> ({ROLE_NAMES[currentUser.role]})
+          {sourceText("Đang đăng nhập với tài khoản ")}<strong>{currentUser.name}</strong> ({sourceText(ROLE_NAMES[currentUser.role])})
         </p>
 
         <div style={{ display: 'grid', gap: '12px' }}>
@@ -407,7 +406,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             className="btn-primary"
             onClick={() => navigate(authDestination(currentUser.role, search), { viewTransition: true })}
           >
-            Tiếp tục vào Portal ({ROLE_NAMES[currentUser.role]}) →
+            {sourceText("Tiếp tục vào Portal (")}{sourceText(ROLE_NAMES[currentUser.role])}) →
           </button>
 
           <button
@@ -418,8 +417,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               setCurrentUser(null);
             }}
           >
-            Đăng xuất tài khoản này
-          </button>
+            {sourceText("Đăng xuất tài khoản này")}</button>
         </div>
       </div>
     );
@@ -450,8 +448,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             fontWeight: 600,
           }}
         >
-          SÖL SANCTUARY PORTAL
-        </span>
+          {sourceText("SÖL SANCTUARY PORTAL")}</span>
         <h3
           style={{
             fontFamily: 'var(--fit-font, var(--font-sans))',
@@ -462,20 +459,20 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             letterSpacing: '0.02em',
           }}
         >
-          {mode === 'standard' && 'Đăng nhập'}
-          {mode === 'google_otp' && 'Xác thực tài khoản'}
+          {mode === 'standard' && sourceText('Đăng nhập')}
+          {mode === 'google_otp' && sourceText('Xác thực tài khoản')}
         </h3>
       </div>
 
       {isExpired && (
         <div role="status" className="portal-alert portal-alert--info" style={{ marginBottom: '18px' }}>
-          <span>Phiên đăng nhập đã hết hạn để đảm bảo an toàn. Vui lòng đăng nhập lại.</span>
+          <span>{sourceText("Phiên đăng nhập đã hết hạn để đảm bảo an toàn. Vui lòng đăng nhập lại.")}</span>
         </div>
       )}
 
       {formError && (
         <div role="alert" className="portal-alert anim-fade-up" style={{ marginBottom: '18px' }}>
-          ⚠️ {formError}
+          ⚠️ {sourceText(formError)}
         </div>
       )}
 
@@ -485,13 +482,12 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           <form onSubmit={handleStandardSubmit}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="login-identifier">
-                Tên đăng nhập hoặc Email
-              </label>
+                {sourceText("Tên đăng nhập hoặc Email")}</label>
               <input
                 id="login-identifier"
                 type="text"
                 className="portal-input"
-                placeholder="Tên đăng nhập hoặc email"
+                placeholder={sourceText("Tên đăng nhập hoặc email")}
                 autoComplete="username"
                 value={identifier}
                 onChange={(e) => {
@@ -505,8 +501,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             <div className="portal-form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <label className="portal-label" htmlFor="login-password" style={{ margin: 0 }}>
-                  Mật Khẩu
-                </label>
+                  {sourceText("Mật Khẩu")}</label>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -519,14 +514,14 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                     padding: 0,
                   }}
                 >
-                  {showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  {showPassword ? sourceText('Ẩn mật khẩu') : sourceText('Hiện mật khẩu')}
                 </button>
               </div>
               <input
                 id="login-password"
                 type={showPassword ? 'text' : 'password'}
                 className="portal-input"
-                placeholder="Nhập mật khẩu"
+                placeholder={sourceText("Nhập mật khẩu")}
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => {
@@ -541,11 +536,10 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               {success ? (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
                   <StatusMark size={22} />
-                  ĐÃ XÁC THỰC
-                </span>
+                  {sourceText("ĐÃ XÁC THỰC")}</span>
               ) : (
                 <>
-                  <span>{isLoading ? 'ĐANG XÁC THỰC...' : 'ĐĂNG NHẬP'}</span>
+                  <span>{isLoading ? sourceText('ĐANG XÁC THỰC...') : sourceText('ĐĂNG NHẬP')}</span>
                   <span className="submit-arrow" aria-hidden="true">→</span>
                 </>
               )}
@@ -556,8 +550,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '12px' }}>
             <div style={{ flex: 1, height: '1px', background: 'var(--color-border-medium)' }} />
             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              HOẶC
-            </span>
+              {sourceText("HOẶC")}</span>
             <div style={{ flex: 1, height: '1px', background: 'var(--color-border-medium)' }} />
           </div>
 
@@ -584,14 +577,13 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
               <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
             </svg>
-            <span>Đăng nhập bằng Google</span>
+            <span>{sourceText("Đăng nhập bằng Google")}</span>
           </button>
-          {isGoogleLoading && <p role="status" style={{ textAlign: 'center', marginTop: 8 }}>Đang xác thực Google và gửi mã OTP...</p>}
+          {isGoogleLoading && <p role="status" style={{ textAlign: 'center', marginTop: 8 }}>{sourceText("Đang xác thực Google và gửi mã OTP...")}</p>}
           <p style={{ marginTop: '20px', fontSize: '0.85rem', textAlign: 'center' }}>
-            Chưa có tài khoản?{' '}
+            {sourceText("Chưa có tài khoản?")}{' '}
             <Link to={purchaseAuthPath('/register', search)} viewTransition style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
-              Đăng ký hội viên
-            </Link>
+              {sourceText("Đăng ký hội viên")}</Link>
           </p>
         </>
       )}
@@ -612,11 +604,11 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           >
             <div style={{ fontSize: '1.8rem', marginBottom: '6px' }}>📩</div>
             <div style={{ fontSize: '0.92rem', color: '#1B5E20', fontWeight: 600, lineHeight: 1.4 }}>
-              {otpMessage}
+              {sourceText(otpMessage)}
             </div>
             {googleEmail && (
               <div style={{ fontSize: '0.8rem', color: '#2E7D32', marginTop: '6px' }}>
-                Tài khoản Google: <strong>{googleEmail}</strong>
+                {sourceText("Tài khoản Google: ")}<strong>{googleEmail}</strong>
               </div>
             )}
           </div>
@@ -634,14 +626,13 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 textAlign: 'center',
               }}
             >
-              ⚙️ <strong>Chế độ Test (Không cần mở mail):</strong> Đã tự động điền mã xác nhận <strong>{debugOtpCode}</strong>
+              ⚙️ <strong>{sourceText("Chế độ Test (Không cần mở mail):")}</strong> {sourceText(" Đã tự động điền mã xác nhận ")}<strong>{debugOtpCode}</strong>
             </div>
           )}
 
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="google-otp-code" style={{ textAlign: 'center', display: 'block' }}>
-              Nhập mã xác nhận (6 chữ số):
-            </label>
+              {sourceText("Nhập mã xác nhận (6 chữ số):")}</label>
             <input
               id="google-otp-code"
               type="text"
@@ -673,11 +664,10 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             {success ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
                 <StatusMark size={22} />
-                ĐÃ KÍCH HOẠT THÀNH CÔNG
-              </span>
+                {sourceText("ĐÃ KÍCH HOẠT THÀNH CÔNG")}</span>
             ) : (
               <>
-                <span>{isLoading ? 'ĐANG XÁC THỰC...' : 'XÁC NHẬN & KÍCH HOẠT TÀI KHOẢN'}</span>
+                <span>{isLoading ? sourceText('ĐANG XÁC THỰC...') : sourceText('XÁC NHẬN & KÍCH HOẠT TÀI KHOẢN')}</span>
                 <span className="submit-arrow" aria-hidden="true">→</span>
               </>
             )}
@@ -699,7 +689,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               disabled={countdown > 0 || isLoading || success}
               onClick={handleGoogleSendOtp}
             >
-              {countdown > 0 ? `Gửi lại mã sau (${countdown}s)` : 'Gửi lại mã xác nhận'}
+              {countdown > 0 ? sourceFormat("Gửi lại mã sau ({0}s)", countdown) : sourceText('Gửi lại mã xác nhận')}
             </button>
 
             <button
@@ -723,8 +713,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 setMode('standard');
               }}
             >
-              Chọn tài khoản Google khác
-            </button>
+              {sourceText("Chọn tài khoản Google khác")}</button>
           </div>
         </form>
       )}

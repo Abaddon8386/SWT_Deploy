@@ -1,5 +1,5 @@
+import { sourceText, useSourceLanguage, sourceError } from './shopI18n';
 import { useCallback, useEffect, useState } from 'react';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
@@ -14,14 +14,14 @@ const STAFF_TABS: Array<{
   label: string;
   countKey?: keyof OrderCountsDto;
 }> = [
-  { id: 'paid', label: 'Cần xử lý', countKey: 'paid' },
-  { id: 'processing', label: 'Đang chuẩn bị', countKey: 'processing' },
-  { id: 'ready_for_pickup', label: 'Chờ nhận tại quầy', countKey: 'ready_for_pickup' },
-  { id: 'shipping', label: 'Đang giao', countKey: 'shipping' },
-  { id: 'pending_payment', label: 'Chờ trả tại quầy', countKey: 'counter_pending' },
-  { id: 'completed', label: 'Hoàn tất' },
-  { id: 'cancelled', label: 'Đã hủy' },
-  { id: '', label: 'Tất cả' },
+  { id: 'paid', get label() { return sourceText('Cần xử lý'); }, countKey: 'paid' },
+  { id: 'processing', get label() { return sourceText('Đang chuẩn bị'); }, countKey: 'processing' },
+  { id: 'ready_for_pickup', get label() { return sourceText('Chờ nhận tại quầy'); }, countKey: 'ready_for_pickup' },
+  { id: 'shipping', get label() { return sourceText('Đang giao'); }, countKey: 'shipping' },
+  { id: 'pending_payment', get label() { return sourceText('Chờ trả tại quầy'); }, countKey: 'counter_pending' },
+  { id: 'completed', get label() { return sourceText('Hoàn tất'); } },
+  { id: 'cancelled', get label() { return sourceText('Đã hủy'); } },
+  { id: '', get label() { return sourceText('Tất cả'); } },
 ];
 
 export function StaffOrdersSection({
@@ -46,9 +46,10 @@ export function StaffOrdersSection({
   data: Page<OrderDto> | null;
   counts: OrderCountsDto | null;
   loading: boolean;
-  error: string;
+  error: string | Error;
   onRetry: () => void;
 }) {
+  useSourceLanguage();
   const [selectedOrder, setSelectedOrder] = useState<OrderDto | null>(null);
 
   return (
@@ -62,7 +63,7 @@ export function StaffOrdersSection({
           flexWrap: 'wrap',
         }}
       >
-        <div className="portal-tabs shop-tabs" role="tablist" aria-label="Trạng thái đơn hàng">
+        <div className="portal-tabs shop-tabs" role="tablist" aria-label={sourceText("Trạng thái đơn hàng")}>
           {STAFF_TABS.map(tab => {
             const count = tab.countKey && counts ? counts[tab.countKey] : null;
             const active = status === tab.id;
@@ -87,13 +88,12 @@ export function StaffOrdersSection({
 
         <div className="shop-field" style={{ minWidth: 240 }}>
           <label className="shop-sr-only" htmlFor="staff-order-search">
-            Tìm mã đơn, tên, SĐT
-          </label>
+            {sourceText("Tìm mã đơn, tên, SĐT")}</label>
           <input
             id="staff-order-search"
             type="search"
             className="shop-input"
-            placeholder="Tìm mã đơn, tên, SĐT…"
+            placeholder={sourceText("Tìm mã đơn, tên, SĐT…")}
             value={q}
             onChange={e => {
               onQueryChange(e.target.value);
@@ -104,33 +104,31 @@ export function StaffOrdersSection({
       </div>
 
       {loading ? (
-        <LoadingSkeleton label="Đang tải đơn hàng…" variant="table" count={4} />
+        <LoadingSkeleton label={sourceText("Đang tải đơn hàng…")} variant="table" count={4} />
       ) : error ? (
         <div className="portal-alert" role="alert">
-          <span>{error}</span>
+          <span>{sourceText(error)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={onRetry}>
-            Thử lại
-          </button>
+            {sourceText("Thử lại")}</button>
         </div>
       ) : !data?.content.length ? (
         <div className="portal-card portal-state">
-          <p style={{ margin: 0 }}>Chưa có đơn hàng nào khớp bộ lọc.</p>
+          <p style={{ margin: 0 }}>{sourceText("Chưa có đơn hàng nào khớp bộ lọc.")}</p>
         </div>
       ) : (
         <>
           <OrderTable orders={data.content} onOpen={order => setSelectedOrder(order)} />
           {data.totalPages > 1 && (
-            <nav className="court-pagination" aria-label="Phân trang đơn hàng">
+            <nav className="court-pagination" aria-label={sourceText("Phân trang đơn hàng")}>
               <button
                 type="button"
                 className="btn-secondary"
                 disabled={page === 0}
                 onClick={() => onPageChange(page - 1)}
               >
-                Trang trước
-              </button>
+                {sourceText("Trang trước")}</button>
               <span>
-                Trang {page + 1} / {data.totalPages}
+                {sourceText("Trang ")}{page + 1} / {data.totalPages}
               </span>
               <button
                 type="button"
@@ -138,8 +136,7 @@ export function StaffOrdersSection({
                 disabled={page + 1 >= data.totalPages}
                 onClick={() => onPageChange(page + 1)}
               >
-                Trang sau
-              </button>
+                {sourceText("Trang sau")}</button>
             </nav>
           )}
         </>
@@ -160,13 +157,14 @@ export function StaffOrdersSection({
 }
 
 export function StaffOrdersPage() {
+  useSourceLanguage();
   const [status, setStatus] = useState('paid');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);
   const [data, setData] = useState<Page<OrderDto> | null>(null);
   const [counts, setCounts] = useState<OrderCountsDto | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | Error>('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -179,7 +177,7 @@ export function StaffOrdersPage() {
       setData(orderPage);
       setCounts(orderCounts);
     } catch (err) {
-      setError(errorMessage(err, 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.'));
+      setError(sourceError(err, 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }
@@ -192,11 +190,11 @@ export function StaffOrdersPage() {
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow="Vận hành"
-        title="Đơn hàng sản phẩm"
+        eyebrow={sourceText("Vận hành")}
+        title={sourceText("Đơn hàng sản phẩm")}
         actions={
           <RefreshButton
-            label="Làm mới đơn hàng"
+            label={sourceText("Làm mới đơn hàng")}
             disabled={loading}
             onClick={() => void load()}
           />

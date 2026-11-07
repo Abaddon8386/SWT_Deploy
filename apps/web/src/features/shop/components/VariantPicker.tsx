@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText } from "../shopI18n";
 import { useId } from 'react';
 import type { ProductVariantDto } from '../shopTypes';
 
@@ -10,11 +11,12 @@ export function VariantPicker({
   value: number;
   onChange: (variantId: number) => void;
 }) {
+  useSourceLanguage();
   const groupName = useId();
 
   return (
     <fieldset className="shop-variants">
-      <legend className="shop-variants__legend">Lựa chọn</legend>
+      <legend className="shop-variants__legend">{sourceText("Lựa chọn")}</legend>
       <div className="shop-variants__list">
         {variants.map((variant) => {
           const soldOut = !variant.available || variant.stock <= 0;
@@ -35,7 +37,7 @@ export function VariantPicker({
                 }}
               />
               <span>{variant.label}</span>
-              {soldOut && <span className="shop-variant-pill__soldout">Hết hàng</span>}
+              {soldOut && <span className="shop-variant-pill__soldout">{sourceText("Hết hàng")}</span>}
             </label>
           );
         })}

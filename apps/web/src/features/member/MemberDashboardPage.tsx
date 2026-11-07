@@ -1,3 +1,5 @@
+﻿import { memberText } from './memberI18n';
+import { getIntlLocale, useLanguage } from '../../shared/i18n/language';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -71,7 +73,8 @@ type ClassesState =
   | { status: 'success'; classes: BookedClass[] };
 
 export function MemberDashboardPage() {
-  const userName = getCurrentUser()?.name || 'Hội viên';
+  useLanguage();
+  const userName = getCurrentUser()?.name || memberText('Hội viên');
 
   const [membershipState, setMembershipState] =
     useState<MembershipState>({ status: 'loading' });
@@ -126,34 +129,33 @@ export function MemberDashboardPage() {
       : [];
 
   return (
-    <div className="portal-container member-overview">
+    <div data-i18n-managed className="portal-container member-overview">
       <PageHeader
-        eyebrow="Hội viên"
-        title={`Xin chào, ${userName}`}
-        actions={<Link className="btn-primary" to="/member/classes">Khám phá lịch học</Link>}
+        eyebrow={memberText("Hội viên")}
+        title={memberText(`Xin chào, ${userName}`, `Hello, ${userName}`)}
+        actions={<Link className="btn-primary" to="/member/classes">{memberText("Khám phá lịch học")}</Link>}
       />
 
       <div className="member-board-toolbar">
-        <div className="member-board-view"><span>Tổng quan của tôi</span></div>
-        <span className="member-board-date">{today.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+        <div className="member-board-view"><span>{memberText("Tổng quan của tôi")}</span></div>
+        <span className="member-board-date">{today.toLocaleDateString(getIntlLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</span>
       </div>
 
-      <div className="member-board" aria-label="Tổng quan hội viên">
-        <section className="member-board-column member-board-column--pink" aria-labelledby="board-membership">
-          <div className="member-column-heading"><h2 id="board-membership">Gói tập của tôi</h2><Link to="/member/packages" aria-label="Xem các gói tập"><PortalIcon name="arrow" size={16} /></Link></div>
+      <div className="member-board" aria-label={memberText("Tổng quan hội viên")}>
+        <section data-i18n-managed className="member-board-column member-board-column--pink" aria-labelledby="board-membership">
+          <div className="member-column-heading"><h2 id="board-membership">{memberText("Gói tập của tôi")}</h2><Link to="/member/packages" aria-label={memberText("Xem các gói tập")}><PortalIcon name="arrow" size={16} /></Link></div>
 
           {membershipState.status === 'loading' && (
-            <section className="portal-card member-board-loading" role="status">
-              <div className="member-skeleton member-skeleton--image" aria-hidden="true" /><span>Đang tải thông tin gói tập…</span>
+            <section data-i18n-managed className="portal-card member-board-loading" role="status">
+              <div className="member-skeleton member-skeleton--image" aria-hidden="true" /><span>{memberText("Đang tải thông tin gói tập…")}</span>
             </section>
           )}
 
           {membershipState.status === 'error' && (
-            <section className="portal-card portal-empty" role="alert">
+            <section data-i18n-managed className="portal-card portal-empty" role="alert">
               <h2 className="portal-card-title">
-                Không thể tải thông tin gói tập
-              </h2>
-              <p>Vui lòng thử lại sau ít phút.</p>
+                {memberText("Không thể tải thông tin gói tập")}</h2>
+              <p>{memberText("Vui lòng thử lại sau ít phút.")}</p>
 
               <button
                 type="button"
@@ -161,8 +163,7 @@ export function MemberDashboardPage() {
                 style={{ marginTop: 20 }}
                 onClick={() => void loadMembership()}
               >
-                Thử lại
-              </button>
+                {memberText("Thử lại")}</button>
             </section>
           )}
 
@@ -173,11 +174,11 @@ export function MemberDashboardPage() {
                   className="portal-card member-membership-card"
                   aria-labelledby="membership-title"
                 >
-                  <Link className="member-card-cover-link" to="/member/packages" aria-label="Xem gói tập của tôi"><LoadingImage className="member-card-cover" src="/images/about-movement-studio.jpg" alt="" /></Link>
+                  <Link className="member-card-cover-link" to="/member/packages" aria-label={memberText("Xem gói tập của tôi")}><LoadingImage className="member-card-cover" src="/images/about-movement-studio.jpg" alt="" /></Link>
                   <div className="member-card-body">
-                    <Link className="member-card-details-link" to="/member/packages" aria-label="Xem chi tiết gói tập của tôi">
-                    <span className="badge badge-success">Đang hoạt động</span>
-                    <div className="meta-label" style={{ marginTop: 14 }}>Gói tập hiện tại</div>
+                    <Link className="member-card-details-link" to="/member/packages" aria-label={memberText("Xem chi tiết gói tập của tôi")}>
+                    <span className="badge badge-success">{memberText("Đang hoạt động")}</span>
+                    <div className="meta-label" style={{ marginTop: 14 }}>{memberText("Gói tập hiện tại")}</div>
 
                     <h2
                       id="membership-title"
@@ -191,14 +192,14 @@ export function MemberDashboardPage() {
                       {formatDate(membership.startDate)}
                       {' – '}
                       {formatDate(membership.paidThroughDate ?? membership.endDate)}
-                      {' · Còn '}
+{memberText(" · Còn ")}
                       {remainingDays(membership.paidThroughDate ?? membership.endDate, today)}
-                      {' ngày'}
+{memberText(" ngày")}
                     </p>
 
                     <div
                       role="progressbar"
-                      aria-label="Thời hạn gói tập đã sử dụng"
+                      aria-label={memberText("Thời hạn gói tập đã sử dụng")}
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-valuenow={Math.round(
@@ -236,18 +237,16 @@ export function MemberDashboardPage() {
                     className="portal-card-title"
                     style={{ margin: '16px 0 10px' }}
                   >
-                    Chưa có gói tập đang hoạt động
-                  </h2>
+                    {memberText("Chưa có gói tập đang hoạt động")}</h2>
 
-                  <p>Đăng ký gói tập để đặt lớp và check-in.</p>
+                  <p>{memberText("Đăng ký gói tập để đặt lớp và check-in.")}</p>
 
                   <Link
                     to="/member/packages"
                     className="btn-primary"
                     style={{ marginTop: 24 }}
                   >
-                    Khám phá các gói tập
-                  </Link>
+                    {memberText("Khám phá các gói tập")}</Link>
                 </section>
               )}
             </>
@@ -255,8 +254,8 @@ export function MemberDashboardPage() {
 
         </section>
 
-        <section className="member-board-column member-board-column--orange" aria-labelledby="board-classes">
-          <div className="member-column-heading"><h2 id="board-classes">Lịch tập của tôi</h2><Link to="/member/classes" aria-label="Xem lịch lớp học"><PortalIcon name="arrow" size={16} /></Link></div>
+        <section data-i18n-managed className="member-board-column member-board-column--orange" aria-labelledby="board-classes">
+          <div className="member-column-heading"><h2 id="board-classes">{memberText("Lịch tập của tôi")}</h2><Link to="/member/classes" aria-label={memberText("Xem lịch lớp học")}><PortalIcon name="arrow" size={16} /></Link></div>
 
           <section
             className="portal-card member-classes-card"
@@ -267,20 +266,18 @@ export function MemberDashboardPage() {
                 id="upcoming-title"
                 className="portal-card-title"
               >
-                Lớp đã đăng ký
-              </h2>
+                {memberText("Lớp đã đăng ký")}</h2>
             </div>
 
-            {classesState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label="Xem lịch lớp học của tôi" />}
+            {classesState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label={memberText("Xem lịch lớp học của tôi")} />}
             {classesState.status === 'loading' && (
-              <LoadingSkeleton label="Đang tải lịch học…" count={3} />
+              <LoadingSkeleton label={memberText("Đang tải lịch học…")} count={3} />
             )}
 
             {classesState.status === 'error' && (
               <div role="alert">
                 <p className="row-card__meta">
-                  Chưa thể tải lịch học lúc này.
-                </p>
+                  {memberText("Chưa thể tải lịch học lúc này.")}</p>
 
                 <button
                   type="button"
@@ -288,22 +285,20 @@ export function MemberDashboardPage() {
                   style={{ marginTop: 16 }}
                   onClick={() => void loadClasses()}
                 >
-                  Thử lại
-                </button>
+                  {memberText("Thử lại")}</button>
               </div>
             )}
 
             {classesState.status === 'success' &&
               classes.length === 0 && (
-                <div className="member-board-empty"><p className="row-card__meta">Bạn chưa có lớp học đang đặt.</p><Link className="member-text-link" to="/member/classes">Tìm lớp phù hợp<PortalIcon name="arrow" size={14} /></Link></div>
+                <div className="member-board-empty"><p className="row-card__meta">{memberText("Bạn chưa có lớp học đang đặt.")}</p><Link className="member-text-link" to="/member/classes">{memberText("Tìm lớp phù hợp")}<PortalIcon name="arrow" size={14} /></Link></div>
               )}
 
             {classesState.status === 'success' &&
               classes.length > 0 && (
                 <div className="stack">
                   <p className="row-card__meta">
-                    Xem lịch lớp để kiểm tra buổi học.
-                  </p>
+                    {memberText("Xem lịch lớp để kiểm tra buổi học.")}</p>
                   {classes.map((item) => (
                     <div key={item.id} className="row-card member-booking-row">
                       <div>
@@ -314,31 +309,30 @@ export function MemberDashboardPage() {
                           {validDate(item.sessionDate) && <span>{formatDate(item.sessionDate!)} · </span>}
                           {item.startTime && item.endTime && <span>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · </span>}
                           {item.roomName && <span>{item.roomName} · </span>}
-                          Đã đặt chỗ
-                        </div>
+                          {memberText("Đã đặt chỗ")}</div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
           </section>
-          <Link className="member-board-note" to="/member/classes?tab=pt"><span>Đặt lịch HLV 1:1<small>PT kèm riêng theo giờ · Đặt trước 2 tiếng</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/classes?tab=pt"><span>{memberText("Đặt lịch HLV 1:1")}<small>{memberText("PT kèm riêng theo giờ · Đặt trước 2 tiếng")}</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
-        <section className="member-board-column member-board-column--blue" aria-labelledby="board-card">
-          <div className="member-column-heading"><h2 id="board-card">Thẻ & thanh toán</h2><Link to="/member/card" aria-label="Xem thẻ hội viên"><PortalIcon name="arrow" size={16} /></Link></div>
+        <section data-i18n-managed className="member-board-column member-board-column--blue" aria-labelledby="board-card">
+          <div className="member-column-heading"><h2 id="board-card">{memberText("Thẻ & thanh toán")}</h2><Link to="/member/card" aria-label={memberText("Xem thẻ hội viên")}><PortalIcon name="arrow" size={16} /></Link></div>
           <Link className="member-digital-card" to="/member/card">
             <div className="member-digital-card-top"><span>SÖL</span><PortalIcon name="scan" size={24} /></div>
-            <span className="member-digital-card-label">FITNESS MEMBERSHIP</span>
+            <span className="member-digital-card-label">{memberText("THẺ HỘI VIÊN", "FITNESS MEMBERSHIP")}</span>
             <strong>{userName}</strong>
-            <div className="member-digital-card-bottom"><span>Thẻ hội viên điện tử</span><PortalIcon name="arrow" size={17} /></div>
+            <div className="member-digital-card-bottom"><span>{memberText("Thẻ hội viên điện tử")}</span><PortalIcon name="arrow" size={17} /></div>
           </Link>
-          <Link className="member-board-note" to="/member/invoices"><span>Giao dịch & hóa đơn<small>Xem các khoản đã thanh toán</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/invoices"><span>{memberText("Giao dịch & hóa đơn")}<small>{memberText("Xem các khoản đã thanh toán")}</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
-        <section className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
-          <div className="member-column-heading"><h2 id="board-wellness">Sức khỏe & cân bằng</h2><Link to="/member/profile" aria-label="Xem hồ sơ và sức khỏe"><PortalIcon name="arrow" size={16} /></Link></div>
-          <Link className="member-profile-card" to="/member/profile"><h3>Hồ sơ sức khỏe</h3><p>Cập nhật thông tin cá nhân và chỉ số cơ thể.</p><span className="member-text-link">Hồ sơ & sức khỏe<PortalIcon name="arrow" size={14} /></span></Link>
+        <section data-i18n-managed className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
+          <div className="member-column-heading"><h2 id="board-wellness">{memberText("Sức khỏe & cân bằng")}</h2><Link to="/member/profile" aria-label={memberText("Xem hồ sơ và sức khỏe")}><PortalIcon name="arrow" size={16} /></Link></div>
+          <Link className="member-profile-card" to="/member/profile"><h3>{memberText("Hồ sơ sức khỏe")}</h3><p>{memberText("Cập nhật thông tin cá nhân và chỉ số cơ thể.")}</p><span className="member-text-link">{memberText("Hồ sơ & sức khỏe")}<PortalIcon name="arrow" size={14} /></span></Link>
         </section>
       </div>
     </div>

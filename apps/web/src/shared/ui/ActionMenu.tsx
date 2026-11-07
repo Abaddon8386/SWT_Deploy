@@ -1,8 +1,11 @@
+import { useI18n } from '../i18n';
 import { useEffect, useRef, type ReactNode } from 'react';
 import './action-menu.css';
 
 /** Menu "⋯" cho thao tác ít dùng: giữ chúng trong tầm tay nhưng không chiếm chỗ cạnh nút chính. */
-export function ActionMenu({ label = 'Thao tác khác', children }: { label?: string; children: ReactNode }) {
+export function ActionMenu({ label, children }: { label?: string; children: ReactNode }) {
+  const { t } = useI18n();
+  const displayLabel = label ?? t('Thao tác khác', 'More actions');
   const root = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -19,7 +22,7 @@ export function ActionMenu({ label = 'Thao tác khác', children }: { label?: st
   }, []);
 
   return <details ref={root} className="action-menu">
-    <summary className="action-menu__trigger" aria-label={label} title={label}><span aria-hidden="true">⋯</span></summary>
+    <summary className="action-menu__trigger" aria-label={displayLabel} title={displayLabel}><span aria-hidden="true">⋯</span></summary>
     <div className="action-menu__list" onClick={(event) => { if ((event.target as HTMLElement).closest('button, a')) root.current?.removeAttribute('open'); }}>{children}</div>
   </details>;
 }

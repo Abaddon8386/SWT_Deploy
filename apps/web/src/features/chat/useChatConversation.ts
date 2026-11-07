@@ -1,30 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getHistory, sendMessage, type ChatMessage } from './chatApi';
-import { errorMessage } from '../../shared/lib/errorMessage';
+import { useI18n } from '../../shared/i18n';
+import { chatError, type ChatError } from './chatMessages';
 
 interface Thread {
   id: number; messages: ChatMessage[]; cursor: number | null; syncing: boolean; again: boolean;
 }
-const errorText = (error: unknown) => errorMessage(error, 'Không thể tải tin nhắn. Vui lòng thử lại.');
+const errorText = (error: unknown) => chatError(error, 'Không thể tải tin nhắn. Vui lòng thử lại.', 'Unable to load messages. Please try again.');
 
 export function useChatConversation(onSent: () => void) {
+  const { t } = useI18n();
   const thread = useRef<Thread | null>(null);
   const mounted = useRef(true);
   const onSentRef = useRef(onSent);
   const drafts = useRef(new Map<number, string>());
   const retries = useRef(new Map<number, { text: string; key: string }>());
   const sendingIds = useRef(new Set<number>());
-  const sendErrors = useRef(new Map<number, string>());
+  const sendErrors = useRef(new Map<number, ChatError>());
   const olderRequest = useRef<Thread | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraftState] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ChatError | null>(null);
   const [hasOlder, setHasOlder] = useState(false);
   const [olderLoading, setOlderLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<ChatError | null>(null);
   useEffect(() => { onSentRef.current = onSent; }, [onSent]);
   useEffect(() => {
     mounted.current = true;
@@ -129,5 +131,5 @@ export function useChatConversation(onSent: () => void) {
   }, [merge, refresh]);
 
   return { selectedId, messages, draft, setDraft, select, refresh, loadOlder, send,
-    loading, error, hasOlder, olderLoading, sending, sendError };
+    loading, error: error ? t(error) : null, hasOlder, olderLoading, sending, sendError: sendError ? t(sendError) : null };
 }

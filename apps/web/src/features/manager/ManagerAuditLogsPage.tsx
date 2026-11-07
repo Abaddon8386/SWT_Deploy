@@ -1,3 +1,4 @@
+import { useStaffI18n, type StaffMessage, staffError as errorMessage } from '../operations/staffI18n';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -9,18 +10,18 @@ import {
   type ClassOccupancyItem,
 } from './auditApi';
 import './manager-audit-logs.css';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 type ActiveTab = 'audit' | 'occupancy';
 
 export function ManagerAuditLogsPage() {
+  const { t } = useStaffI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>('audit');
 
   // Audit Logs state
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loadingLogs, setLoadingLogs] = useState<boolean>(true);
-  const [logsError, setLogsError] = useState<string>('');
+  const [logsError, setLogsError] = useState<StaffMessage>('');
   const [logsReload, setLogsReload] = useState<number>(0);
   const [totalElements, setTotalElements] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -37,7 +38,7 @@ export function ManagerAuditLogsPage() {
   // Occupancy Report state
   const [occupancyList, setOccupancyList] = useState<ClassOccupancyItem[]>([]);
   const [loadingOccupancy, setLoadingOccupancy] = useState<boolean>(true);
-  const [occupancyError, setOccupancyError] = useState<string>('');
+  const [occupancyError, setOccupancyError] = useState<StaffMessage>('');
   const [occupancyReload, setOccupancyReload] = useState<number>(0);
 
   // Fetch Audit Logs
@@ -159,43 +160,43 @@ export function ManagerAuditLogsPage() {
   const getActionLabel = (act: string) => {
     const a = act.toUpperCase();
     switch (a) {
-      case 'CREATE': return 'Tạo mới';
-      case 'UPDATE': return 'Cập nhật';
-      case 'DELETE': return 'Xóa';
-      case 'CANCEL': return 'Hủy gói';
-      case 'SCAN': return 'Quét QR';
-      case 'USER_CREATE': return 'Tạo tài khoản';
-      case 'USER_UPDATE': return 'Sửa tài khoản';
-      case 'USER_DELETE': return 'Xóa tài khoản';
-      case 'USER_STATUS_CHANGE': return 'Đổi trạng thái';
-      case 'USER_CLEANUP_INACTIVE': return 'Dọn dẹp tự động';
-      case 'RECEPTIONIST_PROFILE_UPDATE': return 'Đổi ca trực';
-      case 'GRANTED': return 'Cấp quyền';
-      case 'DENIED': return 'Thu hồi quyền';
+      case 'CREATE': return t('Tạo mới');
+      case 'UPDATE': return t('Cập nhật');
+      case 'DELETE': return t('Xóa');
+      case 'CANCEL': return t('Hủy gói');
+      case 'SCAN': return t('Quét QR');
+      case 'USER_CREATE': return t('Tạo tài khoản');
+      case 'USER_UPDATE': return t('Sửa tài khoản');
+      case 'USER_DELETE': return t('Xóa tài khoản');
+      case 'USER_STATUS_CHANGE': return t('Đổi trạng thái');
+      case 'USER_CLEANUP_INACTIVE': return t('Dọn dẹp tự động');
+      case 'RECEPTIONIST_PROFILE_UPDATE': return t('Đổi ca trực');
+      case 'GRANTED': return t('Cấp quyền');
+      case 'DENIED': return t('Thu hồi quyền');
       default: return act;
     }
   };
 
   const getEntityLabel = (type: string) => {
     switch (type) {
-      case 'membership_subscriptions': return 'Gói tập';
-      case 'payments': return 'Thanh toán';
-      case 'session_attendance': return 'Điểm danh';
-      case 'center_checkins': return 'Lượt ra vào';
-      case 'cancellation_requests': return 'Yêu cầu hủy';
-      case 'users': return 'Tài khoản';
-      case 'receptionists': return 'Lễ tân';
-      case 'classes': return 'Lớp học';
-      case 'class_sessions': return 'Buổi học';
+      case 'membership_subscriptions': return t('Gói tập');
+      case 'payments': return t('Thanh toán');
+      case 'session_attendance': return t('Điểm danh');
+      case 'center_checkins': return t('Lượt ra vào');
+      case 'cancellation_requests': return t('Yêu cầu hủy');
+      case 'users': return t('Tài khoản');
+      case 'receptionists': return t('Lễ tân');
+      case 'classes': return t('Lớp học');
+      case 'class_sessions': return t('Buổi học');
       default: return type;
     }
   };
 
   return (
-    <div className="audit-page portal-container">
+    <div data-i18n-managed className="audit-page portal-container">
       <PageHeader
-        eyebrow="Quản trị trung tâm"
-        title="Giám sát audit log & báo cáo lấp đầy lớp"
+        eyebrow={t("Quản trị trung tâm")}
+        title={t("Giám sát audit log & báo cáo lấp đầy lớp")}
       />
 
       {/* Navigation Tabs */}
@@ -207,8 +208,7 @@ export function ManagerAuditLogsPage() {
           className={`audit-tab-btn ${activeTab === 'audit' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
-          Nhật ký kiểm toán (Audit Trail)
-        </button>
+          {t("Nhật ký kiểm toán (Audit Trail)")}</button>
         <button
           type="button"
           role="tab"
@@ -216,28 +216,27 @@ export function ManagerAuditLogsPage() {
           className={`audit-tab-btn ${activeTab === 'occupancy' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('occupancy')}
         >
-          Tỷ lệ lấp đầy phòng học theo bộ môn
-        </button>
+          {t("Tỷ lệ lấp đầy phòng học theo bộ môn")}</button>
       </div>
 
       {activeTab === 'audit' ? (
-        <section aria-label="Bảng tra cứu Audit Log">
+        <section data-i18n-managed aria-label={t("Bảng tra cứu Audit Log")}>
           {/* Filters Bar */}
           <div className="audit-filter-bar">
             <div className="audit-filter-group" style={{ flex: 1.2, minWidth: '220px' }}>
-              <span className="filter-label">Tìm kiếm Người thực hiện</span>
+              <span className="filter-label">{t("Tìm kiếm Người thực hiện")}</span>
               <input
                 type="text"
                 className="portal-input"
-                placeholder="Nhập tên hoặc email..."
+                placeholder={t("Nhập tên hoặc email...")}
                 value={actorSearch}
                 onChange={(e) => setActorSearch(e.target.value)}
-                aria-label="Tìm kiếm người thực hiện"
+                aria-label={t("Tìm kiếm người thực hiện")}
               />
             </div>
 
             <div className="audit-filter-group" style={{ minWidth: '160px' }}>
-              <span className="filter-label">Hành động (Action)</span>
+              <span className="filter-label">{t("Hành động (Action)")}</span>
               <Select
                 className="portal-select"
                 value={selectedAction}
@@ -245,22 +244,22 @@ export function ManagerAuditLogsPage() {
                   setSelectedAction(e.target.value);
                   setCurrentPage(0);
                 }}
-                aria-label="Lọc theo hành động"
+                aria-label={t("Lọc theo hành động")}
               >
-                <option value="ALL">Tất cả hành động</option>
-                <option value="CREATE">Tạo mới (CREATE)</option>
-                <option value="UPDATE">Cập nhật (UPDATE)</option>
-                <option value="DELETE">Xóa (DELETE)</option>
-                <option value="CANCEL">Hủy gói (CANCEL)</option>
-                <option value="SCAN">Quét mã (SCAN)</option>
-                <option value="USER_CREATE">Tạo người dùng (USER_CREATE)</option>
-                <option value="USER_UPDATE">Sửa người dùng (USER_UPDATE)</option>
-                <option value="USER_CLEANUP_INACTIVE">Dọn dẹp tự động (USER_CLEANUP)</option>
+                <option value="ALL">{t("Tất cả hành động")}</option>
+                <option value="CREATE">{t("Tạo mới (CREATE)")}</option>
+                <option value="UPDATE">{t("Cập nhật (UPDATE)")}</option>
+                <option value="DELETE">{t("Xóa (DELETE)")}</option>
+                <option value="CANCEL">{t("Hủy gói (CANCEL)")}</option>
+                <option value="SCAN">{t("Quét mã (SCAN)")}</option>
+                <option value="USER_CREATE">{t("Tạo người dùng (USER_CREATE)")}</option>
+                <option value="USER_UPDATE">{t("Sửa người dùng (USER_UPDATE)")}</option>
+                <option value="USER_CLEANUP_INACTIVE">{t("Dọn dẹp tự động (USER_CLEANUP)")}</option>
               </Select>
             </div>
 
             <div className="audit-filter-group" style={{ minWidth: '180px' }}>
-              <span className="filter-label">Đối tượng (Entity Type)</span>
+              <span className="filter-label">{t("Đối tượng (Entity Type)")}</span>
               <Select
                 className="portal-select"
                 value={selectedEntityType}
@@ -268,16 +267,16 @@ export function ManagerAuditLogsPage() {
                   setSelectedEntityType(e.target.value);
                   setCurrentPage(0);
                 }}
-                aria-label="Lọc theo đối tượng"
+                aria-label={t("Lọc theo đối tượng")}
               >
-                <option value="ALL">Tất cả đối tượng</option>
-                <option value="membership_subscriptions">Gói tập (subscriptions)</option>
-                <option value="payments">Thanh toán (payments)</option>
-                <option value="session_attendance">Điểm danh (attendance)</option>
-                <option value="center_checkins">Lượt ra vào (check-ins)</option>
-                <option value="cancellation_requests">Yêu cầu hủy (cancellations)</option>
-                <option value="users">Tài khoản (users)</option>
-                <option value="receptionists">Ca trực lễ tân (receptionists)</option>
+                <option value="ALL">{t("Tất cả đối tượng")}</option>
+                <option value="membership_subscriptions">{t("Gói tập (subscriptions)")}</option>
+                <option value="payments">{t("Thanh toán (payments)")}</option>
+                <option value="session_attendance">{t("Điểm danh (attendance)")}</option>
+                <option value="center_checkins">{t("Lượt ra vào (check-ins)")}</option>
+                <option value="cancellation_requests">{t("Yêu cầu hủy (cancellations)")}</option>
+                <option value="users">{t("Tài khoản (users)")}</option>
+                <option value="receptionists">{t("Ca trực lễ tân (receptionists)")}</option>
               </Select>
             </div>
           </div>
@@ -285,37 +284,37 @@ export function ManagerAuditLogsPage() {
           {/* Audit Table */}
           <div className="audit-table-card">
             {loadingLogs ? (
-              <LoadingSkeleton label="Đang tải nhật ký kiểm toán…" variant="table" count={8} />
+              <LoadingSkeleton label={t("Đang tải nhật ký kiểm toán…")} variant="table" count={8} />
             ) : logsError ? (
-              <div className="portal-alert" role="alert">
-                <span>{logsError}</span>
-                <button type="button" className="btn-secondary btn-sm" onClick={() => setLogsReload((n) => n + 1)}>Thử lại</button>
+              <div data-i18n-managed className="portal-alert" role="alert">
+                <span>{t(logsError)}</span>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => setLogsReload((n) => n + 1)}>{t("Thử lại")}</button>
               </div>
             ) : filteredLogs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-                <p>Không tìm thấy bản ghi nhật ký kiểm toán nào phù hợp.</p>
+              <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+                <p>{t("Không tìm thấy bản ghi nhật ký kiểm toán nào phù hợp.")}</p>
               </div>
             ) : (
-              <table className="audit-table" aria-label="Bảng nhật ký kiểm toán">
+              <table data-i18n-managed className="audit-table" aria-label={t("Bảng nhật ký kiểm toán")}>
                 <thead>
                   <tr>
-                    <th>Thời gian</th>
-                    <th>Người thực hiện</th>
-                    <th>Hành động</th>
-                    <th>Đối tượng</th>
-                    <th>Bản ghi ID</th>
-                    <th style={{ textAlign: 'right' }}>Chi tiết thay đổi</th>
+                    <th>{t("Thời gian")}</th>
+                    <th>{t("Người thực hiện")}</th>
+                    <th>{t("Hành động")}</th>
+                    <th>{t("Đối tượng")}</th>
+                    <th>{t("Bản ghi ID")}</th>
+                    <th style={{ textAlign: 'right' }}>{t("Chi tiết thay đổi")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredLogs.map((log) => (
-                    <tr key={log.id}>
+                    <tr data-i18n-managed key={log.id}>
                       <td style={{ fontSize: '0.82rem', fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>
                         {log.createdAt ? formatCenterDateTime(log.createdAt) : '—'}
                       </td>
                       <td>
                         <div className="actor-meta">
-                          <span className="actor-name">{log.userFullName || 'Hệ thống'}</span>
+                          <span className="actor-name">{log.userFullName || t('Hệ thống')}</span>
                           <span className="actor-email">{log.userEmail || `User #${log.userId}`}</span>
                         </div>
                       </td>
@@ -343,10 +342,9 @@ export function ManagerAuditLogsPage() {
                           type="button"
                           className="btn-view-diff"
                           onClick={() => setDiffLog(log)}
-                          aria-label={`Xem diff bản ghi #${log.id}`}
+                          aria-label={t(`Xem diff bản ghi #${log.id}`, `View record diff #${log.id}`)}
                         >
-                          Xem Diff
-                        </button>
+                          {t("Xem Diff")}</button>
                       </td>
                     </tr>
                   ))}
@@ -357,18 +355,16 @@ export function ManagerAuditLogsPage() {
             {/* Pagination Controls */}
             <div className="audit-pagination-bar">
               <span>
-                Hiển thị trang <strong>{currentPage + 1}</strong> / <strong>{totalPages}</strong> ({totalElements} bản ghi)
-              </span>
+                {t("Hiển thị trang ")}<strong>{currentPage + 1}</strong> / <strong>{totalPages}</strong> ({totalElements}{t(" bản ghi)")}</span>
               <div className="pagination-controls">
                 <button
                   type="button"
                   className="btn-page-nav"
                   disabled={currentPage <= 0}
                   onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-                  aria-label="Trang trước"
+                  aria-label={t("Trang trước")}
                 >
-                  Trang trước
-                </button>
+                  {t("Trang trước")}</button>
                 <button
                   type="button"
                   className="btn-page-nav"
@@ -376,34 +372,33 @@ export function ManagerAuditLogsPage() {
                   onClick={() => setCurrentPage((p) => p + 1)}
                   aria-label="Trang sau"
                 >
-                  Trang sau →
-                </button>
+                  {t("Trang sau →")}</button>
               </div>
             </div>
           </div>
         </section>
       ) : (
         /* Tab 2: Occupancy Chart Section */
-        <section aria-label="Biểu đồ tỷ lệ lấp đầy phòng học theo bộ môn">
+        <section data-i18n-managed aria-label={t("Biểu đồ tỷ lệ lấp đầy phòng học theo bộ môn")}>
           {occupancyError && !loadingOccupancy && (
-            <div className="portal-alert" role="alert">
-              <span>{occupancyError}</span>
-              <button type="button" className="btn-secondary btn-sm" onClick={() => setOccupancyReload((n) => n + 1)}>Thử lại</button>
+            <div data-i18n-managed className="portal-alert" role="alert">
+              <span>{t(occupancyError)}</span>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => setOccupancyReload((n) => n + 1)}>{t("Thử lại")}</button>
             </div>
           )}
-          {loadingOccupancy ? <LoadingSkeleton label="Đang tải tổng quan công suất lớp học…" variant="cards" count={3} /> : occupancyError ? null : <div className="occupancy-summary-cards">
+          {loadingOccupancy ? <LoadingSkeleton label={t("Đang tải tổng quan công suất lớp học…")} variant="cards" count={3} /> : occupancyError ? null : <div className="occupancy-summary-cards">
             <div className="occupancy-stat-card">
-              <span className="stat-card-title">Tỷ lệ lấp đầy trung bình</span>
+              <span className="stat-card-title">{t("Tỷ lệ lấp đầy trung bình")}</span>
               <span className="stat-card-number">{occupancyMetrics.avgUtilization}%</span>
             </div>
             <div className="occupancy-stat-card">
-              <span className="stat-card-title">Lớp công suất cao nhất</span>
+              <span className="stat-card-title">{t("Lớp công suất cao nhất")}</span>
               <span className="stat-card-number" style={{ fontSize: '1.25rem', lineHeight: 1.3 }}>
                 {occupancyMetrics.highestClass}
               </span>
             </div>
             <div className="occupancy-stat-card">
-              <span className="stat-card-title">Tổng học viên đã book / Sức chứa</span>
+              <span className="stat-card-title">{t("Tổng học viên đã book / Sức chứa")}</span>
               <span className="stat-card-number">
                 {occupancyMetrics.totalEnrolled} / {occupancyMetrics.totalCapacity}
               </span>
@@ -412,32 +407,30 @@ export function ManagerAuditLogsPage() {
 
           <div className="occupancy-chart-card">
             <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-main)', margin: '0 0 6px' }}>
-              Biểu đồ trực quan tỷ lệ lấp đầy theo lớp & bộ môn
-            </h3>
+              {t("Biểu đồ trực quan tỷ lệ lấp đầy theo lớp & bộ môn")}</h3>
             <p style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)', margin: 0 }}>
-              Thước đo tỷ lệ học viên ghi danh so với sức chứa tối đa của phòng học (Capacity).
-            </p>
+              {t("Thước đo tỷ lệ học viên ghi danh so với sức chứa tối đa của phòng học (Capacity).")}</p>
 
             {loadingOccupancy ? (
-              <LoadingSkeleton label="Đang tải biểu đồ công suất lớp học…" count={4} />
+              <LoadingSkeleton label={t("Đang tải biểu đồ công suất lớp học…")} count={4} />
             ) : occupancyError ? null : occupancyList.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-muted)' }}>
-                <p>Không có dữ liệu lớp học nào.</p>
+              <div data-i18n-managed style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-muted)' }}>
+                <p>{t("Không có dữ liệu lớp học nào.")}</p>
               </div>
             ) : (
-              <div className="chart-discipline-list">
+              <div data-i18n-managed className="chart-discipline-list">
                 {occupancyList.map((item) => (
-                  <div key={item.classId} className="discipline-chart-item">
+                  <div data-i18n-managed key={item.classId} className="discipline-chart-item">
                     <div className="discipline-chart-header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span className="discipline-name-bold">{item.className}</span>
                         {item.roomName && (
-                          <span className="portal-badge" style={{ fontSize: '0.75rem', background: 'rgba(226, 91, 69, 0.15)', color: 'var(--color-primary, #e25b45)' }}>
+                          <span data-i18n-managed className="portal-badge" style={{ fontSize: '0.75rem', background: 'rgba(226, 91, 69, 0.15)', color: 'var(--color-primary, #e25b45)' }}>
                             {item.roomName}
                           </span>
                         )}
                         {item.disciplineName && (
-                          <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                          <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
                             ({item.disciplineName})
                           </span>
                         )}
@@ -454,10 +447,9 @@ export function ManagerAuditLogsPage() {
 
                     <div className="discipline-chart-footer">
                       <span>
-                        Sĩ số: <strong>{item.enrolledCount}</strong> / <strong>{item.capacity}</strong> học viên
-                      </span>
+                        {t("Sĩ số: ")}<strong>{item.enrolledCount}</strong> / <strong>{item.capacity}</strong> {t(" học viên")}</span>
                       <span>
-                        Tỷ lệ chuyên cần (thực tế đi học): <strong>{item.attendanceRate}%</strong>
+                        {t("Tỷ lệ chuyên cần (thực tế đi học): ")}<strong>{item.attendanceRate}%</strong>
                       </span>
                     </div>
                   </div>
@@ -471,20 +463,20 @@ export function ManagerAuditLogsPage() {
       {/* Modal xem chi tiết thay đổi diff (old_value vs new_value) */}
       {diffLog && (
         <Modal
-          title={`Chi tiết thay đổi bản ghi #${diffLog.id} (${diffLog.action} trên ${diffLog.entityType})`}
+          title={t(`Chi tiết thay đổi bản ghi #${diffLog.id} (${diffLog.action} trên ${diffLog.entityType})`, `Record change details #${diffLog.id} (${diffLog.action} on ${diffLog.entityType})`)}
           onClose={() => setDiffLog(null)}
         >
           <div className="diff-modal-container">
             <div className="diff-header-summary">
               <div>
-                <strong>Người thực hiện:</strong> {diffLog.userFullName} ({diffLog.userEmail})
+                <strong>{t("Người thực hiện:")}</strong> {diffLog.userFullName} ({diffLog.userEmail})
               </div>
               <div>
-                <strong>Thời gian:</strong> {diffLog.createdAt ? formatCenterDateTime(diffLog.createdAt) : '—'}
+                <strong>{t("Thời gian:")}</strong> {diffLog.createdAt ? formatCenterDateTime(diffLog.createdAt) : '—'}
               </div>
               {diffLog.ipAddress && (
-                <div>
-                  <strong>Địa chỉ IP:</strong> {diffLog.ipAddress}
+                <div data-i18n-managed>
+                  <strong>{t("Địa chỉ IP:")}</strong> {diffLog.ipAddress}
                 </div>
               )}
             </div>
@@ -492,19 +484,19 @@ export function ManagerAuditLogsPage() {
             <div className="diff-grid-comparison">
               <div className="diff-box is-old">
                 <div className="diff-box-title">
-                  <span>Giá trị cũ (old_value)</span>
+                  <span>{t("Giá trị cũ (old_value)")}</span>
                 </div>
                 <pre className="diff-code-content">
-                  {diffLog.oldValue ? formatJsonPretty(diffLog.oldValue) : '(Không có giá trị cũ - Bản ghi tạo mới)'}
+                  {diffLog.oldValue ? formatJsonPretty(diffLog.oldValue) : t('(Không có giá trị cũ - Bản ghi tạo mới)')}
                 </pre>
               </div>
 
               <div className="diff-box is-new">
                 <div className="diff-box-title">
-                  <span>Giá trị mới (new_value)</span>
+                  <span>{t("Giá trị mới (new_value)")}</span>
                 </div>
                 <pre className="diff-code-content">
-                  {diffLog.newValue ? formatJsonPretty(diffLog.newValue) : '(Không có giá trị mới - Bản ghi bị xóa)'}
+                  {diffLog.newValue ? formatJsonPretty(diffLog.newValue) : t('(Không có giá trị mới - Bản ghi bị xóa)')}
                 </pre>
               </div>
             </div>
@@ -515,8 +507,7 @@ export function ManagerAuditLogsPage() {
                 className="btn-secondary"
                 onClick={() => setDiffLog(null)}
               >
-                Đóng
-              </button>
+                {t("Đóng")}</button>
             </div>
           </div>
         </Modal>

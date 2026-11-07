@@ -150,7 +150,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     });
 
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.any(Array), true);
-    expect(notify).toHaveBeenCalledWith(expect.stringContaining('đánh giá'), 'success');
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining('đánh giá'), 'success', expect.objectContaining({ translation: expect.objectContaining({ en: expect.any(String) }) }));
   });
 
   it('clicking Sửa điểm danh in History opens Modal directly in center without switching tabs', async () => {
@@ -196,7 +196,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     });
 
     // Kết quả đi vào chuông thông báo (kèm toast góc), không còn overlay giữa màn hình
-    expect(notify).toHaveBeenCalledWith('Cập nhật thành công', 'success');
+    expect(notify).toHaveBeenCalledWith('Cập nhật thành công', 'success', { translation: { vi: 'Cập nhật thành công', en: 'Updated successfully' } });
     expect(host.querySelector('.center-toast-card')).toBeNull();
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101 })]));
     // Modal is closed
@@ -239,7 +239,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     });
 
     // Kết quả đi vào chuông thông báo (kèm toast góc), không còn overlay giữa màn hình
-    expect(notify).toHaveBeenCalledWith('Cập nhật thành công', 'success');
+    expect(notify).toHaveBeenCalledWith('Cập nhật thành công', 'success', { translation: { vi: 'Cập nhật thành công', en: 'Updated successfully' } });
     expect(host.querySelector('.center-toast-card')).toBeNull();
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ progressScore: 85 })]), true);
   });
@@ -252,7 +252,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
     expect(localStorage.getItem(coachHistoryStorageKey('attendance'))).toBe(original);
-    expect(notify).toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(notify).toHaveBeenCalledWith('Không thể lưu cập nhật. Vui lòng thử lại.', 'error', { translation: { vi: 'Không thể lưu cập nhật. Vui lòng thử lại.', en: 'Unable to save changes. Please try again.' } });
   });
 
   it('does not fabricate history for a fresh browser', async () => {
@@ -273,7 +273,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
     expect(localStorage.getItem(coachHistoryStorageKey('evaluation'))).toBe(original);
-    expect(notify).toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(notify).toHaveBeenCalledWith('Không thể lưu cập nhật. Vui lòng thử lại.', 'error', { translation: { vi: 'Không thể lưu cập nhật. Vui lòng thử lại.', en: 'Unable to save changes. Please try again.' } });
   });
 
   it('preserves the latest attendance when updating an older evaluation snapshot', async () => {

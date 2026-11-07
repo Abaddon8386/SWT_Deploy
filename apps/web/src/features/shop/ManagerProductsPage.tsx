@@ -1,8 +1,7 @@
+import { useSourceLanguage, sourceText, sourceFormat, sourceError, sourceNotify as notify, sourceFormatPair, sourcePair } from './shopI18n';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../../shared/api/client';
-import { errorMessage } from '../../shared/lib/errorMessage';
-import { notify } from '../../shared/lib/portalNotices';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -24,6 +23,7 @@ import type {
 type ManagerTab = 'products' | 'categories' | 'orders';
 
 export function ManagerProductsPage() {
+  useSourceLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get('tab');
   const activeTab: ManagerTab =
@@ -37,11 +37,11 @@ export function ManagerProductsPage() {
   const [productPage, setProductPage] = useState(0);
   const [productsData, setProductsData] = useState<Page<ProductAdminSummaryDto> | null>(null);
   const [productsLoading, setProductsLoading] = useState(true);
-  const [productsError, setProductsError] = useState('');
+  const [productsError, setProductsError] = useState<string | Error>('');
   const [actionBusy, setActionBusy] = useState(false);
   const [deleteBlockedProduct, setDeleteBlockedProduct] = useState<{
     product: ProductAdminSummaryDto;
-    message: string;
+    message: string | Error;
   } | null>(null);
 
   // Orders state
@@ -52,7 +52,7 @@ export function ManagerProductsPage() {
   const [orderCounts, setOrderCounts] = useState<OrderCountsDto | null>(null);
   const [orderSummary, setOrderSummary] = useState<ManagerOrderSummaryDto | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(true);
-  const [ordersError, setOrdersError] = useState('');
+  const [ordersError, setOrdersError] = useState<string | Error>('');
 
   const loadProducts = useCallback(async () => {
     setProductsLoading(true);
@@ -66,7 +66,7 @@ export function ManagerProductsPage() {
       });
       setProductsData(res);
     } catch (err) {
-      setProductsError(errorMessage(err, 'Không thể tải danh sách sản phẩm.'));
+      setProductsError(sourceError(err, 'Không thể tải danh sách sản phẩm.'));
     } finally {
       setProductsLoading(false);
     }
@@ -90,7 +90,7 @@ export function ManagerProductsPage() {
       setOrderCounts(countsRes);
       setOrderSummary(summaryRes);
     } catch (err) {
-      setOrdersError(errorMessage(err, 'Không thể tải dữ liệu đơn hàng.'));
+      setOrdersError(sourceError(err, 'Không thể tải dữ liệu đơn hàng.'));
     } finally {
       setOrdersLoading(false);
     }
@@ -120,13 +120,13 @@ export function ManagerProductsPage() {
       await shopApi.manager.setProductActive(product.id, !product.active);
       notify(
         product.active
-          ? `Đã ngừng bán “${product.name}”.`
-          : `Đã mở bán “${product.name}”.`,
+          ? sourceFormatPair("Đã ngừng bán “{0}”.", product.name)
+          : sourceFormatPair("Đã mở bán “{0}”.", product.name),
         'success',
       );
       await loadProducts();
     } catch (err) {
-      notify(errorMessage(err, 'Không thể cập nhật trạng thái bán.'), 'error');
+      notify(sourceError(err, 'Không thể cập nhật trạng thái bán.'), 'error');
     } finally {
       setActionBusy(false);
     }
@@ -135,9 +135,9 @@ export function ManagerProductsPage() {
   const handleDeleteProduct = async (product: ProductAdminSummaryDto) => {
     if (actionBusy) return;
     const ok = await confirm({
-      title: 'Xóa sản phẩm',
-      message: `Xóa sản phẩm “${product.name}”?`,
-      confirmLabel: 'Xóa sản phẩm',
+      title: sourcePair('Xóa sản phẩm'),
+      message: sourceFormatPair("Xóa sản phẩm “{0}”?", product.name),
+      confirmLabel: sourcePair('Xóa sản phẩm'),
       danger: true,
     });
     if (!ok) return;
@@ -146,10 +146,10 @@ export function ManagerProductsPage() {
     setDeleteBlockedProduct(null);
     try {
       await shopApi.manager.deleteProduct(product.id);
-      notify(`Đã xóa sản phẩm “${product.name}”.`, 'success');
+      notify(sourceFormatPair("Đã xóa sản phẩm “{0}”.", product.name), 'success');
       await loadProducts();
     } catch (err) {
-      const msg = errorMessage(
+      const msg = sourceError(
         err,
         'Không thể xóa sản phẩm đã có đơn hàng. Hãy chọn Ngừng bán.',
       );
@@ -165,16 +165,15 @@ export function ManagerProductsPage() {
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow="Quản trị trung tâm"
-        title="Sản phẩm & Đơn hàng"
+        eyebrow={sourceText("Quản trị trung tâm")}
+        title={sourceText("Sản phẩm & Đơn hàng")}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Link to="/manager/products/new" className="btn-primary">
-              Thêm sản phẩm
-            </Link>
+              {sourceText("Thêm sản phẩm")}</Link>
             {activeTab !== 'categories' && (
               <RefreshButton
-                label="Làm mới dữ liệu"
+                label={sourceText("Làm mới dữ liệu")}
                 disabled={activeTab === 'products' ? productsLoading : ordersLoading}
                 onClick={() =>
                   void (activeTab === 'products' ? loadProducts() : loadOrders())
@@ -185,7 +184,7 @@ export function ManagerProductsPage() {
         }
       />
 
-      <div className="portal-tabs shop-tabs" role="tablist" aria-label="Quản trị cửa hàng">
+      <div className="portal-tabs shop-tabs" role="tablist" aria-label={sourceText("Quản trị cửa hàng")}>
         <button
           type="button"
           role="tab"
@@ -193,8 +192,7 @@ export function ManagerProductsPage() {
           className={`portal-tab ${activeTab === 'products' ? 'active' : ''}`}
           onClick={() => switchTab('products')}
         >
-          Sản phẩm
-        </button>
+          {sourceText("Sản phẩm")}</button>
         <button
           type="button"
           role="tab"
@@ -202,8 +200,7 @@ export function ManagerProductsPage() {
           className={`portal-tab ${activeTab === 'categories' ? 'active' : ''}`}
           onClick={() => switchTab('categories')}
         >
-          Loại sản phẩm
-        </button>
+          {sourceText("Loại sản phẩm")}</button>
         <button
           type="button"
           role="tab"
@@ -211,14 +208,13 @@ export function ManagerProductsPage() {
           className={`portal-tab ${activeTab === 'orders' ? 'active' : ''}`}
           onClick={() => switchTab('orders')}
         >
-          Đơn hàng
-        </button>
+          {sourceText("Đơn hàng")}</button>
       </div>
 
       {activeTab === 'categories' ? (
         <CategoryManager />
       ) : activeTab === 'orders' ? (
-        <section className="stack" aria-label="Đơn hàng sản phẩm">
+        <section className="stack" aria-label={sourceText("Đơn hàng sản phẩm")}>
           {orderSummary && (
             <div
               style={{
@@ -228,7 +224,7 @@ export function ManagerProductsPage() {
               }}
             >
               <article className="portal-card">
-                <span className="muted">Đơn cần xử lý</span>
+                <span className="muted">{sourceText("Đơn cần xử lý")}</span>
                 <p
                   style={{
                     margin: '6px 0 0',
@@ -241,7 +237,7 @@ export function ManagerProductsPage() {
                 </p>
               </article>
               <article className="portal-card">
-                <span className="muted">Doanh thu sản phẩm 30 ngày</span>
+                <span className="muted">{sourceText("Doanh thu sản phẩm 30 ngày")}</span>
                 <p
                   style={{
                     margin: '6px 0 0',
@@ -254,7 +250,7 @@ export function ManagerProductsPage() {
                 </p>
               </article>
               <article className="portal-card">
-                <span className="muted">Biến thể sắp hết</span>
+                <span className="muted">{sourceText("Biến thể sắp hết")}</span>
                 <p
                   style={{
                     margin: '6px 0 0',
@@ -284,7 +280,7 @@ export function ManagerProductsPage() {
           />
         </section>
       ) : (
-        <section className="stack" aria-label="Danh sách sản phẩm">
+        <section className="stack" aria-label={sourceText("Danh sách sản phẩm")}>
           <div
             style={{
               display: 'flex',
@@ -296,13 +292,12 @@ export function ManagerProductsPage() {
           >
             <div className="shop-field" style={{ minWidth: 260 }}>
               <label className="shop-sr-only" htmlFor="manager-product-search">
-                Tìm sản phẩm
-              </label>
+                {sourceText("Tìm sản phẩm")}</label>
               <input
                 id="manager-product-search"
                 type="search"
                 className="shop-input"
-                placeholder="Tìm tên sản phẩm…"
+                placeholder={sourceText("Tìm tên sản phẩm…")}
                 value={productQuery}
                 onChange={e => {
                   setProductQuery(e.target.value);
@@ -320,17 +315,15 @@ export function ManagerProductsPage() {
                   setProductPage(0);
                 }}
               />
-              <span>Chỉ hiện sản phẩm sắp hết hàng</span>
+              <span>{sourceText("Chỉ hiện sản phẩm sắp hết hàng")}</span>
             </label>
           </div>
 
           {deleteBlockedProduct && (
             <div className="portal-alert stack" role="alert" style={{ gap: 8 }}>
-              <p style={{ margin: 0 }}>{deleteBlockedProduct.message}</p>
+              <p style={{ margin: 0 }}>{sourceText(deleteBlockedProduct.message)}</p>
               <p className="muted" style={{ margin: 0 }}>
-                Sản phẩm đã phát sinh đơn hàng không thể xóa. Bạn có thể chọn Ngừng bán để ẩn
-                khỏi kệ hàng.
-              </p>
+                {sourceText("Sản phẩm đã phát sinh đơn hàng không thể xóa. Bạn có thể chọn Ngừng bán để ẩn khỏi kệ hàng.")}</p>
               {deleteBlockedProduct.product.active && (
                 <div>
                   <button
@@ -339,7 +332,7 @@ export function ManagerProductsPage() {
                     disabled={actionBusy}
                     onClick={() => void handleToggleActive(deleteBlockedProduct.product)}
                   >
-                    Ngừng bán “{deleteBlockedProduct.product.name}”
+                    {sourceText("Ngừng bán “")}{deleteBlockedProduct.product.name}”
                   </button>
                 </div>
               )}
@@ -347,36 +340,35 @@ export function ManagerProductsPage() {
           )}
 
           {productsLoading ? (
-            <LoadingSkeleton label="Đang tải danh sách sản phẩm…" variant="table" count={4} />
+            <LoadingSkeleton label={sourceText("Đang tải danh sách sản phẩm…")} variant="table" count={4} />
           ) : productsError ? (
             <div className="portal-alert" role="alert">
-              <span>{productsError}</span>
+              <span>{sourceText(productsError)}</span>
               <button
                 type="button"
                 className="btn-secondary btn-sm"
                 onClick={() => void loadProducts()}
               >
-                Thử lại
-              </button>
+                {sourceText("Thử lại")}</button>
             </div>
           ) : !productsData?.content.length ? (
             <div className="portal-card portal-state">
-              <p style={{ margin: 0 }}>Chưa có sản phẩm nào khớp bộ lọc.</p>
+              <p style={{ margin: 0 }}>{sourceText("Chưa có sản phẩm nào khớp bộ lọc.")}</p>
             </div>
           ) : (
             <>
-              <div className="portal-table-wrapper" role="region" aria-label="Danh sách sản phẩm" tabIndex={0}>
+              <div className="portal-table-wrapper" role="region" aria-label={sourceText("Danh sách sản phẩm")} tabIndex={0}>
                 <table className="portal-table">
                   <thead>
                     <tr>
-                      <th scope="col">Sản phẩm</th>
-                      <th scope="col">Loại</th>
-                      <th scope="col">Giá bán</th>
-                      <th scope="col">Biến thể</th>
-                      <th scope="col">Tồn kho</th>
-                      <th scope="col">Đang bán</th>
-                      <th scope="col">Nổi bật</th>
-                      <th scope="col">Thao tác</th>
+                      <th scope="col">{sourceText("Sản phẩm")}</th>
+                      <th scope="col">{sourceText("Loại")}</th>
+                      <th scope="col">{sourceText("Giá bán")}</th>
+                      <th scope="col">{sourceText("Biến thể")}</th>
+                      <th scope="col">{sourceText("Tồn kho")}</th>
+                      <th scope="col">{sourceText("Đang bán")}</th>
+                      <th scope="col">{sourceText("Nổi bật")}</th>
+                      <th scope="col">{sourceText("Thao tác")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -388,7 +380,7 @@ export function ManagerProductsPage() {
                               <strong>{p.name}</strong>
                             </Link>
                             {p.isNew && (
-                              <span className="shop-badge shop-badge--new">Mới</span>
+                              <span className="shop-badge shop-badge--new">{sourceText("Mới")}</span>
                             )}
                           </div>
                         </td>
@@ -402,33 +394,31 @@ export function ManagerProductsPage() {
                             <strong>{p.totalStock}</strong>
                             {(p.lowStock || (p.totalStock > 0 && p.totalStock < 10)) && (
                               <span className="shop-status-pill shop-status-pill--pending_payment">
-                                Sắp hết
-                              </span>
+                                {sourceText("Sắp hết")}</span>
                             )}
                           </div>
                         </td>
                         <td>
                           <span className="shop-status-pill">
-                            {p.active ? 'Đang bán' : 'Ngừng bán'}
+                            {p.active ? sourceText('Đang bán') : sourceText('Ngừng bán')}
                           </span>
                         </td>
-                        <td>{p.featured ? 'Nổi bật' : '—'}</td>
+                        <td>{p.featured ? sourceText('Nổi bật') : '—'}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <Link
                               to={`/manager/products/${p.id}`}
                               className="btn-secondary btn-sm"
                             >
-                              Sửa
-                            </Link>
-                            <ActionMenu label={`Thao tác khác cho ${p.name}`}>
+                              {sourceText("Sửa")}</Link>
+                            <ActionMenu label={sourceFormat("Thao tác khác cho {0}", p.name)}>
                               <button
                                 type="button"
                                 className="action-menu__item"
                                 disabled={actionBusy}
                                 onClick={() => void handleToggleActive(p)}
                               >
-                                {p.active ? 'Ngừng bán' : 'Mở bán'}
+                                {p.active ? sourceText('Ngừng bán') : sourceText('Mở bán')}
                               </button>
                               <button
                                 type="button"
@@ -436,8 +426,7 @@ export function ManagerProductsPage() {
                                 disabled={actionBusy}
                                 onClick={() => void handleDeleteProduct(p)}
                               >
-                                Xóa
-                              </button>
+                                {sourceText("Xóa")}</button>
                             </ActionMenu>
                           </div>
                         </td>
@@ -448,17 +437,16 @@ export function ManagerProductsPage() {
               </div>
 
               {productsData.totalPages > 1 && (
-                <nav className="court-pagination" aria-label="Phân trang sản phẩm">
+                <nav className="court-pagination" aria-label={sourceText("Phân trang sản phẩm")}>
                   <button
                     type="button"
                     className="btn-secondary"
                     disabled={productPage === 0}
                     onClick={() => setProductPage(p => p - 1)}
                   >
-                    Trang trước
-                  </button>
+                    {sourceText("Trang trước")}</button>
                   <span>
-                    Trang {productPage + 1} / {productsData.totalPages}
+                    {sourceText("Trang ")}{productPage + 1} / {productsData.totalPages}
                   </span>
                   <button
                     type="button"
@@ -466,8 +454,7 @@ export function ManagerProductsPage() {
                     disabled={productPage + 1 >= productsData.totalPages}
                     onClick={() => setProductPage(p => p + 1)}
                   >
-                    Trang sau
-                  </button>
+                    {sourceText("Trang sau")}</button>
                 </nav>
               )}
             </>

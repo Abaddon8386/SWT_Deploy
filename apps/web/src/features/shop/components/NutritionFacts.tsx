@@ -1,6 +1,8 @@
+import { getIntlLocale } from '../../../shared/i18n';
+import { useSourceLanguage, sourceText } from "../shopI18n";
 import type { NutrientDto } from '../shopTypes';
 
-const num = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
+
 
 export function NutritionFacts({
   servingSize,
@@ -11,33 +13,33 @@ export function NutritionFacts({
   servings: number | null;
   nutrients: NutrientDto[];
 }) {
+  useSourceLanguage();
+  const num = new Intl.NumberFormat(getIntlLocale(), { maximumFractionDigits: 2 });
   const hasDv = nutrients.some((n) => n.dailyValuePercent != null);
   return (
     <div className="shop-facts">
       <table>
-        <caption>Thành phần dinh dưỡng</caption>
+        <caption>{sourceText("Thành phần dinh dưỡng")}</caption>
         <thead>
           <tr className="shop-facts__serving">
             <td colSpan={hasDv ? 3 : 2}>
-              Khẩu phần: {servingSize}
+              {sourceText("Khẩu phần: ")}{servingSize}
               {servings ? (
                 <>
                   <br />
-                  Số lần dùng: {servings}
+                  {sourceText("Số lần dùng: ")}{servings}
                 </>
               ) : null}
             </td>
           </tr>
           {nutrients.length > 0 && (
             <tr className="shop-facts__head">
-              <th scope="col">Mỗi khẩu phần</th>
+              <th scope="col">{sourceText("Mỗi khẩu phần")}</th>
               <th scope="col" className="is-num">
-                Lượng
-              </th>
+                {sourceText("Lượng")}</th>
               {hasDv && (
                 <th scope="col" className="is-num">
-                  % NCKN*
-                </th>
+                  {sourceText("% NCKN*")}</th>
               )}
             </tr>
           )}
@@ -59,7 +61,7 @@ export function NutritionFacts({
         )}
       </table>
       {hasDv && (
-        <p className="shop-facts__foot">*NCKN: phần trăm nhu cầu khuyến nghị hằng ngày cho người trưởng thành.</p>
+        <p className="shop-facts__foot">{sourceText("*NCKN: phần trăm nhu cầu khuyến nghị hằng ngày cho người trưởng thành.")}</p>
       )}
     </div>
   );

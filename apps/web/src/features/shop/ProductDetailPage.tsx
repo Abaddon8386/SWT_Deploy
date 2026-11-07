@@ -1,8 +1,8 @@
+import { useSourceLanguage, sourceText, sourceFormat, sourceToast as toast } from './shopI18n';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { ApiError } from '../../shared/api/client';
-import { toast } from '../../shared/ui/toast';
 import { PublicLayout, RoundArrow } from '../landing/components/PublicLayout';
 import { addToCart } from './cart';
 import { NutritionFacts } from './components/NutritionFacts';
@@ -17,6 +17,7 @@ import type { ProductDetailDto } from './shopTypes';
 import './shop-public.css';
 
 export function ProductDetailPage() {
+  useSourceLanguage();
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<ProductDetailDto | null>(null);
@@ -105,27 +106,26 @@ export function ProductDetailPage() {
       <main id="public-main" className="fit-shop-page">
         <section className="fit-section shop-detail" aria-labelledby="product-detail-title">
           {loading ? (
-            <LoadingSkeleton label="Đang tải chi tiết sản phẩm…" variant="cards" count={2} />
+            <LoadingSkeleton label={sourceText("Đang tải chi tiết sản phẩm…")} variant="cards" count={2} />
           ) : error ? (
             <div className="fit-catalog-state" role="alert">
-              <h1 id="product-detail-title">Không tải được chi tiết sản phẩm.</h1>
-              <button type="button" className="fit-pill" onClick={() => setRetryTick(t => t + 1)}>Thử lại</button>
-              <Link to="/products" className="fit-text-link">Xem tất cả sản phẩm</Link>
+              <h1 id="product-detail-title">{sourceText("Không tải được chi tiết sản phẩm.")}</h1>
+              <button type="button" className="fit-pill" onClick={() => setRetryTick(t => t + 1)}>{sourceText("Thử lại")}</button>
+              <Link to="/products" className="fit-text-link">{sourceText("Xem tất cả sản phẩm")}</Link>
             </div>
           ) : notFound || !product ? (
             <div className="fit-catalog-state shop-detail__empty" role="status">
-              <h1 id="product-detail-title">Sản phẩm này không còn bán.</h1>
+              <h1 id="product-detail-title">{sourceText("Sản phẩm này không còn bán.")}</h1>
               <Link to="/products" className="fit-pill">
-                <span>Xem tất cả sản phẩm</span>
+                <span>{sourceText("Xem tất cả sản phẩm")}</span>
                 <RoundArrow />
               </Link>
             </div>
           ) : (
             <>
-              <nav className="shop-detail__breadcrumb" aria-label="Đường dẫn sản phẩm">
+              <nav className="shop-detail__breadcrumb" aria-label={sourceText("Đường dẫn sản phẩm")}>
                 <Link to="/products" className="fit-text-link">
-                  ← Sản phẩm
-                </Link>
+                  {sourceText("← Sản phẩm")}</Link>
                 <span aria-hidden="true">/</span>
                 <Link to={`/products?category=${encodeURIComponent(product.categorySlug)}`} className="fit-text-link">
                   {product.categoryName}
@@ -144,14 +144,14 @@ export function ProductDetailPage() {
                     />
                   </div>
                   {product.images.length > 1 && (
-                    <div className="shop-detail__thumbs" role="group" aria-label="Ảnh sản phẩm">
+                    <div className="shop-detail__thumbs" role="group" aria-label={sourceText("Ảnh sản phẩm")}>
                       {product.images.map((img, idx) => (
                         <button
                           key={img.id}
                           type="button"
                           className={`shop-detail__thumb${idx === activeImageIdx ? ' is-active' : ''}`}
                           aria-pressed={idx === activeImageIdx}
-                          aria-label={img.alt || `Ảnh ${idx + 1}`}
+                          aria-label={img.alt || sourceFormat("Ảnh {0}", idx + 1)}
                           onClick={() => setActiveImageIdx(idx)}
                         >
                           <img src={img.url} alt={img.alt} loading="lazy" />
@@ -171,7 +171,7 @@ export function ProductDetailPage() {
                   <p className="shop-detail__lead">{product.shortDescription}</p>
                   {product.goals.length > 0 && (
                     <p className="shop-detail__goals">
-                      <strong>Mục tiêu:</strong> {product.goals.map(g => GOAL_LABELS[g] ?? g).join(' · ')}
+                      <strong>{sourceText("Mục tiêu:")}</strong> {product.goals.map(g => GOAL_LABELS[g] ?? g).join(' · ')}
                     </p>
                   )}
 
@@ -188,7 +188,7 @@ export function ProductDetailPage() {
                         <span className="shop-detail__pps">
                           {ppsLabel}
                           {ppsLabel && selectedVariant.servingsPerContainer ? ' · ' : ''}
-                          {selectedVariant.servingsPerContainer ? `${selectedVariant.servingsPerContainer} lần` : ''}
+                          {selectedVariant.servingsPerContainer ? sourceFormat("{0} lần", selectedVariant.servingsPerContainer) : ''}
                         </span>
                       )}
                     </div>
@@ -199,8 +199,7 @@ export function ProductDetailPage() {
                     selectedVariant.stock > 0 &&
                     selectedVariant.stock < 10 && (
                       <p className="shop-detail__low-stock" role="status">
-                        Còn {selectedVariant.stock} sản phẩm
-                      </p>
+                        {sourceText("Còn ")}{selectedVariant.stock}{sourceText(" sản phẩm")}</p>
                     )}
 
                   <div className="shop-detail__buy-row">
@@ -208,29 +207,28 @@ export function ProductDetailPage() {
                       value={effectiveQty}
                       max={maxQty}
                       onChange={setQuantity}
-                      label="Số lượng"
+                      label={sourceText("Số lượng")}
                       disabled={!canBuy}
                     />
                     {canBuy ? (
                       <>
                         <button type="button" className="fit-pill shop-detail__add" onClick={handleAddToCart}>
-                          <span>Thêm vào giỏ</span>
+                          <span>{sourceText("Thêm vào giỏ")}</span>
                         </button>
                         <button type="button" className="fit-pill shop-detail__buy-now" onClick={handleBuyNow}>
-                          <span>Mua ngay</span>
+                          <span>{sourceText("Mua ngay")}</span>
                           <RoundArrow />
                         </button>
                       </>
                     ) : (
                       <button type="button" className="fit-pill" disabled>
-                        <span>Hết hàng</span>
+                        <span>{sourceText("Hết hàng")}</span>
                       </button>
                     )}
                   </div>
 
                   <p className="shop-detail__fulfillment-note">
-                    Nhận tại quầy miễn phí · Giao toàn quốc 30.000đ, miễn phí từ 500.000đ
-                  </p>
+                    {sourceText("Nhận tại quầy miễn phí · Giao toàn quốc 30.000đ, miễn phí từ 500.000đ")}</p>
 
                   <ShopDisclaimer className="shop-detail__disclaimer" />
                 </div>
@@ -247,31 +245,31 @@ export function ProductDetailPage() {
                 <div className="shop-detail__copy-col">
                   {product.description && (
                     <div className="shop-detail__block">
-                      <h2>Mô tả sản phẩm</h2>
+                      <h2>{sourceText("Mô tả sản phẩm")}</h2>
                       <p>{product.description}</p>
                     </div>
                   )}
                   {product.usageInstructions && (
                     <div className="shop-detail__block">
-                      <h2>Cách dùng</h2>
+                      <h2>{sourceText("Cách dùng")}</h2>
                       <p>{product.usageInstructions}</p>
                     </div>
                   )}
                   {product.warnings && (
                     <div className="shop-detail__block">
-                      <h2>Lưu ý</h2>
+                      <h2>{sourceText("Lưu ý")}</h2>
                       <p>{product.warnings}</p>
                     </div>
                   )}
                   {product.registrationNumber && (
-                    <p className="shop-detail__reg">Số công bố: {product.registrationNumber}</p>
+                    <p className="shop-detail__reg">{sourceText("Số công bố: ")}{product.registrationNumber}</p>
                   )}
                 </div>
               </div>
 
               {product.related && product.related.length > 0 && (
                 <div className="shop-detail__related" data-reveal="soft">
-                  <h2 className="shop-detail__related-title">Cùng loại</h2>
+                  <h2 className="shop-detail__related-title">{sourceText("Cùng loại")}</h2>
                   <div className="shop-grid">
                     {product.related.map(rel => (
                       <ProductCard key={rel.id} product={rel} />

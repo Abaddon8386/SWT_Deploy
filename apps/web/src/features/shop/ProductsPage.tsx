@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText } from "./shopI18n";
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -23,6 +24,7 @@ function parseSort(raw: string | null): ProductSort {
 }
 
 export function ProductsPage() {
+  useSourceLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const goal = parseGoal(searchParams.get('goal'));
@@ -190,19 +192,18 @@ export function ProductsPage() {
         <section className="fit-section shop-catalog" aria-labelledby="shop-page-title">
           <div className="shop-catalog__top" data-reveal="soft">
             <div>
-              <span className="fit-kicker">SẢN PHẨM</span>
+              <span className="fit-kicker">{sourceText("SẢN PHẨM")}</span>
               <h1 id="shop-page-title" className="shop-catalog__title">
-                Thực phẩm bổ sung SÖL<span className="fit-title-dot">.</span>
+                {sourceText("Thực phẩm bổ sung SÖL")}<span className="fit-title-dot">.</span>
               </h1>
             </div>
             <div className="shop-catalog__search">
               <label htmlFor="shop-search-input" className="sr-only">
-                Tìm sản phẩm
-              </label>
+                {sourceText("Tìm sản phẩm")}</label>
               <input
                 id="shop-search-input"
                 type="search"
-                placeholder="Tìm sản phẩm…"
+                placeholder={sourceText("Tìm sản phẩm…")}
                 value={qInput}
                 onChange={e => handleSearchChange(e.target.value)}
               />
@@ -213,13 +214,13 @@ export function ProductsPage() {
 
           <div className="shop-catalog__toolbar" data-reveal="soft">
             <label className="shop-catalog__filter">
-              <span>Loại:</span>
+              <span>{sourceText("Loại:")}</span>
               <Select
-                aria-label="Loại sản phẩm"
+                aria-label={sourceText("Loại sản phẩm")}
                 value={category}
                 onChange={e => writeFilters({ category: e.target.value })}
               >
-                <option value="">Tất cả loại</option>
+                <option value="">{sourceText("Tất cả loại")}</option>
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.slug}>
                     {cat.name}
@@ -229,16 +230,16 @@ export function ProductsPage() {
             </label>
 
             <label className="shop-catalog__filter">
-              <span>Sắp xếp:</span>
+              <span>{sourceText("Sắp xếp:")}</span>
               <Select
-                aria-label="Sắp xếp"
+                aria-label={sourceText("Sắp xếp")}
                 value={sort}
                 onChange={e => writeFilters({ sort: parseSort(e.target.value) })}
               >
-                <option value="newest">Mới nhất</option>
-                <option value="price_asc">Giá tăng dần</option>
-                <option value="price_desc">Giá giảm dần</option>
-                <option value="price_per_serving">Giá mỗi lần dùng thấp nhất</option>
+                <option value="newest">{sourceText("Mới nhất")}</option>
+                <option value="price_asc">{sourceText("Giá tăng dần")}</option>
+                <option value="price_desc">{sourceText("Giá giảm dần")}</option>
+                <option value="price_per_serving">{sourceText("Giá mỗi lần dùng thấp nhất")}</option>
               </Select>
             </label>
 
@@ -248,31 +249,28 @@ export function ProductsPage() {
                 checked={inStock}
                 onChange={e => writeFilters({ inStock: e.target.checked })}
               />
-              <span>Chỉ hiện còn hàng</span>
+              <span>{sourceText("Chỉ hiện còn hàng")}</span>
             </label>
 
             {!loading && !error && (
               <span className="shop-catalog__count" aria-live="polite">
-                {totalElements} sản phẩm
-              </span>
+                {totalElements} {sourceText(" sản phẩm")}</span>
             )}
           </div>
 
           {loading ? (
-            <LoadingSkeleton label="Đang tải sản phẩm…" variant="cards" count={8} />
+            <LoadingSkeleton label={sourceText("Đang tải sản phẩm…")} variant="cards" count={8} />
           ) : error ? (
             <div className="fit-catalog-state" role="alert">
-              <p>Không tải được sản phẩm.</p>
+              <p>{sourceText("Không tải được sản phẩm.")}</p>
               <button type="button" className="fit-pill" onClick={() => setRetryTick(t => t + 1)}>
-                Thử lại
-              </button>
+                {sourceText("Thử lại")}</button>
             </div>
           ) : items.length === 0 ? (
             <div className="fit-catalog-state" role="status">
-              <p>Không có sản phẩm khớp bộ lọc.</p>
+              <p>{sourceText("Không có sản phẩm khớp bộ lọc.")}</p>
               <button type="button" className="fit-pill" onClick={clearFilters}>
-                Xóa bộ lọc
-              </button>
+                {sourceText("Xóa bộ lọc")}</button>
             </div>
           ) : (
             <>
@@ -283,14 +281,14 @@ export function ProductsPage() {
               </div>
               {page + 1 < totalPages && (
                 <div className="shop-catalog__more">
-                  {moreError && <p role="alert">Không tải thêm được sản phẩm. Danh sách hiện tại vẫn được giữ.</p>}
+                  {moreError && <p role="alert">{sourceText("Không tải thêm được sản phẩm. Danh sách hiện tại vẫn được giữ.")}</p>}
                   <button
                     type="button"
                     className="fit-pill"
                     disabled={loadingMore}
                     onClick={() => void handleLoadMore()}
                   >
-                    <span>{loadingMore ? 'Đang tải…' : moreError ? 'Thử tải thêm' : 'Xem thêm'}</span>
+                    <span>{loadingMore ? sourceText('Đang tải…') : moreError ? sourceText('Thử tải thêm') : sourceText('Xem thêm')}</span>
                   </button>
                 </div>
               )}

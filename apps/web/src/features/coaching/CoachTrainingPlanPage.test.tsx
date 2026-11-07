@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoachTrainingPlanPage } from './CoachTrainingPlanPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
+import { setLanguage } from '../../shared/i18n/language';
 import { aiApi, type MemberOption } from './aiApi';
 
 vi.mock('../member/profileApi', () => ({ listHealthMetrics: vi.fn().mockResolvedValue([]), addHealthMetric: vi.fn() }));
@@ -50,6 +51,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   };
 
   beforeEach(() => {
+    setLanguage('vi');
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.append(host);
@@ -101,6 +103,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await act(async () => root.unmount());
     host.remove();
     localStorage.clear();
+    setLanguage('vi');
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -160,6 +163,21 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.textContent).toContain('Thứ 6');
     expect(host.textContent).toContain('Thứ 7');
     expect(host.textContent).toContain('Chủ Nhật');
+  });
+
+  it('keeps health precautions highlighted when switching language without changing member data', async () => {
+    await renderComponent();
+    const healthNote = () => Array.from(host.querySelectorAll('strong'))
+      .find(element => element.textContent === MEMBERS[0].healthNotes);
+    expect(healthNote()?.parentElement?.style.color).toBe('var(--portal-danger, #fca5a5)');
+
+    await act(async () => setLanguage('en'));
+    expect(healthNote()?.textContent).toBe('Tránh Deadlift tạ nặng');
+    expect(healthNote()?.parentElement?.style.color).toBe('var(--portal-danger, #fca5a5)');
+    expect(aiApi.getCoachMembers).toHaveBeenCalledOnce();
+
+    await act(async () => setLanguage('vi'));
+    expect(healthNote()?.parentElement?.style.color).toBe('var(--portal-danger, #fca5a5)');
   });
 
   it('allows adding manual exercise to the selected day', async () => {

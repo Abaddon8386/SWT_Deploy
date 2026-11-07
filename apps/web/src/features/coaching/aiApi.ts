@@ -1,3 +1,4 @@
+import { staffSourceError } from '../operations/staffI18n';
 import type { ExerciseValues } from './trainingExercise';
 import { apiFetch } from '../../shared/api/client';
 
@@ -121,7 +122,7 @@ export const aiApi = {
     if (response && response.items && response.items.length > 0) {
       return response;
     }
-    throw new Error('Dữ liệu gợi ý giáo án không hợp lệ');
+    throw staffSourceError('Dữ liệu gợi ý giáo án không hợp lệ', 'Invalid training suggestion data.');
   },
 
   /**

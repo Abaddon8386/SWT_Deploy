@@ -1,5 +1,5 @@
+import { useSourceLanguage, sourceText, sourceToast as toast } from '../shopI18n';
 import { formatCenterDateTime } from '../../../shared/lib/centerTime';
-import { toast } from '../../../shared/ui/toast';
 import type { OrderDto } from '../shopTypes';
 
 interface TimelineStep {
@@ -74,6 +74,7 @@ function buildTimelineSteps(order: OrderDto): TimelineStep[] {
 }
 
 export function OrderTimeline({ order }: { order: OrderDto }) {
+  useSourceLanguage();
   const steps = buildTimelineSteps(order);
 
   const handleCopyTracking = async () => {
@@ -87,8 +88,8 @@ export function OrderTimeline({ order }: { order: OrderDto }) {
   };
 
   return (
-    <section aria-label="Tiến trình đơn hàng" className="stack">
-      <h3 className="portal-card-title">Tiến trình</h3>
+    <section aria-label={sourceText("Tiến trình đơn hàng")} className="stack">
+      <h3 className="portal-card-title">{sourceText("Tiến trình")}</h3>
       <ol className="shop-timeline">
         {steps.map(step => (
           <li
@@ -98,7 +99,7 @@ export function OrderTimeline({ order }: { order: OrderDto }) {
             <span className="shop-timeline__dot" aria-hidden="true" />
             <div className="shop-timeline__content" style={{ flex: 1 }}>
               <div className="shop-timeline__row" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <strong className="shop-timeline__label">{step.label}</strong>
+                <strong className="shop-timeline__label">{sourceText(step.label)}</strong>
                 {step.reached && step.timestamp && (
                   <span className="shop-timeline__time muted">
                     {formatCenterDateTime(step.timestamp)}
@@ -116,13 +117,12 @@ export function OrderTimeline({ order }: { order: OrderDto }) {
                     className="btn-secondary btn-sm"
                     onClick={() => void handleCopyTracking()}
                   >
-                    Sao chép
-                  </button>
+                    {sourceText("Sao chép")}</button>
                 </div>
               )}
               {step.extra === 'cancelReason' && order.cancelReason && (
                 <p className="muted" style={{ margin: '4px 0 0' }}>
-                  Lý do: {order.cancelReason}
+                  {sourceText("Lý do: ")}{order.cancelReason}
                 </p>
               )}
             </div>
@@ -132,11 +132,10 @@ export function OrderTimeline({ order }: { order: OrderDto }) {
       {order.fulfillment === 'pickup' && (
         <div className="shop-timeline__pickup">
           <p style={{ margin: 0 }}>
-            <strong>Nhận tại quầy SÖL:</strong> {order.pickupAddress || 'Quầy lễ tân trung tâm SÖL Fitness'}
+            <strong>{sourceText("Nhận tại quầy SÖL:")}</strong> {order.pickupAddress || sourceText('Quầy lễ tân trung tâm SÖL Fitness')}
           </p>
           <p className="muted" style={{ margin: '4px 0 0' }}>
-            Mang thẻ hội viên khi đến nhận hàng tại quầy.
-          </p>
+            {sourceText("Mang thẻ hội viên khi đến nhận hàng tại quầy.")}</p>
         </div>
       )}
     </section>

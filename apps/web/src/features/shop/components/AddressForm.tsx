@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText } from '../shopI18n';
 import { useId, useRef, useState, type FormEvent } from 'react';
 import type { AddressRequest } from '../shopTypes';
 import { RegionSelects } from './RegionSelects';
@@ -49,6 +50,7 @@ export function AddressForm({
   busy?: boolean;
   submitLabel?: string;
 }) {
+  useSourceLanguage();
   const uid = useId();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -94,8 +96,7 @@ export function AddressForm({
     <form ref={formRef} className="shop-address-form" onSubmit={handleSubmit} noValidate>
       <div className="shop-field">
         <label htmlFor={`${uid}-name`} className="shop-label portal-label">
-          Họ tên người nhận
-        </label>
+          {sourceText("Họ tên người nhận")}</label>
         <input
           id={`${uid}-name`}
           name="recipientName"
@@ -109,15 +110,14 @@ export function AddressForm({
         />
         {errors.recipientName && (
           <p className="form-error" role="alert">
-            {errors.recipientName}
+            {sourceText(errors.recipientName)}
           </p>
         )}
       </div>
 
       <div className="shop-field">
         <label htmlFor={`${uid}-phone`} className="shop-label portal-label">
-          Số điện thoại
-        </label>
+          {sourceText("Số điện thoại")}</label>
         <input
           id={`${uid}-phone`}
           name="phone"
@@ -131,7 +131,7 @@ export function AddressForm({
         />
         {errors.phone && (
           <p className="form-error" role="alert">
-            {errors.phone}
+            {sourceText(errors.phone)}
           </p>
         )}
       </div>
@@ -148,8 +148,7 @@ export function AddressForm({
 
       <div className="shop-field">
         <label htmlFor={`${uid}-street`} className="shop-label portal-label">
-          Số nhà, tên đường
-        </label>
+          {sourceText("Số nhà, tên đường")}</label>
         <input
           id={`${uid}-street`}
           name="streetLine"
@@ -163,15 +162,14 @@ export function AddressForm({
         />
         {errors.streetLine && (
           <p className="form-error" role="alert">
-            {errors.streetLine}
+            {sourceText(errors.streetLine)}
           </p>
         )}
       </div>
 
       <div className="shop-field">
         <label htmlFor={`${uid}-note`} className="shop-label portal-label">
-          Ghi chú giao hàng (tùy chọn)
-        </label>
+          {sourceText("Ghi chú giao hàng (tùy chọn)")}</label>
         <input
           id={`${uid}-note`}
           name="note"
@@ -185,7 +183,7 @@ export function AddressForm({
         />
         {errors.note && (
           <p className="form-error" role="alert">
-            {errors.note}
+            {sourceText(errors.note)}
           </p>
         )}
       </div>
@@ -197,17 +195,16 @@ export function AddressForm({
           disabled={busy}
           onChange={(e) => setForm((prev) => ({ ...prev, makeDefault: e.target.checked }))}
         />
-        <span>Đặt làm địa chỉ mặc định</span>
+        <span>{sourceText("Đặt làm địa chỉ mặc định")}</span>
       </label>
 
       <div className="form-actions">
         {onCancel && (
           <button type="button" className="btn-secondary" disabled={busy} onClick={onCancel}>
-            Hủy
-          </button>
+            {sourceText("Hủy")}</button>
         )}
         <button type="submit" className="btn-primary" disabled={busy}>
-          {submitLabel}
+          {sourceText(submitLabel)}
         </button>
       </div>
     </form>

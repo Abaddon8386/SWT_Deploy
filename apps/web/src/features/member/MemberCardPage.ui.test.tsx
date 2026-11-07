@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n/language';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
@@ -45,7 +46,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await act(async () => root.unmount());
-  host.remove();
+  host.remove(); setLanguage('vi');
   if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
   else Reflect.deleteProperty(navigator, 'clipboard');
   document.querySelectorAll('.sol-toast').forEach((node) => node.remove());
@@ -311,4 +312,23 @@ describe('MemberCardPage', () => {
     expect(host.textContent).toContain('Dynamic QR');
     expect(vi.mocked(QRCode.toDataURL)).toHaveBeenCalledWith('DYN:1:1:1234567890:abcd', expect.anything());
   });
+});
+
+it('switches the mounted card, accessibility labels, and local load error without translating member data', async () => {
+  await renderPage();
+  await act(async () => setLanguage('en'));
+  expect(host.textContent).toContain('DIGITAL MEMBERSHIP CARD');
+  expect(host.textContent).toContain('Nguyễn Minh');
+  expect(host.textContent).toContain('SÖL Gold');
+  expect(host.querySelector('img')?.getAttribute('alt')).toBe('Member check-in QR code');
+  await act(async () => setLanguage('vi'));
+  expect(host.textContent).toContain('THẺ HỘI VIÊN ĐIỆN TỬ');
+});
+it('keeps a local card error bilingual while it remains displayed', async () => {
+  vi.mocked(getProfile).mockRejectedValueOnce(new Error('network'));
+  await renderPage();
+  expect(host.textContent).toContain('Không thể tải thông tin thẻ hội viên.');
+  await act(async () => setLanguage('en'));
+  expect(host.textContent).toContain('Unable to load membership card. Please try again.');
+  await act(async () => setLanguage('vi'));
 });

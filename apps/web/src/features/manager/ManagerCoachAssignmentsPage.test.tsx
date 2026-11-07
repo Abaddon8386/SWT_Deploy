@@ -294,7 +294,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
     await act(async () => { host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(coachAssignmentsApi.reassignStudent).toHaveBeenCalledWith(expect.objectContaining({ assignmentType: 'PT_1_1', referenceId: 501, memberId: 101, fromCoachId: 10, toCoachId: 11 }));
-    expect(notify).toHaveBeenCalledWith(expect.any(String), 'success');
+    expect(notify).toHaveBeenCalledWith('Điều chuyển phân công đã chọn sang HLV mới thành công!', 'success', { translation: { vi: 'Điều chuyển phân công đã chọn sang HLV mới thành công!', en: 'Selected assignment transferred to the new coach successfully!' } });
   });
 
   it('locks the assignment dialog and fields while submission is pending', async () => {
@@ -318,6 +318,6 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(host.querySelector('dialog')).toBe(dialog);
     await act(async () => { finish(); });
     expect(host.querySelector('dialog')).toBeNull();
-    expect(notify).toHaveBeenCalledWith(expect.any(String), 'success');
+    expect(notify).toHaveBeenCalledWith('Phân công học viên cho huấn luyện viên thành công!', 'success', { translation: { vi: 'Phân công học viên cho huấn luyện viên thành công!', en: 'Member assigned to coach successfully!' } });
   });
 });

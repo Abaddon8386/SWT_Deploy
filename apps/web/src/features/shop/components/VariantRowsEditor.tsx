@@ -1,3 +1,4 @@
+import { useSourceLanguage, sourceText, sourceFormat } from '../shopI18n';
 import { useState } from 'react';
 import { StockAdjustDialog } from './StockAdjustDialog';
 
@@ -26,6 +27,7 @@ export function VariantRowsEditor({
   disabled = false,
   error,
 }: VariantRowsEditorProps) {
+  useSourceLanguage();
   const [adjusting, setAdjusting] = useState<VariantRowDraft | null>(null);
 
   const updateRow = (index: number, patch: Partial<VariantRowDraft>) => {
@@ -55,7 +57,7 @@ export function VariantRowsEditor({
   };
 
   return (
-    <section className="portal-card stack" aria-label="Biến thể sản phẩm">
+    <section className="portal-card stack" aria-label={sourceText("Biến thể sản phẩm")}>
       <div
         style={{
           display: 'flex',
@@ -66,29 +68,27 @@ export function VariantRowsEditor({
         }}
       >
         <h2 className="portal-card-title" style={{ margin: 0 }}>
-          Biến thể sản phẩm
-        </h2>
+          {sourceText("Biến thể sản phẩm")}</h2>
         <button
           type="button"
           className="btn-secondary btn-sm"
           disabled={disabled}
           onClick={addRow}
         >
-          Thêm biến thể
-        </button>
+          {sourceText("Thêm biến thể")}</button>
       </div>
 
-      <div className="portal-table-wrapper" role="region" aria-label="Biên tập phân loại sản phẩm" tabIndex={0}>
+      <div className="portal-table-wrapper" role="region" aria-label={sourceText("Biên tập phân loại sản phẩm")} tabIndex={0}>
         <table className="portal-table shop-editor-table shop-editor-table--variants">
           <thead>
             <tr>
               <th scope="col">SKU</th>
-              <th scope="col">Nhãn biến thể</th>
-              <th scope="col">Giá (đ)</th>
-              <th scope="col">Số lần dùng</th>
-              <th scope="col">Tồn kho</th>
-              <th scope="col">Đang bán</th>
-              <th scope="col">Thao tác</th>
+              <th scope="col">{sourceText("Nhãn biến thể")}</th>
+              <th scope="col">{sourceText("Giá (đ)")}</th>
+              <th scope="col">{sourceText("Số lần dùng")}</th>
+              <th scope="col">{sourceText("Tồn kho")}</th>
+              <th scope="col">{sourceText("Đang bán")}</th>
+              <th scope="col">{sourceText("Thao tác")}</th>
             </tr>
           </thead>
           <tbody>
@@ -98,7 +98,7 @@ export function VariantRowsEditor({
                   <input
                     type="text"
                     className="shop-input"
-                    aria-label={`SKU biến thể ${idx + 1}`}
+                    aria-label={sourceFormat("SKU biến thể {0}", idx + 1)}
                     data-field={idx === 0 ? 'variantSku' : undefined}
                     value={row.sku}
                     disabled={disabled}
@@ -111,12 +111,12 @@ export function VariantRowsEditor({
                   <input
                     type="text"
                     className="shop-input"
-                    aria-label={`Nhãn biến thể ${idx + 1}`}
+                    aria-label={sourceFormat("Nhãn biến thể {0}", idx + 1)}
                     data-field={idx === 0 ? 'variantLabel' : undefined}
                     value={row.label}
                     disabled={disabled}
                     maxLength={80}
-                    placeholder="Sô-cô-la · 2,27 kg"
+                    placeholder={sourceText("Sô-cô-la · 2,27 kg")}
                     onChange={e => updateRow(idx, { label: e.target.value })}
                   />
                 </td>
@@ -124,7 +124,7 @@ export function VariantRowsEditor({
                   <input
                     type="number"
                     className="shop-input"
-                    aria-label={`Giá biến thể ${idx + 1}`}
+                    aria-label={sourceFormat("Giá biến thể {0}", idx + 1)}
                     data-field={idx === 0 ? 'variantPrice' : undefined}
                     value={row.price}
                     disabled={disabled}
@@ -137,7 +137,7 @@ export function VariantRowsEditor({
                   <input
                     type="number"
                     className="shop-input"
-                    aria-label={`Số lần dùng biến thể ${idx + 1}`}
+                    aria-label={sourceFormat("Số lần dùng biến thể {0}", idx + 1)}
                     value={row.servingsPerContainer}
                     disabled={disabled}
                     min={1}
@@ -152,15 +152,14 @@ export function VariantRowsEditor({
                       <input
                         type="number"
                         className="shop-input"
-                        aria-label={`Tồn kho biến thể ${idx + 1}`}
+                        aria-label={sourceFormat("Tồn kho biến thể {0}", idx + 1)}
                         value={row.stock}
                         readOnly
                         style={{ width: 84 }}
                       />
                       {row.stock > 0 && row.stock < 10 && (
                         <span className="shop-status-pill shop-status-pill--pending_payment">
-                          Sắp hết
-                        </span>
+                          {sourceText("Sắp hết")}</span>
                       )}
                       <button
                         type="button"
@@ -168,14 +167,13 @@ export function VariantRowsEditor({
                         disabled={disabled}
                         onClick={() => setAdjusting(row)}
                       >
-                        Điều chỉnh tồn
-                      </button>
+                        {sourceText("Điều chỉnh tồn")}</button>
                     </div>
                   ) : (
                     <input
                       type="number"
                       className="shop-input"
-                      aria-label={`Tồn ban đầu biến thể ${idx + 1}`}
+                      aria-label={sourceFormat("Tồn ban đầu biến thể {0}", idx + 1)}
                       value={row.initialStock}
                       disabled={disabled}
                       min={0}
@@ -188,7 +186,7 @@ export function VariantRowsEditor({
                   <label className="shop-checkbox-target">
                     <input
                       type="checkbox"
-                      aria-label={`Đang bán biến thể ${idx + 1}`}
+                      aria-label={sourceFormat("Đang bán biến thể {0}", idx + 1)}
                       checked={row.active}
                       disabled={disabled}
                       onChange={e => updateRow(idx, { active: e.target.checked })}
@@ -202,8 +200,7 @@ export function VariantRowsEditor({
                     disabled={disabled || rows.length <= 1}
                     onClick={() => removeRow(idx)}
                   >
-                    Xóa dòng
-                  </button>
+                    {sourceText("Xóa dòng")}</button>
                 </td>
               </tr>
             ))}
@@ -213,7 +210,7 @@ export function VariantRowsEditor({
 
       {error && (
         <p className="form-error" role="alert">
-          {error}
+          {sourceText(error)}
         </p>
       )}
 

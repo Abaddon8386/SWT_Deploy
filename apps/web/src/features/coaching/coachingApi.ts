@@ -1,3 +1,4 @@
+import { staffSourceError } from '../operations/staffI18n';
 import { apiFetch } from '../../shared/api/client';
 import { getProfile } from '../member/profileApi';
 
@@ -55,7 +56,7 @@ export const coachingApi = {
     if (Array.isArray(sessions)) {
       return sessions;
     }
-    throw new Error('Dữ liệu lịch dạy không hợp lệ');
+    throw staffSourceError('Dữ liệu lịch dạy không hợp lệ', 'Invalid teaching schedule data.');
   },
 
   getCoachWeeklySchedule: async (
@@ -75,7 +76,7 @@ export const coachingApi = {
     if (Array.isArray(res)) {
       return res;
     }
-    throw new Error('Dữ liệu học viên không hợp lệ');
+    throw staffSourceError('Dữ liệu học viên không hợp lệ', 'Invalid member data.');
   },
 
   getAllAssignedStudents: async (coachId?: string | number): Promise<EnrolledStudent[]> => {

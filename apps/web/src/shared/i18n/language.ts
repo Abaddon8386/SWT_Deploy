@@ -89,18 +89,16 @@ export function useLanguage() {
 export function useI18n() {
   const { lang, setLanguage: updateLanguage, toggleLanguage } = useLanguage();
 
-  const t = useCallback((viText: string | Error | { vi: string; en: string }, enText?: string): string => {
-    const english = getLanguage() === 'en';
+  const t = useCallback((viText: string | Error | SourceMessage, enText?: string): string => {
     if (viText instanceof Error) {
       const translation = (viText as Error & { translation?: SourceMessage }).translation;
-      return translation ? (english ? translation.en : translation.vi) : viText.message;
+      return translation ? (lang === 'en' ? translation.en : translation.vi) : viText.message;
     }
-    if (typeof viText !== 'string') return english ? viText.en : viText.vi;
-    if (!english) return viText;
-    if (enText !== undefined) return enText;
-    const source = viText.trim();
-    return Object.hasOwn(englishLabels, source) ? viText.replace(source, englishLabels[source]) : viText;
-  }, []);
+    if (typeof viText !== 'string') return lang === 'en' ? viText.en : viText.vi;
+    // Explicit pairs own their spacing; catalog lookups preserve the source boundaries.
+    if (enText !== undefined) return lang === 'en' ? enText : viText;
+    return translateSource(viText, undefined, lang);
+  }, [lang]);
 
   return {
     lang,
@@ -248,5 +246,24 @@ export function useDomLanguageSync(containerRef?: RefObject<HTMLElement | null>)
 export interface SourceMessage { vi: string; en: string }
 /** Explicit provenance for source-owned notices; never infer translations from API content. */
 export function sourceMessage(vi: string, en?: string): SourceMessage {
-  return { vi, en: en ?? (Object.hasOwn(englishLabels, vi) ? englishLabels[vi] : vi) };
+  return { vi, en: en ?? translateSource(vi, undefined, 'en') };
 }
+
+/** Missing source-owned translations are observable in QA instead of silently passing as English. */
+const missingTranslations = new Set<string>();
+export const getMissingTranslations = (): readonly string[] => [...missingTranslations];
+export const clearMissingTranslations = () => missingTranslations.clear();
+
+/** Only call for source-owned text; API content and user input must remain verbatim. */
+export function translateSource(vi: string, en?: string, lang: Language = getLanguage()): string {
+  const key = vi.trim();
+  const translated = en ?? (Object.hasOwn(englishLabels, key) ? englishLabels[key] : undefined);
+  if (lang === 'en' && translated === undefined && /[\u00c0-\u1ef9\u0110\u0111]/u.test(key)) {
+    if (!missingTranslations.has(key)) {
+      missingTranslations.add(key);
+      if (import.meta.env.DEV) console.warn('[i18n] Missing English UI translation:', key);
+    }
+  }
+  return lang === 'en' && translated !== undefined ? vi.replace(key, translated) : vi;
+}
+export const getIntlLocale = (lang: Language = getLanguage()) => lang === 'en' ? 'en-GB' : 'vi-VN';

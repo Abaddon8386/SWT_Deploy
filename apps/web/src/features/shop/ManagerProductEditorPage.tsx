@@ -1,7 +1,6 @@
+import { useSourceLanguage, sourceText, sourceFormat, sourceError, sourceNotify as notify } from './shopI18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { errorMessage } from '../../shared/lib/errorMessage';
-import { notify } from '../../shared/lib/portalNotices';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { NutrientRowsEditor, type NutrientRowDraft } from './components/NutrientRowsEditor';
@@ -41,6 +40,7 @@ type FieldErrorKey =
   | 'servingSize';
 
 export function ManagerProductEditorPage() {
+  useSourceLanguage();
   const { productId } = useParams<{ productId: string }>();
   const isEdit = Boolean(productId);
   const numericId = isEdit ? Number(productId) : null;
@@ -49,9 +49,9 @@ export function ManagerProductEditorPage() {
 
   const [categories, setCategories] = useState<CategoryAdminDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const [loadError, setLoadError] = useState<string | Error>('');
   const [saving, setSaving] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const [submitError, setSubmitError] = useState<string | Error>('');
   const [errors, setErrors] = useState<Partial<Record<FieldErrorKey, string>>>({});
 
   // Form state
@@ -136,7 +136,7 @@ export function ManagerProductEditorPage() {
         setCategoryId(catList[0].id);
       }
     } catch (err) {
-      setLoadError(errorMessage(err, 'Không thể tải dữ liệu sản phẩm.'));
+      setLoadError(sourceError(err, 'Không thể tải dữ liệu sản phẩm.'));
     } finally {
       setLoading(false);
     }
@@ -280,7 +280,7 @@ export function ManagerProductEditorPage() {
       }
       navigate('/manager/products');
     } catch (err) {
-      setSubmitError(errorMessage(err, 'Không thể lưu sản phẩm. Vui lòng kiểm tra lại.'));
+      setSubmitError(sourceError(err, 'Không thể lưu sản phẩm. Vui lòng kiểm tra lại.'));
     } finally {
       setSaving(false);
     }
@@ -295,23 +295,21 @@ export function ManagerProductEditorPage() {
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow="Quản trị sản phẩm"
-        title={isEdit ? `Sửa sản phẩm: ${name || '...'}` : 'Thêm sản phẩm mới'}
+        eyebrow={sourceText("Quản trị sản phẩm")}
+        title={isEdit ? sourceFormat("Sửa sản phẩm: {0}", name || '...') : sourceText('Thêm sản phẩm mới')}
         actions={
           <Link to="/manager/products" className="btn-secondary">
-            Quay lại danh sách
-          </Link>
+            {sourceText("Quay lại danh sách")}</Link>
         }
       />
 
       {loading ? (
-        <LoadingSkeleton label="Đang tải trình soạn sản phẩm…" variant="rows" count={4} />
+        <LoadingSkeleton label={sourceText("Đang tải trình soạn sản phẩm…")} variant="rows" count={4} />
       ) : loadError ? (
         <div className="portal-alert" role="alert">
-          <span>{loadError}</span>
+          <span>{sourceText(loadError)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>
-            Thử lại
-          </button>
+            {sourceText("Thử lại")}</button>
         </div>
       ) : (
         <form
@@ -320,10 +318,9 @@ export function ManagerProductEditorPage() {
           onSubmit={e => void handleSubmit(e)}
           noValidate
         >
-          <section className="portal-card stack" aria-label="Thông tin chung">
+          <section className="portal-card stack" aria-label={sourceText("Thông tin chung")}>
             <h2 className="portal-card-title" style={{ margin: 0 }}>
-              Thông tin chung
-            </h2>
+              {sourceText("Thông tin chung")}</h2>
 
             <div
               style={{
@@ -334,8 +331,7 @@ export function ManagerProductEditorPage() {
             >
               <div className="shop-field">
                 <label className="shop-label" htmlFor="product-name">
-                  Tên sản phẩm
-                </label>
+                  {sourceText("Tên sản phẩm")}</label>
                 <input
                   id="product-name"
                   data-field="name"
@@ -352,15 +348,14 @@ export function ManagerProductEditorPage() {
                 />
                 {errors.name && (
                   <p className="form-error" role="alert">
-                    {errors.name}
+                    {sourceText(errors.name)}
                   </p>
                 )}
               </div>
 
               <div className="shop-field">
                 <label className="shop-label" htmlFor="product-category">
-                  Loại sản phẩm
-                </label>
+                  {sourceText("Loại sản phẩm")}</label>
                 <Select
                   id="product-category"
                   data-field="categoryId"
@@ -375,7 +370,7 @@ export function ManagerProductEditorPage() {
                     }
                   }}
                 >
-                  <option value={0}>-- Chọn loại sản phẩm --</option>
+                  <option value={0}>{sourceText("-- Chọn loại sản phẩm --")}</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -384,15 +379,14 @@ export function ManagerProductEditorPage() {
                 </Select>
                 {errors.categoryId && (
                   <p className="form-error" role="alert">
-                    {errors.categoryId}
+                    {sourceText(errors.categoryId)}
                   </p>
                 )}
               </div>
 
               <div className="shop-field">
                 <label className="shop-label" htmlFor="product-form">
-                  Dạng bào chế
-                </label>
+                  {sourceText("Dạng bào chế")}</label>
                 <Select
                   id="product-form"
                   className="shop-select"
@@ -410,8 +404,7 @@ export function ManagerProductEditorPage() {
 
               <div className="shop-field">
                 <label className="shop-label" htmlFor="product-brand">
-                  Thương hiệu
-                </label>
+                  {sourceText("Thương hiệu")}</label>
                 <input
                   id="product-brand"
                   type="text"
@@ -426,8 +419,7 @@ export function ManagerProductEditorPage() {
 
             <div className="shop-field">
               <label className="shop-label" htmlFor="product-short-desc">
-                Mô tả ngắn
-              </label>
+                {sourceText("Mô tả ngắn")}</label>
               <input
                 id="product-short-desc"
                 data-field="shortDescription"
@@ -446,15 +438,14 @@ export function ManagerProductEditorPage() {
               />
               {errors.shortDescription && (
                 <p className="form-error" role="alert">
-                  {errors.shortDescription}
+                  {sourceText(errors.shortDescription)}
                 </p>
               )}
             </div>
 
             <div className="shop-field">
               <label className="shop-label" htmlFor="product-desc">
-                Mô tả chi tiết
-              </label>
+                {sourceText("Mô tả chi tiết")}</label>
               <textarea
                 id="product-desc"
                 data-field="description"
@@ -472,13 +463,13 @@ export function ManagerProductEditorPage() {
               />
               {errors.description && (
                 <p className="form-error" role="alert">
-                  {errors.description}
+                  {sourceText(errors.description)}
                 </p>
               )}
             </div>
 
             <div className="shop-field">
-              <span className="shop-label">Mục tiêu tập luyện</span>
+              <span className="shop-label">{sourceText("Mục tiêu tập luyện")}</span>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ALL_GOALS.map((g, idx) => {
                   const selected = goals.includes(g);
@@ -499,7 +490,7 @@ export function ManagerProductEditorPage() {
               </div>
               {errors.goals && (
                 <p className="form-error" role="alert">
-                  {errors.goals}
+                  {sourceText(errors.goals)}
                 </p>
               )}
             </div>
@@ -535,15 +526,13 @@ export function ManagerProductEditorPage() {
             servingSizeError={errors.servingSize}
           />
 
-          <section className="portal-card stack" aria-label="Hướng dẫn và hiển thị">
+          <section className="portal-card stack" aria-label={sourceText("Hướng dẫn và hiển thị")}>
             <h2 className="portal-card-title" style={{ margin: 0 }}>
-              Cách dùng, lưu ý & hiển thị
-            </h2>
+              {sourceText("Cách dùng, lưu ý & hiển thị")}</h2>
 
             <div className="shop-field">
               <label className="shop-label" htmlFor="product-usage">
-                Cách dùng
-              </label>
+                {sourceText("Cách dùng")}</label>
               <textarea
                 id="product-usage"
                 className="shop-textarea"
@@ -556,8 +545,7 @@ export function ManagerProductEditorPage() {
 
             <div className="shop-field">
               <label className="shop-label" htmlFor="product-warnings">
-                Lưu ý bảo quản & cảnh báo
-              </label>
+                {sourceText("Lưu ý bảo quản & cảnh báo")}</label>
               <textarea
                 id="product-warnings"
                 className="shop-textarea"
@@ -570,8 +558,7 @@ export function ManagerProductEditorPage() {
 
             <div className="shop-field" style={{ maxWidth: 360 }}>
               <label className="shop-label" htmlFor="product-reg-number">
-                Số công bố (nếu có)
-              </label>
+                {sourceText("Số công bố (nếu có)")}</label>
               <input
                 id="product-reg-number"
                 type="text"
@@ -591,7 +578,7 @@ export function ManagerProductEditorPage() {
                   disabled={saving}
                   onChange={e => setActive(e.target.checked)}
                 />
-                <span>Đang bán</span>
+                <span>{sourceText("Đang bán")}</span>
               </label>
               <label className="shop-checkbox">
                 <input
@@ -600,23 +587,22 @@ export function ManagerProductEditorPage() {
                   disabled={saving}
                   onChange={e => setFeatured(e.target.checked)}
                 />
-                <span>Nổi bật trên landing</span>
+                <span>{sourceText("Nổi bật trên landing")}</span>
               </label>
             </div>
           </section>
 
           {submitError && (
             <p className="form-error" role="alert">
-              {submitError}
+              {sourceText(submitError)}
             </p>
           )}
 
           <div className="form-actions">
             <Link to="/manager/products" className="btn-secondary">
-              Hủy
-            </Link>
+              {sourceText("Hủy")}</Link>
             <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Đang lưu…' : 'Lưu sản phẩm'}
+              {saving ? sourceText('Đang lưu…') : sourceText('Lưu sản phẩm')}
             </button>
           </div>
         </form>

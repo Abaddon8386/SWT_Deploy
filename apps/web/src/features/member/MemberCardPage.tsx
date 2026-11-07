@@ -1,3 +1,6 @@
+import { memberText, memberMessage, memberRenderMessage } from './memberI18n';
+import type { SourceMessage } from '../../shared/i18n/language';
+import { useLanguage } from '../../shared/i18n/language';
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 
@@ -22,6 +25,7 @@ function validDate(value: string | null | undefined) {
 }
 
 export function MemberCard({ profile, subscription }: { profile: Profile; subscription: CardSubscription }) {
+  useLanguage();
   const cardRef = useRef<HTMLDivElement>(null);
   const [qrImage, setQrImage] = useState('');
   const [qrLoaded, setQrLoaded] = useState(false);
@@ -94,9 +98,9 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
       link.href = canvas.toDataURL('image/png');
       link.download = 'the-hoi-vien.png';
       link.click();
-      notify('Đã tải thẻ hội viên về máy.', 'success');
+      notify(memberText("Đã tải thẻ hội viên về máy."), 'success', { translation: memberMessage("Đã tải thẻ hội viên về máy.") });
     } catch {
-      notify('Không thể tải thẻ. Vui lòng thử lại.', 'error');
+      notify(memberText("Không thể tải thẻ. Vui lòng thử lại."), 'error', { translation: memberMessage("Không thể tải thẻ. Vui lòng thử lại.") });
     } finally {
       setDownloading(false);
     }
@@ -106,26 +110,26 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     <>
       <div ref={cardRef} className="pass-card" style={{ background: '#202020', color: '#faf9f6', border: `2px solid ${border}`, borderRadius: 16, padding: 32, maxWidth: 620 }}>
         <div style={{ color: '#ce9180', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 24 }}>SÖL FITNESS</div>
-        <p style={{ fontSize: '0.75rem', letterSpacing: '0.16em', color: '#bcb8b5', marginTop: 4 }}>THẺ HỘI VIÊN ĐIỆN TỬ</p>
+        <p style={{ fontSize: '0.75rem', letterSpacing: '0.16em', color: '#bcb8b5', marginTop: 4 }}>{memberText("THẺ HỘI VIÊN ĐIỆN TỬ")}</p>
         <h2 style={{ margin: '14px 0 8px' }}>{profile.fullName}</h2>
-        <p style={{ margin: '4px 0' }}>Mã hội viên: {profile.membershipCode || 'Chưa có mã hội viên'}</p>
-        <p style={{ margin: '4px 0' }}>Gói tập: {subscription.packageName}</p>
-        <p style={{ margin: '4px 0' }}>Ngày bắt đầu: {displayDate(subscription.startDate)}</p>
-        <p style={{ margin: '4px 0 12px' }}>Ngày hết hạn: {displayDate(paidThroughDate)}</p>
+        <p style={{ margin: '4px 0' }}>{memberText("Mã hội viên: ")}{profile.membershipCode || memberText("Chưa có mã hội viên")}</p>
+        <p style={{ margin: '4px 0' }}>{memberText("Gói tập: ")}{subscription.packageName}</p>
+        <p style={{ margin: '4px 0' }}>{memberText("Ngày bắt đầu: ")}{displayDate(subscription.startDate)}</p>
+        <p style={{ margin: '4px 0 12px' }}>{memberText("Ngày hết hạn: ")}{displayDate(paidThroughDate)}</p>
         <p style={{ color: border, fontWeight: 600 }}>
           {status === 'warning'
-            ? 'Gói tập sắp hết hạn'
+            ? memberText("Gói tập sắp hết hạn")
             : status === 'expired'
-              ? 'Gói tập đã hết hạn'
+              ? memberText("Gói tập đã hết hạn")
               : status === 'active'
-                ? 'Gói tập đang hoạt động'
-                : 'Gói tập chưa hoạt động'}
+                ? memberText("Gói tập đang hoạt động")
+                : memberText("Gói tập chưa hoạt động")}
         </p>
         {canShowQr && qrImage && !qrError && (
           <div style={{ marginTop: 14 }}>
             <img
               src={qrImage}
-              alt="Mã QR check-in của hội viên"
+              alt={memberText("Mã QR check-in của hội viên")}
               width={180}
               height={180}
               style={{ background: 'white', padding: 8, borderRadius: 8 }}
@@ -139,21 +143,21 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
               {dynamicQr ? (
                 <span>
                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#48BB78', marginRight: 6 }} />
-                  Dynamic QR (Bảo mật)
+                  {memberText("Dynamic QR (Bảo mật)", "Dynamic QR (Secure)")}
                 </span>
               ) : (
-                <span>Mã QR định danh: <strong>{subscription.qrCode}</strong></span>
+                <span>{memberText("Mã QR định danh: ")}<strong>{subscription.qrCode}</strong></span>
               )}
             </div>
           </div>
         )}
         {canShowQr && !qrImage && !qrError && (
           <div className="portal-skeleton" style={{ width: 180, height: 180, marginTop: 14 }}>
-            <span className="sr-only">Đang tạo ảnh QR…</span>
+            <span className="sr-only">{memberText("Đang tạo ảnh QR…")}</span>
           </div>
         )}
-        {qrError && <p role="alert">Không thể hiển thị mã QR. Vui lòng tải lại trang.</p>}
-        {!canShowQr && <p>Chưa có mã QR hợp lệ để check-in. Vui lòng kiểm tra gói tập.</p>}
+        {qrError && <p role="alert">{memberText("Không thể hiển thị mã QR. Vui lòng tải lại trang.")}</p>}
+        {!canShowQr && <p>{memberText("Chưa có mã QR hợp lệ để check-in. Vui lòng kiểm tra gói tập.")}</p>}
       </div>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 20 }}>
         <button
@@ -162,7 +166,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
           onClick={downloadCard}
           disabled={!canShowQr || !qrImage || !qrLoaded || qrError || downloading}
         >
-          {downloading ? 'Đang tải…' : 'Tải thẻ về máy'}
+          {downloading ? memberText("Đang tải…") : memberText("Tải thẻ về máy")}
         </button>
         {canShowQr && activeQrCode && (
           <button
@@ -172,13 +176,13 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
               try {
                 if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
                 await navigator.clipboard.writeText(activeQrCode!);
-                notify('Đã sao chép mã QR check-in vào bộ nhớ tạm!', 'success');
+                notify(memberText("Đã sao chép mã QR check-in vào bộ nhớ tạm!"), 'success', { translation: memberMessage("Đã sao chép mã QR check-in vào bộ nhớ tạm!") });
               } catch {
-                notify('Không thể sao chép mã QR. Vui lòng thử lại.', 'error');
+                notify(memberText("Không thể sao chép mã QR. Vui lòng thử lại."), 'error', { translation: memberMessage("Không thể sao chép mã QR. Vui lòng thử lại.") });
               }
             }}
           >
-            {dynamicQr ? 'Sao chép Dynamic QR' : 'Sao chép mã QR Check-in'}
+            {dynamicQr ? memberText("Sao chép Dynamic QR") : memberText("Sao chép mã QR Check-in")}
           </button>
         )}
       </div>
@@ -187,11 +191,12 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
 }
 
 export function MemberCardPage() {
+  useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [subscription, setSubscription] = useState<CardSubscription | null>(null);
   const [history, setHistory] = useState<CardSubscription[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | SourceMessage>('');
 
   async function loadCard() {
     setLoading(true);
@@ -204,7 +209,7 @@ export function MemberCardPage() {
       setSubscription(memberSubscription);
       setHistory(memberHistory);
     } catch {
-      setError('Không thể tải thông tin thẻ hội viên. Vui lòng thử lại.');
+      setError(memberMessage("Không thể tải thông tin thẻ hội viên. Vui lòng thử lại."));
     } finally {
       setLoading(false);
     }
@@ -220,11 +225,11 @@ export function MemberCardPage() {
   const pending = latestPending && (!expired || latestPending.createdAt > expired.createdAt) ? latestPending : null;
 
   return (
-    <div className="portal-container">
-      <PageHeader eyebrow="Hội viên" title="Thẻ thành viên & Mã QR" />
+    <div data-i18n-managed className="portal-container">
+      <PageHeader eyebrow={memberText("Hội viên")} title={memberText("Thẻ thành viên & Mã QR")} />
       {loading && (
         <div className="portal-card" role="status" aria-busy="true" style={{ maxWidth: 620 }}>
-          <span className="sr-only">Đang tải thẻ hội viên…</span>
+          <span className="sr-only">{memberText("Đang tải thẻ hội viên…")}</span>
           <div className="portal-skeleton-line" style={{ width: '48%', height: 18, marginBottom: 12 }} />
           <div className="portal-skeleton-line" style={{ width: '32%', height: 12, marginBottom: 20 }} />
           <div className="portal-skeleton-line" style={{ width: '60%', height: 24, marginBottom: 14 }} />
@@ -236,45 +241,42 @@ export function MemberCardPage() {
       )}
       {error && (
         <div className="portal-card" role="alert">
-          <p>{error}</p>
-          <button type="button" className="btn-secondary" onClick={() => void loadCard()}>Thử lại</button>
+          <p>{memberRenderMessage(error)}</p>
+          <button type="button" className="btn-secondary" onClick={() => void loadCard()}>{memberText("Thử lại")}</button>
         </div>
       )}
       {!loading && !error && !subscription && pending && (
         <div className="portal-card" style={{ maxWidth: 620 }}>
-          <div className="meta-label">Trạng thái thẻ</div>
-          <h3 className="portal-card-title" style={{ marginTop: 8 }}>Đang chờ thanh toán: {pending.packageName}</h3>
+          <div className="meta-label">{memberText("Trạng thái thẻ")}</div>
+          <h3 className="portal-card-title" style={{ marginTop: 8 }}>{memberText("Đang chờ thanh toán: ")}{pending.packageName}</h3>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
             <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCard()}>
-              Kiểm tra lại trạng thái
-            </button>
+              {memberText("Kiểm tra lại trạng thái")}</button>
             <Link className="btn-primary btn-sm" to="/member/packages">
-              Xem yêu cầu gói tập
-            </Link>
+              {memberText("Xem yêu cầu gói tập")}</Link>
           </div>
         </div>
       )}
       {!loading && !error && !subscription && expired && profile && (
         <>
           <MemberCard profile={profile} subscription={{ ...expired, status: 'expired', qrCode: null }} />
-          <p style={{ marginTop: 14 }}>Gói tập đã hết hạn. <Link to="/member/packages">Xem gói tập để gia hạn</Link></p>
+          <p style={{ marginTop: 14 }}>{memberText("Gói tập đã hết hạn. ")}<Link to="/member/packages">{memberText("Xem gói tập để gia hạn")}</Link></p>
         </>
       )}
       {!loading && !error && !subscription && history.length > 0 && !expired && !pending && (
         <div className="portal-card" style={{ maxWidth: 620 }}>
-          <p>Bạn không còn gói tập hiệu lực.</p>
-          <Link className="btn-primary" to="/member/packages">Xem gói tập</Link>
+          <p>{memberText("Bạn không còn gói tập hiệu lực.")}</p>
+          <Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>
         </div>
       )}
       {!loading && !error && !subscription && history.length === 0 && (
         <div className="portal-card" style={{ maxWidth: 620 }}>
-          <p>Chưa có gói tập để hiển thị thẻ hội viên.</p>
-          <p>Vui lòng đăng ký hoặc gia hạn gói tập.</p>
-          <Link className="btn-primary" to="/member/packages">Xem gói tập</Link>
+          <p>{memberText("Chưa có gói tập để hiển thị thẻ hội viên.")}</p>
+          <p>{memberText("Vui lòng đăng ký hoặc gia hạn gói tập.")}</p>
+          <Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>
         </div>
       )}
       {!loading && !error && profile && subscription && <MemberCard profile={profile} subscription={subscription} />}
     </div>
   );
 }
-

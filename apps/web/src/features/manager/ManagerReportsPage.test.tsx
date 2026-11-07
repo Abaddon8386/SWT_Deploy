@@ -36,7 +36,7 @@ it('protects every untrusted CSV text cell from spreadsheet formulas', async () 
     expect(csv).toContain('"' + "'" + value + '"');
   }
   expect(api.createSnapshot).toHaveBeenCalledTimes(1);
-  expect(api.toast).toHaveBeenCalledWith(expect.any(String), 'success');
+  expect(api.toast).toHaveBeenCalledWith('Đã lưu báo cáo đối soát và xuất tệp CSV.', 'success', { vi: 'Đã lưu báo cáo đối soát và xuất tệp CSV.', en: 'Reconciliation report saved and CSV exported.' });
 });
 it('does not report snapshot success or download a report when persistence fails', async () => {
   api.createSnapshot.mockRejectedValue(new Error('snapshot unavailable'));

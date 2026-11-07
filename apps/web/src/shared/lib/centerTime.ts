@@ -1,3 +1,4 @@
+import { getIntlLocale } from '../i18n/language';
 /**
  * Giờ hiển thị luôn theo múi giờ trung tâm (UTC+7, không có giờ mùa hè), kể cả khi trình duyệt đặt múi giờ khác.
  * Backend trả `LocalDateTime` không kèm offset (giờ trung tâm) hoặc `Instant` có `Z`; cả hai đều được hiểu đúng.
@@ -17,7 +18,7 @@ export function parseCenterTime(value: string | null | undefined): Date | null {
 
 function format(value: string | null | undefined, options: Intl.DateTimeFormatOptions, fallback: string): string {
   const date = parseCenterTime(value);
-  return date ? new Intl.DateTimeFormat('vi-VN', { timeZone: CENTER_TIME_ZONE, hourCycle: 'h23', ...options }).format(date) : fallback;
+  return date ? new Intl.DateTimeFormat(getIntlLocale(), { timeZone: CENTER_TIME_ZONE, hourCycle: 'h23', ...options }).format(date) : fallback;
 }
 
 /** 14:05 */

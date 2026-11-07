@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n/language';
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { createRoot, type Root } from 'react-dom/client';
@@ -21,7 +22,7 @@ beforeEach(() => {
   vi.mocked(api.getMyCompletedItemIds).mockResolvedValue([]);
   vi.mocked(api.setTrainingItemCompleted).mockResolvedValue({ itemId: 5, exerciseDate: '2026-10-25', completed: true });
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.clearAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.clearAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 async function render() { await act(async () => root.render(<MemoryRouter><MemberProgressPage /></MemoryRouter>)); }
 
 it('renders persisted weekly measurements without derived BMI', async () => {
@@ -180,4 +181,17 @@ it('provides a separate workout history tab while preserving progress', async ()
   expect(api.getMyProgressMetrics).toHaveBeenCalledTimes(1);
   await act(async () => history!.click());
   expect(memberCheckinApi.history).toHaveBeenCalledTimes(2);
+});
+
+it('switches mounted progress labels and independent errors without refetching', async () => {
+  vi.mocked(api.getMyProgressMetrics).mockRejectedValueOnce(new Error('offline'));
+  await render();
+  const calls = vi.mocked(api.getMyProgressMetrics).mock.calls.length;
+  await act(async () => setLanguage('en'));
+  expect(host.textContent).toContain('Fitness progress');
+  expect(host.textContent).toContain('Unable to load measurements.');
+  expect(host.textContent).toContain('No active training plan assigned.');
+  expect(vi.mocked(api.getMyProgressMetrics).mock.calls.length).toBe(calls);
+  await act(async () => setLanguage('vi'));
+  expect(host.textContent).toContain('Tiến độ thể lực');
 });

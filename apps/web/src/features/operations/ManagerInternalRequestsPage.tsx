@@ -1,3 +1,4 @@
+import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from './staffI18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
@@ -8,8 +9,6 @@ import {
   type StaffInternalRequestDto,
   type RequestType,
 } from './staffRequestApi';
-import { notify } from '../../shared/lib/portalNotices';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
@@ -33,9 +32,10 @@ const ROLE_DISPLAY: Record<string, { label: string; bg: string; color: string }>
 };
 
 export function ManagerInternalRequestsPage() {
+  const { t } = useStaffI18n();
   const [requests, setRequests] = useState<StaffInternalRequestDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<StaffMessage>('');
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
@@ -46,7 +46,7 @@ export function ManagerInternalRequestsPage() {
   const [reviewAction, setReviewAction] = useState<'APPROVED' | 'REJECTED'>('APPROVED');
   const [managerNotes, setManagerNotes] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [modalError, setModalError] = useState<string>('');
+  const [modalError, setModalError] = useState<StaffMessage>('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -110,8 +110,8 @@ export function ManagerInternalRequestsPage() {
 
       notify(
         reviewAction === 'APPROVED'
-          ? `Đã phê duyệt đơn của ${reviewTarget.userFullName} thành công!`
-          : `Đã từ chối đơn của ${reviewTarget.userFullName}.`
+          ? staffMessage(`Đã phê duyệt đơn của ${reviewTarget.userFullName} thành công!`, `Approved request from ${reviewTarget.userFullName} successfully!`)
+          : staffMessage(`Đã từ chối đơn của ${reviewTarget.userFullName}.`, `Rejected request from ${reviewTarget.userFullName}.`)
       , 'success');
       setReviewTarget(null);
       await loadData();
@@ -123,10 +123,10 @@ export function ManagerInternalRequestsPage() {
   }
 
   return (
-    <div className="portal-container">
+    <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow="Quản lý trung tâm"
-        title="Phê duyệt đơn từ nội bộ"
+        eyebrow={t("Quản lý trung tâm")}
+        title={t("Phê duyệt đơn từ nội bộ")}
       />
 
       {/* Filter and controls bar */}
@@ -147,14 +147,14 @@ export function ManagerInternalRequestsPage() {
         {/* Status tabs */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
-            { key: 'PENDING', label: 'Chờ duyệt', count: pendingCount },
-            { key: 'APPROVED', label: 'Đã duyệt' },
-            { key: 'REJECTED', label: 'Từ chối' },
-            { key: 'ALL', label: 'Tất cả' },
+            { key: 'PENDING', label: t('Chờ duyệt'), count: pendingCount },
+            { key: 'APPROVED', label: t('Đã duyệt') },
+            { key: 'REJECTED', label: t('Từ chối') },
+            { key: 'ALL', label: t('Tất cả') },
           ].map((tab) => {
             const isActive = statusFilter === tab.key;
             return (
-              <button
+              <button data-i18n-managed
                 key={tab.key}
                 type="button"
                 onClick={() => setStatusFilter(tab.key)}
@@ -174,9 +174,9 @@ export function ManagerInternalRequestsPage() {
                   gap: 6,
                 }}
               >
-                <span>{tab.label}</span>
+                <span>{t(tab.label)}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span
+                  <span data-i18n-managed
                     style={{
                       background: isActive ? 'var(--portal-ink, #202020)' : 'var(--portal-warning)',
                       color: isActive ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-on-accent)',
@@ -197,23 +197,23 @@ export function ManagerInternalRequestsPage() {
 
         {/* Type filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>Loại đơn:</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>{t("Loại đơn:")}</span>
           <Select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             style={{ width: 180 }}
           >
-            <option value="ALL">Tất cả loại đơn</option>
-            <option value="LEAVE">Xin nghỉ phép</option>
-            <option value="SHIFT_EXCHANGE">Đổi ca trực</option>
-            <option value="SCHEDULE_CHANGE">Đổi lịch dạy</option>
-            <option value="OTHER">Đề xuất khác</option>
+            <option value="ALL">{t("Tất cả loại đơn")}</option>
+            <option value="LEAVE">{t("Xin nghỉ phép")}</option>
+            <option value="SHIFT_EXCHANGE">{t("Đổi ca trực")}</option>
+            <option value="SCHEDULE_CHANGE">{t("Đổi lịch dạy")}</option>
+            <option value="OTHER">{t("Đề xuất khác")}</option>
           </Select>
         </div>
       </div>
 
       {error && (
-        <div
+        <div data-i18n-managed
           role="alert"
           style={{
             background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
@@ -229,7 +229,7 @@ export function ManagerInternalRequestsPage() {
             fontWeight: 600,
           }}
         >
-          <span>{error}</span>
+          <span>{t(error)}</span>
           <button
             type="button"
             onClick={() => setError('')}
@@ -241,15 +241,15 @@ export function ManagerInternalRequestsPage() {
       )}
 
       {loading ? (
-        <div className="portal-card" role="status" aria-busy="true" style={{ padding: 32, textAlign: 'center' }}>
+        <div data-i18n-managed className="portal-card" role="status" aria-busy="true" style={{ padding: 32, textAlign: 'center' }}>
           <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
             <div className="portal-skeleton" style={{ height: 56, borderRadius: 12 }} />
             <div className="portal-skeleton" style={{ height: 56, borderRadius: 12 }} />
           </div>
-          <p style={{ margin: 0, color: 'var(--portal-muted)' }}>Đang tải danh sách đơn từ...</p>
+          <p style={{ margin: 0, color: 'var(--portal-muted)' }}>{t("Đang tải danh sách đơn từ...")}</p>
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div
+        <div data-i18n-managed
           className="portal-card"
           style={{
             padding: '48px 32px',
@@ -260,26 +260,24 @@ export function ManagerInternalRequestsPage() {
           }}
         >
           <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
-            Không có đơn từ nào cần xử lý
-          </p>
+            {t("Không có đơn từ nào cần xử lý")}</p>
           <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-            Toàn bộ đơn từ của nhân sự đã được xem xét hoặc không có bản ghi phù hợp.
-          </span>
+            {t("Toàn bộ đơn từ của nhân sự đã được xem xét hoặc không có bản ghi phù hợp.")}</span>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: 16 }}>
+        <div data-i18n-managed style={{ display: 'grid', gap: 16 }}>
           {filteredRequests.map((req) => {
             const typeInfo = TYPE_LABELS[req.requestType] || TYPE_LABELS.OTHER;
             const statusInfo = STATUS_LABELS[req.status] || STATUS_LABELS.PENDING;
             const roleInfo = ROLE_DISPLAY[req.userRole] || {
-              label: req.userRole || 'Nhân sự',
+              label: req.userRole || t('Nhân sự'),
               bg: 'var(--portal-raised)',
               color: 'var(--portal-muted)',
             };
             const isPending = req.status === 'PENDING';
 
             return (
-              <div
+              <div data-i18n-managed
                 key={req.id}
                 className="portal-card"
                 style={{
@@ -336,11 +334,11 @@ export function ManagerInternalRequestsPage() {
                             fontWeight: 700,
                           }}
                         >
-                          {roleInfo.label}
+                          {t(roleInfo.label)}
                         </span>
                       </div>
                       <span style={{ fontSize: 12, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                        {req.userEmail} • Gửi lúc:{' '}
+                        {req.userEmail} {t(" • Gửi lúc:")}{' '}
                         {formatCenterDateTime(req.createdAt)}
                       </span>
                     </div>
@@ -357,7 +355,7 @@ export function ManagerInternalRequestsPage() {
                         color: typeInfo.color,
                       }}
                     >
-                      {typeInfo.label}
+                      {t(typeInfo.label)}
                     </span>
                     <span
                       style={{
@@ -369,7 +367,7 @@ export function ManagerInternalRequestsPage() {
                         color: statusInfo.color,
                       }}
                     >
-                      {statusInfo.label}
+                      {t(statusInfo.label)}
                     </span>
                   </div>
                 </div>
@@ -398,18 +396,18 @@ export function ManagerInternalRequestsPage() {
                   }}
                 >
                   {req.startDate && (
-                    <div>
-                      <strong style={{ color: 'var(--portal-muted)' }}>Thời gian:</strong>{' '}
+                    <div data-i18n-managed>
+                      <strong style={{ color: 'var(--portal-muted)' }}>{t("Thời gian:")}</strong>{' '}
                       {formatCenterDate(req.startDate)}
-                      {req.endDate && req.endDate !== req.startDate ? ` đến ${formatCenterDate(req.endDate)}` : ''}
-                      {req.replacementUserFullName ? ` · Thay thế: ${req.replacementUserFullName}` : ''}
+                      {req.endDate && req.endDate !== req.startDate ? t(` đến ${formatCenterDate(req.endDate)}`, ` to ${formatCenterDate(req.endDate)}`) : ''}
+                      {req.replacementUserFullName ? t(` · Thay thế: ${req.replacementUserFullName}`, ` · Substitute: ${req.replacementUserFullName}`) : ''}
 
                     </div>
                   )}
 
                   {req.targetShift && (
-                    <div>
-                      <strong style={{ color: 'var(--portal-muted)' }}>Ca / Buổi liên quan:</strong>{' '}
+                    <div data-i18n-managed>
+                      <strong style={{ color: 'var(--portal-muted)' }}>{t("Ca / Buổi liên quan:")}</strong>{' '}
                       {req.targetShift}
                     </div>
                   )}
@@ -417,7 +415,7 @@ export function ManagerInternalRequestsPage() {
 
                 {/* Review result if already reviewed */}
                 {req.reviewedAt && (
-                  <div
+                  <div data-i18n-managed
                     style={{
                       padding: '12px 16px',
                       borderRadius: 10,
@@ -430,13 +428,13 @@ export function ManagerInternalRequestsPage() {
                     }}
                   >
                     <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
-                      {req.status === 'APPROVED' ? 'Đã phê duyệt' : 'Đã từ chối'} bởi{' '}
-                      {req.reviewedByName || 'Ban Quản Lý'} (
+                      {req.status === 'APPROVED' ? t('Đã phê duyệt') : t('Đã từ chối')} {t(" bởi")}{' '}
+                      {req.reviewedByName || t('Ban Quản Lý')} (
                       {formatCenterDate(req.reviewedAt)})
                     </div>
                     {req.managerNotes && (
-                      <div style={{ marginTop: 4, color: 'var(--portal-paper)', fontStyle: 'italic' }}>
-                        Lời phê / Lý do: "{req.managerNotes}"
+                      <div data-i18n-managed style={{ marginTop: 4, color: 'var(--portal-paper)', fontStyle: 'italic' }}>
+                        {t("Lời phê / Lý do: \"")}{req.managerNotes}"
                       </div>
                     )}
                   </div>
@@ -444,7 +442,7 @@ export function ManagerInternalRequestsPage() {
 
                 {/* Manager Actions (Approve / Reject buttons for pending) */}
                 {isPending && (
-                  <div
+                  <div data-i18n-managed
                     style={{
                       display: 'flex',
                       justifyContent: 'flex-end',
@@ -469,8 +467,7 @@ export function ManagerInternalRequestsPage() {
                         transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
                       }}
                     >
-                      Từ chối đơn
-                    </button>
+                      {t("Từ chối đơn")}</button>
                     <button
                       type="button"
                       onClick={() => handleOpenApprove(req)}
@@ -488,8 +485,7 @@ export function ManagerInternalRequestsPage() {
                         transition: 'background-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease',
                       }}
                     >
-                      Phê duyệt đơn
-                    </button>
+                      {t("Phê duyệt đơn")}</button>
                   </div>
                 )}
               </div>
@@ -503,14 +499,14 @@ export function ManagerInternalRequestsPage() {
         <Modal
           title={
             reviewAction === 'APPROVED'
-              ? `Phê duyệt đơn: ${reviewTarget.title}`
-              : `Từ chối đơn: ${reviewTarget.title}`
+              ? t(`Phê duyệt đơn: ${reviewTarget.title}`, `Approve request: ${reviewTarget.title}`)
+              : t(`Từ chối đơn: ${reviewTarget.title}`, `Reject request: ${reviewTarget.title}`)
           }
           onClose={() => setReviewTarget(null)}
         >
           <form onSubmit={handleReviewSubmit} style={{ display: 'grid', gap: 16 }}>
             {modalError && (
-              <div
+              <div data-i18n-managed
                 role="alert"
                 style={{
                   padding: '10px 14px',
@@ -521,7 +517,7 @@ export function ManagerInternalRequestsPage() {
                   fontWeight: 600,
                 }}
               >
-                {modalError}
+                {t(modalError)}
               </div>
             )}
 
@@ -534,16 +530,16 @@ export function ManagerInternalRequestsPage() {
               }}
             >
               <div>
-                <strong>Người làm đơn:</strong> {reviewTarget.userFullName} ({reviewTarget.userEmail})
+                <strong>{t("Người làm đơn:")}</strong> {reviewTarget.userFullName} ({reviewTarget.userEmail})
               </div>
               <div>
-                <strong>Loại đơn:</strong> {TYPE_LABELS[reviewTarget.requestType]?.label}
+                <strong>{t("Loại đơn:")}</strong> {t(TYPE_LABELS[reviewTarget.requestType]?.label)}
               </div>
               {reviewTarget.startDate && (
-                <div>
-                  <strong>Thời gian đề xuất:</strong> {formatCenterDate(reviewTarget.startDate)}
-                  {reviewTarget.endDate && ` đến ${formatCenterDate(reviewTarget.endDate)}`}
-                  {reviewTarget.replacementUserFullName ? ` · Thay thế: ${reviewTarget.replacementUserFullName}` : ''}
+                <div data-i18n-managed>
+                  <strong>{t("Thời gian đề xuất:")}</strong> {formatCenterDate(reviewTarget.startDate)}
+                  {reviewTarget.endDate && t(` đến ${formatCenterDate(reviewTarget.endDate)}`, ` to ${formatCenterDate(reviewTarget.endDate)}`)}
+                  {reviewTarget.replacementUserFullName ? t(` · Thay thế: ${reviewTarget.replacementUserFullName}`, ` · Substitute: ${reviewTarget.replacementUserFullName}`) : ''}
 
                 </div>
               )}
@@ -552,16 +548,16 @@ export function ManagerInternalRequestsPage() {
             <div>
               <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                 {reviewAction === 'APPROVED'
-                  ? 'Ghi chú / Lời nhắn của Quản lý gửi nhân viên (tùy chọn):'
-                  : 'Lý do từ chối đơn (bắt buộc):'}
+                  ? t('Ghi chú / Lời nhắn của Quản lý gửi nhân viên (tùy chọn):')
+                  : t('Lý do từ chối đơn (bắt buộc):')}
               </label>
               <textarea
                 className="portal-input"
                 rows={4}
                 placeholder={
                   reviewAction === 'APPROVED'
-                    ? 'Ví dụ: Đã bố trí nhân sự hỗ trợ, chúc bạn hoàn thành công việc...'
-                    : 'Nêu rõ lý do từ chối (trùng lịch sự kiện, chưa có người thay thế...)'
+                    ? t('Ví dụ: Đã bố trí nhân sự hỗ trợ, chúc bạn hoàn thành công việc...')
+                    : t('Nêu rõ lý do từ chối (trùng lịch sự kiện, chưa có người thay thế...)')
                 }
                 value={managerNotes}
                 onChange={(e) => setManagerNotes(e.target.value)}
@@ -575,8 +571,7 @@ export function ManagerInternalRequestsPage() {
                 className="btn-secondary"
                 onClick={() => setReviewTarget(null)}
               >
-                Hủy
-              </button>
+                {t("Hủy")}</button>
               <button
                 type="submit"
                 disabled={submitting}
@@ -593,10 +588,10 @@ export function ManagerInternalRequestsPage() {
                 }}
               >
                 {submitting
-                  ? 'Đang xử lý...'
+                  ? t('Đang xử lý...')
                   : reviewAction === 'APPROVED'
-                  ? 'Xác nhận Phê duyệt'
-                  : 'Xác nhận Từ chối'}
+                  ? t('Xác nhận Phê duyệt')
+                  : t('Xác nhận Từ chối')}
               </button>
             </div>
           </form>

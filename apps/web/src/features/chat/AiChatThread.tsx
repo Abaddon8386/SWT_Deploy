@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError } from '../../shared/api/client';
-import { errorMessage } from '../../shared/lib/errorMessage';
+import { chatError, type ChatError } from './chatMessages';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { createAiChatSession, getAiChatHistory, listAiChatSessions, sendAiChatMessage, type AiChatMessage } from './aiChatApi';
@@ -11,7 +11,7 @@ import { useI18n } from '../../shared/i18n';
 
 /** Lỗi mà máy chủ đã hoàn tác tin của người dùng: giữ lại nội dung để gửi lại. */
 const ROLLED_BACK = ['AI_CHAT_NOT_CONFIGURED', 'AI_CHAT_UNAVAILABLE'];
-const errorText = (cause: unknown) => errorMessage(cause, 'Không thể kết nối trợ lý AI. Vui lòng thử lại.');
+const errorText = (cause: unknown) => chatError(cause, 'Không thể kết nối trợ lý AI. Vui lòng thử lại.', 'Unable to connect to the AI assistant. Please try again.');
 
 /**
  * Hội thoại với SÖL AI trong cùng khung Tin nhắn: SÖL AI xuất hiện như một người trong danh sách.
@@ -25,8 +25,8 @@ export function AiChatThread({ onBack, active = true }: { onBack: () => void; ac
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<{ message: string; reload?: boolean } | null>(null);
-  const [sendError, setSendError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: ChatError; reload?: boolean } | null>(null);
+  const [sendError, setSendError] = useState<ChatError | null>(null);
   const alive = useRef(true);
   const busy = useRef(false);
   const scroll = useRef<HTMLDivElement>(null);
@@ -117,7 +117,7 @@ export function AiChatThread({ onBack, active = true }: { onBack: () => void; ac
         </svg>
       </button>
     </header>
-    {error && <div role="alert" className="direct-chat__error"><p>{error.message}{error.reload && <> {t('Hãy tải lại hội thoại để xem kết quả.', 'Reload the conversation to see the result.')}</>}</p><button type="button" className="direct-chat__link" disabled={loading} onClick={() => void load(sessionId)}>{t("Tải lại hội thoại", "Reload conversation")}</button></div>}
+    {error && <div role="alert" className="direct-chat__error"><p>{t(error.message)}{error.reload && <> {t('Hãy tải lại hội thoại để xem kết quả.', 'Reload the conversation to see the result.')}</>}</p><button type="button" className="direct-chat__link" disabled={loading} onClick={() => void load(sessionId)}>{t("Tải lại hội thoại", "Reload conversation")}</button></div>}
     <div className="direct-chat__transcript" ref={scroll} role="region" aria-label={t("Lịch sử trò chuyện với SÖL AI", "SÖL AI conversation history")} tabIndex={0} aria-busy={loading || sending}>
       {loading ? <LoadingSkeleton label={t("Đang tải hội thoại với SÖL AI…", "Loading SÖL AI conversation…")} count={3} />
         : messages.length === 0 && !pending && !error
@@ -139,7 +139,7 @@ export function AiChatThread({ onBack, active = true }: { onBack: () => void; ac
       </ol>}
     </div>
     <ChatComposer id="chat-ai-message" label={t('Câu hỏi cho SÖL AI', 'Question for SÖL AI')} value={draft} onChange={text => { setDraft(text); setSendError(null); }}
-      onSubmit={() => void send()} disabled={loading || sending} sending={sending} failed={!!sendError} error={sendError}
+      onSubmit={() => void send()} disabled={loading || sending} sending={sending} failed={!!sendError} error={sendError ? t(sendError) : null}
       placeholder={t('Hỏi SÖL AI về tập luyện…', 'Ask SÖL AI about training…')} />
   </section>;
 }

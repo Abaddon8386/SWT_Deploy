@@ -1,5 +1,7 @@
+﻿import { getIntlLocale } from '../../shared/i18n/language';
+import { memberMessage, memberError } from '../member/memberI18n';
+import type { SourceMessage } from '../../shared/i18n/language';
 import { apiFetch, ApiError } from '../../shared/api/client';
-import { errorMessage } from '../../shared/lib/errorMessage';
 import { DISCIPLINES } from '../../shared/lib/disciplines';
 import type { SkippedOccurrence } from '../../shared/lib/recurrence';
 
@@ -14,7 +16,7 @@ export interface CourtSlot { startTime: string; endTime: string; status: 'free' 
 export interface CourtQuota { packageName: string | null; monthlyQuota: number; used: number; remaining: number }
 export type CourtPaymentMethod = 'cash' | 'vnpay';
 export const PAYMENT_METHODS: { value: CourtPaymentMethod; label: string }[] = [{ value: 'vnpay', label: 'VNPay Sandbox' }, { value: 'cash', label: 'Tiền mặt tại quầy' }];
-export const formatVnd = (amount: number) => `${new Intl.NumberFormat('vi-VN').format(amount)}đ`;
+export const formatVnd = (amount: number) => `${new Intl.NumberFormat(getIntlLocale()).format(amount)}đ`;
 export interface CourtBooking {
   id: number; roomId: number; roomName: string; disciplineName: string; memberId: number; memberName: string;
   date: string; startTime: string; endTime: string; status: 'booked' | 'cancelled'; createdAt: string;
@@ -55,7 +57,7 @@ export function dateAfter(date: string, days: number): string {
 }
 export const shortTime = (time: string) => time.slice(0, 5);
 export const displayDate = (date: string) => date.split('-').reverse().join('/');
-export function courtError(error: unknown): string {
+export function courtError(error: unknown): string | SourceMessage {
   const messages: Record<string, string> = {
     COURT_BOOKING_SLOT_TAKEN: 'Khung giờ vừa được đặt hoặc đang có lớp. Vui lòng chọn khung khác.',
     COURT_BOOKING_MEMBERSHIP_INVALID: 'Bạn chưa đăng ký gói tập hoặc gói tập không còn hiệu lực đến ngày đặt sân. Vui lòng đăng ký gói tập trước khi đặt sân.',
@@ -71,6 +73,6 @@ export function courtError(error: unknown): string {
     COURT_BOOKING_INVALID_SLOT: 'Khung giờ không hợp lệ. Vui lòng tải lại lịch sân.',
     COURT_BOOKING_INVALID_COURT: 'Phòng chưa được cấu hình để đặt sân.',
   };
-  return error instanceof ApiError && error.code && messages[error.code] ? messages[error.code]
-    : errorMessage(error, 'Không thể tải dữ liệu. Vui lòng thử lại.');
+  return error instanceof ApiError && error.code && messages[error.code] ? memberMessage(messages[error.code])
+    : memberError(error, 'Không thể tải dữ liệu. Vui lòng thử lại.');
 }

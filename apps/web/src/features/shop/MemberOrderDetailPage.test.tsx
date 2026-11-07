@@ -186,7 +186,7 @@ it('cancel goes through useConfirm and records a notice', async () => {
 
   await click('Xác nhận hủy');
   expect(shopApi.cancelMyOrder).toHaveBeenCalledWith(42);
-  expect(notify).toHaveBeenCalledWith('Đã hủy đơn SOL-261105-7KQ2', 'success', { record: true });
+  expect(notify).toHaveBeenCalledWith('Đã hủy đơn SOL-261105-7KQ2', 'success', { record: true, translation: { vi: 'Đã hủy đơn SOL-261105-7KQ2', en: 'Order SOL-261105-7KQ2 cancelled' } });
 });
 
 it('copying the tracking number uses toast, not the bell', async () => {
@@ -214,6 +214,6 @@ it('copying the tracking number uses toast, not the bell', async () => {
 
   await click('Sao chép');
   expect(writeText).toHaveBeenCalledWith('88342210');
-  expect(toast.success).toHaveBeenCalledWith('Đã sao chép mã vận đơn');
+  expect(toast.success).toHaveBeenCalledWith('Đã sao chép mã vận đơn', { vi: 'Đã sao chép mã vận đơn', en: 'Tracking number copied' });
   expect(notify).not.toHaveBeenCalled();
 });

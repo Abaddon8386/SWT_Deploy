@@ -1,3 +1,5 @@
+import { memberText } from '../member/memberI18n';
+import { useLanguage } from '../../shared/i18n/language';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import {
   TIMETABLE_HOURS,
@@ -95,6 +97,7 @@ export function WeeklyTimetable({
   weekStart, events, loading = false, error = null, onRetry, onWeekChange, onEventClick, selectedId, disabled = false,
   emptyLabel = 'Tuần này chưa có buổi học nào', onSlotClick, slotActionLabel = 'tạo lịch', legend, legendNote, toolbar, label,
 }: WeeklyTimetableProps) {
+  useLanguage();
   const now = useNow();
   const today = todayISO(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -171,13 +174,13 @@ export function WeeklyTimetable({
   const rowsPx = hours.length * HOUR_PX;
 
   return (
-    <section className="mcal" aria-label={label}>
+    <section data-i18n-managed className="mcal" aria-label={label}>
       <header className="mcal__toolbar">
-        <div className="mcal__nav" role="group" aria-label="Điều hướng tuần">
-          <button type="button" className="mcal__icon-btn" aria-label="Tuần trước" onClick={() => onWeekChange(addDays(weekStart, -7))}>
+        <div className="mcal__nav" role="group" aria-label={memberText("Điều hướng tuần")}>
+          <button type="button" className="mcal__icon-btn" aria-label={memberText("Tuần trước")} onClick={() => onWeekChange(addDays(weekStart, -7))}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
           </button>
-          <button type="button" className="mcal__icon-btn" aria-label="Tuần sau" onClick={() => onWeekChange(addDays(weekStart, 7))}>
+          <button type="button" className="mcal__icon-btn" aria-label={memberText("Tuần sau")} onClick={() => onWeekChange(addDays(weekStart, 7))}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
           <button
@@ -186,12 +189,11 @@ export function WeeklyTimetable({
             disabled={weekStart === thisWeek}
             onClick={() => { setFocusDay(null); onWeekChange(thisWeek); }}
           >
-            Hôm nay
-          </button>
+            {memberText("Hôm nay")}</button>
           <h2 className="mcal__range" aria-live="polite">{weekRangeLabel(weekStart)}</h2>
         </div>
         <div className="mcal__side">
-          <ul className="mcal__legend" aria-label="Chú thích">
+          <ul className="mcal__legend" aria-label={memberText("Chú thích")}>
             {legend.map((item) => (
               <li key={item.tone}>
                 <i className={`mcal__dot mcal__dot--${item.tone}`} aria-hidden="true" />
@@ -203,11 +205,11 @@ export function WeeklyTimetable({
           {(canCompact || toolbar) && (
             <div className="mcal__extra">
               {canCompact && (
-                <div className="mcal__switch" role="group" aria-label="Khung giờ">
+                <div className="mcal__switch" role="group" aria-label={memberText("Khung giờ")}>
                   <button type="button" aria-pressed={!fullDay} onClick={() => setFullDay(false)}>
                     {`${hourLabel(fittedHours[0])}–${hourLabel(fittedHours[fittedHours.length - 1] + 1)}`}
                   </button>
-                  <button type="button" aria-pressed={fullDay} onClick={() => setFullDay(true)}>Cả ngày</button>
+                  <button type="button" aria-pressed={fullDay} onClick={() => setFullDay(true)}>{memberText("Cả ngày")}</button>
                 </div>
               )}
               {toolbar}
@@ -218,14 +220,14 @@ export function WeeklyTimetable({
 
       {error && (
         <div className="mcal__state" role="alert">
-          <strong>Không tải được thời khóa biểu</strong>
+          <strong>{memberText("Không tải được thời khóa biểu")}</strong>
           <p>{error}</p>
-          {onRetry && <button type="button" className="btn-secondary btn-sm" onClick={onRetry}>Thử lại</button>}
+          {onRetry && <button type="button" className="btn-secondary btn-sm" onClick={onRetry}>{memberText("Thử lại")}</button>}
         </div>
       )}
 
       {narrow && (
-        <div className="mcal__daystrip" role="group" aria-label="Chọn ngày">
+        <div className="mcal__daystrip" role="group" aria-label={memberText("Chọn ngày")}>
           {days.map((day) => {
             const count = (eventsByDay.get(day) ?? []).filter((event) => event.tone !== 'cancelled' && isWithinRange(event)).length;
             return (
@@ -234,19 +236,19 @@ export function WeeklyTimetable({
                 type="button"
                 className={`mcal__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
                 aria-pressed={day === activeDay}
-                aria-label={`${weekdayLabel(day)} ${shortDate(day)}, ${count} buổi`}
+                aria-label={`${memberText(weekdayLabel(day))} ${shortDate(day)}, ${count} ${memberText('buổi học')}`}
                 onClick={() => setFocusDay(day)}
               >
-                <span>{weekdayLabel(day).replace('Thứ ', 'T').replace('Chủ nhật', 'CN')}</span>
+                <span>{weekdayLabel(day).replace(memberText("Thứ "), 'T').replace(memberText("Chủ nhật"), 'CN')}</span>
                 <strong>{shortDate(day).slice(0, 2)}</strong>
-                <small>{count > 0 ? `${count} buổi` : 'Trống'}</small>
+                <small>{count > 0 ? `${count} ${memberText('buổi học')}` : memberText("Trống")}</small>
               </button>
             );
           })}
         </div>
       )}
 
-      {loading && <span className="sr-only" role="status">Đang tải thời khóa biểu...</span>}
+      {loading && <span className="sr-only" role="status">{memberText("Đang tải thời khóa biểu...")}</span>}
 
       <div className={`mcal__scroll${loading ? ' is-loading' : ''}`} aria-busy={loading} ref={scrollRef}>
         <div
@@ -259,7 +261,7 @@ export function WeeklyTimetable({
             const dayEvents = (eventsByDay.get(day) ?? []).filter((event) => isWithinRange(event));
             return (
               <div key={day} className={`mcal__dayhead${day === today ? ' is-today' : ''}`} aria-current={day === today ? 'date' : undefined}>
-                <span className="mcal__dayname">{WEEKDAY_HEAD[days.indexOf(day)]}</span>
+                <span className="mcal__dayname">{memberText(WEEKDAY_HEAD[days.indexOf(day)])}</span>
                 <strong className="mcal__daynum">{day.slice(8)}</strong>
                 <span className="mcal__dots" aria-hidden="true">
                   {dayEvents.slice(0, 3).map((event) => <i key={event.id} className={`mcal__dot mcal__dot--${event.tone}`} />)}
@@ -301,8 +303,8 @@ export function WeeklyTimetable({
                       aria-disabled={past || undefined}
                       aria-label={
                         past
-                          ? `${weekdayLabel(day)} ${shortDate(day)}, ${range}: đã qua`
-                          : `${weekdayLabel(day)} ${shortDate(day)}, ${range}: ${busy ? 'đã có lịch, ' : 'trống, '}${slotActionLabel}`
+                          ? `${weekdayLabel(day)} ${shortDate(day)}, ${range}: ${memberText('Đã qua')}`
+                          : `${weekdayLabel(day)} ${shortDate(day)}, ${range}: ${busy ? memberText("đã có lịch, ") : memberText("trống, ")}${slotActionLabel === 'tạo lịch' ? memberText(slotActionLabel) : slotActionLabel}`
                       }
                       onFocus={() => setRovingKey(key)}
                       onKeyDown={(event) => moveFocus(event, dayIndex, hour)}
@@ -358,15 +360,14 @@ export function WeeklyTimetable({
         </div>
         {!loading && !error && visibleCount === 0 && (
           <p className="mcal__empty" role="status">
-            {emptyText}.{onSlotClick ? ' Bấm vào một ô giờ để tạo lịch.' : ''}
+            {emptyText}.{onSlotClick ? memberText(" Bấm vào một ô giờ để tạo lịch.") : ''}
           </p>
         )}
       </div>
 
       {outsideRange > 0 && (
         <p className="mcal__note" role="status">
-          {outsideRange} buổi học nằm ngoài khung 06:00–22:00 nên không hiện trên bảng.
-        </p>
+          {outsideRange} {memberText(" buổi học nằm ngoài khung 06:00–22:00 nên không hiện trên bảng.")}</p>
       )}
     </section>
   );

@@ -1,3 +1,4 @@
+import { setLanguage } from '../../shared/i18n';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -13,6 +14,7 @@ let root: Root;
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   sessionStorage.clear();
+  setLanguage('vi');
   Object.values(api).forEach(fn => fn.mockReset());
   api.register.mockResolvedValue({}); api.sendOtp.mockResolvedValue({}); api.verifyOtp.mockResolvedValue({});
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
@@ -90,4 +92,18 @@ it('lets the buyer explicitly start another account when the pending mailbox is 
   expect(host.querySelector<HTMLInputElement>('#reg-email')?.value).toBe('');
   expect(sessionStorage.getItem('scms_pending_registration')).toBeNull();
   expect(api.register).toHaveBeenCalledTimes(1);
+});
+
+
+it('switches registration and existing client validation VI → EN → VI', async () => {
+  await render(); await validForm('1234'); await submit();
+  expect(host.querySelector('#reg-phone-error')?.textContent).toContain('Số điện thoại');
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('label[for="reg-username"]')?.textContent).toContain('Username');
+  expect(host.querySelector('#reg-phone-error')?.textContent).toContain('Invalid phone number');
+  expect(host.querySelector<HTMLInputElement>('#reg-password')?.placeholder).toBe('At least 6 characters');
+  expect(api.register).not.toHaveBeenCalled();
+  await act(async () => setLanguage('vi'));
+  expect(host.querySelector('#reg-phone-error')?.textContent).toContain('Số điện thoại');
+  expect(host.querySelector<HTMLInputElement>('#reg-password')?.placeholder).toBe('Tối thiểu 6 ký tự');
 });

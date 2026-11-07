@@ -1,3 +1,4 @@
+import { setLanguage } from '../../../shared/i18n';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
@@ -110,4 +111,23 @@ describe('ProductCard', () => {
     expect(ctaLink.textContent).toBe('Chọn loại');
     expect(ctaLink.getAttribute('href')).toBe('/products/sol-whey-isolate');
   });
+});
+
+
+it('switches all source card chrome VI → EN → VI and preserves product data', async () => {
+  await act(async () => root.render(<MemoryRouter><ProductCard product={baseProduct} /></MemoryRouter>));
+  expect(host.textContent).toContain('Thêm vào giỏ');
+  await act(async () => setLanguage('en'));
+  expect(host.textContent).toContain('Add to cart');
+  expect(host.textContent).toContain('Low stock');
+  expect(host.textContent).toContain('Powder');
+  expect(host.textContent).toContain('/ serving');
+  expect(host.textContent).toContain('đạm');
+  expect(host.textContent).toContain(baseProduct.name);
+  await act(async () => host.querySelector<HTMLButtonElement>('button.shop-card__cta')!.click());
+  expect(document.querySelector('.sol-toast')?.textContent).toContain('Added to cart');
+  await act(async () => setLanguage('vi'));
+  expect(host.textContent).toContain('Thêm vào giỏ');
+  expect(host.textContent).toContain('Bột');
+  expect(document.querySelector('.sol-toast')?.textContent).toContain('Đã thêm vào giỏ');
 });
