@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://swp391-u1fs.onrender.com/api/:path*"
+      "destination": "https://scms-swt-demo-api.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
